@@ -38,8 +38,8 @@ set_option autoImplicit false
 
 namespace Effect4.Program
 
-/-- **A refusal moved below a base.** -/
-def TypeRefusal.rebase (q : List Nat) (r : TypeRefusal) : TypeRefusal := ⟨q ++ r.path, r.reason⟩
+/-- **A refusal moved below a base**: the one prefix rule (`Located.under`). -/
+def TypeRefusal.rebase (q : List Nat) (r : TypeRefusal) : TypeRefusal := Located.under q r
 
 /-- A statement's type moved below a base: a `return`'s answer, which may be a refusal. -/
 def StmtTy.rebase (q : List Nat) : StmtTy → StmtTy

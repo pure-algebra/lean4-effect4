@@ -56,9 +56,9 @@ and 's effect4_run_tree_outcome = {
   state : 's;
 }
 and check_input = CheckInput_module of sig_app * Row.t list * NativeOp.t Eff.t | CheckInput_part of sig_data * Ty.t list * NativeOp.t Eff.t
-and verdict = { result : (EffTy.t, type_refusal) result; table : entry list }
+and verdict = { result : (EffTy.t, (int list, type_reason) located) result; table : entry list }
 and admit_refusal =
-  | AdmitRefusal_illTyped
+  | AdmitRefusal_illTyped of (int list, type_reason) located
   | AdmitRefusal_signature of sig_refusal
   | AdmitRefusal_emptyColumn of string list
   | AdmitRefusal_formation of formation_refusal
@@ -587,7 +587,7 @@ and tree =
 and frame = { args : NativeOp.t Eff.t list; env : Val.t list }
 and stop = Stop_finished of (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t | Stop_cut | Stop_waiting of int * Val.t
 and step = Step_called of int * Val.t * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t | Step_celled of sync_op * Val.t
-and type_refusal = { path : int list; reason : type_reason }
+and ('site, 'reason) located = { site : 'site; reason : 'reason }
 and type_reason =
   | TypeReason_term of Term.t
   | TypeReason_cause of CauseTerm.t
@@ -631,6 +631,9 @@ and type_reason =
   | TypeReason_definitionColumns of string
   | TypeReason_bodyNotDeclared of string * EffTy.t
   | TypeReason_invokeArity of string * int * int
+  | TypeReason_unboundVariable of int list * int * int
+  | TypeReason_unknownAtom of int list * string
+  | TypeReason_refusedArguments of int list * string * Ty.t list
 and sig_data = { app : sig_app; holes : Row.t list; part : part_sig }
 and part_sig = PartSig_root | PartSig_block of DefDecl.t list | PartSig_body of DefDecl.t list * ParamDecl.t list
 and 'op node =
@@ -655,6 +658,7 @@ and 'op signature = {
   service_ty : ServiceKey.t -> Ty.t option;
   dom : 'op -> bool;
   const_atom : string -> bool;
+  known_atom : string -> bool;
   term_of : 'op -> binder_term option;
   with_term : 'op -> Term.t -> 'op;
   type_args_of : 'op -> Ty.t list;
@@ -694,7 +698,7 @@ and event =
   | Event_receive of sel * (Val.t, Err.t, Defect.t, fiber_id, unit) Completion.t
   | Event_apply of sel
   | Event_wire of command
-and explanation = { refusal : type_refusal; site : site; part : check_input option }
+and explanation = { refusal : (int list, type_reason) located; site : site; part : check_input option }
 and raw = {
   doc : doc option;
   fills : fill_set option;
@@ -709,12 +713,17 @@ and effect4_tool_wire_refusal =
   | Effect4_tool_wire_refusal_version of string * int * int
   | Effect4_tool_wire_refusal_method of string * string
   | Effect4_tool_wire_refusal_connection
-and describe = {
+and listing = {
   name : string;
   description : string;
-  schema : string;
-  answers : (string * string) list;
+  input_schema : string;
+  output_schema : string;
+  read_only : bool;
+  destructive : bool;
+  idempotent : bool;
+  open_world : bool;
 }
+and describe = { listing : listing; answers : (string * string) list }
 and ctx = { services : Val.t context; max_ops_before_yield : int; prevent_yield : bool }
 and point = {
   path : int list;
@@ -860,8 +869,14 @@ and node_env =
   | NodeEnv_body of Ty.t list * bool
   | NodeEnv_closed
   | NodeEnv_slots of Ty.t list * ParamDecl.t list
-and entry = { path : int list; env : node_env option; result : (EffTy.t, type_refusal) result option }
-and term_typing_refusal = TermTypingRefusal_record of record_term_refusal | TermTypingRefusal_tuple of tuple_term_refusal | TermTypingRefusal_fold of fold_term_refusal
+and entry = { path : int list; env : node_env option; result : (EffTy.t, (int list, type_reason) located) result option }
+and term_typing_refusal =
+  | TermTypingRefusal_record of record_term_refusal
+  | TermTypingRefusal_tuple of tuple_term_refusal
+  | TermTypingRefusal_fold of fold_term_refusal
+  | TermTypingRefusal_unbound of int list * int * int
+  | TermTypingRefusal_unknownAtom of int list * string
+  | TermTypingRefusal_refusedArguments of int list * string * Ty.t list
 and row_typing_refusal =
   | RowTypingRefusal_requestNotSubtype
   | RowTypingRefusal_formation of formation_refusal
@@ -993,7 +1008,7 @@ and 'op def_src = {
   role : DefRole.t;
   program_params : ParamDecl.t list;
 }
-and stmt_ty = StmtTy_step of gen_ty * Ty.t list | StmtTy_ret of (Ty.t, type_refusal) result | StmtTy_pass
+and stmt_ty = StmtTy_step of gen_ty * Ty.t list | StmtTy_ret of (Ty.t, (int list, type_reason) located) result | StmtTy_pass
 and cause_typing_refusal = CauseTypingRefusal_record of record_cause_refusal | CauseTypingRefusal_tuple of tuple_cause_refusal | CauseTypingRefusal_fold of fold_cause_refusal
 and binder_term = { term : Term.t; param : Ty.t; result : Ty.t }
 and term_use = { param : Ty.t; result : Ty.t; type_at : Ty.t -> Ty.t option }
@@ -1083,13 +1098,31 @@ and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers) ef
   layers_cons : 'r_layer -> 'r_layers -> 'r_layers;
 }
 and request = Request_act of action | Request_ask of query
+and method_key =
+  | MethodKey_open_
+  | MethodKey_edit
+  | MethodKey_fill
+  | MethodKey_publish
+  | MethodKey_reset
+  | MethodKey_start
+  | MethodKey_restore
+  | MethodKey_play
+  | MethodKey_doc
+  | MethodKey_history
+  | MethodKey_fills
+  | MethodKey_suggest
+  | MethodKey_run
+  | MethodKey_preview
+  | MethodKey_dry
+  | MethodKey_discover
+  | MethodKey_table
+  | MethodKey_addresses
+  | MethodKey_slots
 and effect4_tool_methods_entry = {
-  name : string;
-  description : string;
+  listing : listing;
   kind : string;
   field : string;
   case_name : string;
-  schema : string;
 }
 and race_name =
   | RaceName_empty
@@ -1205,14 +1238,27 @@ and answer =
 and doc_view = {
   snap : snap;
   type_ : EffTy.t option;
-  refusals : type_refusal list;
+  refusals : (int list, type_reason) located list;
   holes : hole_view list;
+  declared : hole_decl list;
   inspection : effect4_tool_inspection option;
 }
 and doc = { origin : doc_origin; history : doc_action list; runtime : effect4_program_doc_internal_state }
 and run_form = RunForm_view | RunForm_record | RunForm_journal
 and run_answer = RunAnswer_view of view | RunAnswer_record of live_record | RunAnswer_journal of command list
 and plan = { shared : string list; tools : string list }
+and method_kind = MethodKind_action | MethodKind_query
+and method_descriptor = {
+  name : string;
+  kind : method_kind;
+  versions : int list;
+  arguments : shape_doc;
+  result : shape_doc;
+  description : string;
+  read_only : bool;
+  hints : method_hints;
+}
+and method_hints = { destructive : bool; idempotent : bool; open_world : bool }
 and 'u reference = { key : ServiceKey.t; default : 'u }
 and fn_shape =
   | FnShape_update
@@ -1319,14 +1365,14 @@ and view = {
   funded : bool;
   at_rest : bool;
 }
-and effect4_program_edit_session_view = { table : entry list; refusals : type_refusal list; type_ : EffTy.t option }
+and effect4_program_edit_session_view = { table : entry list; refusals : (int list, type_reason) located list; type_ : EffTy.t option }
 and effect4_tool_inspection = {
   path : int list;
   expected : NativeOp.t Eff.t;
   context : sig_data;
   focus : NativeOp.t focus option;
   entry : entry option;
-  refusal : type_refusal option;
+  refusal : (int list, type_reason) located option;
 }
 and place_refusal =
   | PlaceRefusal_outOfRange of int
@@ -1336,10 +1382,11 @@ and place_refusal =
 and feed_refusal =
   | FeedRefusal_noProgram of int list
   | FeedRefusal_noFocus of int list
-  | FeedRefusal_notKept of (Ty.t list * EffTy.t) * (EffTy.t, type_refusal) result
-  | FeedRefusal_refused of type_refusal list
-  | FeedRefusal_typeChanged of EffTy.t option * EffTy.t
+  | FeedRefusal_notKept of (Ty.t list * EffTy.t) * (EffTy.t, (int list, type_reason) located) result
+  | FeedRefusal_refused of (int list, type_reason) located list
+  | FeedRefusal_typeChanged of EffTy.t * EffTy.t
   | FeedRefusal_localChanged of (Ty.t list * EffTy.t) option * (Ty.t list * EffTy.t) option
+  | FeedRefusal_rootRefused of (int list, type_reason) located list
 and preview_answer = PreviewAnswer_settled of (int * preview_run) option | PreviewAnswer_frames of preview_run list | PreviewAnswer_explored of path list
 and scheme =
   | Scheme_mono of Ty.t list * Ty.t
@@ -1387,6 +1434,12 @@ and work = {
   timers : (fiber_id * E4_clock.t) list;
 }
 and retired_call = { bound : bound_call; pending : effect4_api_host_session_reply option }
+and hole_decl = {
+  index : int;
+  name : string;
+  perform : NativeOp.t Eff.t;
+  performed : bool;
+}
 and effect4_run_preview_refusal =
   | Effect4_run_preview_refusal_admission of admit_refusal
   | Effect4_run_preview_refusal_outsideTree of int list
@@ -1406,7 +1459,7 @@ and undo_item = { path : int list; before : NativeOp.t Eff.t; product : NativeOp
 and add_refusal =
   | AddRefusal_root
   | AddRefusal_unknownAddress
-  | AddRefusal_notCertified
+  | AddRefusal_notCertified of feed_refusal
   | AddRefusal_conflict
   | AddRefusal_overlap of int list
 and add_outcome = AddOutcome_applied of int list | AddOutcome_collapsed of int list | AddOutcome_refused of int list * add_refusal
@@ -1492,7 +1545,7 @@ and fiber_status =
 and evidence =
   | Evidence_exactFit of EffTy.t
   | Evidence_typeMismatch of EffTy.t * EffTy.t
-  | Evidence_refused of type_refusal
+  | Evidence_refused of (int list, type_reason) located
   | Evidence_feedRefused of feed_refusal
   | Evidence_differentEnv of Ty.t list * Ty.t list
 and wait_site = WaitSite_deferred of deferred_key | WaitSite_other
@@ -21814,6 +21867,16 @@ let program_native_const_atom (name : string) : bool =
 
 
 
+(* LCNF mono: Effect4.Program.nativeKnownAtom (name : String) : Bool *)
+
+let program_native_known_atom (name : string) : bool =
+  let _x_1 = program_native_atom_of_name_opt name in
+  match _x_1 with
+    | None -> false
+    | Some _ -> true
+
+
+
 (* LCNF mono: Effect4.Program.NativeOp.withTerm (x.1 : Effect4.Program.NativeOp) (x.2 : Effect4.Program.Term) : Effect4.Program.NativeOp *)
 
 let program_native_op_with_term (x_1 : NativeOp.t) (x_2 : Term.t) : NativeOp.t =
@@ -22205,12 +22268,13 @@ let program_native_signature (table : Row.t list) : NativeOp.t signature =
   let _x_8 = program_native_scope_key in
   let _x_9 = program_native_service_ty in
   let _x_10 = program_native_const_atom in
-  let _x_11 = program_native_op_with_term in
-  let _x_12 = program_native_op_type_args in
-  let _x_13 = program_native_op_with_type_args in
-  let _x_14 = program_row_key_names table in
-  let _x_15 = [] in
-  ({ row_of = _f_1; atom_of = _x_7; scope_key = _x_8; service_ty = _x_9; dom = _f_2; const_atom = _x_10; term_of = _f_3; with_term = _x_11; type_args_of = _x_12; with_type_args = _x_13; call_of = _f_4; param_of = _f_5; def_of = _f_6; key_names = _x_14; types = _x_15 } : _ signature)
+  let _x_11 = program_native_known_atom in
+  let _x_12 = program_native_op_with_term in
+  let _x_13 = program_native_op_type_args in
+  let _x_14 = program_native_op_with_type_args in
+  let _x_15 = program_row_key_names table in
+  let _x_16 = [] in
+  ({ row_of = _f_1; atom_of = _x_7; scope_key = _x_8; service_ty = _x_9; dom = _f_2; const_atom = _x_10; known_atom = _x_11; term_of = _f_3; with_term = _x_12; type_args_of = _x_13; with_type_args = _x_14; call_of = _f_4; param_of = _f_5; def_of = _f_6; key_names = _x_15; types = _x_16 } : _ signature)
 
 
 
@@ -22285,11 +22349,11 @@ let program_sig_app_signature (app : sig_app) : NativeOp.t signature =
   match (app : sig_app) with
     | { rows = rows; types = types; _ } -> (let _x_1 = program_native_signature rows in
       match (_x_1 : _ signature) with
-        | { row_of = row_of; atom_of = atom_of; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; _ } -> (let _x_2 = [] in
+        | { row_of = row_of; atom_of = atom_of; dom = dom; const_atom = const_atom; known_atom = known_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; _ } -> (let _x_2 = [] in
           let _x_3 = 0 in
           let _x_4 = ({ ServiceKey.name = _x_3; ServiceKey.service = _x_3 } : ServiceKey.t) in
           let _x_5 = program_sig_app_service_ty app in
-          ({ row_of = row_of; atom_of = atom_of; scope_key = _x_4; service_ty = _x_5; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } : _ signature)))
+          ({ row_of = row_of; atom_of = atom_of; scope_key = _x_4; service_ty = _x_5; dom = dom; const_atom = const_atom; known_atom = known_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } : _ signature)))
 
 
 
@@ -22348,10 +22412,10 @@ let program_signature_with_defs__red_arg__lam_2 (decls : DefDecl.t list) (def_of
 
 let program_signature_with_defs (sig_ : _ signature) (decls : DefDecl.t list) : _ signature =
   match (sig_ : _ signature) with
-    | { row_of = row_of; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } -> (let _f_1 = program_signature_with_defs__red_arg__lam_0 call_of row_of decls in
+    | { row_of = row_of; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = dom; const_atom = const_atom; known_atom = known_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } -> (let _f_1 = program_signature_with_defs__red_arg__lam_0 call_of row_of decls in
       let _f_2 = program_signature_with_defs__red_arg__lam_1 call_of dom decls in
       let _f_3 = program_signature_with_defs__red_arg__lam_2 decls def_of in
-      ({ row_of = _f_1; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = _f_2; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = _f_3; key_names = key_names; types = types } : _ signature))
+      ({ row_of = _f_1; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = _f_2; const_atom = const_atom; known_atom = known_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = _f_3; key_names = key_names; types = types } : _ signature))
 
 
 
@@ -22644,9 +22708,9 @@ let program_signature_with_params (sig_ : _ signature) (x_1 : ParamDecl.t list) 
   match x_1 with
     | [] -> sig_
     | _ :: _ -> (match (sig_ : _ signature) with
-        | { row_of = row_of; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = dom; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } -> (let _f_4 = program_signature_with_params__red_arg__lam_0 param_of row_of x_1 in
+        | { row_of = row_of; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = dom; const_atom = const_atom; known_atom = known_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } -> (let _f_4 = program_signature_with_params__red_arg__lam_0 param_of row_of x_1 in
           let _f_5 = program_signature_with_params__red_arg__lam_1 param_of dom x_1 in
-          ({ row_of = _f_4; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = _f_5; const_atom = const_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } : _ signature)))
+          ({ row_of = _f_4; atom_of = atom_of; scope_key = scope_key; service_ty = service_ty; dom = _f_5; const_atom = const_atom; known_atom = known_atom; term_of = term_of; with_term = with_term; type_args_of = type_args_of; with_type_args = with_type_args; call_of = call_of; param_of = param_of; def_of = def_of; key_names = key_names; types = types } : _ signature)))
 
 
 
@@ -23478,18 +23542,31 @@ let program_term_ty (sig_ : _ signature) (env : Ty.t list) (t : Term.t) : Ty.t o
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_0 (x.1 : List Effect4.Program.Ty) (x.2 : Bool) (x.3 : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_0 (level : Nat) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_0 (x_1 : Ty.t list) (x_2 : bool) (x_3 : int list) : term_typing_refusal option =
-  None
+let program_term_refusal_algebra__lam_0 (level : int) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+  let _x_2 = list_get_opt_internal env level in
+  match _x_2 with
+    | None -> (let _x_3 = List.length env in
+      let _x_4 = TermTypingRefusal_unbound (path, level, _x_3) in
+      Some _x_4)
+    | Some _ -> None
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_1 (_f.1 : (List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) (level : Nat) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_1 (level : Nat) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_1 (_f_1 : Ty.t list -> bool -> int list -> term_typing_refusal option) (level : int) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_1 (level : int) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+  let _f_1 = program_term_refusal_algebra__lam_0 level in
   let _x_2 = Term.Var level in
   _x_2, _f_1
+
+
+
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_2 (x.1 : List Effect4.Program.Ty) (x.2 : Bool) (x.3 : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+
+let program_term_refusal_algebra__lam_2 (x_1 : Ty.t list) (x_2 : bool) (x_3 : int list) : term_typing_refusal option =
+  None
 
 
 
@@ -23501,20 +23578,29 @@ let program_term_refusal_algebra__lam_3 (_f_1 : Ty.t list -> bool -> int list ->
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_2 (constAtom : String -> Bool) (atom : String) (snd : lcAny) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_4 (constAtom : String -> Bool) (atom : String) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (fst : lcAny) (snd : lcAny) (atomOf : String -> (List Effect4.Program.Ty) -> (Option Effect4.Program.Ty)) (knownAtom : String -> Bool) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_2 (const_atom : string -> bool) (atom : string) snd_1 (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_4 (const_atom : string -> bool) (atom : string) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) fst_1 snd_1 (atom_of : string -> Ty.t list -> Ty.t option) (known_atom : string -> bool) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
   let _x_2 = const_atom atom in
-  let _x_3 = 0 in
-  snd_1 env _x_2 path _x_3
+  let _x_3 = infer_args env _x_2 fst_1 in
+  match _x_3 with
+    | None -> (let _x_4 = 0 in
+      snd_1 env _x_2 path _x_4)
+    | Some val__6 -> (let _x_7 = atom_of atom val__6 in
+      match _x_7 with
+        | None -> (let _x_8 = known_atom atom in
+          if _x_8 then (let _x_11 = TermTypingRefusal_refusedArguments (path, atom, val__6) in
+            Some _x_11) else (let _x_9 = TermTypingRefusal_unknownAtom (path, atom) in
+            Some _x_9))
+        | Some _ -> None)
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_4 (constAtom : String -> Bool) (atom : String) (args : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_5 (constAtom : String -> Bool) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (atomOf : String -> (List Effect4.Program.Ty) -> (Option Effect4.Program.Ty)) (knownAtom : String -> Bool) (atom : String) (args : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_4 (const_atom : string -> bool) (atom : string) (args : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_5 (const_atom : string -> bool) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) (atom_of : string -> Ty.t list -> Ty.t option) (known_atom : string -> bool) (atom : string) (args : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
   match args with
-    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_2 const_atom atom snd_1 in
+    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_4 const_atom atom infer_args fst_1 snd_1 atom_of known_atom in
       let _x_2 = Term.App (atom, fst_1) in
       _x_2, _f_1)
 
@@ -23592,9 +23678,9 @@ let program_term_refusal_construction (decls : (string * Ty.t) list) (fields : (
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_5 (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (names : List String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_6 (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (names : List String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_5 (fields : (string * (bool * Ty.t)) list) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) fst_1 snd_1 (decls : (string * Ty.t) list) (names : string list) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_6 (fields : (string * (bool * Ty.t)) list) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) fst_1 snd_1 (decls : (string * Ty.t) list) (names : string list) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
   let _x_2 = program_term_refusal_declaration fields in
   match _x_2 with
     | None -> (let _x_3 = true in
@@ -23614,11 +23700,11 @@ let program_term_refusal_algebra__lam_5 (fields : (string * (bool * Ty.t)) list)
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_6 (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (decls : List (Prod String Effect4.Program.Ty)) (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (names : List String) (values : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_7 (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (decls : List (Prod String Effect4.Program.Ty)) (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (names : List String) (values : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_6 (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) (decls : (string * Ty.t) list) (fields : (string * (bool * Ty.t)) list) (names : string list) (values : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_7 (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) (decls : (string * Ty.t) list) (fields : (string * (bool * Ty.t)) list) (names : string list) (values : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
   match values with
-    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_5 fields infer_args fst_1 snd_1 decls names in
+    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_6 fields infer_args fst_1 snd_1 decls names in
       let _x_2 = Term.Record (fields, names, fst_1) in
       _x_2, _f_1)
 
@@ -23670,9 +23756,9 @@ let program_term_refusal_read_field (decls : (string * Ty.t) list) (mode : Field
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_7 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (name : String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_8 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (name : String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_7 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (decls : (string * Ty.t) list) (mode : FieldReadMode.t) (name : string) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_8 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (decls : (string * Ty.t) list) (mode : FieldReadMode.t) (name : string) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
   let _x_2 = false in
   let _x_3 = infer env _x_2 fst_1 in
   match _x_3 with
@@ -23690,19 +23776,19 @@ let program_term_refusal_algebra__lam_7 (infer : Ty.t list -> bool -> Term.t -> 
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_8 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (name : String) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_9 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (name : String) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_8 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (decls : (string * Ty.t) list) (mode : FieldReadMode.t) (target : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (name : string) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_9 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (decls : (string * Ty.t) list) (mode : FieldReadMode.t) (target : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (name : string) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
   match target with
-    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_7 infer fst_1 snd_1 decls mode name in
+    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_8 infer fst_1 snd_1 decls mode name in
       let _x_2 = Term.Field (mode, fst_1, name) in
       _x_2, _f_1)
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_9 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_10 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_9 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 fst_2 snd_2 (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_10 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 fst_2 snd_2 (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
   let _x_2 = false in
   let _x_3 = infer env _x_2 fst_1 in
   match _x_3 with
@@ -23723,12 +23809,12 @@ let program_term_refusal_algebra__lam_9 (infer : Ty.t list -> bool -> Term.t -> 
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_10 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (name : String) (value : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_11 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (name : String) (value : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_10 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (target : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (name : string) (value : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_11 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (target : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (name : string) (value : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
   match target with
     | fst_1, snd_1 -> (match value with
-        | fst_2, snd_2 -> (let _f_1 = program_term_refusal_algebra__lam_9 infer fst_1 snd_1 fst_2 snd_2 in
+        | fst_2, snd_2 -> (let _f_1 = program_term_refusal_algebra__lam_10 infer fst_1 snd_1 fst_2 snd_2 in
           let _x_2 = Term.RecordSet (fst_1, name, fst_2) in
           _x_2, _f_1))
 
@@ -23782,9 +23868,9 @@ let program_term_refusal_tuple_index (target : Ty.t) (index : int) : tuple_typin
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_11 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (index : Nat) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_12 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (index : Nat) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_11 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (index : int) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_12 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (index : int) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
   let _x_2 = false in
   let _x_3 = infer env _x_2 fst_1 in
   match _x_3 with
@@ -23802,19 +23888,19 @@ let program_term_refusal_algebra__lam_11 (infer : Ty.t list -> bool -> Term.t ->
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_12 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (index : Nat) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_13 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (index : Nat) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_12 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (target : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (index : int) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_13 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (target : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (index : int) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
   match target with
-    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_11 infer fst_1 snd_1 index in
+    | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_12 infer fst_1 snd_1 index in
       let _x_2 = Term.TupleAt (fst_1, index) in
       _x_2, _f_1)
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_13 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (accTy : Option Effect4.Program.Ty) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_14 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (accTy : Option Effect4.Program.Ty) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_13 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (decls : (string * Ty.t) list) fst_2 snd_2 fst_3 snd_3 (acc_ty : Ty.t option) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_14 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (decls : (string * Ty.t) list) fst_2 snd_2 fst_3 snd_3 (acc_ty : Ty.t option) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
   let _x_2 = false in
   let _x_3 = infer env _x_2 fst_1 in
   match _x_3 with
@@ -23864,28 +23950,28 @@ let program_term_refusal_algebra__lam_13 (infer : Ty.t list -> bool -> Term.t ->
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_14 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (accTy : Option Effect4.Program.Ty) (list : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (init : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (body : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_15 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (accTy : Option Effect4.Program.Ty) (list : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (init : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (body : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_14 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (decls : (string * Ty.t) list) (acc_ty : Ty.t option) (list : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (init : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (body : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_15 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (decls : (string * Ty.t) list) (acc_ty : Ty.t option) (list : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (init : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (body : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
   match list with
     | fst_1, snd_1 -> (match init with
         | fst_2, snd_2 -> (match body with
-            | fst_3, snd_3 -> (let _f_1 = program_term_refusal_algebra__lam_13 infer fst_1 snd_1 decls fst_2 snd_2 fst_3 snd_3 acc_ty in
+            | fst_3, snd_3 -> (let _f_1 = program_term_refusal_algebra__lam_14 infer fst_1 snd_1 decls fst_2 snd_2 fst_3 snd_3 acc_ty in
               let _x_2 = Term.Fold (acc_ty, fst_1, fst_2, fst_3) in
               _x_2, _f_1)))
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_15 (x.1 : List Effect4.Program.Ty) (x.2 : Bool) (x.3 : List Nat) (x.4 : Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_16 (x.1 : List Effect4.Program.Ty) (x.2 : Bool) (x.3 : List Nat) (x.4 : Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_15 (x_1 : Ty.t list) (x_2 : bool) (x_3 : int list) (x_4 : int) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_16 (x_1 : Ty.t list) (x_2 : bool) (x_3 : int list) (x_4 : int) : term_typing_refusal option =
   None
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_16 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (snd : lcAny) (env : List Effect4.Program.Ty) (flag : Bool) (path : List Nat) (index : Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_17 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (snd : lcAny) (env : List Effect4.Program.Ty) (flag : Bool) (path : List Nat) (index : Nat) : Option Effect4.Program.TermTypingRefusal *)
 
-let program_term_refusal_algebra__lam_16 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 snd_2 (env : Ty.t list) (flag : bool) (path : int list) (index : int) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_17 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 snd_2 (env : Ty.t list) (flag : bool) (path : int list) (index : int) : term_typing_refusal option =
   let _x_1 = infer env flag fst_1 in
   match _x_1 with
     | None -> (let _x_2 = [] in
@@ -23898,34 +23984,34 @@ let program_term_refusal_algebra__lam_16 (infer : Ty.t list -> bool -> Term.t ->
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_17 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (head : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (tail : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_18 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (head : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (tail : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal)) *)
 
-let program_term_refusal_algebra__lam_17 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (head : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (tail : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option)) : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_18 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (head : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (tail : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option)) : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option) =
   match head with
     | fst_1, snd_1 -> (match tail with
-        | fst_2, snd_2 -> (let _f_1 = program_term_refusal_algebra__lam_16 infer fst_1 snd_1 snd_2 in
+        | fst_2, snd_2 -> (let _f_1 = program_term_refusal_algebra__lam_17 infer fst_1 snd_1 snd_2 in
           let _x_2 = Terms.Cons (fst_1, fst_2) in
           _x_2, _f_1))
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (constAtom : String -> Bool) (decls : List (Prod String Effect4.Program.Ty)) : Effect4.Program.TermAlgebra lcAny *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (constAtom : String -> Bool) (decls : List (Prod String Effect4.Program.Ty)) (atomOf : String -> (List Effect4.Program.Ty) -> (Option Effect4.Program.Ty)) (knownAtom : String -> Bool) : Effect4.Program.TermAlgebra lcAny *)
 
-let program_term_refusal_algebra (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) (const_atom : string -> bool) (decls : (string * Ty.t) list) : (_, _) term_algebra =
-  let _f_1 = program_term_refusal_algebra__lam_0 in
-  let _f_2 = program_term_refusal_algebra__lam_1 _f_1 in
-  let _f_3 = program_term_refusal_algebra__lam_3 _f_1 in
-  let _f_4 = program_term_refusal_algebra__lam_4 const_atom in
-  let _f_5 = program_term_refusal_algebra__lam_6 infer_args decls in
-  let _f_6 = program_term_refusal_algebra__lam_8 infer decls in
-  let _f_7 = program_term_refusal_algebra__lam_10 infer in
-  let _f_8 = program_term_refusal_algebra__lam_12 infer in
-  let _f_9 = program_term_refusal_algebra__lam_14 infer decls in
-  let _f_10 = program_term_refusal_algebra__lam_15 in
-  let _f_11 = program_term_refusal_algebra__lam_17 infer in
+let program_term_refusal_algebra (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) (const_atom : string -> bool) (decls : (string * Ty.t) list) (atom_of : string -> Ty.t list -> Ty.t option) (known_atom : string -> bool) : (_, _) term_algebra =
+  let _f_1 = program_term_refusal_algebra__lam_1 in
+  let _f_2 = program_term_refusal_algebra__lam_2 in
+  let _f_3 = program_term_refusal_algebra__lam_3 _f_2 in
+  let _f_4 = program_term_refusal_algebra__lam_5 const_atom infer_args atom_of known_atom in
+  let _f_5 = program_term_refusal_algebra__lam_7 infer_args decls in
+  let _f_6 = program_term_refusal_algebra__lam_9 infer decls in
+  let _f_7 = program_term_refusal_algebra__lam_11 infer in
+  let _f_8 = program_term_refusal_algebra__lam_13 infer in
+  let _f_9 = program_term_refusal_algebra__lam_15 infer decls in
+  let _f_10 = program_term_refusal_algebra__lam_16 in
+  let _f_11 = program_term_refusal_algebra__lam_18 infer in
   let _x_12 = Terms.Nil in
   let _x_13 = _x_12, _f_10 in
-  ({ term_var = _f_2; term_lit = _f_3; term_app = _f_4; term_record = _f_5; term_field = _f_6; term_record_set = _f_7; term_tuple_at = _f_8; term_fold = _f_9; terms_nil = _x_13; terms_cons = _f_11 } : (_, _) term_algebra)
+  ({ term_var = _f_1; term_lit = _f_3; term_app = _f_4; term_record = _f_5; term_field = _f_6; term_record_set = _f_7; term_tuple_at = _f_8; term_fold = _f_9; terms_nil = _x_13; terms_cons = _f_11 } : (_, _) term_algebra)
 
 
 
@@ -23975,9 +24061,9 @@ and program_cata_terms (alg : (_, _) term_algebra) (node : Terms.t) =
 
 let program_term_refusal_diagnose (sig_ : _ signature) (env : Ty.t list) (term : Term.t) =
   match (sig_ : _ signature) with
-    | { const_atom = const_atom; types = types; _ } -> (let _x_1 = fun _eta _eta_1 _eta_2 -> program_arg_ty sig_ _eta _eta_1 _eta_2 in
+    | { atom_of = atom_of; const_atom = const_atom; known_atom = known_atom; types = types; _ } -> (let _x_1 = fun _eta _eta_1 _eta_2 -> program_arg_ty sig_ _eta _eta_1 _eta_2 in
       let _x_2 = fun _eta_3 _eta_4 _eta_5 -> program_args_ty sig_ _eta_3 _eta_4 _eta_5 in
-      let _x_3 = program_term_refusal_algebra _x_1 _x_2 const_atom types in
+      let _x_3 = program_term_refusal_algebra _x_1 _x_2 const_atom types atom_of known_atom in
       let _x_4 = program_cata_term _x_3 term in
       match _x_4 with
         | _, snd_1 -> (let _x_5 = false in
@@ -23986,10 +24072,10 @@ let program_term_refusal_diagnose (sig_ : _ signature) (env : Ty.t list) (term :
 
 
 
-(* LCNF mono: Effect4.Program.Checker.term?._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (t : Effect4.Program.Term) : Except Effect4.Program.TypeRefusal Effect4.Program.Ty *)
+(* LCNF mono: Effect4.Program.Checker.term?._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (t : Effect4.Program.Term) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.Ty *)
 
-let program_checker_term_opt (sig_ : _ signature) (env : Ty.t list) (p : int list) (t : Term.t) : (Ty.t, type_refusal) result =
-  let[@local always] _jp_1 = fun _y_2 -> let _x_3 = ({ path = p; reason = _y_2 } : type_refusal) in
+let program_checker_term_opt (sig_ : _ signature) (env : Ty.t list) (p : int list) (t : Term.t) : (Ty.t, (int list, type_reason) located) result =
+  let[@local always] _jp_1 = fun _y_2 -> let _x_3 = ({ site = p; reason = _y_2 } : (_, _) located) in
   Error _x_3 in
   let _x_5 = program_term_ty sig_ env t in
   match _x_5 with
@@ -24003,8 +24089,14 @@ let program_checker_term_opt (sig_ : _ signature) (env : Ty.t list) (p : int lis
             | TermTypingRefusal_tuple why_11 -> (let _x_12 = TypeReason_tupleTerm why_11 in
               _jp_1 _x_12)
             | TermTypingRefusal_fold why_13 -> (let _x_14 = TypeReason_foldTerm why_13 in
-              _jp_1 _x_14)))
-    | Some val__15 -> Ok val__15
+              _jp_1 _x_14)
+            | TermTypingRefusal_unbound (path_15, index_16, depth_17) -> (let _x_18 = TypeReason_unboundVariable (path_15, index_16, depth_17) in
+              _jp_1 _x_18)
+            | TermTypingRefusal_unknownAtom (path_19, atom_20) -> (let _x_21 = TypeReason_unknownAtom (path_19, atom_20) in
+              _jp_1 _x_21)
+            | TermTypingRefusal_refusedArguments (path_22, atom_23, args_24) -> (let _x_25 = TypeReason_refusedArguments (path_22, atom_23, args_24) in
+              _jp_1 _x_25)))
+    | Some val__26 -> Ok val__26
 
 
 
@@ -24131,16 +24223,20 @@ let rec program_cause_ty (sig_ : _ signature) (env : Ty.t list) (x_1 : CauseTerm
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.inCause (path : List Nat) (x.1 : Effect4.Program.TermTypingRefusal) : Effect4.Program.CauseTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.inCause (path : List Nat) (x.1 : Effect4.Program.TermTypingRefusal) : Option Effect4.Program.CauseTypingRefusal *)
 
-let program_term_refusal_in_cause (path : int list) (x_1 : term_typing_refusal) : cause_typing_refusal =
+let program_term_refusal_in_cause (path : int list) (x_1 : term_typing_refusal) : cause_typing_refusal option =
   match (x_1 : term_typing_refusal) with
     | TermTypingRefusal_record why_2 -> (let _x_3 = ({ cause_path = path; term = why_2 } : record_cause_refusal) in
-      CauseTypingRefusal_record _x_3)
-    | TermTypingRefusal_tuple why_5 -> (let _x_6 = ({ cause_path = path; term = why_5 } : tuple_cause_refusal) in
-      CauseTypingRefusal_tuple _x_6)
-    | TermTypingRefusal_fold why_8 -> (let _x_9 = ({ cause_path = path; term = why_8 } : fold_cause_refusal) in
-      CauseTypingRefusal_fold _x_9)
+      let _x_4 = CauseTypingRefusal_record _x_3 in
+      Some _x_4)
+    | TermTypingRefusal_tuple why_6 -> (let _x_7 = ({ cause_path = path; term = why_6 } : tuple_cause_refusal) in
+      let _x_8 = CauseTypingRefusal_tuple _x_7 in
+      Some _x_8)
+    | TermTypingRefusal_fold why_10 -> (let _x_11 = ({ cause_path = path; term = why_10 } : fold_cause_refusal) in
+      let _x_12 = CauseTypingRefusal_fold _x_11 in
+      Some _x_12)
+    | _ -> None
 
 
 
@@ -24152,8 +24248,7 @@ let program_term_refusal_cause_algebra__lam_0 (infer_term : Term.t -> Ty.t optio
     | None -> (let _x_2 = diagnose term in
       match _x_2 with
         | None -> None
-        | Some val__4 -> (let _x_5 = program_term_refusal_in_cause path val__4 in
-          Some _x_5))
+        | Some val__4 -> program_term_refusal_in_cause path val__4)
     | Some _ -> None
 
 
@@ -24186,8 +24281,7 @@ let program_term_refusal_cause_algebra__lam_2 (term : Term.t option) (infer_term
         | None -> (let _x_4 = diagnose val__2 in
           match _x_4 with
             | None -> None
-            | Some val__6 -> (let _x_7 = program_term_refusal_in_cause path val__6 in
-              Some _x_7))
+            | Some val__6 -> program_term_refusal_in_cause path val__6)
         | Some _ -> None)
 
 
@@ -24272,10 +24366,10 @@ let program_term_refusal_diagnose_cause (sig_ : _ signature) (env : Ty.t list) (
 
 
 
-(* LCNF mono: Effect4.Program.Checker.cause?._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (cause : Effect4.Program.CauseTerm) : Except Effect4.Program.TypeRefusal Effect4.Program.Ty *)
+(* LCNF mono: Effect4.Program.Checker.cause?._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (cause : Effect4.Program.CauseTerm) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.Ty *)
 
-let program_checker_cause_opt (sig_ : _ signature) (env : Ty.t list) (p : int list) (cause : CauseTerm.t) : (Ty.t, type_refusal) result =
-  let[@local always] _jp_1 = fun _y_2 -> let _x_3 = ({ path = p; reason = _y_2 } : type_refusal) in
+let program_checker_cause_opt (sig_ : _ signature) (env : Ty.t list) (p : int list) (cause : CauseTerm.t) : (Ty.t, (int list, type_reason) located) result =
+  let[@local always] _jp_1 = fun _y_2 -> let _x_3 = ({ site = p; reason = _y_2 } : (_, _) located) in
   Error _x_3 in
   let _x_5 = program_cause_ty sig_ env cause in
   match _x_5 with
@@ -24452,27 +24546,27 @@ let program_check_row (row : Row.t) (request : Ty.t) (use : term_use option) : (
 
 
 
-(* LCNF mono: Effect4.Program.Checker.rowCheck (row : Effect4.Program.Row) (r : Effect4.Program.Ty) (use : Option Effect4.Program.TermUse) (p : List Nat) : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy *)
+(* LCNF mono: Effect4.Program.Checker.rowCheck (row : Effect4.Program.Row) (r : Effect4.Program.Ty) (use : Option Effect4.Program.TermUse) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy *)
 
-let program_checker_row_check (row : Row.t) (r : Ty.t) (use : term_use option) (p : int list) : (EffTy.t, type_refusal) result =
+let program_checker_row_check (row : Row.t) (r : Ty.t) (use : term_use option) (p : int list) : (EffTy.t, (int list, type_reason) located) result =
   let _x_1 = program_check_row row r use in
   match _x_1 with
     | Error a_2 -> (match (a_2 : row_typing_refusal) with
         | RowTypingRefusal_requestNotSubtype -> (match (row : Row.t) with
             | { Row.name = name; Row.request = request; _ } -> (let _x_3 = TypeReason_requestNotSubtype (name, r, request) in
-              let _x_4 = ({ path = p; reason = _x_3 } : type_refusal) in
+              let _x_4 = ({ site = p; reason = _x_3 } : (_, _) located) in
               Error _x_4))
         | RowTypingRefusal_formation why_6 -> (match (row : Row.t) with
             | { Row.name = name_1; _ } -> (let _x_7 = TypeReason_instantiatedFormation (name_1, why_6) in
-              let _x_8 = ({ path = p; reason = _x_7 } : type_refusal) in
+              let _x_8 = ({ site = p; reason = _x_7 } : (_, _) located) in
               Error _x_8))
         | RowTypingRefusal_term param_10 -> (match (row : Row.t) with
             | { Row.name = name_2; _ } -> (let _x_11 = TypeReason_binderTerm (name_2, param_10) in
-              let _x_12 = ({ path = p; reason = _x_11 } : type_refusal) in
+              let _x_12 = ({ site = p; reason = _x_11 } : (_, _) located) in
               Error _x_12))
         | RowTypingRefusal_resultNotSubtype (result_14, expected_15) -> (match (row : Row.t) with
             | { Row.name = name_3; _ } -> (let _x_16 = TypeReason_resultNotSubtype (name_3, result_14, expected_15) in
-              let _x_17 = ({ path = p; reason = _x_16 } : type_refusal) in
+              let _x_17 = ({ site = p; reason = _x_16 } : (_, _) located) in
               Error _x_17)))
     | Ok a_19 -> Ok a_19
 
@@ -24533,9 +24627,9 @@ let program_gen_ty_seq_t (s : gen_ty) (r : gen_ty) : gen_ty =
 
 
 
-(* LCNF mono: Effect4.Program.StmtTy.fold._redArg (step : Effect4.Program.GenTy -> (List Effect4.Program.Ty) -> lcAny) (ret : (Except Effect4.Program.TypeRefusal Effect4.Program.Ty) -> lcAny) (pass : lcAny) (x.1 : Effect4.Program.StmtTy) : lcAny *)
+(* LCNF mono: Effect4.Program.StmtTy.fold._redArg (step : Effect4.Program.GenTy -> (List Effect4.Program.Ty) -> lcAny) (ret : (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.Ty) -> lcAny) (pass : lcAny) (x.1 : Effect4.Program.StmtTy) : lcAny *)
 
-let program_stmt_ty_fold (step : gen_ty -> Ty.t list -> _) (ret : (Ty.t, type_refusal) result -> _) pass (x_1 : stmt_ty) =
+let program_stmt_ty_fold (step : gen_ty -> Ty.t list -> _) (ret : (Ty.t, (int list, type_reason) located) result -> _) pass (x_1 : stmt_ty) =
   match (x_1 : stmt_ty) with
     | StmtTy_step (state_2, binds_3) -> step state_2 binds_3
     | StmtTy_ret answer_5 -> ret answer_5
@@ -24643,9 +24737,9 @@ let program_fiber_ty (target : Ty.t) : (Ty.t * Ty.t) option =
 
 
 
-(* LCNF mono: Effect4.Program.Checker.expect._redArg (r : Effect4.Program.TypeRefusal) (x.1 : Option lcAny) : Except Effect4.Program.TypeRefusal lcAny *)
+(* LCNF mono: Effect4.Program.Checker.expect._redArg (r : Effect4.Located (List Nat) Effect4.Program.TypeReason) (x.1 : Option lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) lcAny *)
 
-let program_checker_expect (r : type_refusal) (x_1 : _ option) : (_, type_refusal) result =
+let program_checker_expect (r : (int list, type_reason) located) (x_1 : _ option) : (_, (int list, type_reason) located) result =
   match x_1 with
     | None -> Error r
     | Some val__3 -> Ok val__3
@@ -24708,14 +24802,14 @@ let program_ty_mask_restore : Ty.t =
 
 
 
-(* LCNF mono: List.forIn'.loop._at_.Effect4.Program.Checker.checkAction.spec_6._redArg (p : List Nat) (sig : Effect4.Program.Signature lcAny) (as' : List Effect4.ServiceKey) (b : PUnit) : Except Effect4.Program.TypeRefusal PUnit *)
+(* LCNF mono: List.forIn'.loop._at_.Effect4.Program.Checker.checkAction.spec_6._redArg (p : List Nat) (sig : Effect4.Program.Signature lcAny) (as' : List Effect4.ServiceKey) (b : PUnit) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) PUnit *)
 
-let rec list_for_in'_loop_at_program_checker_check_action_spec_6 (p : int list) (sig_ : _ signature) (as' : ServiceKey.t list) (b : unit) : (unit, type_refusal) result =
+let rec list_for_in'_loop_at_program_checker_check_action_spec_6 (p : int list) (sig_ : _ signature) (as' : ServiceKey.t list) (b : unit) : (unit, (int list, type_reason) located) result =
   match as' with
     | [] -> Ok b
     | head_2 :: tail_3 -> (match (sig_ : _ signature) with
         | { service_ty = service_ty; _ } -> (let _x_4 = TypeReason_serviceUnknown head_2 in
-          let _x_5 = ({ path = p; reason = _x_4 } : type_refusal) in
+          let _x_5 = ({ site = p; reason = _x_4 } : (_, _) located) in
           let _x_6 = service_ty head_2 in
           let _x_7 = program_checker_expect _x_5 _x_6 in
           match _x_7 with
@@ -25451,17 +25545,17 @@ let program_decision_arms_in (decls : (string * Ty.t) list) (d : Decision.t) (t 
 
 
 
-(* LCNF mono: Effect4.Program.Checker.check._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (x.1 : Effect4.Program.Eff lcAny) : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy
-   Effect4.Program.Checker.checkStmts._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (afterRet : Option (List Nat)) (p : List Nat) (x.1 : Effect4.Program.Stmts lcAny) : Except Effect4.Program.TypeRefusal Effect4.Program.GenTy
-   Effect4.Program.Checker.checkStmt._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (p : List Nat) (x.1 : Effect4.Program.Stmt lcAny) : Except Effect4.Program.TypeRefusal Effect4.Program.StmtTy
-   Effect4.Program.Checker.checkStmts._redArg._lam_0 (env : List Effect4.Program.Ty) (_x.1 : List Nat) (p : List Nat) (sig : Effect4.Program.Signature lcAny) (inLoop : Bool) (afterRet : Option (List Nat)) (tail.2 : Effect4.Program.Stmts lcAny) (g : Effect4.Program.GenTy) (binds : List Effect4.Program.Ty) : Except Effect4.Program.TypeRefusal Effect4.Program.GenTy
-   Effect4.Program.Checker.checkStmts._redArg._lam_1 (_x.1 : List Nat) (_x.2 : List Nat) (p : List Nat) (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (tail.3 : Effect4.Program.Stmts lcAny) (answer : Except Effect4.Program.TypeRefusal Effect4.Program.Ty) : Except Effect4.Program.TypeRefusal Effect4.Program.GenTy
-   Effect4.Program.Checker.checkAction._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (x.1 : Effect4.Program.ActionTerm lcAny) : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy
-   Effect4.Program.Checker.checkEffs._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (qs : List Effect4.Program.ParamDecl) (x.1 : Effect4.Program.Effs lcAny) : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy
-   Effect4.Program.Checker.checkLayer._redArg (sig : Effect4.Program.Signature lcAny) (p : List Nat) (x.1 : Effect4.Program.LayerTerm lcAny) : Except Effect4.Program.TypeRefusal Effect4.Program.LayerTy
-   Effect4.Program.Checker.checkLayers._redArg (sig : Effect4.Program.Signature lcAny) (p : List Nat) (x.1 : Effect4.Program.LayerTerms lcAny) : Except Effect4.Program.TypeRefusal (List Effect4.Program.LayerTy) *)
+(* LCNF mono: Effect4.Program.Checker.check._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (x.1 : Effect4.Program.Eff lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy
+   Effect4.Program.Checker.checkStmts._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (afterRet : Option (List Nat)) (p : List Nat) (x.1 : Effect4.Program.Stmts lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.GenTy
+   Effect4.Program.Checker.checkStmt._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (p : List Nat) (x.1 : Effect4.Program.Stmt lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.StmtTy
+   Effect4.Program.Checker.checkStmts._redArg._lam_0 (env : List Effect4.Program.Ty) (_x.1 : List Nat) (p : List Nat) (sig : Effect4.Program.Signature lcAny) (inLoop : Bool) (afterRet : Option (List Nat)) (tail.2 : Effect4.Program.Stmts lcAny) (g : Effect4.Program.GenTy) (binds : List Effect4.Program.Ty) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.GenTy
+   Effect4.Program.Checker.checkStmts._redArg._lam_1 (_x.1 : List Nat) (_x.2 : List Nat) (p : List Nat) (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (tail.3 : Effect4.Program.Stmts lcAny) (answer : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.Ty) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.GenTy
+   Effect4.Program.Checker.checkAction._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (x.1 : Effect4.Program.ActionTerm lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy
+   Effect4.Program.Checker.checkEffs._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (qs : List Effect4.Program.ParamDecl) (x.1 : Effect4.Program.Effs lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy
+   Effect4.Program.Checker.checkLayer._redArg (sig : Effect4.Program.Signature lcAny) (p : List Nat) (x.1 : Effect4.Program.LayerTerm lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.LayerTy
+   Effect4.Program.Checker.checkLayers._redArg (sig : Effect4.Program.Signature lcAny) (p : List Nat) (x.1 : Effect4.Program.LayerTerms lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) (List Effect4.Program.LayerTy) *)
 
-let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int list) (x_1 : _ Eff.t) : (EffTy.t, type_refusal) result =
+let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int list) (x_1 : _ Eff.t) : (EffTy.t, (int list, type_reason) located) result =
   let[@local always] _jp_2 = fun value -> let _x_3 = program_checker_term_opt sig_ env p value in
   match _x_3 with
     | Error a_4 -> Error a_4
@@ -25482,7 +25576,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
             let _x_26 = row_empty_at_env_requirement_empty_spec_0 in
             let _x_27 = ({ EffTy.answer = _x_25; EffTy.error = a_20; EffTy.requires = _x_26 } : EffTy.t) in
             Ok _x_27) else (let _x_22 = program_error_refusal a_20 in
-            let _x_23 = ({ path = p; reason = _x_22 } : type_refusal) in
+            let _x_23 = ({ site = p; reason = _x_22 } : (_, _) located) in
             Error _x_23)))
     | Eff.FailCause cause_29 -> (let _x_30 = program_checker_cause_opt sig_ env p cause_29 in
       match _x_30 with
@@ -25502,7 +25596,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
               if _x_47 then (let _x_51 = program_signature_term_use sig_ env op_40 in
                 program_checker_row_check _x_46 a_45 _x_51 p) else (match (_x_46 : Row.t) with
                   | { Row.name = name; _ } -> (let _x_48 = TypeReason_outsideDomain name in
-                    let _x_49 = ({ path = p; reason = _x_48 } : type_refusal) in
+                    let _x_49 = ({ site = p; reason = _x_48 } : (_, _) located) in
                     Error _x_49)))))
     | Eff.Bind (first_53, rest_54) -> (let _x_55 = 0 in
       let _x_56 = [] in
@@ -25636,7 +25730,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
       match _x_185 with
         | Error a_186 -> Error a_186
         | Ok a_188 -> (let _x_189 = TypeReason_notFiber a_188 in
-          let _x_190 = ({ path = p; reason = _x_189 } : type_refusal) in
+          let _x_190 = ({ site = p; reason = _x_189 } : (_, _) located) in
           let _x_191 = program_fiber_ty a_188 in
           let _x_192 = program_checker_expect _x_190 _x_191 in
           match _x_192 with
@@ -25695,7 +25789,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
                             let _x_247 = row_union_at_env_requirement_union_spec_0 _x_245 _x_246 in
                             let _x_248 = ({ EffTy.answer = answer_10; EffTy.error = error_12; EffTy.requires = _x_247 } : EffTy.t) in
                             Ok _x_248)) else (let _x_242 = TypeReason_releaseFails error_13 in
-                        let _x_243 = ({ path = p; reason = _x_242 } : type_refusal) in
+                        let _x_243 = ({ site = p; reason = _x_242 } : (_, _) located) in
                         Error _x_243))))))
     | Eff.ProvideLayer (layer_250, _, body_252) -> (let _x_253 = 0 in
       let _x_254 = [] in
@@ -25719,7 +25813,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
                       Ok _x_270)))))
     | Eff.Service key_272 -> (match (sig_ : _ signature) with
         | { service_ty = service_ty; _ } -> (let _x_273 = TypeReason_serviceUnknown key_272 in
-          let _x_274 = ({ path = p; reason = _x_273 } : type_refusal) in
+          let _x_274 = ({ site = p; reason = _x_273 } : (_, _) located) in
           let _x_275 = service_ty key_272 in
           let _x_276 = program_checker_expect _x_274 _x_275 in
           match _x_276 with
@@ -25730,7 +25824,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
               Ok _x_282)))
     | Eff.ProvideService (key_284, value_285, body_286) -> (match (sig_ : _ signature) with
         | { service_ty = service_ty_1; _ } -> (let _x_287 = TypeReason_serviceUnknown key_284 in
-          let _x_288 = ({ path = p; reason = _x_287 } : type_refusal) in
+          let _x_288 = ({ site = p; reason = _x_287 } : (_, _) located) in
           let _x_289 = service_ty_1 key_284 in
           let _x_290 = program_checker_expect _x_288 _x_289 in
           match _x_290 with
@@ -25753,7 +25847,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
                             let _x_312 = row_diff_at_program_checker_check_spec_0 requires_15 _x_311 in
                             let _x_313 = ({ EffTy.answer = answer_12; EffTy.error = error_17; EffTy.requires = _x_312 } : EffTy.t) in
                             Ok _x_313)) else (let _x_308 = TypeReason_valueNotSubtype (key_284, a_297, a_293) in
-                        let _x_309 = ({ path = p; reason = _x_308 } : type_refusal) in
+                        let _x_309 = ({ site = p; reason = _x_308 } : (_, _) located) in
                         Error _x_309))))))
     | Eff.CatchIf (test_315, body_316, handler_317) -> (let _x_318 = 0 in
       let _x_319 = [] in
@@ -25784,14 +25878,14 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
                             let _x_346 = row_union_at_env_requirement_union_spec_0 requires_16 requires_17 in
                             let _x_347 = ({ EffTy.answer = _x_343; EffTy.error = _x_345; EffTy.requires = _x_346 } : EffTy.t) in
                             Ok _x_347))) else (let _x_334 = TypeReason_predicateNotBool a_330 in
-                    let _x_335 = ({ path = p; reason = _x_334 } : type_refusal) in
+                    let _x_335 = ({ site = p; reason = _x_334 } : (_, _) located) in
                     Error _x_335)))))
     | Eff.Select (scrutinee_349, decision_350, arm0_351, arm1_352) -> (let _x_353 = program_checker_term_opt sig_ env p scrutinee_349 in
       match _x_353 with
         | Error a_354 -> Error a_354
         | Ok a_356 -> (match (sig_ : _ signature) with
             | { types = types; _ } -> (let _x_357 = program_select_refusal decision_350 a_356 in
-              let _x_358 = ({ path = p; reason = _x_357 } : type_refusal) in
+              let _x_358 = ({ site = p; reason = _x_357 } : (_, _) located) in
               let _x_359 = program_decision_arms_in types decision_350 a_356 in
               let _x_360 = program_checker_expect _x_358 _x_359 in
               match _x_360 with
@@ -25822,15 +25916,15 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
     | Eff.Iterate (cursor_ty_384, initial_385, test_386, step_387, result_388, body_389) -> (let _x_390 = program_checker_term_opt sig_ env p initial_385 in
       match _x_390 with
         | Error a_391 -> Error a_391
-        | Ok a_393 -> (let[@local always] _jp_394 = fun _y_395 _y_396 _y_397 _y_398 -> if _y_396 then (let _x_402 = program_ty_normalize a_393 in
-            let _x_403 = program_ty_normalize _y_395 in
+        | Ok a_393 -> (let[@local always] _jp_394 = fun _y_395 _y_396 _y_397 _y_398 -> if _y_395 then (let _x_402 = program_ty_normalize a_393 in
+            let _x_403 = program_ty_normalize _y_398 in
             let _x_404 = program_ty_sub _x_402 _x_403 in
-            if _x_404 then (let _x_408 = TypeReason_stepNotCursor (_y_397, _y_395) in
-              let _x_409 = ({ path = p; reason = _x_408 } : type_refusal) in
-              Error _x_409) else (let _x_405 = TypeReason_initialNotCursor (a_393, _y_395) in
-              let _x_406 = ({ path = p; reason = _x_405 } : type_refusal) in
-              Error _x_406)) else (let _x_399 = TypeReason_predicateNotBool _y_398 in
-            let _x_400 = ({ path = p; reason = _x_399 } : type_refusal) in
+            if _x_404 then (let _x_408 = TypeReason_stepNotCursor (_y_396, _y_398) in
+              let _x_409 = ({ site = p; reason = _x_408 } : (_, _) located) in
+              Error _x_409) else (let _x_405 = TypeReason_initialNotCursor (a_393, _y_398) in
+              let _x_406 = ({ site = p; reason = _x_405 } : (_, _) located) in
+              Error _x_406)) else (let _x_399 = TypeReason_predicateNotBool _y_397 in
+            let _x_400 = ({ site = p; reason = _x_399 } : (_, _) located) in
             Error _x_400) in
           let[@local always] _jp_411 = fun _y_412 -> let _x_413 = [] in
           let _x_414 = _y_412 :: _x_413 in
@@ -25863,7 +25957,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
                                 if _x_442 then (let _x_443 = program_ty_normalize a_432 in
                                   let _x_444 = program_ty_sub _x_443 _x_441 in
                                   if _x_444 then (let _x_445 = ({ EffTy.answer = a_436; EffTy.error = error_22; EffTy.requires = requires_20 } : EffTy.t) in
-                                    Ok _x_445) else _jp_394 _y_412 _x_439 a_432 a_419) else _jp_394 _y_412 _x_439 a_432 a_419) else _jp_394 _y_412 _x_439 a_432 a_419))))) in
+                                    Ok _x_445) else _jp_394 _x_439 a_432 a_419 _y_412) else _jp_394 _x_439 a_432 a_419 _y_412) else _jp_394 _x_439 a_432 a_419 _y_412))))) in
           match cursor_ty_384 with
             | None -> _jp_411 a_393
             | Some val__447 -> _jp_411 val__447))
@@ -25878,10 +25972,10 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
             let _x_462 = _x_460 :: _x_461 in
             let _x_463 = p @ _x_462 in
             program_checker_check sig_ env _x_463 body_449) else (let _x_457 = TypeReason_maskRestoreExpected a_453 in
-            let _x_458 = ({ path = p; reason = _x_457 } : type_refusal) in
+            let _x_458 = ({ site = p; reason = _x_457 } : (_, _) located) in
             Error _x_458)))
     | Eff.Defs (_, _, _, _) -> (let _x_469 = TypeReason_definitionBlock in
-      let _x_470 = ({ path = p; reason = _x_469 } : type_refusal) in
+      let _x_470 = ({ site = p; reason = _x_469 } : (_, _) located) in
       Error _x_470)
     | Eff.Invoke (index_472, request_473, args_474) -> (let _x_475 = program_checker_term_opt sig_ env p request_473 in
       match _x_475 with
@@ -25889,7 +25983,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
         | Ok a_478 -> (match (sig_ : _ signature) with
             | { def_of = def_of; _ } -> (let _x_479 = "call" in
               let _x_480 = TypeReason_outsideDomain _x_479 in
-              let _x_481 = ({ path = p; reason = _x_480 } : type_refusal) in
+              let _x_481 = ({ site = p; reason = _x_480 } : (_, _) located) in
               let _x_482 = def_of index_472 in
               let _x_483 = program_checker_expect _x_481 _x_482 in
               match _x_483 with
@@ -25899,7 +25993,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
                       let _x_489 = program_effs_to_list args_474 in
                       let _x_490 = List.length _x_489 in
                       let _x_491 = TypeReason_invokeArity (name_1, _x_488, _x_490) in
-                      let _x_492 = ({ path = p; reason = _x_491 } : type_refusal) in
+                      let _x_492 = ({ site = p; reason = _x_491 } : (_, _) located) in
                       Error _x_492 in
                       let[@local always] _jp_494 = fun _y_495 -> if _y_495 then _jp_487 () else (let _x_496 = program_def_decl_row a_486 in
                         let _x_497 = program_row_normalize_types _x_496 in
@@ -25942,10 +26036,10 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
                       let _x_533 = ({ EffTy.answer = answer_19; EffTy.error = error_24; EffTy.requires = _x_532 } : EffTy.t) in
                       Ok _x_533)))
             | _ -> (let _x_535 = TypeReason_contextExpected a_522 in
-              let _x_536 = ({ path = p; reason = _x_535 } : type_refusal) in
+              let _x_536 = ({ site = p; reason = _x_535 } : (_, _) located) in
               Error _x_536)))
 
-and program_checker_check_stmts (sig_ : _ signature) (env : Ty.t list) (in_loop : bool) (after_ret : int list option) (p : int list) (x_1 : _ Stmts.t) : (gen_ty, type_refusal) result =
+and program_checker_check_stmts (sig_ : _ signature) (env : Ty.t list) (in_loop : bool) (after_ret : int list option) (p : int list) (x_1 : _ Stmts.t) : (gen_ty, (int list, type_reason) located) result =
   match (x_1 : _ Stmts.t) with
     | Stmts.Nil -> (let _x_2 = None in
       let _x_3 = Ty.Never in
@@ -25974,10 +26068,10 @@ and program_checker_check_stmts (sig_ : _ signature) (env : Ty.t list) (in_loop 
                   let _x_29 = Ok _x_28 in
                   program_stmt_ty_fold _f_19 _f_20 _x_29 a_18)))
         | Some val__31 -> (let _x_32 = TypeReason_returnNotLast in
-          let _x_33 = ({ path = val__31; reason = _x_32 } : type_refusal) in
+          let _x_33 = ({ site = val__31; reason = _x_32 } : (_, _) located) in
           Error _x_33))
 
-and program_checker_check_stmt (sig_ : _ signature) (env : Ty.t list) (in_loop : bool) (p : int list) (x_1 : _ Stmt.t) : (stmt_ty, type_refusal) result =
+and program_checker_check_stmt (sig_ : _ signature) (env : Ty.t list) (in_loop : bool) (p : int list) (x_1 : _ Stmt.t) : (stmt_ty, (int list, type_reason) located) result =
   match (x_1 : _ Stmt.t) with
     | Stmt.BindYield effect_2 -> (let _x_3 = 0 in
       let _x_4 = [] in
@@ -26034,7 +26128,7 @@ and program_checker_check_stmt (sig_ : _ signature) (env : Ty.t list) (in_loop :
                   | Ok a_65 -> (let _x_66 = program_gen_ty_merge_t a_58 a_65 in
                     let _x_67 = StmtTy_step (_x_66, _x_52) in
                     Ok _x_67))) else (let _x_47 = TypeReason_predicateNotBool a_43 in
-            let _x_48 = ({ path = p; reason = _x_47 } : type_refusal) in
+            let _x_48 = ({ site = p; reason = _x_47 } : (_, _) located) in
             Error _x_48)))
     | Stmt.WhileTrue body_69 -> (let _x_70 = true in
       let _x_71 = None in
@@ -26050,10 +26144,10 @@ and program_checker_check_stmt (sig_ : _ signature) (env : Ty.t list) (in_loop :
           Ok _x_81))
     | Stmt.BreakLoop -> if in_loop then (let _x_86 = StmtTy_pass in
         Ok _x_86) else (let _x_83 = TypeReason_breakOutsideLoop in
-        let _x_84 = ({ path = p; reason = _x_83 } : type_refusal) in
+        let _x_84 = ({ site = p; reason = _x_83 } : (_, _) located) in
         Error _x_84)
 
-and program_checker_check_stmts__red_arg__lam_0 (env : Ty.t list) (_x_1 : int list) (p : int list) (sig_ : _ signature) (in_loop : bool) (after_ret : int list option) (tail_2 : _ Stmts.t) (g : gen_ty) (binds : Ty.t list) : (gen_ty, type_refusal) result =
+and program_checker_check_stmts__red_arg__lam_0 (env : Ty.t list) (_x_1 : int list) (p : int list) (sig_ : _ signature) (in_loop : bool) (after_ret : int list option) (tail_2 : _ Stmts.t) (g : gen_ty) (binds : Ty.t list) : (gen_ty, (int list, type_reason) located) result =
   let _x_3 = env @ binds in
   let _x_4 = 1 in
   let _x_5 = _x_4 :: _x_1 in
@@ -26064,7 +26158,7 @@ and program_checker_check_stmts__red_arg__lam_0 (env : Ty.t list) (_x_1 : int li
     | Ok a_9 -> (let _x_10 = program_gen_ty_seq_t g a_9 in
       Ok _x_10)
 
-and program_checker_check_stmts__red_arg__lam_1 (_x_1 : int list) (_x_2 : int list) (p : int list) (sig_ : _ signature) (env : Ty.t list) (in_loop : bool) (tail_3 : _ Stmts.t) (answer : (Ty.t, type_refusal) result) : (gen_ty, type_refusal) result =
+and program_checker_check_stmts__red_arg__lam_1 (_x_1 : int list) (_x_2 : int list) (p : int list) (sig_ : _ signature) (env : Ty.t list) (in_loop : bool) (tail_3 : _ Stmts.t) (answer : (Ty.t, (int list, type_reason) located) result) : (gen_ty, (int list, type_reason) located) result =
   let _x_4 = Some _x_1 in
   let _x_5 = 1 in
   let _x_6 = _x_5 :: _x_2 in
@@ -26081,7 +26175,7 @@ and program_checker_check_stmts__red_arg__lam_1 (_x_1 : int list) (_x_2 : int li
           let _x_18 = ({ answer = _x_14; error = _x_15; requires = _x_16; completes = _x_17; breaks = _x_17 } : gen_ty) in
           Ok _x_18))
 
-and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int list) (x_1 : _ ActionTerm.t) : (EffTy.t, type_refusal) result =
+and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int list) (x_1 : _ ActionTerm.t) : (EffTy.t, (int list, type_reason) located) result =
   let[@local always] _jp_2 = fun entrants -> let _x_3 = 0 in
   let _x_4 = [] in
   let _x_5 = _x_3 :: _x_4 in
@@ -26091,13 +26185,13 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
   match _x_9 with
     | Error a_10 -> Error a_10
     | Ok a_12 -> (let _x_13 = TypeReason_listOfFibersExpected a_12 in
-      let _x_14 = ({ path = p; reason = _x_13 } : type_refusal) in
+      let _x_14 = ({ site = p; reason = _x_13 } : (_, _) located) in
       let _x_15 = program_checker_list_of_opt a_12 in
       let _x_16 = program_checker_expect _x_14 _x_15 in
       match _x_16 with
         | Error a_17 -> Error a_17
         | Ok a_19 -> (let _x_20 = TypeReason_notFiber a_19 in
-          let _x_21 = ({ path = p; reason = _x_20 } : type_refusal) in
+          let _x_21 = ({ site = p; reason = _x_20 } : (_, _) located) in
           let _x_22 = program_fiber_ty a_19 in
           let _x_23 = program_checker_expect _x_21 _x_22 in
           match _x_23 with
@@ -26111,7 +26205,7 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
   match _x_32 with
     | Error a_33 -> Error a_33
     | Ok a_35 -> (let _x_36 = TypeReason_notFiber a_35 in
-      let _x_37 = ({ path = p; reason = _x_36 } : type_refusal) in
+      let _x_37 = ({ site = p; reason = _x_36 } : (_, _) located) in
       let _x_38 = program_fiber_ty a_35 in
       let _x_39 = program_checker_expect _x_37 _x_38 in
       match _x_39 with
@@ -26150,7 +26244,7 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
                     let _x_80 = Ty.Never in
                     let _x_81 = ({ EffTy.answer = _x_79; EffTy.error = _x_80; EffTy.requires = requires_1 } : EffTy.t) in
                     Ok _x_81)) else (let _x_76 = TypeReason_scopeExpected a_72 in
-                let _x_77 = ({ path = p; reason = _x_76 } : type_refusal) in
+                let _x_77 = ({ site = p; reason = _x_76 } : (_, _) located) in
                 Error _x_77))))
     | ActionTerm.ForkScoped (program_83, _) -> (let _x_85 = 0 in
       let _x_86 = [] in
@@ -26171,7 +26265,7 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
       match _x_100 with
         | Error a_101 -> Error a_101
         | Ok a_103 -> (let _x_104 = TypeReason_notFiber a_103 in
-          let _x_105 = ({ path = p; reason = _x_104 } : type_refusal) in
+          let _x_105 = ({ site = p; reason = _x_104 } : (_, _) located) in
           let _x_106 = program_fiber_ty a_103 in
           let _x_107 = program_checker_expect _x_105 _x_106 in
           match _x_107 with
@@ -26185,7 +26279,7 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
                   if _x_117 then (let _x_121 = Ty.Unit in
                     let _x_122 = program_eff_ty_pure _x_121 in
                     Ok _x_122) else (let _x_118 = TypeReason_scopeExpected a_114 in
-                    let _x_119 = ({ path = p; reason = _x_118 } : type_refusal) in
+                    let _x_119 = ({ site = p; reason = _x_118 } : (_, _) located) in
                     Error _x_119)))))
     | ActionTerm.Interrupt target_124 -> _jp_31 target_124
     | ActionTerm.InterruptScoped target_125 -> _jp_31 target_125
@@ -26193,13 +26287,13 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
       match _x_128 with
         | Error a_129 -> Error a_129
         | Ok a_131 -> (let _x_132 = TypeReason_listOfFibersExpected a_131 in
-          let _x_133 = ({ path = p; reason = _x_132 } : type_refusal) in
+          let _x_133 = ({ site = p; reason = _x_132 } : (_, _) located) in
           let _x_134 = program_checker_list_of_opt a_131 in
           let _x_135 = program_checker_expect _x_133 _x_134 in
           match _x_135 with
             | Error a_136 -> Error a_136
             | Ok a_138 -> (let _x_139 = TypeReason_notFiber a_138 in
-              let _x_140 = ({ path = p; reason = _x_139 } : type_refusal) in
+              let _x_140 = ({ site = p; reason = _x_139 } : (_, _) located) in
               let _x_141 = program_fiber_ty a_138 in
               let _x_142 = program_checker_expect _x_140 _x_141 in
               match _x_142 with
@@ -26217,7 +26311,7 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
                           if _x_156 then (let _x_160 = Ty.Unit in
                             let _x_161 = program_eff_ty_pure _x_160 in
                             Ok _x_161) else (let _x_157 = TypeReason_natExpected a_153 in
-                            let _x_158 = ({ path = p; reason = _x_157 } : type_refusal) in
+                            let _x_158 = ({ site = p; reason = _x_157 } : (_, _) located) in
                             Error _x_158)))))))
     | ActionTerm.AwaitAll targets_163 -> _jp_8 targets_163
     | ActionTerm.AwaitAllFailFast targets_164 -> _jp_8 targets_164
@@ -26237,7 +26331,7 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
           if _x_179 then (let _x_183 = Ty.Unit in
             let _x_184 = program_eff_ty_pure _x_183 in
             Ok _x_184) else (let _x_180 = TypeReason_snapshotExpected a_174 in
-            let _x_181 = ({ path = p; reason = _x_180 } : type_refusal) in
+            let _x_181 = ({ site = p; reason = _x_180 } : (_, _) located) in
             Error _x_181)))
     | ActionTerm.RaceAll entrants_186 -> _jp_2 entrants_186
     | ActionTerm.GetId -> (let _x_187 = Ty.Nat in
@@ -26250,7 +26344,7 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
           match _x_196 with
             | Error a_197 -> Error a_197
             | Ok a_199 -> (let _x_200 = TypeReason_exitExpected a_199 in
-              let _x_201 = ({ path = p; reason = _x_200 } : type_refusal) in
+              let _x_201 = ({ site = p; reason = _x_200 } : (_, _) located) in
               let _x_202 = program_checker_exit_of_opt a_199 in
               let _x_203 = program_checker_expect _x_201 _x_202 in
               match _x_203 with
@@ -26261,7 +26355,7 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
                   if _x_209 then (let _x_213 = Ty.Unit in
                     let _x_214 = program_eff_ty_pure _x_213 in
                     Ok _x_214) else (let _x_210 = TypeReason_scopeExpected a_195 in
-                    let _x_211 = ({ path = p; reason = _x_210 } : type_refusal) in
+                    let _x_211 = ({ site = p; reason = _x_210 } : (_, _) located) in
                     Error _x_211)))))
     | ActionTerm.GetInterruptible -> (let _x_216 = program_ty_mask_restore in
       let _x_217 = program_eff_ty_pure _x_216 in
@@ -26276,7 +26370,7 @@ and program_checker_check_action (sig_ : _ signature) (env : Ty.t list) (p : int
           let _x_228 = ({ EffTy.answer = _x_226; EffTy.error = _x_227; EffTy.requires = keys_220 } : EffTy.t) in
           Ok _x_228))
 
-and program_checker_check_effs (sig_ : _ signature) (env : Ty.t list) (p : int list) (qs : ParamDecl.t list) (x_1 : _ Effs.t) : (EffTy.t, type_refusal) result =
+and program_checker_check_effs (sig_ : _ signature) (env : Ty.t list) (p : int list) (qs : ParamDecl.t list) (x_1 : _ Effs.t) : (EffTy.t, (int list, type_reason) located) result =
   match (x_1 : _ Effs.t) with
     | Effs.Nil -> (let _x_2 = Ty.Never in
       let _x_3 = row_empty_at_env_requirement_empty_spec_0 in
@@ -26328,20 +26422,20 @@ and program_checker_check_effs (sig_ : _ signature) (env : Ty.t list) (p : int l
                                 let _x_50 = row_union_at_env_requirement_union_spec_0 requires_2 requires_3 in
                                 let _x_51 = ({ EffTy.answer = _x_48; EffTy.error = _x_49; EffTy.requires = _x_50 } : EffTy.t) in
                                 Ok _x_51)))) else (let _x_39 = TypeReason_bodyNotDeclared (name, a_37) in
-                    let _x_40 = ({ path = _x_34; reason = _x_39 } : type_refusal) in
+                    let _x_40 = ({ site = _x_34; reason = _x_39 } : (_, _) located) in
                     Error _x_40)))))
 
-and program_checker_check_layer (sig_ : _ signature) (p : int list) (x_1 : _ LayerTerm.t) : (layer_ty, type_refusal) result =
+and program_checker_check_layer (sig_ : _ signature) (p : int list) (x_1 : _ LayerTerm.t) : (layer_ty, (int list, type_reason) located) result =
   match (x_1 : _ LayerTerm.t) with
     | LayerTerm.Succeed (key_2, value_3) -> (let _x_4 = TypeReason_literalOutsideAlphabet value_3 in
-      let _x_5 = ({ path = p; reason = _x_4 } : type_refusal) in
+      let _x_5 = ({ site = p; reason = _x_4 } : (_, _) located) in
       let _x_6 = program_lit_val value_3 in
       let _x_7 = program_checker_expect _x_5 _x_6 in
       match _x_7 with
         | Error a_8 -> Error a_8
         | Ok _ -> (match (sig_ : _ signature) with
             | { service_ty = service_ty; _ } -> (let _x_11 = TypeReason_serviceUnknown key_2 in
-              let _x_12 = ({ path = p; reason = _x_11 } : type_refusal) in
+              let _x_12 = ({ site = p; reason = _x_11 } : (_, _) located) in
               let _x_13 = service_ty key_2 in
               let _x_14 = program_checker_expect _x_12 _x_13 in
               match _x_14 with
@@ -26355,7 +26449,7 @@ and program_checker_check_layer (sig_ : _ signature) (p : int list) (x_1 : _ Lay
                     let _x_27 = row_empty_at_env_requirement_empty_spec_0 in
                     let _x_28 = ({ out = _x_25; error = _x_26; requires = _x_27 } : layer_ty) in
                     Ok _x_28) else (let _x_22 = TypeReason_valueNotSubtype (key_2, _x_18, a_17) in
-                    let _x_23 = ({ path = p; reason = _x_22 } : type_refusal) in
+                    let _x_23 = ({ site = p; reason = _x_22 } : (_, _) located) in
                     Error _x_23)))))
     | LayerTerm.Effect (key_30, body_31) -> (let _x_32 = [] in
       let _x_33 = 0 in
@@ -26366,7 +26460,7 @@ and program_checker_check_layer (sig_ : _ signature) (p : int list) (x_1 : _ Lay
         | Error a_37 -> Error a_37
         | Ok a_39 -> (match (sig_ : _ signature) with
             | { service_ty = service_ty_1; _ } -> (let _x_40 = TypeReason_serviceUnknown key_30 in
-              let _x_41 = ({ path = p; reason = _x_40 } : type_refusal) in
+              let _x_41 = ({ site = p; reason = _x_40 } : (_, _) located) in
               let _x_42 = service_ty_1 key_30 in
               let _x_43 = program_checker_expect _x_41 _x_42 in
               match _x_43 with
@@ -26379,7 +26473,7 @@ and program_checker_check_layer (sig_ : _ signature) (p : int list) (x_1 : _ Lay
                         let _x_54 = program_body_requires sig_ a_39 in
                         let _x_55 = ({ out = _x_53; error = error; requires = _x_54 } : layer_ty) in
                         Ok _x_55) else (let _x_50 = TypeReason_valueNotSubtype (key_30, answer, a_46) in
-                        let _x_51 = ({ path = p; reason = _x_50 } : type_refusal) in
+                        let _x_51 = ({ site = p; reason = _x_50 } : (_, _) located) in
                         Error _x_51))))))
     | LayerTerm.EffectDiscard body_57 -> (let _x_58 = [] in
       let _x_59 = 0 in
@@ -26453,7 +26547,7 @@ and program_checker_check_layer (sig_ : _ signature) (p : int list) (x_1 : _ Lay
         | Ok a_134 -> (let _x_135 = program_layer_ty_or_die a_134 in
           Ok _x_135))
     | LayerTerm.Ref target_137 -> (let _x_138 = TypeReason_layerReference target_137 in
-      let _x_139 = ({ path = p; reason = _x_138 } : type_refusal) in
+      let _x_139 = ({ site = p; reason = _x_138 } : (_, _) located) in
       Error _x_139)
     | LayerTerm.MergeAll layers_141 -> (let _x_142 = 0 in
       let _x_143 = [] in
@@ -26463,11 +26557,11 @@ and program_checker_check_layer (sig_ : _ signature) (p : int list) (x_1 : _ Lay
       match _x_146 with
         | Error a_147 -> Error a_147
         | Ok a_149 -> (let _x_150 = TypeReason_mergeAllEmpty in
-          let _x_151 = ({ path = _x_145; reason = _x_150 } : type_refusal) in
+          let _x_151 = ({ site = _x_145; reason = _x_150 } : (_, _) located) in
           let _x_152 = program_layer_ty_merge_nonempty a_149 in
           program_checker_expect _x_151 _x_152))
 
-and program_checker_check_layers (sig_ : _ signature) (p : int list) (x_1 : _ LayerTerms.t) : (layer_ty list, type_refusal) result =
+and program_checker_check_layers (sig_ : _ signature) (p : int list) (x_1 : _ LayerTerms.t) : (layer_ty list, (int list, type_reason) located) result =
   match (x_1 : _ LayerTerms.t) with
     | LayerTerms.Nil -> (let _x_2 = [] in
       Ok _x_2)
@@ -26507,9 +26601,9 @@ let program_def_decl_admits (d : DefDecl.t) (t : EffTy.t) : bool =
 
 
 
-(* LCNF mono: Effect4.Program.Checker.checkBodies._redArg (sig : Effect4.Program.Signature lcAny) (p : List Nat) (x.1 : List Effect4.Program.DefDecl) (x.2 : Effect4.Program.Effs lcAny) : Except Effect4.Program.TypeRefusal PUnit *)
+(* LCNF mono: Effect4.Program.Checker.checkBodies._redArg (sig : Effect4.Program.Signature lcAny) (p : List Nat) (x.1 : List Effect4.Program.DefDecl) (x.2 : Effect4.Program.Effs lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) PUnit *)
 
-let rec program_checker_check_bodies (sig_ : _ signature) (p : int list) (x_1 : DefDecl.t list) (x_2 : _ Effs.t) : (unit, type_refusal) result =
+let rec program_checker_check_bodies (sig_ : _ signature) (p : int list) (x_1 : DefDecl.t list) (x_2 : _ Effs.t) : (unit, (int list, type_reason) located) result =
   let[@local always] _jp_3 = fun () -> let _x_4 = () in
   Ok _x_4 in
   match x_1 with
@@ -26531,23 +26625,23 @@ let rec program_checker_check_bodies (sig_ : _ signature) (p : int list) (x_1 : 
                       let _x_34 = _x_33 :: _x_20 in
                       let _x_35 = p @ _x_34 in
                       program_checker_check_bodies sig_ _x_35 tail_7 tail_9) else (let _x_30 = TypeReason_bodyNotDeclared (name_1, a_28) in
-                      let _x_31 = ({ path = _x_24; reason = _x_30 } : type_refusal) in
+                      let _x_31 = ({ site = _x_24; reason = _x_30 } : (_, _) located) in
                       Error _x_31)))) else (match (head_6 : DefDecl.t) with
               | { DefDecl.name = name; _ } -> (let _x_11 = 0 in
                 let _x_12 = [] in
                 let _x_13 = _x_11 :: _x_12 in
                 let _x_14 = p @ _x_13 in
                 let _x_15 = TypeReason_definitionColumns name in
-                let _x_16 = ({ path = _x_14; reason = _x_15 } : type_refusal) in
+                let _x_16 = ({ site = _x_14; reason = _x_15 } : (_, _) located) in
                 Error _x_16)))
         | _ -> _jp_3 ())
     | _ -> _jp_3 ()
 
 
 
-(* LCNF mono: Effect4.Program.Checker.checkModule._redArg (sig : Effect4.Program.Signature lcAny) (x.1 : Effect4.Program.Eff lcAny) : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy *)
+(* LCNF mono: Effect4.Program.Checker.checkModule._redArg (sig : Effect4.Program.Signature lcAny) (x.1 : Effect4.Program.Eff lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy *)
 
-let program_checker_check_module (sig_ : _ signature) (x_1 : _ Eff.t) : (EffTy.t, type_refusal) result =
+let program_checker_check_module (sig_ : _ signature) (x_1 : _ Eff.t) : (EffTy.t, (int list, type_reason) located) result =
   match (x_1 : _ Eff.t) with
     | Eff.Defs (decls_2, bodies_3, main_4, layers_5) -> (let _x_6 = List.length decls_2 in
       let _x_7 = program_effs_to_list bodies_3 in
@@ -26572,16 +26666,16 @@ let program_checker_check_module (sig_ : _ signature) (x_1 : _ Eff.t) : (EffTy.t
                   | Error a_29 -> Error a_29
                   | Ok _ -> _x_23))) else (let _x_10 = [] in
         let _x_11 = TypeReason_definitionsMismatch (_x_6, _x_8) in
-        let _x_12 = ({ path = _x_10; reason = _x_11 } : type_refusal) in
+        let _x_12 = ({ site = _x_10; reason = _x_11 } : (_, _) located) in
         Error _x_12))
     | _ -> (let _x_32 = [] in
       program_checker_check sig_ _x_32 _x_32 x_1)
 
 
 
-(* LCNF mono: Effect4.Program.Sketch.check (s : Effect4.Program.Sketch) (app : Effect4.Program.SigApp) : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy *)
+(* LCNF mono: Effect4.Program.Sketch.check (s : Effect4.Program.Sketch) (app : Effect4.Program.SigApp) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy *)
 
-let program_sketch_check (s : sketch) (app : sig_app) : (EffTy.t, type_refusal) result =
+let program_sketch_check (s : sketch) (app : sig_app) : (EffTy.t, (int list, type_reason) located) result =
   match (s : sketch) with
     | { program = program; holes = holes } -> (let _x_1 = program_sig_app_with_holes app holes in
       let _x_2 = program_sig_app_signature _x_1 in
@@ -26589,9 +26683,9 @@ let program_sketch_check (s : sketch) (app : sig_app) : (EffTy.t, type_refusal) 
 
 
 
-(* LCNF mono: Effect4.Program.Sketch.sourceCheck (s : Effect4.Program.Sketch) (app : Effect4.Program.SigApp) : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy *)
+(* LCNF mono: Effect4.Program.Sketch.sourceCheck (s : Effect4.Program.Sketch) (app : Effect4.Program.SigApp) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy *)
 
-let program_sketch_source_check (s : sketch) (app : sig_app) : (EffTy.t, type_refusal) result =
+let program_sketch_source_check (s : sketch) (app : sig_app) : (EffTy.t, (int list, type_reason) located) result =
   match (s : sketch) with
     | { program = program; _ } -> (let _x_1 = program_eff_first_ref_fault program in
       match _x_1 with
@@ -26600,7 +26694,7 @@ let program_sketch_source_check (s : sketch) (app : sig_app) : (EffTy.t, type_re
         | Some val__4 -> (match val__4 with
             | fst_5, snd_6 -> (match snd_6 with
                 | fst_7, snd_8 -> (let _x_9 = TypeReason_referenceIllFormed (fst_7, snd_8) in
-                  let _x_10 = ({ path = fst_5; reason = _x_9 } : type_refusal) in
+                  let _x_10 = ({ site = fst_5; reason = _x_9 } : (_, _) located) in
                   Error _x_10))))
 
 
@@ -26684,9 +26778,9 @@ let rec list_map_tr_loop_at_program_table_bodies_spec_0 (x_1 : int list) (a_2 : 
 
 
 
-(* LCNF mono: Effect4.Program.Annotate.atProgram (a : List Nat) (env : List Effect4.Program.Ty) (r : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy) (children : List Effect4.Program.Table.Entry) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal Effect4.Program.EffTy) *)
+(* LCNF mono: Effect4.Program.Annotate.atProgram (a : List Nat) (env : List Effect4.Program.Ty) (r : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy) (children : List Effect4.Program.Table.Entry) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy) *)
 
-let program_annotate_at_program (a : int list) (env : Ty.t list) (r : (EffTy.t, type_refusal) result) (children : entry list) : entry list * (EffTy.t, type_refusal) result =
+let program_annotate_at_program (a : int list) (env : Ty.t list) (r : (EffTy.t, (int list, type_reason) located) result) (children : entry list) : entry list * (EffTy.t, (int list, type_reason) located) result =
   let _x_1 = NodeEnv_env env in
   let _x_2 = Some _x_1 in
   let _x_3 = Some r in
@@ -26718,9 +26812,9 @@ let program_annotate_unreached (a : int list) (n : _ node) : entry list =
 
 
 
-(* LCNF mono: Effect4.Program.Annotate.atNode._redArg (a : List Nat) (ctx : Effect4.Program.NodeEnv) (r : Except Effect4.Program.TypeRefusal lcAny) (children : List Effect4.Program.Table.Entry) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal lcAny) *)
+(* LCNF mono: Effect4.Program.Annotate.atNode._redArg (a : List Nat) (ctx : Effect4.Program.NodeEnv) (r : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) lcAny) (children : List Effect4.Program.Table.Entry) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) lcAny) *)
 
-let program_annotate_at_node (a : int list) (ctx : node_env) (r : (_, type_refusal) result) (children : entry list) : entry list * (_, type_refusal) result =
+let program_annotate_at_node (a : int list) (ctx : node_env) (r : (_, (int list, type_reason) located) result) (children : entry list) : entry list * (_, (int list, type_reason) located) result =
   let _x_1 = Some ctx in
   let _x_2 = None in
   let _x_3 = ({ path = a; env = _x_1; result = _x_2 } : entry) in
@@ -26729,9 +26823,9 @@ let program_annotate_at_node (a : int list) (ctx : node_env) (r : (_, type_refus
 
 
 
-(* LCNF mono: Effect4.Program.Annotate.checkStmts._redArg._lam_0 (snd : lcAny) (answer : Except Effect4.Program.TypeRefusal Effect4.Program.Ty) : Except Effect4.Program.TypeRefusal Effect4.Program.GenTy *)
+(* LCNF mono: Effect4.Program.Annotate.checkStmts._redArg._lam_0 (snd : lcAny) (answer : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.Ty) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.GenTy *)
 
-let program_annotate_check_stmts__red_arg__lam_0 snd_1 (answer : (Ty.t, type_refusal) result) : (gen_ty, type_refusal) result =
+let program_annotate_check_stmts__red_arg__lam_0 snd_1 (answer : (Ty.t, (int list, type_reason) located) result) : (gen_ty, (int list, type_reason) located) result =
   match snd_1 with
     | Error _ -> snd_1
     | Ok _ -> (match answer with
@@ -26745,9 +26839,9 @@ let program_annotate_check_stmts__red_arg__lam_0 snd_1 (answer : (Ty.t, type_ref
 
 
 
-(* LCNF mono: Effect4.Program.Annotate.checkStmts._redArg._lam_1 (snd : lcAny) (g : Effect4.Program.GenTy) (x.1 : List Effect4.Program.Ty) : Except Effect4.Program.TypeRefusal Effect4.Program.GenTy *)
+(* LCNF mono: Effect4.Program.Annotate.checkStmts._redArg._lam_1 (snd : lcAny) (g : Effect4.Program.GenTy) (x.1 : List Effect4.Program.Ty) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.GenTy *)
 
-let program_annotate_check_stmts__red_arg__lam_1 snd_1 (g : gen_ty) (x_1 : Ty.t list) : (gen_ty, type_refusal) result =
+let program_annotate_check_stmts__red_arg__lam_1 snd_1 (g : gen_ty) (x_1 : Ty.t list) : (gen_ty, (int list, type_reason) located) result =
   match snd_1 with
     | Error _ -> snd_1
     | Ok a_3 -> (let _x_4 = program_gen_ty_seq_t g a_3 in
@@ -26815,18 +26909,18 @@ let row_union_at_program_annotate_check_spec_1 (r : ServiceKey.t list) (s : Serv
 
 
 
-(* LCNF mono: Effect4.Program.Annotate.check._redArg (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (x.1 : Effect4.Program.Eff lcAny) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal Effect4.Program.EffTy)
-   Effect4.Program.Annotate.checkStmts._redArg (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (afterRet : Option (List Nat)) (p : List Nat) (x.1 : Effect4.Program.Stmts lcAny) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal Effect4.Program.GenTy)
-   Effect4.Program.Annotate.checkStmt._redArg (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (p : List Nat) (x.1 : Effect4.Program.Stmt lcAny) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal Effect4.Program.StmtTy)
-   Effect4.Program.Annotate.checkStmts._redArg._lam_2 (_x.1 : List Nat) (p : List Nat) (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (tail.2 : Effect4.Program.Stmts lcAny) (x.3 : PUnit) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal Effect4.Program.GenTy)
-   Effect4.Program.Annotate.checkStmts._redArg._lam_3 (env : List Effect4.Program.Ty) (_x.1 : List Nat) (p : List Nat) (s : Effect4.Program.Signature lcAny) (inLoop : Bool) (tail.2 : Effect4.Program.Stmts lcAny) (x.3 : Effect4.Program.GenTy) (binds : List Effect4.Program.Ty) (x.4 : PUnit) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal Effect4.Program.GenTy)
-   Effect4.Program.Annotate.checkStmts._redArg._lam_4 (_x.1 : List Nat) (_x.2 : List Nat) (p : List Nat) (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (tail.3 : Effect4.Program.Stmts lcAny) (x.4 : Except Effect4.Program.TypeRefusal Effect4.Program.Ty) (x.5 : PUnit) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal Effect4.Program.GenTy)
-   Effect4.Program.Annotate.checkAction._redArg (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (x.1 : Effect4.Program.ActionTerm lcAny) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal Effect4.Program.EffTy)
-   Effect4.Program.Annotate.checkEffs._redArg (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (qs : List Effect4.Program.ParamDecl) (x.1 : Effect4.Program.Effs lcAny) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal Effect4.Program.EffTy)
-   Effect4.Program.Annotate.checkLayer._redArg (s : Effect4.Program.Signature lcAny) (p : List Nat) (x.1 : Effect4.Program.LayerTerm lcAny) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal Effect4.Program.LayerTy)
-   Effect4.Program.Annotate.checkLayers._redArg (s : Effect4.Program.Signature lcAny) (p : List Nat) (x.1 : Effect4.Program.LayerTerms lcAny) : Prod (List Effect4.Program.Table.Entry) (Except Effect4.Program.TypeRefusal (List Effect4.Program.LayerTy)) *)
+(* LCNF mono: Effect4.Program.Annotate.check._redArg (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (x.1 : Effect4.Program.Eff lcAny) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy)
+   Effect4.Program.Annotate.checkStmts._redArg (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (afterRet : Option (List Nat)) (p : List Nat) (x.1 : Effect4.Program.Stmts lcAny) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.GenTy)
+   Effect4.Program.Annotate.checkStmt._redArg (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (p : List Nat) (x.1 : Effect4.Program.Stmt lcAny) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.StmtTy)
+   Effect4.Program.Annotate.checkStmts._redArg._lam_2 (_x.1 : List Nat) (p : List Nat) (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (tail.2 : Effect4.Program.Stmts lcAny) (x.3 : PUnit) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.GenTy)
+   Effect4.Program.Annotate.checkStmts._redArg._lam_3 (env : List Effect4.Program.Ty) (_x.1 : List Nat) (p : List Nat) (s : Effect4.Program.Signature lcAny) (inLoop : Bool) (tail.2 : Effect4.Program.Stmts lcAny) (x.3 : Effect4.Program.GenTy) (binds : List Effect4.Program.Ty) (x.4 : PUnit) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.GenTy)
+   Effect4.Program.Annotate.checkStmts._redArg._lam_4 (_x.1 : List Nat) (_x.2 : List Nat) (p : List Nat) (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (inLoop : Bool) (tail.3 : Effect4.Program.Stmts lcAny) (x.4 : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.Ty) (x.5 : PUnit) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.GenTy)
+   Effect4.Program.Annotate.checkAction._redArg (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (x.1 : Effect4.Program.ActionTerm lcAny) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy)
+   Effect4.Program.Annotate.checkEffs._redArg (s : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (p : List Nat) (qs : List Effect4.Program.ParamDecl) (x.1 : Effect4.Program.Effs lcAny) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy)
+   Effect4.Program.Annotate.checkLayer._redArg (s : Effect4.Program.Signature lcAny) (p : List Nat) (x.1 : Effect4.Program.LayerTerm lcAny) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.LayerTy)
+   Effect4.Program.Annotate.checkLayers._redArg (s : Effect4.Program.Signature lcAny) (p : List Nat) (x.1 : Effect4.Program.LayerTerms lcAny) : Prod (List Effect4.Program.Table.Entry) (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) (List Effect4.Program.LayerTy)) *)
 
-let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list) (x_1 : _ Eff.t) : entry list * (EffTy.t, type_refusal) result =
+let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list) (x_1 : _ Eff.t) : entry list * (EffTy.t, (int list, type_reason) located) result =
   let[@local always] _jp_2 = fun body -> let _x_3 = 0 in
   let _x_4 = [] in
   let _x_5 = _x_3 :: _x_4 in
@@ -27092,7 +27186,7 @@ let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list
                                     let _x_242 = ({ EffTy.answer = answer_10; EffTy.error = error_12; EffTy.requires = _x_241 } : EffTy.t) in
                                     let _x_243 = Ok _x_242 in
                                     _jp_227 _x_243)) else (let _x_236 = TypeReason_releaseFails error_13 in
-                                let _x_237 = ({ path = p; reason = _x_236 } : type_refusal) in
+                                let _x_237 = ({ site = p; reason = _x_236 } : (_, _) located) in
                                 let _x_238 = Error _x_237 in
                                 _jp_227 _x_238))))))))
     | Eff.ProvideLayer (layer_244, _, body_246) -> (let _x_247 = 0 in
@@ -27132,7 +27226,7 @@ let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list
           let[@local always] _jp_275 = fun _y_276 -> match b_8 with
             | fst_20, _ -> program_annotate_at_program p env _y_276 fst_20 in
           let _x_278 = TypeReason_serviceUnknown key_268 in
-          let _x_279 = ({ path = p; reason = _x_278 } : type_refusal) in
+          let _x_279 = ({ site = p; reason = _x_278 } : (_, _) located) in
           let _x_280 = service_ty key_268 in
           let _x_281 = program_checker_expect _x_279 _x_280 in
           match _x_281 with
@@ -27154,7 +27248,7 @@ let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list
                                 let _x_299 = ({ EffTy.answer = answer_12; EffTy.error = error_16; EffTy.requires = _x_298 } : EffTy.t) in
                                 let _x_300 = Ok _x_299 in
                                 _jp_275 _x_300)) else (let _x_294 = TypeReason_valueNotSubtype (key_268, a_288, a_284) in
-                            let _x_295 = ({ path = p; reason = _x_294 } : type_refusal) in
+                            let _x_295 = ({ site = p; reason = _x_294 } : (_, _) located) in
                             let _x_296 = Error _x_295 in
                             _jp_275 _x_296)))))))
     | Eff.CatchIf (test_301, body_302, handler_303) -> (let _x_304 = 0 in
@@ -27199,7 +27293,7 @@ let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list
                                     let _x_342 = ({ EffTy.answer = _x_338; EffTy.error = _x_340; EffTy.requires = _x_341 } : EffTy.t) in
                                     let _x_343 = Ok _x_342 in
                                     _jp_322 _x_343)))) else (let _x_333 = TypeReason_predicateNotBool a_329 in
-                        let _x_334 = ({ path = p; reason = _x_333 } : type_refusal) in
+                        let _x_334 = ({ site = p; reason = _x_333 } : (_, _) located) in
                         let _x_335 = Error _x_334 in
                         _jp_322 _x_335))))))
     | Eff.Select (scrutinee_344, decision_345, arm0_346, arm1_347) -> (let _x_348 = 0 in
@@ -27222,7 +27316,7 @@ let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list
             | { types = types; _ } -> (let _x_364 = program_decision_arms_in types decision_345 a_363 in
               match _x_364 with
                 | None -> (let _x_365 = program_select_refusal decision_345 a_363 in
-                  let _x_366 = ({ path = p; reason = _x_365 } : type_refusal) in
+                  let _x_366 = ({ site = p; reason = _x_365 } : (_, _) located) in
                   let _x_367 = Error _x_366 in
                   program_annotate_at_program p env _x_367 unreached_arms)
                 | Some val__369 -> (match val__369 with
@@ -27258,19 +27352,19 @@ let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list
           let _x_398 = Node_eff body_390 in
           let _x_399 = program_annotate_unreached _x_397 _x_398 in
           program_annotate_at_program p env _x_393 _x_399)
-        | Ok a_401 -> (let[@local always] _jp_402 = fun _y_403 _y_404 _y_405 _y_406 _y_407 -> if _y_404 then (let _x_411 = program_ty_normalize a_401 in
-            let _x_412 = program_ty_normalize _y_405 in
+        | Ok a_401 -> (let[@local always] _jp_402 = fun _y_403 _y_404 _y_405 _y_406 _y_407 -> if _y_406 then (let _x_411 = program_ty_normalize a_401 in
+            let _x_412 = program_ty_normalize _y_407 in
             let _x_413 = program_ty_sub _x_411 _x_412 in
-            if _x_413 then (let _x_417 = TypeReason_stepNotCursor (_y_406, _y_405) in
-              let _x_418 = ({ path = p; reason = _x_417 } : type_refusal) in
+            if _x_413 then (let _x_417 = TypeReason_stepNotCursor (_y_403, _y_407) in
+              let _x_418 = ({ site = p; reason = _x_417 } : (_, _) located) in
               let _x_419 = Error _x_418 in
-              _jp_8 _y_407 _x_419) else (let _x_414 = TypeReason_initialNotCursor (a_401, _y_405) in
-              let _x_415 = ({ path = p; reason = _x_414 } : type_refusal) in
+              _jp_8 _y_405 _x_419) else (let _x_414 = TypeReason_initialNotCursor (a_401, _y_407) in
+              let _x_415 = ({ site = p; reason = _x_414 } : (_, _) located) in
               let _x_416 = Error _x_415 in
-              _jp_8 _y_407 _x_416)) else (let _x_408 = TypeReason_predicateNotBool _y_403 in
-            let _x_409 = ({ path = p; reason = _x_408 } : type_refusal) in
+              _jp_8 _y_405 _x_416)) else (let _x_408 = TypeReason_predicateNotBool _y_404 in
+            let _x_409 = ({ site = p; reason = _x_408 } : (_, _) located) in
             let _x_410 = Error _x_409 in
-            _jp_8 _y_407 _x_410) in
+            _jp_8 _y_405 _x_410) in
           let[@local always] _jp_420 = fun _y_421 -> let _x_422 = [] in
           let _x_423 = _y_421 :: _x_422 in
           let _x_424 = env @ _x_423 in
@@ -27307,7 +27401,7 @@ let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list
                                       let _x_452 = program_ty_sub _x_451 _x_449 in
                                       if _x_452 then (let _x_453 = ({ EffTy.answer = a_444; EffTy.error = error_21; EffTy.requires = requires_20 } : EffTy.t) in
                                         let _x_454 = Ok _x_453 in
-                                        _jp_8 b_10 _x_454) else _jp_402 a_431 _x_447 _y_421 a_440 b_10) else _jp_402 a_431 _x_447 _y_421 a_440 b_10) else _jp_402 a_431 _x_447 _y_421 a_440 b_10)))))) in
+                                        _jp_8 b_10 _x_454) else _jp_402 a_440 a_431 b_10 _x_447 _y_421) else _jp_402 a_440 a_431 b_10 _x_447 _y_421) else _jp_402 a_440 a_431 b_10 _x_447 _y_421)))))) in
           match cursor_ty_385 with
             | None -> _jp_420 a_401
             | Some val__455 -> _jp_420 val__455))
@@ -27327,7 +27421,7 @@ let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list
           let _x_471 = program_ty_sub _x_469 _x_470 in
           if _x_471 then (match b_11 with
               | _, snd_26 -> _jp_462 snd_26) else (let _x_472 = TypeReason_maskRestoreExpected a_468 in
-            let _x_473 = ({ path = p; reason = _x_472 } : type_refusal) in
+            let _x_473 = ({ site = p; reason = _x_472 } : (_, _) located) in
             let _x_474 = Error _x_473 in
             _jp_462 _x_474)))
     | Eff.Defs (_, bodies_476, main_477, layers_478) -> (let _x_479 = program_checker_check s env p x_1 in
@@ -27377,7 +27471,7 @@ let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list
                   let _x_526 = program_effs_to_list args_501 in
                   let _x_527 = List.length _x_526 in
                   let _x_528 = TypeReason_invokeArity (name, _x_525, _x_527) in
-                  let _x_529 = ({ path = p; reason = _x_528 } : type_refusal) in
+                  let _x_529 = ({ site = p; reason = _x_528 } : (_, _) located) in
                   let _x_530 = Error _x_529 in
                   _jp_516 _x_530 in
                   let _x_531 = program_checker_term_opt s env p request_500 in
@@ -27427,14 +27521,14 @@ let rec program_annotate_check (s : _ signature) (env : Ty.t list) (p : int list
                           let _x_572 = Ok _x_571 in
                           _jp_559 _x_572))))
             | _ -> (let _x_573 = TypeReason_contextExpected a_565 in
-              let _x_574 = ({ path = p; reason = _x_573 } : type_refusal) in
+              let _x_574 = ({ site = p; reason = _x_573 } : (_, _) located) in
               let _x_575 = Error _x_574 in
               _jp_559 _x_575)))
     | _ -> (let _x_576 = program_checker_check s env p x_1 in
       let _x_577 = [] in
       program_annotate_at_program p env _x_576 _x_577)
 
-and program_annotate_check_stmts (s : _ signature) (env : Ty.t list) (in_loop : bool) (after_ret : int list option) (p : int list) (x_1 : _ Stmts.t) : entry list * (gen_ty, type_refusal) result =
+and program_annotate_check_stmts (s : _ signature) (env : Ty.t list) (in_loop : bool) (after_ret : int list option) (p : int list) (x_1 : _ Stmts.t) : entry list * (gen_ty, (int list, type_reason) located) result =
   match (x_1 : _ Stmts.t) with
     | Stmts.Nil -> (let _x_2 = NodeEnv_body (env, in_loop) in
       let _x_3 = program_checker_check_stmts s env in_loop after_ret p x_1 in
@@ -27446,29 +27540,29 @@ and program_annotate_check_stmts (s : _ signature) (env : Ty.t list) (in_loop : 
       let _x_11 = p @ _x_10 in
       let h = program_annotate_check_stmt s env in_loop _x_11 head_6 in
       match h with
-        | fst_1, snd_1 -> (let[@local always] _jp_12 = fun fst_2 _y_13 _y_14 -> let _x_15 = fst_1 @ fst_2 in
+        | fst_1, snd_1 -> (let[@local always] _jp_12 = fun _y_13 fst_2 _y_14 -> let _x_15 = fst_1 @ fst_2 in
           program_annotate_at_node p _y_13 _y_14 _x_15 in
-          let[@local always] _jp_17 = fun _y_18 _y_19 _y_20 -> match _y_18 with
-            | fst_3, _ -> _jp_12 fst_3 _y_19 _y_20 in
+          let[@local always] _jp_17 = fun _y_18 _y_19 _y_20 -> match _y_19 with
+            | fst_3, _ -> _jp_12 _y_18 fst_3 _y_20 in
           let[@local always] _jp_21 = fun _y_22 -> let _x_23 = NodeEnv_body (env, in_loop) in
           match after_ret with
             | None -> (match snd_1 with
                 | Error a_24 -> (let _x_25 = Error a_24 in
-                  _jp_17 _y_22 _x_23 _x_25)
+                  _jp_17 _x_23 _y_22 _x_25)
                 | Ok a_26 -> (match _y_22 with
                     | fst_4, snd_2 -> (let _f_27 = program_annotate_check_stmts__red_arg__lam_0 snd_2 in
                       let _f_28 = program_annotate_check_stmts__red_arg__lam_1 snd_2 in
                       match snd_2 with
                         | Error _ -> (let _x_30 = program_stmt_ty_fold _f_28 _f_27 snd_2 a_26 in
-                          _jp_12 fst_4 _x_23 _x_30)
+                          _jp_12 _x_23 fst_4 _x_30)
                         | Ok a_31 -> (let _x_32 = program_gen_ty_broken a_31 in
                           let _x_33 = Ok _x_32 in
                           let _x_34 = program_stmt_ty_fold _f_28 _f_27 _x_33 a_26 in
-                          _jp_12 fst_4 _x_23 _x_34))))
+                          _jp_12 _x_23 fst_4 _x_34))))
             | Some val__35 -> (let _x_36 = TypeReason_returnNotLast in
-              let _x_37 = ({ path = val__35; reason = _x_36 } : type_refusal) in
+              let _x_37 = ({ site = val__35; reason = _x_36 } : (_, _) located) in
               let _x_38 = Error _x_37 in
-              _jp_17 _y_22 _x_23 _x_38) in
+              _jp_17 _x_23 _y_22 _x_38) in
           match snd_1 with
             | Error a_39 -> (match (head_6 : _ Stmt.t) with
                 | Stmt.BindYield _ -> (let _x_41 = 1 in
@@ -27492,7 +27586,7 @@ and program_annotate_check_stmts (s : _ signature) (env : Ty.t list) (in_loop : 
               let _x_58 = program_stmt_ty_fold _f_55 _f_56 _f_54 a_53 _x_57 in
               _jp_21 _x_58)))
 
-and program_annotate_check_stmt (s : _ signature) (env : Ty.t list) (in_loop : bool) (p : int list) (x_1 : _ Stmt.t) : entry list * (stmt_ty, type_refusal) result =
+and program_annotate_check_stmt (s : _ signature) (env : Ty.t list) (in_loop : bool) (p : int list) (x_1 : _ Stmt.t) : entry list * (stmt_ty, (int list, type_reason) located) result =
   match (x_1 : _ Stmt.t) with
     | Stmt.BindYield effect_2 -> (let _x_3 = 0 in
       let _x_4 = [] in
@@ -27569,7 +27663,7 @@ and program_annotate_check_stmt (s : _ signature) (env : Ty.t list) (in_loop : b
                             let _x_72 = StmtTy_step (_x_71, _x_44) in
                             let _x_73 = Ok _x_72 in
                             _jp_51 _x_73))))) else (let _x_62 = TypeReason_predicateNotBool a_58 in
-            let _x_63 = ({ path = p; reason = _x_62 } : type_refusal) in
+            let _x_63 = ({ site = p; reason = _x_62 } : (_, _) located) in
             let _x_64 = Error _x_63 in
             _jp_51 _x_64)))
     | Stmt.WhileTrue body_74 -> (let _x_75 = true in
@@ -27595,14 +27689,14 @@ and program_annotate_check_stmt (s : _ signature) (env : Ty.t list) (in_loop : b
       let _x_93 = [] in
       program_annotate_at_node p _x_91 _x_92 _x_93)
 
-and program_annotate_check_stmts__red_arg__lam_2 (_x_1 : int list) (p : int list) (s : _ signature) (env : Ty.t list) (in_loop : bool) (tail_2 : _ Stmts.t) (x_3 : unit) : entry list * (gen_ty, type_refusal) result =
+and program_annotate_check_stmts__red_arg__lam_2 (_x_1 : int list) (p : int list) (s : _ signature) (env : Ty.t list) (in_loop : bool) (tail_2 : _ Stmts.t) (x_3 : unit) : entry list * (gen_ty, (int list, type_reason) located) result =
   let _x_4 = None in
   let _x_5 = 1 in
   let _x_6 = _x_5 :: _x_1 in
   let _x_7 = p @ _x_6 in
   program_annotate_check_stmts s env in_loop _x_4 _x_7 tail_2
 
-and program_annotate_check_stmts__red_arg__lam_3 (env : Ty.t list) (_x_1 : int list) (p : int list) (s : _ signature) (in_loop : bool) (tail_2 : _ Stmts.t) (x_3 : gen_ty) (binds : Ty.t list) (x_4 : unit) : entry list * (gen_ty, type_refusal) result =
+and program_annotate_check_stmts__red_arg__lam_3 (env : Ty.t list) (_x_1 : int list) (p : int list) (s : _ signature) (in_loop : bool) (tail_2 : _ Stmts.t) (x_3 : gen_ty) (binds : Ty.t list) (x_4 : unit) : entry list * (gen_ty, (int list, type_reason) located) result =
   let _x_5 = env @ binds in
   let _x_6 = None in
   let _x_7 = 1 in
@@ -27610,14 +27704,14 @@ and program_annotate_check_stmts__red_arg__lam_3 (env : Ty.t list) (_x_1 : int l
   let _x_9 = p @ _x_8 in
   program_annotate_check_stmts s _x_5 in_loop _x_6 _x_9 tail_2
 
-and program_annotate_check_stmts__red_arg__lam_4 (_x_1 : int list) (_x_2 : int list) (p : int list) (s : _ signature) (env : Ty.t list) (in_loop : bool) (tail_3 : _ Stmts.t) (x_4 : (Ty.t, type_refusal) result) (x_5 : unit) : entry list * (gen_ty, type_refusal) result =
+and program_annotate_check_stmts__red_arg__lam_4 (_x_1 : int list) (_x_2 : int list) (p : int list) (s : _ signature) (env : Ty.t list) (in_loop : bool) (tail_3 : _ Stmts.t) (x_4 : (Ty.t, (int list, type_reason) located) result) (x_5 : unit) : entry list * (gen_ty, (int list, type_reason) located) result =
   let _x_6 = Some _x_1 in
   let _x_7 = 1 in
   let _x_8 = _x_7 :: _x_2 in
   let _x_9 = p @ _x_8 in
   program_annotate_check_stmts s env in_loop _x_6 _x_9 tail_3
 
-and program_annotate_check_action (s : _ signature) (env : Ty.t list) (p : int list) (x_1 : _ ActionTerm.t) : entry list * (EffTy.t, type_refusal) result =
+and program_annotate_check_action (s : _ signature) (env : Ty.t list) (p : int list) (x_1 : _ ActionTerm.t) : entry list * (EffTy.t, (int list, type_reason) located) result =
   let[@local always] _jp_2 = fun entrants -> let _x_3 = 0 in
   let _x_4 = [] in
   let _x_5 = _x_3 :: _x_4 in
@@ -27668,7 +27762,7 @@ and program_annotate_check_action (s : _ signature) (env : Ty.t list) (p : int l
                         let _x_50 = ({ EffTy.answer = _x_48; EffTy.error = _x_49; EffTy.requires = requires_1 } : EffTy.t) in
                         let _x_51 = Ok _x_50 in
                         _jp_33 _x_51)) else (let _x_45 = TypeReason_scopeExpected a_41 in
-                    let _x_46 = ({ path = p; reason = _x_45 } : type_refusal) in
+                    let _x_46 = ({ site = p; reason = _x_45 } : (_, _) located) in
                     let _x_47 = Error _x_46 in
                     _jp_33 _x_47)))))
     | ActionTerm.ForkScoped (program_52, _) -> (let _x_54 = 0 in
@@ -27698,7 +27792,7 @@ and program_annotate_check_action (s : _ signature) (env : Ty.t list) (p : int l
       let _x_74 = [] in
       program_annotate_at_node p _x_72 _x_73 _x_74)
 
-and program_annotate_check_effs (s : _ signature) (env : Ty.t list) (p : int list) (qs : ParamDecl.t list) (x_1 : _ Effs.t) : entry list * (EffTy.t, type_refusal) result =
+and program_annotate_check_effs (s : _ signature) (env : Ty.t list) (p : int list) (qs : ParamDecl.t list) (x_1 : _ Effs.t) : entry list * (EffTy.t, (int list, type_reason) located) result =
   match (x_1 : _ Effs.t) with
     | Effs.Nil -> (let _x_2 = program_node_env_spine env qs in
       let _x_3 = program_checker_check_effs s env p qs x_1 in
@@ -27771,11 +27865,11 @@ and program_annotate_check_effs (s : _ signature) (env : Ty.t list) (p : int lis
                                         let _x_65 = ({ EffTy.answer = _x_62; EffTy.error = _x_63; EffTy.requires = _x_64 } : EffTy.t) in
                                         let _x_66 = Ok _x_65 in
                                         _jp_48 _x_66))))) else (let _x_57 = TypeReason_bodyNotDeclared (name, a_55) in
-                        let _x_58 = ({ path = _x_37; reason = _x_57 } : type_refusal) in
+                        let _x_58 = ({ site = _x_37; reason = _x_57 } : (_, _) located) in
                         let _x_59 = Error _x_58 in
                         _jp_48 _x_59))))))
 
-and program_annotate_check_layer (s : _ signature) (p : int list) (x_1 : _ LayerTerm.t) : entry list * (layer_ty, type_refusal) result =
+and program_annotate_check_layer (s : _ signature) (p : int list) (x_1 : _ LayerTerm.t) : entry list * (layer_ty, (int list, type_reason) located) result =
   match (x_1 : _ LayerTerm.t) with
     | LayerTerm.Effect (key_2, body_3) -> (let _x_4 = [] in
       let _x_5 = 0 in
@@ -27791,7 +27885,7 @@ and program_annotate_check_layer (s : _ signature) (p : int list) (x_1 : _ Layer
               _jp_9 _x_13)
             | Ok a_14 -> (match (s : _ signature) with
                 | { service_ty = service_ty; _ } -> (let _x_15 = TypeReason_serviceUnknown key_2 in
-                  let _x_16 = ({ path = p; reason = _x_15 } : type_refusal) in
+                  let _x_16 = ({ site = p; reason = _x_15 } : (_, _) located) in
                   let _x_17 = service_ty key_2 in
                   let _x_18 = program_checker_expect _x_16 _x_17 in
                   match _x_18 with
@@ -27806,7 +27900,7 @@ and program_annotate_check_layer (s : _ signature) (p : int list) (x_1 : _ Layer
                             let _x_30 = ({ out = _x_28; error = error; requires = _x_29 } : layer_ty) in
                             let _x_31 = Ok _x_30 in
                             _jp_9 _x_31) else (let _x_25 = TypeReason_valueNotSubtype (key_2, answer, a_21) in
-                            let _x_26 = ({ path = p; reason = _x_25 } : type_refusal) in
+                            let _x_26 = ({ site = p; reason = _x_25 } : (_, _) located) in
                             let _x_27 = Error _x_26 in
                             _jp_9 _x_27)))))))
     | LayerTerm.EffectDiscard body_32 -> (let _x_33 = [] in
@@ -27931,7 +28025,7 @@ and program_annotate_check_layer (s : _ signature) (p : int list) (x_1 : _ Layer
             | Error a_137 -> (let _x_138 = Error a_137 in
               _jp_134 _x_138)
             | Ok a_139 -> (let _x_140 = TypeReason_mergeAllEmpty in
-              let _x_141 = ({ path = _x_132; reason = _x_140 } : type_refusal) in
+              let _x_141 = ({ site = _x_132; reason = _x_140 } : (_, _) located) in
               let _x_142 = program_layer_ty_merge_nonempty a_139 in
               let _x_143 = program_checker_expect _x_141 _x_142 in
               _jp_134 _x_143)))
@@ -27940,7 +28034,7 @@ and program_annotate_check_layer (s : _ signature) (p : int list) (x_1 : _ Layer
       let _x_146 = [] in
       program_annotate_at_node p _x_144 _x_145 _x_146)
 
-and program_annotate_check_layers (s : _ signature) (p : int list) (x_1 : _ LayerTerms.t) : entry list * (layer_ty list, type_refusal) result =
+and program_annotate_check_layers (s : _ signature) (p : int list) (x_1 : _ LayerTerms.t) : entry list * (layer_ty list, (int list, type_reason) located) result =
   match (x_1 : _ LayerTerms.t) with
     | LayerTerms.Nil -> (let _x_2 = NodeEnv_closed in
       let _x_3 = program_checker_check_layers s p x_1 in
@@ -28047,9 +28141,9 @@ let program_annotate (s : _ signature) (env0 : Ty.t list) (p : _ Eff.t) =
 
 
 
-(* LCNF mono: Effect4.Program.annotateModule._redArg (s : Effect4.Program.Signature lcAny) (root : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy) (x.1 : Effect4.Program.Eff lcAny) : List Effect4.Program.Table.Entry *)
+(* LCNF mono: Effect4.Program.annotateModule._redArg (s : Effect4.Program.Signature lcAny) (root : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy) (x.1 : Effect4.Program.Eff lcAny) : List Effect4.Program.Table.Entry *)
 
-let program_annotate_module (s : _ signature) (root : (EffTy.t, type_refusal) result) (x_1 : _ Eff.t) : entry list =
+let program_annotate_module (s : _ signature) (root : (EffTy.t, (int list, type_reason) located) result) (x_1 : _ Eff.t) : entry list =
   match (x_1 : _ Eff.t) with
     | Eff.Defs (decls_2, bodies_3, main_4, layers_5) -> (let _x_6 = [] in
       let _x_7 = NodeEnv_env _x_6 in
@@ -28118,7 +28212,7 @@ let program_table_at_source (sites : int list list) (fault : (int list * (int li
                 | _ :: tail_9 -> (let _x_10 = NodeEnv_env _x_6 in
                   let _x_11 = Some _x_10 in
                   let _x_12 = TypeReason_referenceIllFormed (fst_4, snd_5) in
-                  let _x_13 = ({ path = fst_2; reason = _x_12 } : type_refusal) in
+                  let _x_13 = ({ site = fst_2; reason = _x_12 } : (_, _) located) in
                   let _x_14 = Error _x_13 in
                   let _x_15 = Some _x_14 in
                   let _x_16 = ({ path = _x_6; env = _x_11; result = _x_15 } : entry) in
@@ -28174,9 +28268,9 @@ let program_check_run (x_1 : check_input) : verdict =
 
 
 
-(* LCNF mono: Effect4.Run.Kit.check (app : Effect4.Program.SigApp) (program : Effect4.Program.Eff Effect4.Program.NativeOp) : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy *)
+(* LCNF mono: Effect4.Run.Kit.check (app : Effect4.Program.SigApp) (program : Effect4.Program.Eff Effect4.Program.NativeOp) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy *)
 
-let run_kit_check (app : sig_app) (program : NativeOp.t Eff.t) : (EffTy.t, type_refusal) result =
+let run_kit_check (app : sig_app) (program : NativeOp.t Eff.t) : (EffTy.t, (int list, type_reason) located) result =
   let _x_1 = [] in
   let _x_2 = CheckInput_module (app, _x_1, program) in
   let _x_3 = program_check_run _x_2 in
@@ -30132,116 +30226,10 @@ let run_kit_admit (app : sig_app) (program : NativeOp.t Eff.t) : admit_refusal o
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RowReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.ProgramGen.ServiceNameC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_row_reason_c_shape_doc : shape_doc =
-  let _x_1 = "RowReason" in
-  let _x_2 = "notExternal" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "notAsync" in
-  let _x_8 = 1 in
-  let _x_9 = _x_8, _x_4 in
-  let _x_10 = _x_7, _x_9 in
-  let _x_11 = "builtinCollision" in
-  let _x_12 = 2 in
-  let _x_13 = _x_12, _x_4 in
-  let _x_14 = _x_11, _x_13 in
-  let _x_15 = "valueRowTrailing" in
-  let _x_16 = 3 in
-  let _x_17 = _x_16, _x_4 in
-  let _x_18 = _x_15, _x_17 in
-  let _x_19 = "internalHandle" in
-  let _x_20 = 4 in
-  let _x_21 = "column" in
-  let _x_22 = Shape_string in
-  let _x_23 = _x_21, _x_22 in
-  let _x_24 = _x_23 :: _x_4 in
-  let _x_25 = _x_20, _x_24 in
-  let _x_26 = _x_19, _x_25 in
-  let _x_27 = "emptyColumn" in
-  let _x_28 = 5 in
-  let _x_29 = _x_28, _x_24 in
-  let _x_30 = _x_27, _x_29 in
-  let _x_31 = "templateNotAdmissible" in
-  let _x_32 = 6 in
-  let _x_33 = _x_32, _x_24 in
-  let _x_34 = _x_31, _x_33 in
-  let _x_35 = "notWellScoped" in
-  let _x_36 = 7 in
-  let _x_37 = _x_36, _x_4 in
-  let _x_38 = _x_35, _x_37 in
-  let _x_39 = _x_38 :: _x_4 in
-  let _x_40 = _x_34 :: _x_39 in
-  let _x_41 = _x_30 :: _x_40 in
-  let _x_42 = _x_26 :: _x_41 in
-  let _x_43 = _x_18 :: _x_42 in
-  let _x_44 = _x_14 :: _x_43 in
-  let _x_45 = _x_10 :: _x_44 in
-  let _x_46 = _x_6 :: _x_45 in
-  let _x_47 = Shape_sum (_x_1, _x_46) in
-  ({ root = _x_47; defs = _x_4 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.RowArgC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_program_gen_row_arg_c_shape_doc : shape_doc =
-  let _x_1 = "RowArg" in
-  let _x_2 = "name" in
-  let _x_3 = 0 in
-  let _x_4 = "spelling" in
-  let _x_5 = Shape_string in
-  let _x_6 = [] in
-  let _x_7 = _x_4, _x_5 in
-  let _x_8 = _x_7 :: _x_6 in
-  let _x_9 = _x_3, _x_8 in
-  let _x_10 = _x_2, _x_9 in
-  let _x_11 = "str" in
-  let _x_12 = 1 in
-  let _x_13 = "value" in
-  let _x_14 = _x_13, _x_5 in
-  let _x_15 = _x_14 :: _x_6 in
-  let _x_16 = _x_12, _x_15 in
-  let _x_17 = _x_11, _x_16 in
-  let _x_18 = _x_17 :: _x_6 in
-  let _x_19 = _x_10 :: _x_18 in
-  let _x_20 = Shape_sum (_x_1, _x_19) in
-  ({ root = _x_20; defs = _x_6 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.ServiceReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_service_reason_c_shape_doc : shape_doc =
-  let _x_1 = "ServiceReason" in
-  let _x_2 = "reservedName" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "nonFlatCarrier" in
-  let _x_8 = 1 in
-  let _x_9 = _x_8, _x_4 in
-  let _x_10 = _x_7, _x_9 in
-  let _x_11 = "conflictsBuiltin" in
-  let _x_12 = 2 in
-  let _x_13 = _x_12, _x_4 in
-  let _x_14 = _x_11, _x_13 in
-  let _x_15 = _x_14 :: _x_4 in
-  let _x_16 = _x_10 :: _x_15 in
-  let _x_17 = _x_6 :: _x_16 in
-  let _x_18 = Shape_sum (_x_1, _x_17) in
-  ({ root = _x_18; defs = _x_4 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.ServiceTypeCodeC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_program_gen_service_type_code_c_shape_doc : shape_doc =
-  let _x_1 = "ServiceTypeCode" in
+let store_program_gen_service_name_c_shape_doc : shape_doc =
+  let _x_1 = "ServiceName" in
   let _x_2 = "value" in
   let _x_3 = Shape_nat in
   let _x_4 = [] in
@@ -30252,10 +30240,10 @@ let store_program_gen_service_type_code_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.ProgramGen.ServiceNameC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.ProgramGen.ServiceTypeCodeC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_program_gen_service_name_c_shape_doc : shape_doc =
-  let _x_1 = "ServiceName" in
+let store_program_gen_service_type_code_c_shape_doc : shape_doc =
+  let _x_1 = "ServiceTypeCode" in
   let _x_2 = "value" in
   let _x_3 = Shape_nat in
   let _x_4 = [] in
@@ -30284,178 +30272,6 @@ let store_program_gen_service_key_c_shape_doc : shape_doc =
           let _x_11 = Shape_struct (_x_4, _x_10) in
           let _x_12 = _x_2 @ _x_2 in
           ({ root = _x_11; defs = _x_12 } : shape_doc)))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.DeclReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_decl_reason_c_shape_doc : shape_doc =
-  let _x_1 = "DeclReason" in
-  let _x_2 = "internalSpelling" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "typeVariable" in
-  let _x_8 = 1 in
-  let _x_9 = _x_8, _x_4 in
-  let _x_10 = _x_7, _x_9 in
-  let _x_11 = "applied" in
-  let _x_12 = 2 in
-  let _x_13 = _x_12, _x_4 in
-  let _x_14 = _x_11, _x_13 in
-  let _x_15 = "handleAtName" in
-  let _x_16 = 3 in
-  let _x_17 = _x_16, _x_4 in
-  let _x_18 = _x_15, _x_17 in
-  let _x_19 = "undeclaredName" in
-  let _x_20 = 4 in
-  let _x_21 = _x_20, _x_4 in
-  let _x_22 = _x_19, _x_21 in
-  let _x_23 = _x_22 :: _x_4 in
-  let _x_24 = _x_18 :: _x_23 in
-  let _x_25 = _x_14 :: _x_24 in
-  let _x_26 = _x_10 :: _x_25 in
-  let _x_27 = _x_6 :: _x_26 in
-  let _x_28 = Shape_sum (_x_1, _x_27) in
-  ({ root = _x_28; defs = _x_4 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.SigRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_sig_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_row_reason_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = store_program_gen_row_arg_c_shape_doc in
-      match (_x_3 : shape_doc) with
-        | { root = root_1; _ } -> (let _x_4 = "reason" in
-          let _x_5 = _x_4, root in
-          let _x_6 = _x_5 :: _x_2 in
-          let _x_7 = store_refusals_gen_service_reason_c_shape_doc in
-          match (_x_7 : shape_doc) with
-            | { root = root_2; _ } -> (let _x_8 = _x_2 @ _x_2 in
-              let _x_9 = store_program_gen_service_type_code_c_shape_doc in
-              match (_x_9 : shape_doc) with
-                | { root = root_3; _ } -> (let _x_10 = "key" in
-                  let _x_11 = Shape_string in
-                  let _x_12 = Shape_list root_1 in
-                  let _x_13 = Shape_pair (_x_11, _x_12) in
-                  let _x_14 = _x_10, _x_13 in
-                  let _x_15 = _x_14 :: _x_2 in
-                  let _x_16 = store_program_gen_service_key_c_shape_doc in
-                  match (_x_16 : shape_doc) with
-                    | { root = root_4; defs = defs } -> (let _x_17 = _x_4, root_2 in
-                      let _x_18 = _x_17 :: _x_2 in
-                      let _x_19 = store_refusals_gen_decl_reason_c_shape_doc in
-                      match (_x_19 : shape_doc) with
-                        | { root = root_5; _ } -> (let _x_20 = "index" in
-                          let _x_21 = Shape_nat in
-                          let _x_22 = _x_20, _x_21 in
-                          let _x_23 = _x_22 :: _x_6 in
-                          let _x_24 = "row" in
-                          let _x_25 = 0 in
-                          let _x_26 = _x_25, _x_23 in
-                          let _x_27 = _x_24, _x_26 in
-                          let _x_28 = "code" in
-                          let _x_29 = _x_28, root_3 in
-                          let _x_30 = _x_29 :: _x_2 in
-                          let _x_31 = "SigRefusal" in
-                          let _x_32 = "duplicateRow" in
-                          let _x_33 = 1 in
-                          let _x_34 = _x_33, _x_15 in
-                          let _x_35 = _x_32, _x_34 in
-                          let _x_36 = "service" in
-                          let _x_37 = 2 in
-                          let _x_38 = _x_22 :: _x_18 in
-                          let _x_39 = _x_37, _x_38 in
-                          let _x_40 = _x_36, _x_39 in
-                          let _x_41 = "duplicateCode" in
-                          let _x_42 = 3 in
-                          let _x_43 = _x_42, _x_30 in
-                          let _x_44 = _x_41, _x_43 in
-                          let _x_45 = "unservedKey" in
-                          let _x_46 = 4 in
-                          let _x_47 = _x_24, _x_21 in
-                          let _x_48 = _x_10, root_4 in
-                          let _x_49 = _x_48 :: _x_2 in
-                          let _x_50 = _x_47 :: _x_49 in
-                          let _x_51 = _x_46, _x_50 in
-                          let _x_52 = _x_45, _x_51 in
-                          let _x_53 = "decl" in
-                          let _x_54 = 5 in
-                          let _x_55 = _x_4, root_5 in
-                          let _x_56 = _x_55 :: _x_2 in
-                          let _x_57 = _x_22 :: _x_56 in
-                          let _x_58 = _x_54, _x_57 in
-                          let _x_59 = _x_53, _x_58 in
-                          let _x_60 = "rowName" in
-                          let _x_61 = 6 in
-                          let _x_62 = _x_61, _x_57 in
-                          let _x_63 = _x_60, _x_62 in
-                          let _x_64 = "conflictingDecl" in
-                          let _x_65 = 7 in
-                          let _x_66 = "name" in
-                          let _x_67 = _x_66, _x_11 in
-                          let _x_68 = _x_67 :: _x_2 in
-                          let _x_69 = _x_65, _x_68 in
-                          let _x_70 = _x_64, _x_69 in
-                          let _x_71 = "unguardedDecl" in
-                          let _x_72 = 8 in
-                          let _x_73 = _x_72, _x_68 in
-                          let _x_74 = _x_71, _x_73 in
-                          let _x_75 = _x_74 :: _x_2 in
-                          let _x_76 = _x_70 :: _x_75 in
-                          let _x_77 = _x_63 :: _x_76 in
-                          let _x_78 = _x_59 :: _x_77 in
-                          let _x_79 = _x_52 :: _x_78 in
-                          let _x_80 = _x_44 :: _x_79 in
-                          let _x_81 = _x_40 :: _x_80 in
-                          let _x_82 = _x_35 :: _x_81 in
-                          let _x_83 = _x_27 :: _x_82 in
-                          let _x_84 = Shape_sum (_x_31, _x_83) in
-                          let _x_85 = _x_8 @ _x_8 in
-                          let _x_86 = _x_85 @ _x_2 in
-                          let _x_87 = _x_86 @ _x_2 in
-                          let _x_88 = _x_87 @ defs in
-                          let _x_89 = _x_88 @ _x_2 in
-                          let _x_90 = _x_89 @ _x_2 in
-                          ({ root = _x_84; defs = _x_90 } : shape_doc)))))))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.FormationReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_formation_reason_c_shape_doc : shape_doc =
-  let _x_1 = "FormationReason" in
-  let _x_2 = "repeatedField" in
-  let _x_3 = 0 in
-  let _x_4 = "name" in
-  let _x_5 = Shape_string in
-  let _x_6 = [] in
-  let _x_7 = _x_4, _x_5 in
-  let _x_8 = _x_7 :: _x_6 in
-  let _x_9 = _x_3, _x_8 in
-  let _x_10 = _x_2, _x_9 in
-  let _x_11 = "mapKey" in
-  let _x_12 = 1 in
-  let _x_13 = _x_12, _x_6 in
-  let _x_14 = _x_11, _x_13 in
-  let _x_15 = "deferredError" in
-  let _x_16 = 2 in
-  let _x_17 = _x_16, _x_6 in
-  let _x_18 = _x_15, _x_17 in
-  let _x_19 = "typeVariable" in
-  let _x_20 = 3 in
-  let _x_21 = _x_20, _x_6 in
-  let _x_22 = _x_19, _x_21 in
-  let _x_23 = _x_22 :: _x_6 in
-  let _x_24 = _x_18 :: _x_23 in
-  let _x_25 = _x_14 :: _x_24 in
-  let _x_26 = _x_10 :: _x_25 in
-  let _x_27 = Shape_sum (_x_1, _x_26) in
-  ({ root = _x_27; defs = _x_6 } : shape_doc)
 
 
 
@@ -30683,6 +30499,148 @@ let store_program_gen_ty_c_defs : (string * shape) list =
 
 
 
+(* LCNF mono: Effect4.Store.ProgramGen.EffTyC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_program_gen_eff_ty_c_shape_doc : shape_doc =
+  let _x_1 = store_program_gen_service_key_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "answer" in
+      let _x_3 = "Ty" in
+      let _x_4 = Shape_named _x_3 in
+      let _x_5 = _x_2, _x_4 in
+      let _x_6 = "EffTy" in
+      let _x_7 = store_program_gen_ty_c_defs in
+      let _x_8 = "error" in
+      let _x_9 = _x_8, _x_4 in
+      let _x_10 = "requires" in
+      let _x_11 = Shape_list root in
+      let _x_12 = _x_10, _x_11 in
+      let _x_13 = [] in
+      let _x_14 = _x_12 :: _x_13 in
+      let _x_15 = _x_9 :: _x_14 in
+      let _x_16 = _x_5 :: _x_15 in
+      let _x_17 = Shape_struct (_x_6, _x_16) in
+      let _x_18 = _x_7 @ defs in
+      ({ root = _x_17; defs = _x_18 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.FoldTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_fold_typing_reason_c_shape_doc : shape_doc =
+  let _x_1 = "FoldTypingReason" in
+  let _x_2 = "notList" in
+  let _x_3 = 0 in
+  let _x_4 = "list" in
+  let _x_5 = "Ty" in
+  let _x_6 = Shape_named _x_5 in
+  let _x_7 = store_program_gen_ty_c_defs in
+  let _x_8 = _x_4, _x_6 in
+  let _x_9 = [] in
+  let _x_10 = _x_8 :: _x_9 in
+  let _x_11 = _x_3, _x_10 in
+  let _x_12 = _x_2, _x_11 in
+  let _x_13 = "initialNotAccumulator" in
+  let _x_14 = 1 in
+  let _x_15 = "initial" in
+  let _x_16 = _x_15, _x_6 in
+  let _x_17 = "accumulator" in
+  let _x_18 = _x_17, _x_6 in
+  let _x_19 = _x_18 :: _x_9 in
+  let _x_20 = _x_16 :: _x_19 in
+  let _x_21 = _x_14, _x_20 in
+  let _x_22 = _x_13, _x_21 in
+  let _x_23 = "bodyNotAccumulator" in
+  let _x_24 = 2 in
+  let _x_25 = "body" in
+  let _x_26 = _x_25, _x_6 in
+  let _x_27 = _x_26 :: _x_19 in
+  let _x_28 = _x_24, _x_27 in
+  let _x_29 = _x_23, _x_28 in
+  let _x_30 = _x_29 :: _x_9 in
+  let _x_31 = _x_22 :: _x_30 in
+  let _x_32 = _x_12 :: _x_31 in
+  let _x_33 = Shape_sum (_x_1, _x_32) in
+  ({ root = _x_33; defs = _x_7 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.FoldTermRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_fold_term_refusal_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_fold_typing_reason_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "FoldTermRefusal" in
+      let _x_3 = "path" in
+      let _x_4 = Shape_nat in
+      let _x_5 = [] in
+      let _x_6 = Shape_list _x_4 in
+      let _x_7 = _x_3, _x_6 in
+      let _x_8 = "reason" in
+      let _x_9 = _x_8, root in
+      let _x_10 = _x_9 :: _x_5 in
+      let _x_11 = _x_7 :: _x_10 in
+      let _x_12 = Shape_struct (_x_2, _x_11) in
+      let _x_13 = _x_5 @ defs in
+      ({ root = _x_12; defs = _x_13 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.FoldCauseRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_fold_cause_refusal_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_fold_term_refusal_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "FoldCauseRefusal" in
+      let _x_3 = "causePath" in
+      let _x_4 = Shape_nat in
+      let _x_5 = [] in
+      let _x_6 = Shape_list _x_4 in
+      let _x_7 = _x_3, _x_6 in
+      let _x_8 = "term" in
+      let _x_9 = _x_8, root in
+      let _x_10 = _x_9 :: _x_5 in
+      let _x_11 = _x_7 :: _x_10 in
+      let _x_12 = Shape_struct (_x_2, _x_11) in
+      let _x_13 = _x_5 @ defs in
+      ({ root = _x_12; defs = _x_13 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.FormationReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_formation_reason_c_shape_doc : shape_doc =
+  let _x_1 = "FormationReason" in
+  let _x_2 = "repeatedField" in
+  let _x_3 = 0 in
+  let _x_4 = "name" in
+  let _x_5 = Shape_string in
+  let _x_6 = [] in
+  let _x_7 = _x_4, _x_5 in
+  let _x_8 = _x_7 :: _x_6 in
+  let _x_9 = _x_3, _x_8 in
+  let _x_10 = _x_2, _x_9 in
+  let _x_11 = "mapKey" in
+  let _x_12 = 1 in
+  let _x_13 = _x_12, _x_6 in
+  let _x_14 = _x_11, _x_13 in
+  let _x_15 = "deferredError" in
+  let _x_16 = 2 in
+  let _x_17 = _x_16, _x_6 in
+  let _x_18 = _x_15, _x_17 in
+  let _x_19 = "typeVariable" in
+  let _x_20 = 3 in
+  let _x_21 = _x_20, _x_6 in
+  let _x_22 = _x_19, _x_21 in
+  let _x_23 = _x_22 :: _x_6 in
+  let _x_24 = _x_18 :: _x_23 in
+  let _x_25 = _x_14 :: _x_24 in
+  let _x_26 = _x_10 :: _x_25 in
+  let _x_27 = Shape_sum (_x_1, _x_26) in
+  ({ root = _x_27; defs = _x_6 } : shape_doc)
+
+
+
 (* LCNF mono: Effect4.Store.RefusalsGen.FormationRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_refusals_gen_formation_refusal_c_shape_doc : shape_doc =
@@ -30711,49 +30669,1302 @@ let store_refusals_gen_formation_refusal_c_shape_doc : shape_doc =
 
 
 
+(* LCNF mono: Effect4.Store.RefusalsGen.RecordTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_record_typing_reason_c_shape_doc : shape_doc =
+  let _x_1 = 0 in
+  let _x_2 = "name" in
+  let _x_3 = Shape_string in
+  let _x_4 = [] in
+  let _x_5 = _x_2, _x_3 in
+  let _x_6 = _x_5 :: _x_4 in
+  let _x_7 = _x_1, _x_6 in
+  let _x_8 = 1 in
+  let _x_9 = _x_8, _x_6 in
+  let _x_10 = "actual" in
+  let _x_11 = "Ty" in
+  let _x_12 = Shape_named _x_11 in
+  let _x_13 = _x_10, _x_12 in
+  let _x_14 = "expected" in
+  let _x_15 = _x_14, _x_12 in
+  let _x_16 = _x_15 :: _x_4 in
+  let _x_17 = _x_13 :: _x_16 in
+  let _x_18 = _x_5 :: _x_17 in
+  let _x_19 = "names" in
+  let _x_20 = Shape_nat in
+  let _x_21 = _x_19, _x_20 in
+  let _x_22 = "values" in
+  let _x_23 = _x_22, _x_20 in
+  let _x_24 = _x_23 :: _x_4 in
+  let _x_25 = store_refusals_gen_formation_refusal_c_shape_doc in
+  match (_x_25 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_26 = 2 in
+      let _x_27 = _x_26, _x_6 in
+      let _x_28 = 6 in
+      let _x_29 = "branch" in
+      let _x_30 = _x_29, _x_12 in
+      let _x_31 = _x_30 :: _x_4 in
+      let _x_32 = _x_5 :: _x_31 in
+      let _x_33 = _x_28, _x_32 in
+      let _x_34 = "RecordTypingReason" in
+      let _x_35 = "duplicateDeclaration" in
+      let _x_36 = _x_35, _x_7 in
+      let _x_37 = "duplicateSupplied" in
+      let _x_38 = _x_37, _x_9 in
+      let _x_39 = "missingRequired" in
+      let _x_40 = _x_39, _x_27 in
+      let _x_41 = "unknownSupplied" in
+      let _x_42 = 3 in
+      let _x_43 = _x_42, _x_6 in
+      let _x_44 = _x_41, _x_43 in
+      let _x_45 = "fieldNotSubtype" in
+      let _x_46 = 4 in
+      let _x_47 = store_program_gen_ty_c_defs in
+      let _x_48 = _x_46, _x_18 in
+      let _x_49 = _x_45, _x_48 in
+      let _x_50 = "columnLengths" in
+      let _x_51 = 5 in
+      let _x_52 = _x_21 :: _x_24 in
+      let _x_53 = _x_51, _x_52 in
+      let _x_54 = _x_50, _x_53 in
+      let _x_55 = "missingReadField" in
+      let _x_56 = _x_55, _x_33 in
+      let _x_57 = "optionalReadField" in
+      let _x_58 = 7 in
+      let _x_59 = _x_58, _x_32 in
+      let _x_60 = _x_57, _x_59 in
+      let _x_61 = "declarationFormation" in
+      let _x_62 = 8 in
+      let _x_63 = "why" in
+      let _x_64 = _x_63, root in
+      let _x_65 = _x_64 :: _x_4 in
+      let _x_66 = _x_62, _x_65 in
+      let _x_67 = _x_61, _x_66 in
+      let _x_68 = _x_67 :: _x_4 in
+      let _x_69 = _x_60 :: _x_68 in
+      let _x_70 = _x_56 :: _x_69 in
+      let _x_71 = _x_54 :: _x_70 in
+      let _x_72 = _x_49 :: _x_71 in
+      let _x_73 = _x_44 :: _x_72 in
+      let _x_74 = _x_40 :: _x_73 in
+      let _x_75 = _x_38 :: _x_74 in
+      let _x_76 = _x_36 :: _x_75 in
+      let _x_77 = Shape_sum (_x_34, _x_76) in
+      let _x_78 = _x_4 @ _x_47 in
+      let _x_79 = _x_78 @ _x_4 in
+      let _x_80 = _x_79 @ defs in
+      ({ root = _x_77; defs = _x_80 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.RecordTermRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_record_term_refusal_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_record_typing_reason_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "RecordTermRefusal" in
+      let _x_3 = "path" in
+      let _x_4 = Shape_nat in
+      let _x_5 = [] in
+      let _x_6 = Shape_list _x_4 in
+      let _x_7 = _x_3, _x_6 in
+      let _x_8 = "reason" in
+      let _x_9 = _x_8, root in
+      let _x_10 = _x_9 :: _x_5 in
+      let _x_11 = _x_7 :: _x_10 in
+      let _x_12 = Shape_struct (_x_2, _x_11) in
+      let _x_13 = _x_5 @ defs in
+      ({ root = _x_12; defs = _x_13 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.RecordCauseRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_record_cause_refusal_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_record_term_refusal_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "RecordCauseRefusal" in
+      let _x_3 = "causePath" in
+      let _x_4 = Shape_nat in
+      let _x_5 = [] in
+      let _x_6 = Shape_list _x_4 in
+      let _x_7 = _x_3, _x_6 in
+      let _x_8 = "term" in
+      let _x_9 = _x_8, root in
+      let _x_10 = _x_9 :: _x_5 in
+      let _x_11 = _x_7 :: _x_10 in
+      let _x_12 = Shape_struct (_x_2, _x_11) in
+      let _x_13 = _x_5 @ defs in
+      ({ root = _x_12; defs = _x_13 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.TupleTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_tuple_typing_reason_c_shape_doc : shape_doc =
+  let _x_1 = "TupleTypingReason" in
+  let _x_2 = "nonTuple" in
+  let _x_3 = 0 in
+  let _x_4 = "branch" in
+  let _x_5 = "Ty" in
+  let _x_6 = Shape_named _x_5 in
+  let _x_7 = store_program_gen_ty_c_defs in
+  let _x_8 = _x_4, _x_6 in
+  let _x_9 = [] in
+  let _x_10 = _x_8 :: _x_9 in
+  let _x_11 = _x_3, _x_10 in
+  let _x_12 = _x_2, _x_11 in
+  let _x_13 = "outOfBounds" in
+  let _x_14 = 1 in
+  let _x_15 = "arity" in
+  let _x_16 = Shape_nat in
+  let _x_17 = _x_15, _x_16 in
+  let _x_18 = _x_17 :: _x_9 in
+  let _x_19 = _x_14, _x_18 in
+  let _x_20 = _x_13, _x_19 in
+  let _x_21 = _x_20 :: _x_9 in
+  let _x_22 = _x_12 :: _x_21 in
+  let _x_23 = Shape_sum (_x_1, _x_22) in
+  let _x_24 = _x_7 @ _x_9 in
+  ({ root = _x_23; defs = _x_24 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.TupleTermRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_tuple_term_refusal_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_tuple_typing_reason_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = Shape_nat in
+      let _x_3 = Shape_list _x_2 in
+      let _x_4 = "TupleTermRefusal" in
+      let _x_5 = "path" in
+      let _x_6 = [] in
+      let _x_7 = _x_5, _x_3 in
+      let _x_8 = "index" in
+      let _x_9 = _x_8, _x_2 in
+      let _x_10 = "reason" in
+      let _x_11 = _x_10, root in
+      let _x_12 = _x_11 :: _x_6 in
+      let _x_13 = _x_9 :: _x_12 in
+      let _x_14 = _x_7 :: _x_13 in
+      let _x_15 = Shape_struct (_x_4, _x_14) in
+      let _x_16 = _x_6 @ _x_6 in
+      let _x_17 = _x_16 @ defs in
+      ({ root = _x_15; defs = _x_17 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.TupleCauseRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_tuple_cause_refusal_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_tuple_term_refusal_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "TupleCauseRefusal" in
+      let _x_3 = "causePath" in
+      let _x_4 = Shape_nat in
+      let _x_5 = [] in
+      let _x_6 = Shape_list _x_4 in
+      let _x_7 = _x_3, _x_6 in
+      let _x_8 = "term" in
+      let _x_9 = _x_8, root in
+      let _x_10 = _x_9 :: _x_5 in
+      let _x_11 = _x_7 :: _x_10 in
+      let _x_12 = Shape_struct (_x_2, _x_11) in
+      let _x_13 = _x_5 @ defs in
+      ({ root = _x_12; defs = _x_13 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.LitC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_program_gen_lit_c_shape_doc : shape_doc =
+  let _x_1 = "Lit" in
+  let _x_2 = "unit" in
+  let _x_3 = 0 in
+  let _x_4 = [] in
+  let _x_5 = _x_3, _x_4 in
+  let _x_6 = _x_2, _x_5 in
+  let _x_7 = "nat" in
+  let _x_8 = 1 in
+  let _x_9 = "value" in
+  let _x_10 = Shape_nat in
+  let _x_11 = _x_9, _x_10 in
+  let _x_12 = _x_11 :: _x_4 in
+  let _x_13 = _x_8, _x_12 in
+  let _x_14 = _x_7, _x_13 in
+  let _x_15 = "bool" in
+  let _x_16 = 2 in
+  let _x_17 = Shape_bool in
+  let _x_18 = _x_9, _x_17 in
+  let _x_19 = _x_18 :: _x_4 in
+  let _x_20 = _x_16, _x_19 in
+  let _x_21 = _x_15, _x_20 in
+  let _x_22 = "str" in
+  let _x_23 = 3 in
+  let _x_24 = Shape_string in
+  let _x_25 = _x_9, _x_24 in
+  let _x_26 = _x_25 :: _x_4 in
+  let _x_27 = _x_23, _x_26 in
+  let _x_28 = _x_22, _x_27 in
+  let _x_29 = _x_28 :: _x_4 in
+  let _x_30 = _x_21 :: _x_29 in
+  let _x_31 = _x_14 :: _x_30 in
+  let _x_32 = _x_6 :: _x_31 in
+  let _x_33 = Shape_sum (_x_1, _x_32) in
+  let _x_34 = _x_4 @ _x_4 in
+  let _x_35 = _x_34 @ _x_4 in
+  ({ root = _x_33; defs = _x_35 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.RefFaultC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_ref_fault_c_shape_doc : shape_doc =
+  let _x_1 = "RefFault" in
+  let _x_2 = "notBefore" in
+  let _x_3 = 0 in
+  let _x_4 = [] in
+  let _x_5 = _x_3, _x_4 in
+  let _x_6 = _x_2, _x_5 in
+  let _x_7 = "encloses" in
+  let _x_8 = 1 in
+  let _x_9 = _x_8, _x_4 in
+  let _x_10 = _x_7, _x_9 in
+  let _x_11 = "noLayer" in
+  let _x_12 = 2 in
+  let _x_13 = _x_12, _x_4 in
+  let _x_14 = _x_11, _x_13 in
+  let _x_15 = "toReference" in
+  let _x_16 = 3 in
+  let _x_17 = _x_16, _x_4 in
+  let _x_18 = _x_15, _x_17 in
+  let _x_19 = "otherScope" in
+  let _x_20 = 4 in
+  let _x_21 = _x_20, _x_4 in
+  let _x_22 = _x_19, _x_21 in
+  let _x_23 = _x_22 :: _x_4 in
+  let _x_24 = _x_18 :: _x_23 in
+  let _x_25 = _x_14 :: _x_24 in
+  let _x_26 = _x_10 :: _x_25 in
+  let _x_27 = _x_6 :: _x_26 in
+  let _x_28 = Shape_sum (_x_1, _x_27) in
+  ({ root = _x_28; defs = _x_4 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.DecisionC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_program_gen_decision_c_shape_doc : shape_doc =
+  let _x_1 = "Decision" in
+  let _x_2 = "bool" in
+  let _x_3 = 0 in
+  let _x_4 = [] in
+  let _x_5 = _x_3, _x_4 in
+  let _x_6 = _x_2, _x_5 in
+  let _x_7 = "option" in
+  let _x_8 = 1 in
+  let _x_9 = _x_8, _x_4 in
+  let _x_10 = _x_7, _x_9 in
+  let _x_11 = "tag" in
+  let _x_12 = 2 in
+  let _x_13 = Shape_string in
+  let _x_14 = _x_11, _x_13 in
+  let _x_15 = _x_14 :: _x_4 in
+  let _x_16 = _x_12, _x_15 in
+  let _x_17 = _x_11, _x_16 in
+  let _x_18 = "recordTag" in
+  let _x_19 = 3 in
+  let _x_20 = _x_19, _x_15 in
+  let _x_21 = _x_18, _x_20 in
+  let _x_22 = _x_21 :: _x_4 in
+  let _x_23 = _x_17 :: _x_22 in
+  let _x_24 = _x_10 :: _x_23 in
+  let _x_25 = _x_6 :: _x_24 in
+  let _x_26 = Shape_sum (_x_1, _x_25) in
+  ({ root = _x_26; defs = _x_4 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.FieldReadModeC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_program_gen_field_read_mode_c_shape_doc : shape_doc =
+  let _x_1 = "FieldReadMode" in
+  let _x_2 = "required" in
+  let _x_3 = 0 in
+  let _x_4 = [] in
+  let _x_5 = _x_3, _x_4 in
+  let _x_6 = _x_2, _x_5 in
+  let _x_7 = "optional" in
+  let _x_8 = 1 in
+  let _x_9 = _x_8, _x_4 in
+  let _x_10 = _x_7, _x_9 in
+  let _x_11 = _x_10 :: _x_4 in
+  let _x_12 = _x_6 :: _x_11 in
+  let _x_13 = Shape_sum (_x_1, _x_12) in
+  ({ root = _x_13; defs = _x_4 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.TermC.TermShape : Effect4.Store.Shape *)
+
+let store_program_gen_term_c_term_shape : shape =
+  let _x_1 = store_program_gen_lit_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; _ } -> (let _x_2 = "index" in
+      let _x_3 = Shape_nat in
+      let _x_4 = _x_2, _x_3 in
+      let _x_5 = [] in
+      let _x_6 = _x_4 :: _x_5 in
+      let _x_7 = "value" in
+      let _x_8 = _x_7, root in
+      let _x_9 = _x_8 :: _x_5 in
+      let _x_10 = "atom" in
+      let _x_11 = Shape_string in
+      let _x_12 = _x_10, _x_11 in
+      let _x_13 = store_program_gen_field_read_mode_c_shape_doc in
+      match (_x_13 : shape_doc) with
+        | { root = root_1; _ } -> (let _x_14 = "args" in
+          let _x_15 = "Terms" in
+          let _x_16 = Shape_named _x_15 in
+          let _x_17 = _x_14, _x_16 in
+          let _x_18 = _x_17 :: _x_5 in
+          let _x_19 = Shape_bool in
+          let _x_20 = "Ty" in
+          let _x_21 = Shape_named _x_20 in
+          let _x_22 = Shape_pair (_x_19, _x_21) in
+          let _x_23 = Shape_pair (_x_11, _x_22) in
+          let _x_24 = "Term" in
+          let _x_25 = "var" in
+          let _x_26 = 0 in
+          let _x_27 = _x_26, _x_6 in
+          let _x_28 = _x_25, _x_27 in
+          let _x_29 = "lit" in
+          let _x_30 = 1 in
+          let _x_31 = _x_30, _x_9 in
+          let _x_32 = _x_29, _x_31 in
+          let _x_33 = "app" in
+          let _x_34 = 2 in
+          let _x_35 = _x_12 :: _x_18 in
+          let _x_36 = _x_34, _x_35 in
+          let _x_37 = _x_33, _x_36 in
+          let _x_38 = "record" in
+          let _x_39 = 3 in
+          let _x_40 = "fields" in
+          let _x_41 = Shape_list _x_23 in
+          let _x_42 = _x_40, _x_41 in
+          let _x_43 = "presentNames" in
+          let _x_44 = Shape_list _x_11 in
+          let _x_45 = _x_43, _x_44 in
+          let _x_46 = "values" in
+          let _x_47 = _x_46, _x_16 in
+          let _x_48 = _x_47 :: _x_5 in
+          let _x_49 = _x_45 :: _x_48 in
+          let _x_50 = _x_42 :: _x_49 in
+          let _x_51 = _x_39, _x_50 in
+          let _x_52 = _x_38, _x_51 in
+          let _x_53 = "field" in
+          let _x_54 = 4 in
+          let _x_55 = "mode" in
+          let _x_56 = _x_55, root_1 in
+          let _x_57 = "target" in
+          let _x_58 = Shape_named _x_24 in
+          let _x_59 = _x_57, _x_58 in
+          let _x_60 = "name" in
+          let _x_61 = _x_60, _x_11 in
+          let _x_62 = _x_61 :: _x_5 in
+          let _x_63 = _x_59 :: _x_62 in
+          let _x_64 = _x_56 :: _x_63 in
+          let _x_65 = _x_54, _x_64 in
+          let _x_66 = _x_53, _x_65 in
+          let _x_67 = "recordSet" in
+          let _x_68 = 5 in
+          let _x_69 = _x_7, _x_58 in
+          let _x_70 = _x_69 :: _x_5 in
+          let _x_71 = _x_61 :: _x_70 in
+          let _x_72 = _x_59 :: _x_71 in
+          let _x_73 = _x_68, _x_72 in
+          let _x_74 = _x_67, _x_73 in
+          let _x_75 = "tupleAt" in
+          let _x_76 = 6 in
+          let _x_77 = _x_59 :: _x_6 in
+          let _x_78 = _x_76, _x_77 in
+          let _x_79 = _x_75, _x_78 in
+          let _x_80 = "fold" in
+          let _x_81 = 7 in
+          let _x_82 = "accTy" in
+          let _x_83 = Shape_option _x_21 in
+          let _x_84 = _x_82, _x_83 in
+          let _x_85 = "list" in
+          let _x_86 = _x_85, _x_58 in
+          let _x_87 = "init" in
+          let _x_88 = _x_87, _x_58 in
+          let _x_89 = "body" in
+          let _x_90 = _x_89, _x_58 in
+          let _x_91 = _x_90 :: _x_5 in
+          let _x_92 = _x_88 :: _x_91 in
+          let _x_93 = _x_86 :: _x_92 in
+          let _x_94 = _x_84 :: _x_93 in
+          let _x_95 = _x_81, _x_94 in
+          let _x_96 = _x_80, _x_95 in
+          let _x_97 = _x_96 :: _x_5 in
+          let _x_98 = _x_79 :: _x_97 in
+          let _x_99 = _x_74 :: _x_98 in
+          let _x_100 = _x_66 :: _x_99 in
+          let _x_101 = _x_52 :: _x_100 in
+          let _x_102 = _x_37 :: _x_101 in
+          let _x_103 = _x_32 :: _x_102 in
+          let _x_104 = _x_28 :: _x_103 in
+          Shape_sum (_x_24, _x_104)))
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.TermC.TermsShape : Effect4.Store.Shape *)
+
+let store_program_gen_term_c_terms_shape : shape =
+  let _x_1 = "Terms" in
+  let _x_2 = "nil" in
+  let _x_3 = 0 in
+  let _x_4 = [] in
+  let _x_5 = _x_3, _x_4 in
+  let _x_6 = _x_2, _x_5 in
+  let _x_7 = "cons" in
+  let _x_8 = 1 in
+  let _x_9 = "head" in
+  let _x_10 = "Term" in
+  let _x_11 = Shape_named _x_10 in
+  let _x_12 = _x_9, _x_11 in
+  let _x_13 = "tail" in
+  let _x_14 = Shape_named _x_1 in
+  let _x_15 = _x_13, _x_14 in
+  let _x_16 = _x_15 :: _x_4 in
+  let _x_17 = _x_12 :: _x_16 in
+  let _x_18 = _x_8, _x_17 in
+  let _x_19 = _x_7, _x_18 in
+  let _x_20 = _x_19 :: _x_4 in
+  let _x_21 = _x_6 :: _x_20 in
+  Shape_sum (_x_1, _x_21)
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.TermC.defs : List (Prod String Effect4.Store.Shape) *)
+
+let store_program_gen_term_c_defs : (string * shape) list =
+  let _x_1 = store_program_gen_lit_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { defs = defs; _ } -> (let _x_2 = [] in
+      let _x_3 = _x_2 @ defs in
+      let _x_4 = _x_3 @ _x_2 in
+      let _x_5 = store_program_gen_ty_c_defs in
+      let _x_6 = _x_2 @ _x_5 in
+      let _x_7 = store_program_gen_field_read_mode_c_shape_doc in
+      match (_x_7 : shape_doc) with
+        | _ -> (let _x_8 = _x_2 @ _x_6 in
+          let _x_9 = "Term" in
+          let _x_10 = store_program_gen_term_c_term_shape in
+          let _x_11 = _x_9, _x_10 in
+          let _x_12 = "Terms" in
+          let _x_13 = store_program_gen_term_c_terms_shape in
+          let _x_14 = _x_12, _x_13 in
+          let _x_15 = _x_4 @ _x_8 in
+          let _x_16 = _x_15 @ _x_2 in
+          let _x_17 = _x_16 @ _x_2 in
+          let _x_18 = _x_17 @ _x_5 in
+          let _x_19 = _x_14 :: _x_18 in
+          _x_11 :: _x_19))
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.CauseTermC.CauseTermShape : Effect4.Store.Shape *)
+
+let store_program_gen_cause_term_c_cause_term_shape : shape =
+  let _x_1 = "CauseTerm" in
+  let _x_2 = "fail" in
+  let _x_3 = 0 in
+  let _x_4 = "error" in
+  let _x_5 = "Term" in
+  let _x_6 = Shape_named _x_5 in
+  let _x_7 = _x_4, _x_6 in
+  let _x_8 = [] in
+  let _x_9 = _x_7 :: _x_8 in
+  let _x_10 = _x_3, _x_9 in
+  let _x_11 = _x_2, _x_10 in
+  let _x_12 = "die" in
+  let _x_13 = 1 in
+  let _x_14 = "defect" in
+  let _x_15 = _x_14, _x_6 in
+  let _x_16 = _x_15 :: _x_8 in
+  let _x_17 = _x_13, _x_16 in
+  let _x_18 = _x_12, _x_17 in
+  let _x_19 = "interrupt" in
+  let _x_20 = 2 in
+  let _x_21 = "interruptor" in
+  let _x_22 = Shape_option _x_6 in
+  let _x_23 = _x_21, _x_22 in
+  let _x_24 = _x_23 :: _x_8 in
+  let _x_25 = _x_20, _x_24 in
+  let _x_26 = _x_19, _x_25 in
+  let _x_27 = "both" in
+  let _x_28 = 3 in
+  let _x_29 = "left" in
+  let _x_30 = Shape_named _x_1 in
+  let _x_31 = _x_29, _x_30 in
+  let _x_32 = "right" in
+  let _x_33 = _x_32, _x_30 in
+  let _x_34 = _x_33 :: _x_8 in
+  let _x_35 = _x_31 :: _x_34 in
+  let _x_36 = _x_28, _x_35 in
+  let _x_37 = _x_27, _x_36 in
+  let _x_38 = _x_37 :: _x_8 in
+  let _x_39 = _x_26 :: _x_38 in
+  let _x_40 = _x_18 :: _x_39 in
+  let _x_41 = _x_11 :: _x_40 in
+  Shape_sum (_x_1, _x_41)
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.CauseTermC.defs : List (Prod String Effect4.Store.Shape) *)
+
+let store_program_gen_cause_term_c_defs : (string * shape) list =
+  let _x_1 = "CauseTerm" in
+  let _x_2 = store_program_gen_cause_term_c_cause_term_shape in
+  let _x_3 = _x_1, _x_2 in
+  let _x_4 = store_program_gen_term_c_defs in
+  let _x_5 = _x_4 @ _x_4 in
+  _x_3 :: _x_5
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.TypeReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_type_reason_c_shape_doc : shape_doc =
+  let _x_1 = store_program_gen_eff_ty_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "name" in
+      let _x_3 = Shape_string in
+      let _x_4 = [] in
+      let _x_5 = _x_2, _x_3 in
+      let _x_6 = _x_5 :: _x_4 in
+      let _x_7 = "body" in
+      let _x_8 = _x_7, root in
+      let _x_9 = _x_8 :: _x_4 in
+      let _x_10 = "params" in
+      let _x_11 = Shape_nat in
+      let _x_12 = _x_10, _x_11 in
+      let _x_13 = "args" in
+      let _x_14 = _x_13, _x_11 in
+      let _x_15 = _x_14 :: _x_4 in
+      let _x_16 = "path" in
+      let _x_17 = Shape_list _x_11 in
+      let _x_18 = _x_16, _x_17 in
+      let _x_19 = "index" in
+      let _x_20 = _x_19, _x_11 in
+      let _x_21 = "depth" in
+      let _x_22 = _x_21, _x_11 in
+      let _x_23 = _x_22 :: _x_4 in
+      let _x_24 = _x_20 :: _x_23 in
+      let _x_25 = _x_18 :: _x_24 in
+      let _x_26 = "atom" in
+      let _x_27 = _x_26, _x_3 in
+      let _x_28 = _x_27 :: _x_4 in
+      let _x_29 = "Ty" in
+      let _x_30 = Shape_named _x_29 in
+      let _x_31 = Shape_list _x_30 in
+      let _x_32 = store_refusals_gen_fold_term_refusal_c_shape_doc in
+      match (_x_32 : shape_doc) with
+        | { root = root_1; defs = defs_1 } -> (let _x_33 = _x_13, _x_31 in
+          let _x_34 = _x_33 :: _x_4 in
+          let _x_35 = "result" in
+          let _x_36 = _x_35, _x_30 in
+          let _x_37 = store_refusals_gen_fold_cause_refusal_c_shape_doc in
+          match (_x_37 : shape_doc) with
+            | { root = root_2; defs = defs_2 } -> (let _x_38 = "expected" in
+              let _x_39 = _x_38, _x_30 in
+              let _x_40 = _x_39 :: _x_4 in
+              let _x_41 = "why" in
+              let _x_42 = _x_41, root_1 in
+              let _x_43 = _x_42 :: _x_4 in
+              let _x_44 = _x_41, root_2 in
+              let _x_45 = _x_44 :: _x_4 in
+              let _x_46 = "t" in
+              let _x_47 = _x_46, _x_30 in
+              let _x_48 = _x_47 :: _x_4 in
+              let _x_49 = store_refusals_gen_record_cause_refusal_c_shape_doc in
+              match (_x_49 : shape_doc) with
+                | { root = root_3; defs = defs_3 } -> (let _x_50 = 37 in
+                  let _x_51 = _x_50, _x_4 in
+                  let _x_52 = "decls" in
+                  let _x_53 = _x_52, _x_11 in
+                  let _x_54 = store_refusals_gen_tuple_term_refusal_c_shape_doc in
+                  match (_x_54 : shape_doc) with
+                    | { root = root_4; defs = defs_4 } -> (let _x_55 = "bodies" in
+                      let _x_56 = _x_55, _x_11 in
+                      let _x_57 = _x_56 :: _x_4 in
+                      let _x_58 = store_refusals_gen_tuple_cause_refusal_c_shape_doc in
+                      match (_x_58 : shape_doc) with
+                        | { root = root_5; defs = defs_5 } -> (let _x_59 = _x_41, root_3 in
+                          let _x_60 = _x_59 :: _x_4 in
+                          let _x_61 = "row" in
+                          let _x_62 = _x_61, _x_3 in
+                          let _x_63 = _x_41, root_4 in
+                          let _x_64 = _x_63 :: _x_4 in
+                          let _x_65 = _x_41, root_5 in
+                          let _x_66 = _x_65 :: _x_4 in
+                          let _x_67 = "error" in
+                          let _x_68 = _x_67, _x_30 in
+                          let _x_69 = "field" in
+                          let _x_70 = _x_69, _x_30 in
+                          let _x_71 = _x_70 :: _x_4 in
+                          let _x_72 = "spelling" in
+                          let _x_73 = _x_72, _x_30 in
+                          let _x_74 = _x_73 :: _x_4 in
+                          let _x_75 = "param" in
+                          let _x_76 = _x_75, _x_30 in
+                          let _x_77 = _x_76 :: _x_4 in
+                          let _x_78 = store_program_gen_lit_c_shape_doc in
+                          match (_x_78 : shape_doc) with
+                            | { root = root_6; defs = defs_6 } -> (let _x_79 = 22 in
+                              let _x_80 = _x_79, _x_4 in
+                              let _x_81 = store_refusals_gen_formation_refusal_c_shape_doc in
+                              match (_x_81 : shape_doc) with
+                                | { root = root_7; defs = defs_7 } -> (let _x_82 = _x_36 :: _x_40 in
+                                  let _x_83 = _x_62 :: _x_82 in
+                                  let _x_84 = 23 in
+                                  let _x_85 = _x_84, _x_4 in
+                                  let _x_86 = store_refusals_gen_record_term_refusal_c_shape_doc in
+                                  match (_x_86 : shape_doc) with
+                                    | { root = root_8; defs = defs_8 } -> (let _x_87 = "value" in
+                                      let _x_88 = _x_87, root_6 in
+                                      let _x_89 = _x_88 :: _x_4 in
+                                      let _x_90 = store_program_gen_service_key_c_shape_doc in
+                                      match (_x_90 : shape_doc) with
+                                        | { root = root_9; defs = defs_9 } -> (let _x_91 = _x_41, root_7 in
+                                          let _x_92 = _x_91 :: _x_4 in
+                                          let _x_93 = _x_41, root_8 in
+                                          let _x_94 = _x_93 :: _x_4 in
+                                          let _x_95 = "key" in
+                                          let _x_96 = _x_95, root_9 in
+                                          let _x_97 = _x_96 :: _x_4 in
+                                          let _x_98 = _x_87, _x_30 in
+                                          let _x_99 = store_refusals_gen_ref_fault_c_shape_doc in
+                                          match (_x_99 : shape_doc) with
+                                            | { root = root_10; _ } -> (let _x_100 = 36 in
+                                              let _x_101 = _x_100, _x_48 in
+                                              let _x_102 = "carrier" in
+                                              let _x_103 = _x_102, _x_30 in
+                                              let _x_104 = _x_103 :: _x_4 in
+                                              let _x_105 = 16 in
+                                              let _x_106 = _x_105, _x_48 in
+                                              let _x_107 = "target" in
+                                              let _x_108 = _x_107, _x_17 in
+                                              let _x_109 = _x_108 :: _x_4 in
+                                              let _x_110 = 11 in
+                                              let _x_111 = _x_110, _x_48 in
+                                              let _x_112 = 12 in
+                                              let _x_113 = _x_112, _x_48 in
+                                              let _x_114 = 13 in
+                                              let _x_115 = _x_114, _x_48 in
+                                              let _x_116 = 14 in
+                                              let _x_117 = _x_116, _x_48 in
+                                              let _x_118 = store_program_gen_decision_c_shape_doc in
+                                              match (_x_118 : shape_doc) with
+                                                | { root = root_11; _ } -> (let _x_119 = _x_5 :: _x_9 in
+                                                  let _x_120 = _x_18 :: _x_28 in
+                                                  let _x_121 = Shape_list _x_3 in
+                                                  let _x_122 = _x_16, _x_121 in
+                                                  let _x_123 = _x_122 :: _x_71 in
+                                                  let _x_124 = _x_68 :: _x_123 in
+                                                  let _x_125 = _x_62 :: _x_77 in
+                                                  let _x_126 = _x_41, root_10 in
+                                                  let _x_127 = _x_126 :: _x_4 in
+                                                  let _x_128 = 15 in
+                                                  let _x_129 = _x_128, _x_48 in
+                                                  let _x_130 = "TypeReason" in
+                                                  let _x_131 = "definitionColumns" in
+                                                  let _x_132 = 39 in
+                                                  let _x_133 = _x_132, _x_6 in
+                                                  let _x_134 = _x_131, _x_133 in
+                                                  let _x_135 = "bodyNotDeclared" in
+                                                  let _x_136 = 40 in
+                                                  let _x_137 = _x_136, _x_119 in
+                                                  let _x_138 = _x_135, _x_137 in
+                                                  let _x_139 = "invokeArity" in
+                                                  let _x_140 = 41 in
+                                                  let _x_141 = _x_12 :: _x_15 in
+                                                  let _x_142 = _x_5 :: _x_141 in
+                                                  let _x_143 = _x_140, _x_142 in
+                                                  let _x_144 = _x_139, _x_143 in
+                                                  let _x_145 = "unboundVariable" in
+                                                  let _x_146 = 42 in
+                                                  let _x_147 = _x_146, _x_25 in
+                                                  let _x_148 = _x_145, _x_147 in
+                                                  let _x_149 = "unknownAtom" in
+                                                  let _x_150 = 43 in
+                                                  let _x_151 = _x_150, _x_120 in
+                                                  let _x_152 = _x_149, _x_151 in
+                                                  let _x_153 = "refusedArguments" in
+                                                  let _x_154 = 44 in
+                                                  let _x_155 = store_program_gen_ty_c_defs in
+                                                  let _x_156 = _x_27 :: _x_34 in
+                                                  let _x_157 = _x_18 :: _x_156 in
+                                                  let _x_158 = _x_154, _x_157 in
+                                                  let _x_159 = _x_153, _x_158 in
+                                                  let _x_160 = _x_159 :: _x_4 in
+                                                  let _x_161 = _x_152 :: _x_160 in
+                                                  let _x_162 = _x_148 :: _x_161 in
+                                                  let _x_163 = _x_144 :: _x_162 in
+                                                  let _x_164 = _x_138 :: _x_163 in
+                                                  let y_165 = _x_134 :: _x_164 in
+                                                  let _x_166 = "resultNotSubtype" in
+                                                  let _x_167 = 33 in
+                                                  let _x_168 = _x_167, _x_83 in
+                                                  let _x_169 = _x_166, _x_168 in
+                                                  let _x_170 = "foldTerm" in
+                                                  let _x_171 = 34 in
+                                                  let _x_172 = _x_171, _x_43 in
+                                                  let _x_173 = _x_170, _x_172 in
+                                                  let _x_174 = "foldCause" in
+                                                  let _x_175 = 35 in
+                                                  let _x_176 = _x_175, _x_45 in
+                                                  let _x_177 = _x_174, _x_176 in
+                                                  let _x_178 = "maskRestoreExpected" in
+                                                  let _x_179 = _x_178, _x_101 in
+                                                  let _x_180 = "definitionBlock" in
+                                                  let _x_181 = _x_180, _x_51 in
+                                                  let _x_182 = "definitionsMismatch" in
+                                                  let _x_183 = 38 in
+                                                  let _x_184 = _x_53 :: _x_57 in
+                                                  let _x_185 = _x_183, _x_184 in
+                                                  let _x_186 = _x_182, _x_185 in
+                                                  let _x_187 = _x_186 :: y_165 in
+                                                  let _x_188 = _x_181 :: _x_187 in
+                                                  let _x_189 = _x_179 :: _x_188 in
+                                                  let _x_190 = _x_177 :: _x_189 in
+                                                  let _x_191 = _x_173 :: _x_190 in
+                                                  let y_192 = _x_169 :: _x_191 in
+                                                  let _x_193 = "recordCause" in
+                                                  let _x_194 = 27 in
+                                                  let _x_195 = _x_194, _x_60 in
+                                                  let _x_196 = _x_193, _x_195 in
+                                                  let _x_197 = "tupleTerm" in
+                                                  let _x_198 = 28 in
+                                                  let _x_199 = _x_198, _x_64 in
+                                                  let _x_200 = _x_197, _x_199 in
+                                                  let _x_201 = "tupleCause" in
+                                                  let _x_202 = 29 in
+                                                  let _x_203 = _x_202, _x_66 in
+                                                  let _x_204 = _x_201, _x_203 in
+                                                  let _x_205 = "errorPayloadField" in
+                                                  let _x_206 = 30 in
+                                                  let _x_207 = _x_206, _x_124 in
+                                                  let _x_208 = _x_205, _x_207 in
+                                                  let _x_209 = "errorSpelling" in
+                                                  let _x_210 = 31 in
+                                                  let _x_211 = _x_68 :: _x_74 in
+                                                  let _x_212 = _x_210, _x_211 in
+                                                  let _x_213 = _x_209, _x_212 in
+                                                  let _x_214 = "binderTerm" in
+                                                  let _x_215 = 32 in
+                                                  let _x_216 = _x_215, _x_125 in
+                                                  let _x_217 = _x_214, _x_216 in
+                                                  let _x_218 = _x_217 :: y_192 in
+                                                  let _x_219 = _x_213 :: _x_218 in
+                                                  let _x_220 = _x_208 :: _x_219 in
+                                                  let _x_221 = _x_204 :: _x_220 in
+                                                  let _x_222 = _x_200 :: _x_221 in
+                                                  let y_223 = _x_196 :: _x_222 in
+                                                  let _x_224 = "returnNotLast" in
+                                                  let _x_225 = _x_224, _x_80 in
+                                                  let _x_226 = "breakOutsideLoop" in
+                                                  let _x_227 = _x_226, _x_85 in
+                                                  let _x_228 = "literalOutsideAlphabet" in
+                                                  let _x_229 = 24 in
+                                                  let _x_230 = _x_229, _x_89 in
+                                                  let _x_231 = _x_228, _x_230 in
+                                                  let _x_232 = "instantiatedFormation" in
+                                                  let _x_233 = 25 in
+                                                  let _x_234 = _x_62 :: _x_92 in
+                                                  let _x_235 = _x_233, _x_234 in
+                                                  let _x_236 = _x_232, _x_235 in
+                                                  let _x_237 = "recordTerm" in
+                                                  let _x_238 = 26 in
+                                                  let _x_239 = _x_238, _x_94 in
+                                                  let _x_240 = _x_237, _x_239 in
+                                                  let _x_241 = _x_240 :: y_223 in
+                                                  let _x_242 = _x_236 :: _x_241 in
+                                                  let _x_243 = _x_231 :: _x_242 in
+                                                  let _x_244 = _x_227 :: _x_243 in
+                                                  let y_245 = _x_225 :: _x_244 in
+                                                  let _x_246 = "exitExpected" in
+                                                  let _x_247 = _x_246, _x_106 in
+                                                  let _x_248 = "serviceUnknown" in
+                                                  let _x_249 = 17 in
+                                                  let _x_250 = _x_249, _x_97 in
+                                                  let _x_251 = _x_248, _x_250 in
+                                                  let _x_252 = "valueNotSubtype" in
+                                                  let _x_253 = 18 in
+                                                  let _x_254 = _x_98 :: _x_104 in
+                                                  let _x_255 = _x_96 :: _x_254 in
+                                                  let _x_256 = _x_253, _x_255 in
+                                                  let _x_257 = _x_252, _x_256 in
+                                                  let _x_258 = "layerReference" in
+                                                  let _x_259 = 19 in
+                                                  let _x_260 = _x_259, _x_109 in
+                                                  let _x_261 = _x_258, _x_260 in
+                                                  let _x_262 = "referenceIllFormed" in
+                                                  let _x_263 = 20 in
+                                                  let _x_264 = _x_108 :: _x_127 in
+                                                  let _x_265 = _x_263, _x_264 in
+                                                  let _x_266 = _x_262, _x_265 in
+                                                  let _x_267 = "mergeAllEmpty" in
+                                                  let _x_268 = 21 in
+                                                  let _x_269 = _x_268, _x_4 in
+                                                  let _x_270 = _x_267, _x_269 in
+                                                  let _x_271 = _x_270 :: y_245 in
+                                                  let _x_272 = _x_266 :: _x_271 in
+                                                  let _x_273 = _x_261 :: _x_272 in
+                                                  let _x_274 = _x_257 :: _x_273 in
+                                                  let _x_275 = _x_251 :: _x_274 in
+                                                  let y_276 = _x_247 :: _x_275 in
+                                                  let _x_277 = "scopeExpected" in
+                                                  let _x_278 = _x_277, _x_111 in
+                                                  let _x_279 = "natExpected" in
+                                                  let _x_280 = _x_279, _x_113 in
+                                                  let _x_281 = "listOfFibersExpected" in
+                                                  let _x_282 = _x_281, _x_115 in
+                                                  let _x_283 = "contextExpected" in
+                                                  let _x_284 = _x_283, _x_117 in
+                                                  let _x_285 = "snapshotExpected" in
+                                                  let _x_286 = _x_285, _x_129 in
+                                                  let _x_287 = _x_286 :: y_276 in
+                                                  let _x_288 = _x_284 :: _x_287 in
+                                                  let _x_289 = _x_282 :: _x_288 in
+                                                  let _x_290 = _x_280 :: _x_289 in
+                                                  let y_291 = _x_278 :: _x_290 in
+                                                  let _x_292 = "predicateNotBool" in
+                                                  let _x_293 = 5 in
+                                                  let _x_294 = _x_293, _x_48 in
+                                                  let _x_295 = _x_292, _x_294 in
+                                                  let _x_296 = "notSelectable" in
+                                                  let _x_297 = 6 in
+                                                  let _x_298 = "decision" in
+                                                  let _x_299 = _x_298, root_11 in
+                                                  let _x_300 = "scrutinee" in
+                                                  let _x_301 = _x_300, _x_30 in
+                                                  let _x_302 = _x_301 :: _x_4 in
+                                                  let _x_303 = _x_299 :: _x_302 in
+                                                  let _x_304 = _x_297, _x_303 in
+                                                  let _x_305 = _x_296, _x_304 in
+                                                  let _x_306 = "stepNotCursor" in
+                                                  let _x_307 = 7 in
+                                                  let _x_308 = "step" in
+                                                  let _x_309 = _x_308, _x_30 in
+                                                  let _x_310 = "cursor" in
+                                                  let _x_311 = _x_310, _x_30 in
+                                                  let _x_312 = _x_311 :: _x_4 in
+                                                  let _x_313 = _x_309 :: _x_312 in
+                                                  let _x_314 = _x_307, _x_313 in
+                                                  let _x_315 = _x_306, _x_314 in
+                                                  let _x_316 = "initialNotCursor" in
+                                                  let _x_317 = 8 in
+                                                  let _x_318 = "initial" in
+                                                  let _x_319 = _x_318, _x_30 in
+                                                  let _x_320 = _x_319 :: _x_312 in
+                                                  let _x_321 = _x_317, _x_320 in
+                                                  let _x_322 = _x_316, _x_321 in
+                                                  let _x_323 = "releaseFails" in
+                                                  let _x_324 = 9 in
+                                                  let _x_325 = _x_68 :: _x_4 in
+                                                  let _x_326 = _x_324, _x_325 in
+                                                  let _x_327 = _x_323, _x_326 in
+                                                  let _x_328 = "notFiber" in
+                                                  let _x_329 = 10 in
+                                                  let _x_330 = _x_329, _x_48 in
+                                                  let _x_331 = _x_328, _x_330 in
+                                                  let _x_332 = _x_331 :: y_291 in
+                                                  let _x_333 = _x_327 :: _x_332 in
+                                                  let _x_334 = _x_322 :: _x_333 in
+                                                  let _x_335 = _x_315 :: _x_334 in
+                                                  let _x_336 = _x_305 :: _x_335 in
+                                                  let y_337 = _x_295 :: _x_336 in
+                                                  let _x_338 = "term" in
+                                                  let _x_339 = 0 in
+                                                  let _x_340 = "Term" in
+                                                  let _x_341 = Shape_named _x_340 in
+                                                  let _x_342 = store_program_gen_term_c_defs in
+                                                  let _x_343 = _x_46, _x_341 in
+                                                  let _x_344 = _x_343 :: _x_4 in
+                                                  let _x_345 = _x_339, _x_344 in
+                                                  let _x_346 = _x_338, _x_345 in
+                                                  let _x_347 = "cause" in
+                                                  let _x_348 = 1 in
+                                                  let _x_349 = "c" in
+                                                  let _x_350 = "CauseTerm" in
+                                                  let _x_351 = Shape_named _x_350 in
+                                                  let _x_352 = store_program_gen_cause_term_c_defs in
+                                                  let _x_353 = _x_349, _x_351 in
+                                                  let _x_354 = _x_353 :: _x_4 in
+                                                  let _x_355 = _x_348, _x_354 in
+                                                  let _x_356 = _x_347, _x_355 in
+                                                  let _x_357 = "errorNotAdmitted" in
+                                                  let _x_358 = 2 in
+                                                  let _x_359 = _x_358, _x_325 in
+                                                  let _x_360 = _x_357, _x_359 in
+                                                  let _x_361 = "outsideDomain" in
+                                                  let _x_362 = 3 in
+                                                  let _x_363 = _x_62 :: _x_4 in
+                                                  let _x_364 = _x_362, _x_363 in
+                                                  let _x_365 = _x_361, _x_364 in
+                                                  let _x_366 = "requestNotSubtype" in
+                                                  let _x_367 = 4 in
+                                                  let _x_368 = "request" in
+                                                  let _x_369 = _x_368, _x_30 in
+                                                  let _x_370 = _x_369 :: _x_40 in
+                                                  let _x_371 = _x_62 :: _x_370 in
+                                                  let _x_372 = _x_367, _x_371 in
+                                                  let _x_373 = _x_366, _x_372 in
+                                                  let _x_374 = _x_373 :: y_337 in
+                                                  let _x_375 = _x_365 :: _x_374 in
+                                                  let _x_376 = _x_360 :: _x_375 in
+                                                  let _x_377 = _x_356 :: _x_376 in
+                                                  let _x_378 = _x_346 :: _x_377 in
+                                                  let _x_379 = Shape_sum (_x_130, _x_378) in
+                                                  let _x_380 = _x_342 @ _x_352 in
+                                                  let _x_381 = _x_380 @ _x_155 in
+                                                  let _x_382 = _x_381 @ _x_4 in
+                                                  let _x_383 = _x_382 @ _x_4 in
+                                                  let _x_384 = _x_383 @ defs_9 in
+                                                  let _x_385 = _x_384 @ _x_4 in
+                                                  let _x_386 = _x_385 @ _x_4 in
+                                                  let _x_387 = _x_386 @ defs_6 in
+                                                  let _x_388 = _x_387 @ defs_7 in
+                                                  let _x_389 = _x_388 @ defs_8 in
+                                                  let _x_390 = _x_389 @ defs_3 in
+                                                  let _x_391 = _x_390 @ defs_4 in
+                                                  let _x_392 = _x_391 @ defs_5 in
+                                                  let _x_393 = _x_392 @ _x_4 in
+                                                  let _x_394 = _x_393 @ defs_1 in
+                                                  let _x_395 = _x_394 @ defs_2 in
+                                                  let _x_396 = _x_395 @ _x_4 in
+                                                  let _x_397 = _x_396 @ defs in
+                                                  let _x_398 = _x_397 @ _x_155 in
+                                                  ({ root = _x_379; defs = _x_398 } : shape_doc)))))))))))))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.LocatedC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_located_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_type_reason_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "Located" in
+      let _x_3 = "site" in
+      let _x_4 = Shape_nat in
+      let _x_5 = [] in
+      let _x_6 = Shape_list _x_4 in
+      let _x_7 = _x_3, _x_6 in
+      let _x_8 = "reason" in
+      let _x_9 = _x_8, root in
+      let _x_10 = _x_9 :: _x_5 in
+      let _x_11 = _x_7 :: _x_10 in
+      let _x_12 = Shape_struct (_x_2, _x_11) in
+      let _x_13 = _x_5 @ defs in
+      ({ root = _x_12; defs = _x_13 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.RowReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_row_reason_c_shape_doc : shape_doc =
+  let _x_1 = "RowReason" in
+  let _x_2 = "notExternal" in
+  let _x_3 = 0 in
+  let _x_4 = [] in
+  let _x_5 = _x_3, _x_4 in
+  let _x_6 = _x_2, _x_5 in
+  let _x_7 = "notAsync" in
+  let _x_8 = 1 in
+  let _x_9 = _x_8, _x_4 in
+  let _x_10 = _x_7, _x_9 in
+  let _x_11 = "builtinCollision" in
+  let _x_12 = 2 in
+  let _x_13 = _x_12, _x_4 in
+  let _x_14 = _x_11, _x_13 in
+  let _x_15 = "valueRowTrailing" in
+  let _x_16 = 3 in
+  let _x_17 = _x_16, _x_4 in
+  let _x_18 = _x_15, _x_17 in
+  let _x_19 = "internalHandle" in
+  let _x_20 = 4 in
+  let _x_21 = "column" in
+  let _x_22 = Shape_string in
+  let _x_23 = _x_21, _x_22 in
+  let _x_24 = _x_23 :: _x_4 in
+  let _x_25 = _x_20, _x_24 in
+  let _x_26 = _x_19, _x_25 in
+  let _x_27 = "emptyColumn" in
+  let _x_28 = 5 in
+  let _x_29 = _x_28, _x_24 in
+  let _x_30 = _x_27, _x_29 in
+  let _x_31 = "templateNotAdmissible" in
+  let _x_32 = 6 in
+  let _x_33 = _x_32, _x_24 in
+  let _x_34 = _x_31, _x_33 in
+  let _x_35 = "notWellScoped" in
+  let _x_36 = 7 in
+  let _x_37 = _x_36, _x_4 in
+  let _x_38 = _x_35, _x_37 in
+  let _x_39 = _x_38 :: _x_4 in
+  let _x_40 = _x_34 :: _x_39 in
+  let _x_41 = _x_30 :: _x_40 in
+  let _x_42 = _x_26 :: _x_41 in
+  let _x_43 = _x_18 :: _x_42 in
+  let _x_44 = _x_14 :: _x_43 in
+  let _x_45 = _x_10 :: _x_44 in
+  let _x_46 = _x_6 :: _x_45 in
+  let _x_47 = Shape_sum (_x_1, _x_46) in
+  ({ root = _x_47; defs = _x_4 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.RowArgC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_program_gen_row_arg_c_shape_doc : shape_doc =
+  let _x_1 = "RowArg" in
+  let _x_2 = "name" in
+  let _x_3 = 0 in
+  let _x_4 = "spelling" in
+  let _x_5 = Shape_string in
+  let _x_6 = [] in
+  let _x_7 = _x_4, _x_5 in
+  let _x_8 = _x_7 :: _x_6 in
+  let _x_9 = _x_3, _x_8 in
+  let _x_10 = _x_2, _x_9 in
+  let _x_11 = "str" in
+  let _x_12 = 1 in
+  let _x_13 = "value" in
+  let _x_14 = _x_13, _x_5 in
+  let _x_15 = _x_14 :: _x_6 in
+  let _x_16 = _x_12, _x_15 in
+  let _x_17 = _x_11, _x_16 in
+  let _x_18 = _x_17 :: _x_6 in
+  let _x_19 = _x_10 :: _x_18 in
+  let _x_20 = Shape_sum (_x_1, _x_19) in
+  ({ root = _x_20; defs = _x_6 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.ServiceReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_service_reason_c_shape_doc : shape_doc =
+  let _x_1 = "ServiceReason" in
+  let _x_2 = "reservedName" in
+  let _x_3 = 0 in
+  let _x_4 = [] in
+  let _x_5 = _x_3, _x_4 in
+  let _x_6 = _x_2, _x_5 in
+  let _x_7 = "nonFlatCarrier" in
+  let _x_8 = 1 in
+  let _x_9 = _x_8, _x_4 in
+  let _x_10 = _x_7, _x_9 in
+  let _x_11 = "conflictsBuiltin" in
+  let _x_12 = 2 in
+  let _x_13 = _x_12, _x_4 in
+  let _x_14 = _x_11, _x_13 in
+  let _x_15 = _x_14 :: _x_4 in
+  let _x_16 = _x_10 :: _x_15 in
+  let _x_17 = _x_6 :: _x_16 in
+  let _x_18 = Shape_sum (_x_1, _x_17) in
+  ({ root = _x_18; defs = _x_4 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.DeclReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_decl_reason_c_shape_doc : shape_doc =
+  let _x_1 = "DeclReason" in
+  let _x_2 = "internalSpelling" in
+  let _x_3 = 0 in
+  let _x_4 = [] in
+  let _x_5 = _x_3, _x_4 in
+  let _x_6 = _x_2, _x_5 in
+  let _x_7 = "typeVariable" in
+  let _x_8 = 1 in
+  let _x_9 = _x_8, _x_4 in
+  let _x_10 = _x_7, _x_9 in
+  let _x_11 = "applied" in
+  let _x_12 = 2 in
+  let _x_13 = _x_12, _x_4 in
+  let _x_14 = _x_11, _x_13 in
+  let _x_15 = "handleAtName" in
+  let _x_16 = 3 in
+  let _x_17 = _x_16, _x_4 in
+  let _x_18 = _x_15, _x_17 in
+  let _x_19 = "undeclaredName" in
+  let _x_20 = 4 in
+  let _x_21 = _x_20, _x_4 in
+  let _x_22 = _x_19, _x_21 in
+  let _x_23 = _x_22 :: _x_4 in
+  let _x_24 = _x_18 :: _x_23 in
+  let _x_25 = _x_14 :: _x_24 in
+  let _x_26 = _x_10 :: _x_25 in
+  let _x_27 = _x_6 :: _x_26 in
+  let _x_28 = Shape_sum (_x_1, _x_27) in
+  ({ root = _x_28; defs = _x_4 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.SigRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_sig_refusal_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_row_reason_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; _ } -> (let _x_2 = [] in
+      let _x_3 = store_program_gen_row_arg_c_shape_doc in
+      match (_x_3 : shape_doc) with
+        | { root = root_1; _ } -> (let _x_4 = "reason" in
+          let _x_5 = _x_4, root in
+          let _x_6 = _x_5 :: _x_2 in
+          let _x_7 = store_refusals_gen_service_reason_c_shape_doc in
+          match (_x_7 : shape_doc) with
+            | { root = root_2; _ } -> (let _x_8 = _x_2 @ _x_2 in
+              let _x_9 = store_program_gen_service_type_code_c_shape_doc in
+              match (_x_9 : shape_doc) with
+                | { root = root_3; _ } -> (let _x_10 = "key" in
+                  let _x_11 = Shape_string in
+                  let _x_12 = Shape_list root_1 in
+                  let _x_13 = Shape_pair (_x_11, _x_12) in
+                  let _x_14 = _x_10, _x_13 in
+                  let _x_15 = _x_14 :: _x_2 in
+                  let _x_16 = store_program_gen_service_key_c_shape_doc in
+                  match (_x_16 : shape_doc) with
+                    | { root = root_4; defs = defs } -> (let _x_17 = _x_4, root_2 in
+                      let _x_18 = _x_17 :: _x_2 in
+                      let _x_19 = store_refusals_gen_decl_reason_c_shape_doc in
+                      match (_x_19 : shape_doc) with
+                        | { root = root_5; _ } -> (let _x_20 = "index" in
+                          let _x_21 = Shape_nat in
+                          let _x_22 = _x_20, _x_21 in
+                          let _x_23 = _x_22 :: _x_6 in
+                          let _x_24 = "row" in
+                          let _x_25 = 0 in
+                          let _x_26 = _x_25, _x_23 in
+                          let _x_27 = _x_24, _x_26 in
+                          let _x_28 = "code" in
+                          let _x_29 = _x_28, root_3 in
+                          let _x_30 = _x_29 :: _x_2 in
+                          let _x_31 = "SigRefusal" in
+                          let _x_32 = "duplicateRow" in
+                          let _x_33 = 1 in
+                          let _x_34 = _x_33, _x_15 in
+                          let _x_35 = _x_32, _x_34 in
+                          let _x_36 = "service" in
+                          let _x_37 = 2 in
+                          let _x_38 = _x_22 :: _x_18 in
+                          let _x_39 = _x_37, _x_38 in
+                          let _x_40 = _x_36, _x_39 in
+                          let _x_41 = "duplicateCode" in
+                          let _x_42 = 3 in
+                          let _x_43 = _x_42, _x_30 in
+                          let _x_44 = _x_41, _x_43 in
+                          let _x_45 = "unservedKey" in
+                          let _x_46 = 4 in
+                          let _x_47 = _x_24, _x_21 in
+                          let _x_48 = _x_10, root_4 in
+                          let _x_49 = _x_48 :: _x_2 in
+                          let _x_50 = _x_47 :: _x_49 in
+                          let _x_51 = _x_46, _x_50 in
+                          let _x_52 = _x_45, _x_51 in
+                          let _x_53 = "decl" in
+                          let _x_54 = 5 in
+                          let _x_55 = _x_4, root_5 in
+                          let _x_56 = _x_55 :: _x_2 in
+                          let _x_57 = _x_22 :: _x_56 in
+                          let _x_58 = _x_54, _x_57 in
+                          let _x_59 = _x_53, _x_58 in
+                          let _x_60 = "rowName" in
+                          let _x_61 = 6 in
+                          let _x_62 = _x_61, _x_57 in
+                          let _x_63 = _x_60, _x_62 in
+                          let _x_64 = "conflictingDecl" in
+                          let _x_65 = 7 in
+                          let _x_66 = "name" in
+                          let _x_67 = _x_66, _x_11 in
+                          let _x_68 = _x_67 :: _x_2 in
+                          let _x_69 = _x_65, _x_68 in
+                          let _x_70 = _x_64, _x_69 in
+                          let _x_71 = "unguardedDecl" in
+                          let _x_72 = 8 in
+                          let _x_73 = _x_72, _x_68 in
+                          let _x_74 = _x_71, _x_73 in
+                          let _x_75 = _x_74 :: _x_2 in
+                          let _x_76 = _x_70 :: _x_75 in
+                          let _x_77 = _x_63 :: _x_76 in
+                          let _x_78 = _x_59 :: _x_77 in
+                          let _x_79 = _x_52 :: _x_78 in
+                          let _x_80 = _x_44 :: _x_79 in
+                          let _x_81 = _x_40 :: _x_80 in
+                          let _x_82 = _x_35 :: _x_81 in
+                          let _x_83 = _x_27 :: _x_82 in
+                          let _x_84 = Shape_sum (_x_31, _x_83) in
+                          let _x_85 = _x_8 @ _x_8 in
+                          let _x_86 = _x_85 @ _x_2 in
+                          let _x_87 = _x_86 @ _x_2 in
+                          let _x_88 = _x_87 @ defs in
+                          let _x_89 = _x_88 @ _x_2 in
+                          let _x_90 = _x_89 @ _x_2 in
+                          ({ root = _x_84; defs = _x_90 } : shape_doc)))))))
+
+
+
 (* LCNF mono: Effect4.Store.RefusalsGen.AdmitRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_refusals_gen_admit_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_sig_refusal_c_shape_doc in
+  let _x_1 = store_refusals_gen_located_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      let _x_4 = _x_2, _x_3 in
-      let _x_5 = store_refusals_gen_formation_refusal_c_shape_doc in
-      match (_x_5 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_6 = "why" in
-          let _x_7 = _x_6, root in
-          let _x_8 = _x_7 :: _x_3 in
-          let _x_9 = "AdmitRefusal" in
-          let _x_10 = "illTyped" in
-          let _x_11 = _x_10, _x_4 in
-          let _x_12 = "signature" in
-          let _x_13 = 1 in
-          let _x_14 = _x_13, _x_8 in
-          let _x_15 = _x_12, _x_14 in
-          let _x_16 = "emptyColumn" in
-          let _x_17 = 2 in
-          let _x_18 = "at" in
-          let _x_19 = Shape_string in
-          let _x_20 = Shape_list _x_19 in
-          let _x_21 = _x_18, _x_20 in
-          let _x_22 = _x_21 :: _x_3 in
-          let _x_23 = _x_17, _x_22 in
-          let _x_24 = _x_16, _x_23 in
-          let _x_25 = "formation" in
-          let _x_26 = 3 in
-          let _x_27 = _x_6, root_1 in
-          let _x_28 = _x_27 :: _x_3 in
-          let _x_29 = _x_26, _x_28 in
-          let _x_30 = _x_25, _x_29 in
-          let _x_31 = _x_30 :: _x_3 in
-          let _x_32 = _x_24 :: _x_31 in
-          let _x_33 = _x_15 :: _x_32 in
-          let _x_34 = _x_11 :: _x_33 in
-          let _x_35 = Shape_sum (_x_9, _x_34) in
-          let _x_36 = defs @ _x_3 in
-          let _x_37 = _x_36 @ defs_1 in
-          ({ root = _x_35; defs = _x_37 } : shape_doc)))
+    | { root = root; defs = defs } -> (let _x_2 = store_refusals_gen_sig_refusal_c_shape_doc in
+      match (_x_2 : shape_doc) with
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = "why" in
+          let _x_4 = _x_3, root in
+          let _x_5 = [] in
+          let _x_6 = _x_4 :: _x_5 in
+          let _x_7 = store_refusals_gen_formation_refusal_c_shape_doc in
+          match (_x_7 : shape_doc) with
+            | { root = root_2; defs = defs_2 } -> (let _x_8 = _x_3, root_1 in
+              let _x_9 = _x_8 :: _x_5 in
+              let _x_10 = "AdmitRefusal" in
+              let _x_11 = "illTyped" in
+              let _x_12 = 0 in
+              let _x_13 = _x_12, _x_6 in
+              let _x_14 = _x_11, _x_13 in
+              let _x_15 = "signature" in
+              let _x_16 = 1 in
+              let _x_17 = _x_16, _x_9 in
+              let _x_18 = _x_15, _x_17 in
+              let _x_19 = "emptyColumn" in
+              let _x_20 = 2 in
+              let _x_21 = "at" in
+              let _x_22 = Shape_string in
+              let _x_23 = Shape_list _x_22 in
+              let _x_24 = _x_21, _x_23 in
+              let _x_25 = _x_24 :: _x_5 in
+              let _x_26 = _x_20, _x_25 in
+              let _x_27 = _x_19, _x_26 in
+              let _x_28 = "formation" in
+              let _x_29 = 3 in
+              let _x_30 = _x_3, root_2 in
+              let _x_31 = _x_30 :: _x_5 in
+              let _x_32 = _x_29, _x_31 in
+              let _x_33 = _x_28, _x_32 in
+              let _x_34 = _x_33 :: _x_5 in
+              let _x_35 = _x_27 :: _x_34 in
+              let _x_36 = _x_18 :: _x_35 in
+              let _x_37 = _x_14 :: _x_36 in
+              let _x_38 = Shape_sum (_x_10, _x_37) in
+              let _x_39 = defs @ defs_1 in
+              let _x_40 = _x_39 @ _x_5 in
+              let _x_41 = _x_40 @ defs_2 in
+              ({ root = _x_38; defs = _x_41 } : shape_doc))))
 
 
 
@@ -30764,90 +31975,52 @@ let run_kit_admit_shape : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RowReasonC.toVal (x.1 : Effect4.Program.RowReason) : Effect4.Store.Val *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ProgramGen.EffC.toValLayerTerm.spec_3 (a.1 : List Nat) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let store_refusals_gen_row_reason_c_to_val (x_1 : row_reason) : Val.t =
-  match (x_1 : row_reason) with
-    | RowReason_notExternal -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | RowReason_notAsync -> (let _x_5 = 1 in
-      let _x_6 = [] in
-      Val.Ctor (_x_5, _x_6))
-    | RowReason_builtinCollision -> (let _x_8 = 2 in
-      let _x_9 = [] in
-      Val.Ctor (_x_8, _x_9))
-    | RowReason_valueRowTrailing -> (let _x_11 = 3 in
-      let _x_12 = [] in
-      Val.Ctor (_x_11, _x_12))
-    | RowReason_internalHandle column_14 -> (let _x_15 = 4 in
-      let _x_16 = Val.Str column_14 in
-      let _x_17 = [] in
-      let _x_18 = _x_16 :: _x_17 in
-      Val.Ctor (_x_15, _x_18))
-    | RowReason_emptyColumn column_20 -> (let _x_21 = 5 in
-      let _x_22 = Val.Str column_20 in
-      let _x_23 = [] in
-      let _x_24 = _x_22 :: _x_23 in
-      Val.Ctor (_x_21, _x_24))
-    | RowReason_templateNotAdmissible column_26 -> (let _x_27 = 6 in
-      let _x_28 = Val.Str column_26 in
-      let _x_29 = [] in
-      let _x_30 = _x_28 :: _x_29 in
-      Val.Ctor (_x_27, _x_30))
-    | RowReason_notWellScoped -> (let _x_32 = 7 in
-      let _x_33 = [] in
-      Val.Ctor (_x_32, _x_33))
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.RowArgC.toVal (x.1 : Effect4.Program.RowArg) : Effect4.Store.Val *)
-
-let store_program_gen_row_arg_c_to_val (x_1 : RowArg.t) : Val.t =
-  match (x_1 : RowArg.t) with
-    | RowArg.Name spelling_2 -> (let _x_3 = 0 in
-      let _x_4 = Val.Str spelling_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | RowArg.Str value_8 -> (let _x_9 = 1 in
-      let _x_10 = Val.Str value_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ProgramGen.RowC.toVal.spec_0 (a.1 : List Effect4.Program.RowArg) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_program_gen_row_c_to_val_spec_0 (a_1 : RowArg.t list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 (a_1 : int list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_program_gen_row_arg_c_to_val head_4 in
+    | head_4 :: tail_5 -> (let _x_6 = Val.Nat head_4 in
       let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_program_gen_row_c_to_val_spec_0 tail_5 _x_7)
+      list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 tail_5 _x_7)
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.ServiceReasonC.toVal (x.1 : Effect4.Program.ServiceReason) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.ProgramGen.LitC.toVal (x.1 : Effect4.Program.Lit) : Effect4.Store.Val *)
 
-let store_refusals_gen_service_reason_c_to_val (x_1 : service_reason) : Val.t =
-  match (x_1 : service_reason) with
-    | ServiceReason_reservedName -> (let _x_2 = 0 in
+let store_program_gen_lit_c_to_val (x_1 : Lit.t) : Val.t =
+  match (x_1 : Lit.t) with
+    | Lit.Unit -> (let _x_2 = 0 in
       let _x_3 = [] in
       Val.Ctor (_x_2, _x_3))
-    | ServiceReason_nonFlatCarrier -> (let _x_5 = 1 in
-      let _x_6 = [] in
-      Val.Ctor (_x_5, _x_6))
-    | ServiceReason_conflictsBuiltin -> (let _x_8 = 2 in
-      let _x_9 = [] in
-      Val.Ctor (_x_8, _x_9))
+    | Lit.Nat value_5 -> (let _x_6 = 1 in
+      let _x_7 = Val.Nat value_5 in
+      let _x_8 = [] in
+      let _x_9 = _x_7 :: _x_8 in
+      Val.Ctor (_x_6, _x_9))
+    | Lit.Bool value_11 -> (let _x_12 = 2 in
+      let _x_13 = Val.Bool value_11 in
+      let _x_14 = [] in
+      let _x_15 = _x_13 :: _x_14 in
+      Val.Ctor (_x_12, _x_15))
+    | Lit.Str value_17 -> (let _x_18 = 3 in
+      let _x_19 = Val.Str value_17 in
+      let _x_20 = [] in
+      let _x_21 = _x_19 :: _x_20 in
+      Val.Ctor (_x_18, _x_21))
 
 
 
-(* LCNF mono: Effect4.Store.ProgramGen.ServiceTypeCodeC.toVal (x.1 : Nat) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.rowImage._at_.Effect4.Store.ProgramGen.TyC.toValTy.spec_0._lam_0 (r : List Effect4.ServiceKey) : List Effect4.ServiceKey *)
 
-let store_program_gen_service_type_code_c_to_val (x_1 : int) : Val.t =
+let store_row_image_at_store_program_gen_ty_c_to_val_ty_spec_0__lam_0 (r : ServiceKey.t list) : ServiceKey.t list =
+  r
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.ServiceNameC.toVal (x.1 : Nat) : Effect4.Store.Val *)
+
+let store_program_gen_service_name_c_to_val (x_1 : int) : Val.t =
   let _x_2 = 0 in
   let _x_3 = Val.Nat x_1 in
   let _x_4 = [] in
@@ -30856,9 +32029,9 @@ let store_program_gen_service_type_code_c_to_val (x_1 : int) : Val.t =
 
 
 
-(* LCNF mono: Effect4.Store.ProgramGen.ServiceNameC.toVal (x.1 : Nat) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.ProgramGen.ServiceTypeCodeC.toVal (x.1 : Nat) : Effect4.Store.Val *)
 
-let store_program_gen_service_name_c_to_val (x_1 : int) : Val.t =
+let store_program_gen_service_type_code_c_to_val (x_1 : int) : Val.t =
   let _x_2 = 0 in
   let _x_3 = Val.Nat x_1 in
   let _x_4 = [] in
@@ -30878,112 +32051,6 @@ let store_program_gen_service_key_c_to_val (x_1 : ServiceKey.t) : Val.t =
       let _x_8 = _x_6 :: _x_7 in
       let _x_9 = _x_5 :: _x_8 in
       Val.Ctor (_x_4, _x_9))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.DeclReasonC.toVal (x.1 : Effect4.Program.DeclReason) : Effect4.Store.Val *)
-
-let store_refusals_gen_decl_reason_c_to_val (x_1 : decl_reason) : Val.t =
-  match (x_1 : decl_reason) with
-    | DeclReason_internalSpelling -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | DeclReason_typeVariable -> (let _x_5 = 1 in
-      let _x_6 = [] in
-      Val.Ctor (_x_5, _x_6))
-    | DeclReason_applied -> (let _x_8 = 2 in
-      let _x_9 = [] in
-      Val.Ctor (_x_8, _x_9))
-    | DeclReason_handleAtName -> (let _x_11 = 3 in
-      let _x_12 = [] in
-      Val.Ctor (_x_11, _x_12))
-    | DeclReason_undeclaredName -> (let _x_14 = 4 in
-      let _x_15 = [] in
-      Val.Ctor (_x_14, _x_15))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.SigRefusalC.toVal (x.1 : Effect4.Program.SigRefusal) : Effect4.Store.Val *)
-
-let store_refusals_gen_sig_refusal_c_to_val (x_1 : sig_refusal) : Val.t =
-  match (x_1 : sig_refusal) with
-    | SigRefusal_row (index_2, reason_3) -> (let _x_4 = 0 in
-      let _x_5 = Val.Nat index_2 in
-      let _x_6 = store_refusals_gen_row_reason_c_to_val reason_3 in
-      let _x_7 = [] in
-      let _x_8 = _x_6 :: _x_7 in
-      let _x_9 = _x_5 :: _x_8 in
-      Val.Ctor (_x_4, _x_9))
-    | SigRefusal_duplicateRow key_11 -> (match key_11 with
-        | fst_1, snd_1 -> (let _x_12 = 1 in
-          let _x_13 = Val.Str fst_1 in
-          let _x_14 = [] in
-          let _x_15 = list_map_tr_loop_at_store_program_gen_row_c_to_val_spec_0 snd_1 _x_14 in
-          let _x_16 = Val.List _x_15 in
-          let _x_17 = Val.Pair (_x_13, _x_16) in
-          let _x_18 = _x_17 :: _x_14 in
-          Val.Ctor (_x_12, _x_18)))
-    | SigRefusal_service (index_20, reason_21) -> (let _x_22 = 2 in
-      let _x_23 = Val.Nat index_20 in
-      let _x_24 = store_refusals_gen_service_reason_c_to_val reason_21 in
-      let _x_25 = [] in
-      let _x_26 = _x_24 :: _x_25 in
-      let _x_27 = _x_23 :: _x_26 in
-      Val.Ctor (_x_22, _x_27))
-    | SigRefusal_duplicateCode code_29 -> (let _x_30 = 3 in
-      let _x_31 = store_program_gen_service_type_code_c_to_val code_29 in
-      let _x_32 = [] in
-      let _x_33 = _x_31 :: _x_32 in
-      Val.Ctor (_x_30, _x_33))
-    | SigRefusal_unservedKey (row_35, key_36) -> (let _x_37 = 4 in
-      let _x_38 = Val.Nat row_35 in
-      let _x_39 = store_program_gen_service_key_c_to_val key_36 in
-      let _x_40 = [] in
-      let _x_41 = _x_39 :: _x_40 in
-      let _x_42 = _x_38 :: _x_41 in
-      Val.Ctor (_x_37, _x_42))
-    | SigRefusal_decl (index_44, reason_45) -> (let _x_46 = 5 in
-      let _x_47 = Val.Nat index_44 in
-      let _x_48 = store_refusals_gen_decl_reason_c_to_val reason_45 in
-      let _x_49 = [] in
-      let _x_50 = _x_48 :: _x_49 in
-      let _x_51 = _x_47 :: _x_50 in
-      Val.Ctor (_x_46, _x_51))
-    | SigRefusal_rowName (index_53, reason_54) -> (let _x_55 = 6 in
-      let _x_56 = Val.Nat index_53 in
-      let _x_57 = store_refusals_gen_decl_reason_c_to_val reason_54 in
-      let _x_58 = [] in
-      let _x_59 = _x_57 :: _x_58 in
-      let _x_60 = _x_56 :: _x_59 in
-      Val.Ctor (_x_55, _x_60))
-    | SigRefusal_conflictingDecl name_62 -> (let _x_63 = 7 in
-      let _x_64 = Val.Str name_62 in
-      let _x_65 = [] in
-      let _x_66 = _x_64 :: _x_65 in
-      Val.Ctor (_x_63, _x_66))
-    | SigRefusal_unguardedDecl name_68 -> (let _x_69 = 8 in
-      let _x_70 = Val.Str name_68 in
-      let _x_71 = [] in
-      let _x_72 = _x_70 :: _x_71 in
-      Val.Ctor (_x_69, _x_72))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ProgramGen.TermC.toValTerm.spec_1 (a.1 : List String) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 (a_1 : string list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = Val.Str head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.rowImage._at_.Effect4.Store.ProgramGen.TyC.toValTy.spec_0._lam_0 (r : List Effect4.ServiceKey) : List Effect4.ServiceKey *)
-
-let store_row_image_at_store_program_gen_ty_c_to_val_ty_spec_0__lam_0 (r : ServiceKey.t list) : ServiceKey.t list =
-  r
 
 
 
@@ -31326,6 +32393,216 @@ and store_program_gen_ty_c_to_val_l3 (x_1 : Ty.t list) : Val.t list =
 
 
 
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ProgramGen.TermC.toValTerm.spec_0 (a.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_0 (a_1 : (string * (bool * Ty.t)) list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (match head_4 with
+        | fst_1, snd_1 -> (match snd_1 with
+            | fst_2, snd_2 -> (let _x_6 = Val.Str fst_1 in
+              let _x_7 = Val.Bool fst_2 in
+              let _x_8 = store_program_gen_ty_c_to_val_ty snd_2 in
+              let _x_9 = Val.Pair (_x_7, _x_8) in
+              let _x_10 = Val.Pair (_x_6, _x_9) in
+              let _x_11 = _x_10 :: a_2 in
+              list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_0 tail_5 _x_11)))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ProgramGen.TermC.toValTerm.spec_1 (a.1 : List String) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 (a_1 : string list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = Val.Str head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 tail_5 _x_7)
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.FieldReadModeC.toVal (x.1 : Effect4.Program.FieldReadMode) : Effect4.Store.Val *)
+
+let store_program_gen_field_read_mode_c_to_val (x_1 : FieldReadMode.t) : Val.t =
+  match (x_1 : FieldReadMode.t) with
+    | FieldReadMode.Required -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      Val.Ctor (_x_2, _x_3))
+    | FieldReadMode.Optional -> (let _x_5 = 1 in
+      let _x_6 = [] in
+      Val.Ctor (_x_5, _x_6))
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.TermC.toValTerm (x.1 : Effect4.Program.Term) : Effect4.Store.Val
+   Effect4.Store.ProgramGen.TermC.toValTerms (x.1 : Effect4.Program.Terms) : Effect4.Store.Val *)
+
+let rec store_program_gen_term_c_to_val_term (x_1 : Term.t) : Val.t =
+  match (x_1 : Term.t) with
+    | Term.Var index_2 -> (let _x_3 = 0 in
+      let _x_4 = Val.Nat index_2 in
+      let _x_5 = [] in
+      let _x_6 = _x_4 :: _x_5 in
+      Val.Ctor (_x_3, _x_6))
+    | Term.Lit value_8 -> (let _x_9 = 1 in
+      let _x_10 = store_program_gen_lit_c_to_val value_8 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      Val.Ctor (_x_9, _x_12))
+    | Term.App (atom_14, args_15) -> (let _x_16 = 2 in
+      let _x_17 = Val.Str atom_14 in
+      let _x_18 = store_program_gen_term_c_to_val_terms args_15 in
+      let _x_19 = [] in
+      let _x_20 = _x_18 :: _x_19 in
+      let _x_21 = _x_17 :: _x_20 in
+      Val.Ctor (_x_16, _x_21))
+    | Term.Record (fields_23, present_names_24, values_25) -> (let _x_26 = 3 in
+      let _x_27 = [] in
+      let _x_28 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_0 fields_23 _x_27 in
+      let _x_29 = Val.List _x_28 in
+      let _x_30 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 present_names_24 _x_27 in
+      let _x_31 = Val.List _x_30 in
+      let _x_32 = store_program_gen_term_c_to_val_terms values_25 in
+      let _x_33 = _x_32 :: _x_27 in
+      let _x_34 = _x_31 :: _x_33 in
+      let _x_35 = _x_29 :: _x_34 in
+      Val.Ctor (_x_26, _x_35))
+    | Term.Field (mode_37, target_38, name_39) -> (let _x_40 = 4 in
+      let _x_41 = store_program_gen_field_read_mode_c_to_val mode_37 in
+      let _x_42 = store_program_gen_term_c_to_val_term target_38 in
+      let _x_43 = Val.Str name_39 in
+      let _x_44 = [] in
+      let _x_45 = _x_43 :: _x_44 in
+      let _x_46 = _x_42 :: _x_45 in
+      let _x_47 = _x_41 :: _x_46 in
+      Val.Ctor (_x_40, _x_47))
+    | Term.RecordSet (target_49, name_50, value_51) -> (let _x_52 = 5 in
+      let _x_53 = store_program_gen_term_c_to_val_term target_49 in
+      let _x_54 = Val.Str name_50 in
+      let _x_55 = store_program_gen_term_c_to_val_term value_51 in
+      let _x_56 = [] in
+      let _x_57 = _x_55 :: _x_56 in
+      let _x_58 = _x_54 :: _x_57 in
+      let _x_59 = _x_53 :: _x_58 in
+      Val.Ctor (_x_52, _x_59))
+    | Term.TupleAt (target_61, index_62) -> (let _x_63 = 6 in
+      let _x_64 = store_program_gen_term_c_to_val_term target_61 in
+      let _x_65 = Val.Nat index_62 in
+      let _x_66 = [] in
+      let _x_67 = _x_65 :: _x_66 in
+      let _x_68 = _x_64 :: _x_67 in
+      Val.Ctor (_x_63, _x_68))
+    | Term.Fold (acc_ty_70, list_71, init_72, body_73) -> (let _x_74 = 7 in
+      let[@local always] _jp_75 = fun _y_76 -> let _x_77 = store_program_gen_term_c_to_val_term list_71 in
+      let _x_78 = store_program_gen_term_c_to_val_term init_72 in
+      let _x_79 = store_program_gen_term_c_to_val_term body_73 in
+      let _x_80 = [] in
+      let _x_81 = _x_79 :: _x_80 in
+      let _x_82 = _x_78 :: _x_81 in
+      let _x_83 = _x_77 :: _x_82 in
+      let _x_84 = _y_76 :: _x_83 in
+      Val.Ctor (_x_74, _x_84) in
+      match acc_ty_70 with
+        | None -> (let _x_86 = Val.None in
+          _jp_75 _x_86)
+        | Some val__87 -> (let _x_88 = store_program_gen_ty_c_to_val_ty val__87 in
+          let _x_89 = Val.Some _x_88 in
+          _jp_75 _x_89))
+
+and store_program_gen_term_c_to_val_terms (x_1 : Terms.t) : Val.t =
+  match (x_1 : Terms.t) with
+    | Terms.Nil -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      Val.Ctor (_x_2, _x_3))
+    | Terms.Cons (head_5, tail_6) -> (let _x_7 = 1 in
+      let _x_8 = store_program_gen_term_c_to_val_term head_5 in
+      let _x_9 = store_program_gen_term_c_to_val_terms tail_6 in
+      let _x_10 = [] in
+      let _x_11 = _x_9 :: _x_10 in
+      let _x_12 = _x_8 :: _x_11 in
+      Val.Ctor (_x_7, _x_12))
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.CauseTermC.toValCauseTerm (x.1 : Effect4.Program.CauseTerm) : Effect4.Store.Val *)
+
+let rec store_program_gen_cause_term_c_to_val_cause_term (x_1 : CauseTerm.t) : Val.t =
+  match (x_1 : CauseTerm.t) with
+    | CauseTerm.Fail error_2 -> (let _x_3 = 0 in
+      let _x_4 = store_program_gen_term_c_to_val_term error_2 in
+      let _x_5 = [] in
+      let _x_6 = _x_4 :: _x_5 in
+      Val.Ctor (_x_3, _x_6))
+    | CauseTerm.Die defect_8 -> (let _x_9 = 1 in
+      let _x_10 = store_program_gen_term_c_to_val_term defect_8 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      Val.Ctor (_x_9, _x_12))
+    | CauseTerm.Interrupt interruptor_14 -> (let _x_15 = 2 in
+      let[@local always] _jp_16 = fun _y_17 -> let _x_18 = [] in
+      let _x_19 = _y_17 :: _x_18 in
+      Val.Ctor (_x_15, _x_19) in
+      match interruptor_14 with
+        | None -> (let _x_21 = Val.None in
+          _jp_16 _x_21)
+        | Some val__22 -> (let _x_23 = store_program_gen_term_c_to_val_term val__22 in
+          let _x_24 = Val.Some _x_23 in
+          _jp_16 _x_24))
+    | CauseTerm.Both (left_25, right_26) -> (let _x_27 = 3 in
+      let _x_28 = store_program_gen_cause_term_c_to_val_cause_term left_25 in
+      let _x_29 = store_program_gen_cause_term_c_to_val_cause_term right_26 in
+      let _x_30 = [] in
+      let _x_31 = _x_29 :: _x_30 in
+      let _x_32 = _x_28 :: _x_31 in
+      Val.Ctor (_x_27, _x_32))
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.DecisionC.toVal (x.1 : Effect4.Program.Decision) : Effect4.Store.Val *)
+
+let store_program_gen_decision_c_to_val (x_1 : Decision.t) : Val.t =
+  match (x_1 : Decision.t) with
+    | Decision.Bool -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      Val.Ctor (_x_2, _x_3))
+    | Decision.Option -> (let _x_5 = 1 in
+      let _x_6 = [] in
+      Val.Ctor (_x_5, _x_6))
+    | Decision.Tag tag_8 -> (let _x_9 = 2 in
+      let _x_10 = Val.Str tag_8 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      Val.Ctor (_x_9, _x_12))
+    | Decision.RecordTag tag_14 -> (let _x_15 = 3 in
+      let _x_16 = Val.Str tag_14 in
+      let _x_17 = [] in
+      let _x_18 = _x_16 :: _x_17 in
+      Val.Ctor (_x_15, _x_18))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.RefFaultC.toVal (x.1 : Effect4.Program.RefFault) : Effect4.Store.Val *)
+
+let store_refusals_gen_ref_fault_c_to_val (x_1 : ref_fault) : Val.t =
+  match (x_1 : ref_fault) with
+    | RefFault_notBefore -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      Val.Ctor (_x_2, _x_3))
+    | RefFault_encloses -> (let _x_5 = 1 in
+      let _x_6 = [] in
+      Val.Ctor (_x_5, _x_6))
+    | RefFault_noLayer -> (let _x_8 = 2 in
+      let _x_9 = [] in
+      Val.Ctor (_x_8, _x_9))
+    | RefFault_toReference -> (let _x_11 = 3 in
+      let _x_12 = [] in
+      Val.Ctor (_x_11, _x_12))
+    | RefFault_otherScope -> (let _x_14 = 4 in
+      let _x_15 = [] in
+      Val.Ctor (_x_14, _x_15))
+
+
+
 (* LCNF mono: Effect4.Store.RefusalsGen.FormationReasonC.toVal (x.1 : Effect4.Program.FormationReason) : Effect4.Store.Val *)
 
 let store_refusals_gen_formation_reason_c_to_val (x_1 : formation_reason) : Val.t =
@@ -31364,29 +32641,720 @@ let store_refusals_gen_formation_refusal_c_to_val (x_1 : formation_refusal) : Va
 
 
 
+(* LCNF mono: Effect4.Store.RefusalsGen.RecordTypingReasonC.toVal (x.1 : Effect4.Program.RecordTypingReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_record_typing_reason_c_to_val (x_1 : record_typing_reason) : Val.t =
+  match (x_1 : record_typing_reason) with
+    | RecordTypingReason_duplicateDeclaration name_2 -> (let _x_3 = 0 in
+      let _x_4 = Val.Str name_2 in
+      let _x_5 = [] in
+      let _x_6 = _x_4 :: _x_5 in
+      Val.Ctor (_x_3, _x_6))
+    | RecordTypingReason_duplicateSupplied name_8 -> (let _x_9 = 1 in
+      let _x_10 = Val.Str name_8 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      Val.Ctor (_x_9, _x_12))
+    | RecordTypingReason_missingRequired name_14 -> (let _x_15 = 2 in
+      let _x_16 = Val.Str name_14 in
+      let _x_17 = [] in
+      let _x_18 = _x_16 :: _x_17 in
+      Val.Ctor (_x_15, _x_18))
+    | RecordTypingReason_unknownSupplied name_20 -> (let _x_21 = 3 in
+      let _x_22 = Val.Str name_20 in
+      let _x_23 = [] in
+      let _x_24 = _x_22 :: _x_23 in
+      Val.Ctor (_x_21, _x_24))
+    | RecordTypingReason_fieldNotSubtype (name_26, actual_27, expected_28) -> (let _x_29 = 4 in
+      let _x_30 = Val.Str name_26 in
+      let _x_31 = store_program_gen_ty_c_to_val_ty actual_27 in
+      let _x_32 = store_program_gen_ty_c_to_val_ty expected_28 in
+      let _x_33 = [] in
+      let _x_34 = _x_32 :: _x_33 in
+      let _x_35 = _x_31 :: _x_34 in
+      let _x_36 = _x_30 :: _x_35 in
+      Val.Ctor (_x_29, _x_36))
+    | RecordTypingReason_columnLengths (names_38, values_39) -> (let _x_40 = 5 in
+      let _x_41 = Val.Nat names_38 in
+      let _x_42 = Val.Nat values_39 in
+      let _x_43 = [] in
+      let _x_44 = _x_42 :: _x_43 in
+      let _x_45 = _x_41 :: _x_44 in
+      Val.Ctor (_x_40, _x_45))
+    | RecordTypingReason_missingReadField (name_47, branch_48) -> (let _x_49 = 6 in
+      let _x_50 = Val.Str name_47 in
+      let _x_51 = store_program_gen_ty_c_to_val_ty branch_48 in
+      let _x_52 = [] in
+      let _x_53 = _x_51 :: _x_52 in
+      let _x_54 = _x_50 :: _x_53 in
+      Val.Ctor (_x_49, _x_54))
+    | RecordTypingReason_optionalReadField (name_56, branch_57) -> (let _x_58 = 7 in
+      let _x_59 = Val.Str name_56 in
+      let _x_60 = store_program_gen_ty_c_to_val_ty branch_57 in
+      let _x_61 = [] in
+      let _x_62 = _x_60 :: _x_61 in
+      let _x_63 = _x_59 :: _x_62 in
+      Val.Ctor (_x_58, _x_63))
+    | RecordTypingReason_declarationFormation why_65 -> (let _x_66 = 8 in
+      let _x_67 = store_refusals_gen_formation_refusal_c_to_val why_65 in
+      let _x_68 = [] in
+      let _x_69 = _x_67 :: _x_68 in
+      Val.Ctor (_x_66, _x_69))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.RecordTermRefusalC.toVal (x.1 : Effect4.Program.RecordTermRefusal) : Effect4.Store.Val *)
+
+let store_refusals_gen_record_term_refusal_c_to_val (x_1 : record_term_refusal) : Val.t =
+  match (x_1 : record_term_refusal) with
+    | { path = path_2; reason = reason_3 } -> (let _x_4 = 0 in
+      let _x_5 = [] in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_5 in
+      let _x_7 = Val.List _x_6 in
+      let _x_8 = store_refusals_gen_record_typing_reason_c_to_val reason_3 in
+      let _x_9 = _x_8 :: _x_5 in
+      let _x_10 = _x_7 :: _x_9 in
+      Val.Ctor (_x_4, _x_10))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.RecordCauseRefusalC.toVal (x.1 : Effect4.Program.RecordCauseRefusal) : Effect4.Store.Val *)
+
+let store_refusals_gen_record_cause_refusal_c_to_val (x_1 : record_cause_refusal) : Val.t =
+  match (x_1 : record_cause_refusal) with
+    | { cause_path = cause_path_2; term = term_3 } -> (let _x_4 = 0 in
+      let _x_5 = [] in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 cause_path_2 _x_5 in
+      let _x_7 = Val.List _x_6 in
+      let _x_8 = store_refusals_gen_record_term_refusal_c_to_val term_3 in
+      let _x_9 = _x_8 :: _x_5 in
+      let _x_10 = _x_7 :: _x_9 in
+      Val.Ctor (_x_4, _x_10))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.TupleTypingReasonC.toVal (x.1 : Effect4.Program.TupleTypingReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_tuple_typing_reason_c_to_val (x_1 : tuple_typing_reason) : Val.t =
+  match (x_1 : tuple_typing_reason) with
+    | TupleTypingReason_nonTuple branch_2 -> (let _x_3 = 0 in
+      let _x_4 = store_program_gen_ty_c_to_val_ty branch_2 in
+      let _x_5 = [] in
+      let _x_6 = _x_4 :: _x_5 in
+      Val.Ctor (_x_3, _x_6))
+    | TupleTypingReason_outOfBounds arity_8 -> (let _x_9 = 1 in
+      let _x_10 = Val.Nat arity_8 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      Val.Ctor (_x_9, _x_12))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.TupleTermRefusalC.toVal (x.1 : Effect4.Program.TupleTermRefusal) : Effect4.Store.Val *)
+
+let store_refusals_gen_tuple_term_refusal_c_to_val (x_1 : tuple_term_refusal) : Val.t =
+  match (x_1 : tuple_term_refusal) with
+    | { path = path_2; index = index_3; reason = reason_4 } -> (let _x_5 = 0 in
+      let _x_6 = [] in
+      let _x_7 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_6 in
+      let _x_8 = Val.List _x_7 in
+      let _x_9 = Val.Nat index_3 in
+      let _x_10 = store_refusals_gen_tuple_typing_reason_c_to_val reason_4 in
+      let _x_11 = _x_10 :: _x_6 in
+      let _x_12 = _x_9 :: _x_11 in
+      let _x_13 = _x_8 :: _x_12 in
+      Val.Ctor (_x_5, _x_13))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.TupleCauseRefusalC.toVal (x.1 : Effect4.Program.TupleCauseRefusal) : Effect4.Store.Val *)
+
+let store_refusals_gen_tuple_cause_refusal_c_to_val (x_1 : tuple_cause_refusal) : Val.t =
+  match (x_1 : tuple_cause_refusal) with
+    | { cause_path = cause_path_2; term = term_3 } -> (let _x_4 = 0 in
+      let _x_5 = [] in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 cause_path_2 _x_5 in
+      let _x_7 = Val.List _x_6 in
+      let _x_8 = store_refusals_gen_tuple_term_refusal_c_to_val term_3 in
+      let _x_9 = _x_8 :: _x_5 in
+      let _x_10 = _x_7 :: _x_9 in
+      Val.Ctor (_x_4, _x_10))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.FoldTypingReasonC.toVal (x.1 : Effect4.Program.FoldTypingReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_fold_typing_reason_c_to_val (x_1 : fold_typing_reason) : Val.t =
+  match (x_1 : fold_typing_reason) with
+    | FoldTypingReason_notList list_2 -> (let _x_3 = 0 in
+      let _x_4 = store_program_gen_ty_c_to_val_ty list_2 in
+      let _x_5 = [] in
+      let _x_6 = _x_4 :: _x_5 in
+      Val.Ctor (_x_3, _x_6))
+    | FoldTypingReason_initialNotAccumulator (initial_8, accumulator_9) -> (let _x_10 = 1 in
+      let _x_11 = store_program_gen_ty_c_to_val_ty initial_8 in
+      let _x_12 = store_program_gen_ty_c_to_val_ty accumulator_9 in
+      let _x_13 = [] in
+      let _x_14 = _x_12 :: _x_13 in
+      let _x_15 = _x_11 :: _x_14 in
+      Val.Ctor (_x_10, _x_15))
+    | FoldTypingReason_bodyNotAccumulator (body_17, accumulator_18) -> (let _x_19 = 2 in
+      let _x_20 = store_program_gen_ty_c_to_val_ty body_17 in
+      let _x_21 = store_program_gen_ty_c_to_val_ty accumulator_18 in
+      let _x_22 = [] in
+      let _x_23 = _x_21 :: _x_22 in
+      let _x_24 = _x_20 :: _x_23 in
+      Val.Ctor (_x_19, _x_24))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.FoldTermRefusalC.toVal (x.1 : Effect4.Program.FoldTermRefusal) : Effect4.Store.Val *)
+
+let store_refusals_gen_fold_term_refusal_c_to_val (x_1 : fold_term_refusal) : Val.t =
+  match (x_1 : fold_term_refusal) with
+    | { path = path_2; reason = reason_3 } -> (let _x_4 = 0 in
+      let _x_5 = [] in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_5 in
+      let _x_7 = Val.List _x_6 in
+      let _x_8 = store_refusals_gen_fold_typing_reason_c_to_val reason_3 in
+      let _x_9 = _x_8 :: _x_5 in
+      let _x_10 = _x_7 :: _x_9 in
+      Val.Ctor (_x_4, _x_10))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.FoldCauseRefusalC.toVal (x.1 : Effect4.Program.FoldCauseRefusal) : Effect4.Store.Val *)
+
+let store_refusals_gen_fold_cause_refusal_c_to_val (x_1 : fold_cause_refusal) : Val.t =
+  match (x_1 : fold_cause_refusal) with
+    | { cause_path = cause_path_2; term = term_3 } -> (let _x_4 = 0 in
+      let _x_5 = [] in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 cause_path_2 _x_5 in
+      let _x_7 = Val.List _x_6 in
+      let _x_8 = store_refusals_gen_fold_term_refusal_c_to_val term_3 in
+      let _x_9 = _x_8 :: _x_5 in
+      let _x_10 = _x_7 :: _x_9 in
+      Val.Ctor (_x_4, _x_10))
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.EffTyC.toVal (x.1 : Effect4.Program.EffTy) : Effect4.Store.Val *)
+
+let store_program_gen_eff_ty_c_to_val (x_1 : EffTy.t) : Val.t =
+  match (x_1 : EffTy.t) with
+    | { EffTy.answer = answer_2; EffTy.error = error_3; EffTy.requires = requires_4 } -> (let _x_5 = store_row_image_at_store_program_gen_ty_c_to_val_ty_spec_0 in
+      match (_x_5 : _ image) with
+        | { to_val = to_val; _ } -> (let _x_6 = 0 in
+          let _x_7 = store_program_gen_ty_c_to_val_ty answer_2 in
+          let _x_8 = store_program_gen_ty_c_to_val_ty error_3 in
+          let _x_9 = to_val requires_4 in
+          let _x_10 = [] in
+          let _x_11 = _x_9 :: _x_10 in
+          let _x_12 = _x_8 :: _x_11 in
+          let _x_13 = _x_7 :: _x_12 in
+          Val.Ctor (_x_6, _x_13)))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.RefusalsGen.TermTypingRefusalC.toVal.spec_0 (a.1 : List Effect4.Program.Ty) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 (a_1 : Ty.t list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = store_program_gen_ty_c_to_val_ty head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 tail_5 _x_7)
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.TypeReasonC.toVal (x.1 : Effect4.Program.TypeReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_type_reason_c_to_val (x_1 : type_reason) : Val.t =
+  match (x_1 : type_reason) with
+    | TypeReason_term t_2 -> (let _x_3 = 0 in
+      let _x_4 = store_program_gen_term_c_to_val_term t_2 in
+      let _x_5 = [] in
+      let _x_6 = _x_4 :: _x_5 in
+      Val.Ctor (_x_3, _x_6))
+    | TypeReason_cause c_8 -> (let _x_9 = 1 in
+      let _x_10 = store_program_gen_cause_term_c_to_val_cause_term c_8 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      Val.Ctor (_x_9, _x_12))
+    | TypeReason_errorNotAdmitted error_14 -> (let _x_15 = 2 in
+      let _x_16 = store_program_gen_ty_c_to_val_ty error_14 in
+      let _x_17 = [] in
+      let _x_18 = _x_16 :: _x_17 in
+      Val.Ctor (_x_15, _x_18))
+    | TypeReason_outsideDomain row_20 -> (let _x_21 = 3 in
+      let _x_22 = Val.Str row_20 in
+      let _x_23 = [] in
+      let _x_24 = _x_22 :: _x_23 in
+      Val.Ctor (_x_21, _x_24))
+    | TypeReason_requestNotSubtype (row_26, request_27, expected_28) -> (let _x_29 = 4 in
+      let _x_30 = Val.Str row_26 in
+      let _x_31 = store_program_gen_ty_c_to_val_ty request_27 in
+      let _x_32 = store_program_gen_ty_c_to_val_ty expected_28 in
+      let _x_33 = [] in
+      let _x_34 = _x_32 :: _x_33 in
+      let _x_35 = _x_31 :: _x_34 in
+      let _x_36 = _x_30 :: _x_35 in
+      Val.Ctor (_x_29, _x_36))
+    | TypeReason_predicateNotBool t_38 -> (let _x_39 = 5 in
+      let _x_40 = store_program_gen_ty_c_to_val_ty t_38 in
+      let _x_41 = [] in
+      let _x_42 = _x_40 :: _x_41 in
+      Val.Ctor (_x_39, _x_42))
+    | TypeReason_notSelectable (decision_44, scrutinee_45) -> (let _x_46 = 6 in
+      let _x_47 = store_program_gen_decision_c_to_val decision_44 in
+      let _x_48 = store_program_gen_ty_c_to_val_ty scrutinee_45 in
+      let _x_49 = [] in
+      let _x_50 = _x_48 :: _x_49 in
+      let _x_51 = _x_47 :: _x_50 in
+      Val.Ctor (_x_46, _x_51))
+    | TypeReason_stepNotCursor (step_53, cursor_54) -> (let _x_55 = 7 in
+      let _x_56 = store_program_gen_ty_c_to_val_ty step_53 in
+      let _x_57 = store_program_gen_ty_c_to_val_ty cursor_54 in
+      let _x_58 = [] in
+      let _x_59 = _x_57 :: _x_58 in
+      let _x_60 = _x_56 :: _x_59 in
+      Val.Ctor (_x_55, _x_60))
+    | TypeReason_initialNotCursor (initial_62, cursor_63) -> (let _x_64 = 8 in
+      let _x_65 = store_program_gen_ty_c_to_val_ty initial_62 in
+      let _x_66 = store_program_gen_ty_c_to_val_ty cursor_63 in
+      let _x_67 = [] in
+      let _x_68 = _x_66 :: _x_67 in
+      let _x_69 = _x_65 :: _x_68 in
+      Val.Ctor (_x_64, _x_69))
+    | TypeReason_releaseFails error_71 -> (let _x_72 = 9 in
+      let _x_73 = store_program_gen_ty_c_to_val_ty error_71 in
+      let _x_74 = [] in
+      let _x_75 = _x_73 :: _x_74 in
+      Val.Ctor (_x_72, _x_75))
+    | TypeReason_notFiber t_77 -> (let _x_78 = 10 in
+      let _x_79 = store_program_gen_ty_c_to_val_ty t_77 in
+      let _x_80 = [] in
+      let _x_81 = _x_79 :: _x_80 in
+      Val.Ctor (_x_78, _x_81))
+    | TypeReason_scopeExpected t_83 -> (let _x_84 = 11 in
+      let _x_85 = store_program_gen_ty_c_to_val_ty t_83 in
+      let _x_86 = [] in
+      let _x_87 = _x_85 :: _x_86 in
+      Val.Ctor (_x_84, _x_87))
+    | TypeReason_natExpected t_89 -> (let _x_90 = 12 in
+      let _x_91 = store_program_gen_ty_c_to_val_ty t_89 in
+      let _x_92 = [] in
+      let _x_93 = _x_91 :: _x_92 in
+      Val.Ctor (_x_90, _x_93))
+    | TypeReason_listOfFibersExpected t_95 -> (let _x_96 = 13 in
+      let _x_97 = store_program_gen_ty_c_to_val_ty t_95 in
+      let _x_98 = [] in
+      let _x_99 = _x_97 :: _x_98 in
+      Val.Ctor (_x_96, _x_99))
+    | TypeReason_contextExpected t_101 -> (let _x_102 = 14 in
+      let _x_103 = store_program_gen_ty_c_to_val_ty t_101 in
+      let _x_104 = [] in
+      let _x_105 = _x_103 :: _x_104 in
+      Val.Ctor (_x_102, _x_105))
+    | TypeReason_snapshotExpected t_107 -> (let _x_108 = 15 in
+      let _x_109 = store_program_gen_ty_c_to_val_ty t_107 in
+      let _x_110 = [] in
+      let _x_111 = _x_109 :: _x_110 in
+      Val.Ctor (_x_108, _x_111))
+    | TypeReason_exitExpected t_113 -> (let _x_114 = 16 in
+      let _x_115 = store_program_gen_ty_c_to_val_ty t_113 in
+      let _x_116 = [] in
+      let _x_117 = _x_115 :: _x_116 in
+      Val.Ctor (_x_114, _x_117))
+    | TypeReason_serviceUnknown key_119 -> (let _x_120 = 17 in
+      let _x_121 = store_program_gen_service_key_c_to_val key_119 in
+      let _x_122 = [] in
+      let _x_123 = _x_121 :: _x_122 in
+      Val.Ctor (_x_120, _x_123))
+    | TypeReason_valueNotSubtype (key_125, value_126, carrier_127) -> (let _x_128 = 18 in
+      let _x_129 = store_program_gen_service_key_c_to_val key_125 in
+      let _x_130 = store_program_gen_ty_c_to_val_ty value_126 in
+      let _x_131 = store_program_gen_ty_c_to_val_ty carrier_127 in
+      let _x_132 = [] in
+      let _x_133 = _x_131 :: _x_132 in
+      let _x_134 = _x_130 :: _x_133 in
+      let _x_135 = _x_129 :: _x_134 in
+      Val.Ctor (_x_128, _x_135))
+    | TypeReason_layerReference target_137 -> (let _x_138 = 19 in
+      let _x_139 = [] in
+      let _x_140 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 target_137 _x_139 in
+      let _x_141 = Val.List _x_140 in
+      let _x_142 = _x_141 :: _x_139 in
+      Val.Ctor (_x_138, _x_142))
+    | TypeReason_referenceIllFormed (target_144, why_145) -> (let _x_146 = 20 in
+      let _x_147 = [] in
+      let _x_148 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 target_144 _x_147 in
+      let _x_149 = Val.List _x_148 in
+      let _x_150 = store_refusals_gen_ref_fault_c_to_val why_145 in
+      let _x_151 = _x_150 :: _x_147 in
+      let _x_152 = _x_149 :: _x_151 in
+      Val.Ctor (_x_146, _x_152))
+    | TypeReason_mergeAllEmpty -> (let _x_154 = 21 in
+      let _x_155 = [] in
+      Val.Ctor (_x_154, _x_155))
+    | TypeReason_returnNotLast -> (let _x_157 = 22 in
+      let _x_158 = [] in
+      Val.Ctor (_x_157, _x_158))
+    | TypeReason_breakOutsideLoop -> (let _x_160 = 23 in
+      let _x_161 = [] in
+      Val.Ctor (_x_160, _x_161))
+    | TypeReason_literalOutsideAlphabet value_163 -> (let _x_164 = 24 in
+      let _x_165 = store_program_gen_lit_c_to_val value_163 in
+      let _x_166 = [] in
+      let _x_167 = _x_165 :: _x_166 in
+      Val.Ctor (_x_164, _x_167))
+    | TypeReason_instantiatedFormation (row_169, why_170) -> (let _x_171 = 25 in
+      let _x_172 = Val.Str row_169 in
+      let _x_173 = store_refusals_gen_formation_refusal_c_to_val why_170 in
+      let _x_174 = [] in
+      let _x_175 = _x_173 :: _x_174 in
+      let _x_176 = _x_172 :: _x_175 in
+      Val.Ctor (_x_171, _x_176))
+    | TypeReason_recordTerm why_178 -> (let _x_179 = 26 in
+      let _x_180 = store_refusals_gen_record_term_refusal_c_to_val why_178 in
+      let _x_181 = [] in
+      let _x_182 = _x_180 :: _x_181 in
+      Val.Ctor (_x_179, _x_182))
+    | TypeReason_recordCause why_184 -> (let _x_185 = 27 in
+      let _x_186 = store_refusals_gen_record_cause_refusal_c_to_val why_184 in
+      let _x_187 = [] in
+      let _x_188 = _x_186 :: _x_187 in
+      Val.Ctor (_x_185, _x_188))
+    | TypeReason_tupleTerm why_190 -> (let _x_191 = 28 in
+      let _x_192 = store_refusals_gen_tuple_term_refusal_c_to_val why_190 in
+      let _x_193 = [] in
+      let _x_194 = _x_192 :: _x_193 in
+      Val.Ctor (_x_191, _x_194))
+    | TypeReason_tupleCause why_196 -> (let _x_197 = 29 in
+      let _x_198 = store_refusals_gen_tuple_cause_refusal_c_to_val why_196 in
+      let _x_199 = [] in
+      let _x_200 = _x_198 :: _x_199 in
+      Val.Ctor (_x_197, _x_200))
+    | TypeReason_errorPayloadField (error_202, path_203, field_204) -> (let _x_205 = 30 in
+      let _x_206 = store_program_gen_ty_c_to_val_ty error_202 in
+      let _x_207 = [] in
+      let _x_208 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 path_203 _x_207 in
+      let _x_209 = Val.List _x_208 in
+      let _x_210 = store_program_gen_ty_c_to_val_ty field_204 in
+      let _x_211 = _x_210 :: _x_207 in
+      let _x_212 = _x_209 :: _x_211 in
+      let _x_213 = _x_206 :: _x_212 in
+      Val.Ctor (_x_205, _x_213))
+    | TypeReason_errorSpelling (error_215, spelling_216) -> (let _x_217 = 31 in
+      let _x_218 = store_program_gen_ty_c_to_val_ty error_215 in
+      let _x_219 = store_program_gen_ty_c_to_val_ty spelling_216 in
+      let _x_220 = [] in
+      let _x_221 = _x_219 :: _x_220 in
+      let _x_222 = _x_218 :: _x_221 in
+      Val.Ctor (_x_217, _x_222))
+    | TypeReason_binderTerm (row_224, param_225) -> (let _x_226 = 32 in
+      let _x_227 = Val.Str row_224 in
+      let _x_228 = store_program_gen_ty_c_to_val_ty param_225 in
+      let _x_229 = [] in
+      let _x_230 = _x_228 :: _x_229 in
+      let _x_231 = _x_227 :: _x_230 in
+      Val.Ctor (_x_226, _x_231))
+    | TypeReason_resultNotSubtype (row_233, result_234, expected_235) -> (let _x_236 = 33 in
+      let _x_237 = Val.Str row_233 in
+      let _x_238 = store_program_gen_ty_c_to_val_ty result_234 in
+      let _x_239 = store_program_gen_ty_c_to_val_ty expected_235 in
+      let _x_240 = [] in
+      let _x_241 = _x_239 :: _x_240 in
+      let _x_242 = _x_238 :: _x_241 in
+      let _x_243 = _x_237 :: _x_242 in
+      Val.Ctor (_x_236, _x_243))
+    | TypeReason_foldTerm why_245 -> (let _x_246 = 34 in
+      let _x_247 = store_refusals_gen_fold_term_refusal_c_to_val why_245 in
+      let _x_248 = [] in
+      let _x_249 = _x_247 :: _x_248 in
+      Val.Ctor (_x_246, _x_249))
+    | TypeReason_foldCause why_251 -> (let _x_252 = 35 in
+      let _x_253 = store_refusals_gen_fold_cause_refusal_c_to_val why_251 in
+      let _x_254 = [] in
+      let _x_255 = _x_253 :: _x_254 in
+      Val.Ctor (_x_252, _x_255))
+    | TypeReason_maskRestoreExpected t_257 -> (let _x_258 = 36 in
+      let _x_259 = store_program_gen_ty_c_to_val_ty t_257 in
+      let _x_260 = [] in
+      let _x_261 = _x_259 :: _x_260 in
+      Val.Ctor (_x_258, _x_261))
+    | TypeReason_definitionBlock -> (let _x_263 = 37 in
+      let _x_264 = [] in
+      Val.Ctor (_x_263, _x_264))
+    | TypeReason_definitionsMismatch (decls_266, bodies_267) -> (let _x_268 = 38 in
+      let _x_269 = Val.Nat decls_266 in
+      let _x_270 = Val.Nat bodies_267 in
+      let _x_271 = [] in
+      let _x_272 = _x_270 :: _x_271 in
+      let _x_273 = _x_269 :: _x_272 in
+      Val.Ctor (_x_268, _x_273))
+    | TypeReason_definitionColumns name_275 -> (let _x_276 = 39 in
+      let _x_277 = Val.Str name_275 in
+      let _x_278 = [] in
+      let _x_279 = _x_277 :: _x_278 in
+      Val.Ctor (_x_276, _x_279))
+    | TypeReason_bodyNotDeclared (name_281, body_282) -> (let _x_283 = 40 in
+      let _x_284 = Val.Str name_281 in
+      let _x_285 = store_program_gen_eff_ty_c_to_val body_282 in
+      let _x_286 = [] in
+      let _x_287 = _x_285 :: _x_286 in
+      let _x_288 = _x_284 :: _x_287 in
+      Val.Ctor (_x_283, _x_288))
+    | TypeReason_invokeArity (name_290, params_291, args_292) -> (let _x_293 = 41 in
+      let _x_294 = Val.Str name_290 in
+      let _x_295 = Val.Nat params_291 in
+      let _x_296 = Val.Nat args_292 in
+      let _x_297 = [] in
+      let _x_298 = _x_296 :: _x_297 in
+      let _x_299 = _x_295 :: _x_298 in
+      let _x_300 = _x_294 :: _x_299 in
+      Val.Ctor (_x_293, _x_300))
+    | TypeReason_unboundVariable (path_302, index_303, depth_304) -> (let _x_305 = 42 in
+      let _x_306 = [] in
+      let _x_307 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_302 _x_306 in
+      let _x_308 = Val.List _x_307 in
+      let _x_309 = Val.Nat index_303 in
+      let _x_310 = Val.Nat depth_304 in
+      let _x_311 = _x_310 :: _x_306 in
+      let _x_312 = _x_309 :: _x_311 in
+      let _x_313 = _x_308 :: _x_312 in
+      Val.Ctor (_x_305, _x_313))
+    | TypeReason_unknownAtom (path_315, atom_316) -> (let _x_317 = 43 in
+      let _x_318 = [] in
+      let _x_319 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_315 _x_318 in
+      let _x_320 = Val.List _x_319 in
+      let _x_321 = Val.Str atom_316 in
+      let _x_322 = _x_321 :: _x_318 in
+      let _x_323 = _x_320 :: _x_322 in
+      Val.Ctor (_x_317, _x_323))
+    | TypeReason_refusedArguments (path_325, atom_326, args_327) -> (let _x_328 = 44 in
+      let _x_329 = [] in
+      let _x_330 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_325 _x_329 in
+      let _x_331 = Val.List _x_330 in
+      let _x_332 = Val.Str atom_326 in
+      let _x_333 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 args_327 _x_329 in
+      let _x_334 = Val.List _x_333 in
+      let _x_335 = _x_334 :: _x_329 in
+      let _x_336 = _x_332 :: _x_335 in
+      let _x_337 = _x_331 :: _x_336 in
+      Val.Ctor (_x_328, _x_337))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.LocatedC.toVal (x.1 : Effect4.Located (List Nat) Effect4.Program.TypeReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_located_c_to_val (x_1 : (int list, type_reason) located) : Val.t =
+  match (x_1 : (_, _) located) with
+    | { site = site_2; reason = reason_3 } -> (let _x_4 = 0 in
+      let _x_5 = [] in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 site_2 _x_5 in
+      let _x_7 = Val.List _x_6 in
+      let _x_8 = store_refusals_gen_type_reason_c_to_val reason_3 in
+      let _x_9 = _x_8 :: _x_5 in
+      let _x_10 = _x_7 :: _x_9 in
+      Val.Ctor (_x_4, _x_10))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.RowReasonC.toVal (x.1 : Effect4.Program.RowReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_row_reason_c_to_val (x_1 : row_reason) : Val.t =
+  match (x_1 : row_reason) with
+    | RowReason_notExternal -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      Val.Ctor (_x_2, _x_3))
+    | RowReason_notAsync -> (let _x_5 = 1 in
+      let _x_6 = [] in
+      Val.Ctor (_x_5, _x_6))
+    | RowReason_builtinCollision -> (let _x_8 = 2 in
+      let _x_9 = [] in
+      Val.Ctor (_x_8, _x_9))
+    | RowReason_valueRowTrailing -> (let _x_11 = 3 in
+      let _x_12 = [] in
+      Val.Ctor (_x_11, _x_12))
+    | RowReason_internalHandle column_14 -> (let _x_15 = 4 in
+      let _x_16 = Val.Str column_14 in
+      let _x_17 = [] in
+      let _x_18 = _x_16 :: _x_17 in
+      Val.Ctor (_x_15, _x_18))
+    | RowReason_emptyColumn column_20 -> (let _x_21 = 5 in
+      let _x_22 = Val.Str column_20 in
+      let _x_23 = [] in
+      let _x_24 = _x_22 :: _x_23 in
+      Val.Ctor (_x_21, _x_24))
+    | RowReason_templateNotAdmissible column_26 -> (let _x_27 = 6 in
+      let _x_28 = Val.Str column_26 in
+      let _x_29 = [] in
+      let _x_30 = _x_28 :: _x_29 in
+      Val.Ctor (_x_27, _x_30))
+    | RowReason_notWellScoped -> (let _x_32 = 7 in
+      let _x_33 = [] in
+      Val.Ctor (_x_32, _x_33))
+
+
+
+(* LCNF mono: Effect4.Store.ProgramGen.RowArgC.toVal (x.1 : Effect4.Program.RowArg) : Effect4.Store.Val *)
+
+let store_program_gen_row_arg_c_to_val (x_1 : RowArg.t) : Val.t =
+  match (x_1 : RowArg.t) with
+    | RowArg.Name spelling_2 -> (let _x_3 = 0 in
+      let _x_4 = Val.Str spelling_2 in
+      let _x_5 = [] in
+      let _x_6 = _x_4 :: _x_5 in
+      Val.Ctor (_x_3, _x_6))
+    | RowArg.Str value_8 -> (let _x_9 = 1 in
+      let _x_10 = Val.Str value_8 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      Val.Ctor (_x_9, _x_12))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ProgramGen.RowC.toVal.spec_0 (a.1 : List Effect4.Program.RowArg) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_program_gen_row_c_to_val_spec_0 (a_1 : RowArg.t list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = store_program_gen_row_arg_c_to_val head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_store_program_gen_row_c_to_val_spec_0 tail_5 _x_7)
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.ServiceReasonC.toVal (x.1 : Effect4.Program.ServiceReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_service_reason_c_to_val (x_1 : service_reason) : Val.t =
+  match (x_1 : service_reason) with
+    | ServiceReason_reservedName -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      Val.Ctor (_x_2, _x_3))
+    | ServiceReason_nonFlatCarrier -> (let _x_5 = 1 in
+      let _x_6 = [] in
+      Val.Ctor (_x_5, _x_6))
+    | ServiceReason_conflictsBuiltin -> (let _x_8 = 2 in
+      let _x_9 = [] in
+      Val.Ctor (_x_8, _x_9))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.DeclReasonC.toVal (x.1 : Effect4.Program.DeclReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_decl_reason_c_to_val (x_1 : decl_reason) : Val.t =
+  match (x_1 : decl_reason) with
+    | DeclReason_internalSpelling -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      Val.Ctor (_x_2, _x_3))
+    | DeclReason_typeVariable -> (let _x_5 = 1 in
+      let _x_6 = [] in
+      Val.Ctor (_x_5, _x_6))
+    | DeclReason_applied -> (let _x_8 = 2 in
+      let _x_9 = [] in
+      Val.Ctor (_x_8, _x_9))
+    | DeclReason_handleAtName -> (let _x_11 = 3 in
+      let _x_12 = [] in
+      Val.Ctor (_x_11, _x_12))
+    | DeclReason_undeclaredName -> (let _x_14 = 4 in
+      let _x_15 = [] in
+      Val.Ctor (_x_14, _x_15))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.SigRefusalC.toVal (x.1 : Effect4.Program.SigRefusal) : Effect4.Store.Val *)
+
+let store_refusals_gen_sig_refusal_c_to_val (x_1 : sig_refusal) : Val.t =
+  match (x_1 : sig_refusal) with
+    | SigRefusal_row (index_2, reason_3) -> (let _x_4 = 0 in
+      let _x_5 = Val.Nat index_2 in
+      let _x_6 = store_refusals_gen_row_reason_c_to_val reason_3 in
+      let _x_7 = [] in
+      let _x_8 = _x_6 :: _x_7 in
+      let _x_9 = _x_5 :: _x_8 in
+      Val.Ctor (_x_4, _x_9))
+    | SigRefusal_duplicateRow key_11 -> (match key_11 with
+        | fst_1, snd_1 -> (let _x_12 = 1 in
+          let _x_13 = Val.Str fst_1 in
+          let _x_14 = [] in
+          let _x_15 = list_map_tr_loop_at_store_program_gen_row_c_to_val_spec_0 snd_1 _x_14 in
+          let _x_16 = Val.List _x_15 in
+          let _x_17 = Val.Pair (_x_13, _x_16) in
+          let _x_18 = _x_17 :: _x_14 in
+          Val.Ctor (_x_12, _x_18)))
+    | SigRefusal_service (index_20, reason_21) -> (let _x_22 = 2 in
+      let _x_23 = Val.Nat index_20 in
+      let _x_24 = store_refusals_gen_service_reason_c_to_val reason_21 in
+      let _x_25 = [] in
+      let _x_26 = _x_24 :: _x_25 in
+      let _x_27 = _x_23 :: _x_26 in
+      Val.Ctor (_x_22, _x_27))
+    | SigRefusal_duplicateCode code_29 -> (let _x_30 = 3 in
+      let _x_31 = store_program_gen_service_type_code_c_to_val code_29 in
+      let _x_32 = [] in
+      let _x_33 = _x_31 :: _x_32 in
+      Val.Ctor (_x_30, _x_33))
+    | SigRefusal_unservedKey (row_35, key_36) -> (let _x_37 = 4 in
+      let _x_38 = Val.Nat row_35 in
+      let _x_39 = store_program_gen_service_key_c_to_val key_36 in
+      let _x_40 = [] in
+      let _x_41 = _x_39 :: _x_40 in
+      let _x_42 = _x_38 :: _x_41 in
+      Val.Ctor (_x_37, _x_42))
+    | SigRefusal_decl (index_44, reason_45) -> (let _x_46 = 5 in
+      let _x_47 = Val.Nat index_44 in
+      let _x_48 = store_refusals_gen_decl_reason_c_to_val reason_45 in
+      let _x_49 = [] in
+      let _x_50 = _x_48 :: _x_49 in
+      let _x_51 = _x_47 :: _x_50 in
+      Val.Ctor (_x_46, _x_51))
+    | SigRefusal_rowName (index_53, reason_54) -> (let _x_55 = 6 in
+      let _x_56 = Val.Nat index_53 in
+      let _x_57 = store_refusals_gen_decl_reason_c_to_val reason_54 in
+      let _x_58 = [] in
+      let _x_59 = _x_57 :: _x_58 in
+      let _x_60 = _x_56 :: _x_59 in
+      Val.Ctor (_x_55, _x_60))
+    | SigRefusal_conflictingDecl name_62 -> (let _x_63 = 7 in
+      let _x_64 = Val.Str name_62 in
+      let _x_65 = [] in
+      let _x_66 = _x_64 :: _x_65 in
+      Val.Ctor (_x_63, _x_66))
+    | SigRefusal_unguardedDecl name_68 -> (let _x_69 = 8 in
+      let _x_70 = Val.Str name_68 in
+      let _x_71 = [] in
+      let _x_72 = _x_70 :: _x_71 in
+      Val.Ctor (_x_69, _x_72))
+
+
+
 (* LCNF mono: Effect4.Store.RefusalsGen.AdmitRefusalC.toVal (x.1 : Effect4.Program.AdmitRefusal) : Effect4.Store.Val *)
 
 let store_refusals_gen_admit_refusal_c_to_val (x_1 : admit_refusal) : Val.t =
   match (x_1 : admit_refusal) with
-    | AdmitRefusal_illTyped -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | AdmitRefusal_signature why_5 -> (let _x_6 = 1 in
-      let _x_7 = store_refusals_gen_sig_refusal_c_to_val why_5 in
-      let _x_8 = [] in
-      let _x_9 = _x_7 :: _x_8 in
-      Val.Ctor (_x_6, _x_9))
-    | AdmitRefusal_emptyColumn at_11 -> (let _x_12 = 2 in
-      let _x_13 = [] in
-      let _x_14 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 at_11 _x_13 in
-      let _x_15 = Val.List _x_14 in
-      let _x_16 = _x_15 :: _x_13 in
-      Val.Ctor (_x_12, _x_16))
-    | AdmitRefusal_formation why_18 -> (let _x_19 = 3 in
-      let _x_20 = store_refusals_gen_formation_refusal_c_to_val why_18 in
-      let _x_21 = [] in
-      let _x_22 = _x_20 :: _x_21 in
-      Val.Ctor (_x_19, _x_22))
+    | AdmitRefusal_illTyped why_2 -> (let _x_3 = 0 in
+      let _x_4 = store_refusals_gen_located_c_to_val why_2 in
+      let _x_5 = [] in
+      let _x_6 = _x_4 :: _x_5 in
+      Val.Ctor (_x_3, _x_6))
+    | AdmitRefusal_signature why_8 -> (let _x_9 = 1 in
+      let _x_10 = store_refusals_gen_sig_refusal_c_to_val why_8 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      Val.Ctor (_x_9, _x_12))
+    | AdmitRefusal_emptyColumn at_14 -> (let _x_15 = 2 in
+      let _x_16 = [] in
+      let _x_17 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 at_14 _x_16 in
+      let _x_18 = Val.List _x_17 in
+      let _x_19 = _x_18 :: _x_16 in
+      Val.Ctor (_x_15, _x_19))
+    | AdmitRefusal_formation why_21 -> (let _x_22 = 3 in
+      let _x_23 = store_refusals_gen_formation_refusal_c_to_val why_21 in
+      let _x_24 = [] in
+      let _x_25 = _x_23 :: _x_24 in
+      Val.Ctor (_x_22, _x_25))
 
 
 
@@ -31952,237 +33920,6 @@ let store_program_gen_finalizer_strategy_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.ProgramGen.LitC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_program_gen_lit_c_shape_doc : shape_doc =
-  let _x_1 = "Lit" in
-  let _x_2 = "unit" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "nat" in
-  let _x_8 = 1 in
-  let _x_9 = "value" in
-  let _x_10 = Shape_nat in
-  let _x_11 = _x_9, _x_10 in
-  let _x_12 = _x_11 :: _x_4 in
-  let _x_13 = _x_8, _x_12 in
-  let _x_14 = _x_7, _x_13 in
-  let _x_15 = "bool" in
-  let _x_16 = 2 in
-  let _x_17 = Shape_bool in
-  let _x_18 = _x_9, _x_17 in
-  let _x_19 = _x_18 :: _x_4 in
-  let _x_20 = _x_16, _x_19 in
-  let _x_21 = _x_15, _x_20 in
-  let _x_22 = "str" in
-  let _x_23 = 3 in
-  let _x_24 = Shape_string in
-  let _x_25 = _x_9, _x_24 in
-  let _x_26 = _x_25 :: _x_4 in
-  let _x_27 = _x_23, _x_26 in
-  let _x_28 = _x_22, _x_27 in
-  let _x_29 = _x_28 :: _x_4 in
-  let _x_30 = _x_21 :: _x_29 in
-  let _x_31 = _x_14 :: _x_30 in
-  let _x_32 = _x_6 :: _x_31 in
-  let _x_33 = Shape_sum (_x_1, _x_32) in
-  let _x_34 = _x_4 @ _x_4 in
-  let _x_35 = _x_34 @ _x_4 in
-  ({ root = _x_33; defs = _x_35 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.FieldReadModeC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_program_gen_field_read_mode_c_shape_doc : shape_doc =
-  let _x_1 = "FieldReadMode" in
-  let _x_2 = "required" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "optional" in
-  let _x_8 = 1 in
-  let _x_9 = _x_8, _x_4 in
-  let _x_10 = _x_7, _x_9 in
-  let _x_11 = _x_10 :: _x_4 in
-  let _x_12 = _x_6 :: _x_11 in
-  let _x_13 = Shape_sum (_x_1, _x_12) in
-  ({ root = _x_13; defs = _x_4 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.TermC.TermShape : Effect4.Store.Shape *)
-
-let store_program_gen_term_c_term_shape : shape =
-  let _x_1 = store_program_gen_lit_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = "index" in
-      let _x_3 = Shape_nat in
-      let _x_4 = _x_2, _x_3 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      let _x_7 = "value" in
-      let _x_8 = _x_7, root in
-      let _x_9 = _x_8 :: _x_5 in
-      let _x_10 = "atom" in
-      let _x_11 = Shape_string in
-      let _x_12 = _x_10, _x_11 in
-      let _x_13 = store_program_gen_field_read_mode_c_shape_doc in
-      match (_x_13 : shape_doc) with
-        | { root = root_1; _ } -> (let _x_14 = "args" in
-          let _x_15 = "Terms" in
-          let _x_16 = Shape_named _x_15 in
-          let _x_17 = _x_14, _x_16 in
-          let _x_18 = _x_17 :: _x_5 in
-          let _x_19 = Shape_bool in
-          let _x_20 = "Ty" in
-          let _x_21 = Shape_named _x_20 in
-          let _x_22 = Shape_pair (_x_19, _x_21) in
-          let _x_23 = Shape_pair (_x_11, _x_22) in
-          let _x_24 = "Term" in
-          let _x_25 = "var" in
-          let _x_26 = 0 in
-          let _x_27 = _x_26, _x_6 in
-          let _x_28 = _x_25, _x_27 in
-          let _x_29 = "lit" in
-          let _x_30 = 1 in
-          let _x_31 = _x_30, _x_9 in
-          let _x_32 = _x_29, _x_31 in
-          let _x_33 = "app" in
-          let _x_34 = 2 in
-          let _x_35 = _x_12 :: _x_18 in
-          let _x_36 = _x_34, _x_35 in
-          let _x_37 = _x_33, _x_36 in
-          let _x_38 = "record" in
-          let _x_39 = 3 in
-          let _x_40 = "fields" in
-          let _x_41 = Shape_list _x_23 in
-          let _x_42 = _x_40, _x_41 in
-          let _x_43 = "presentNames" in
-          let _x_44 = Shape_list _x_11 in
-          let _x_45 = _x_43, _x_44 in
-          let _x_46 = "values" in
-          let _x_47 = _x_46, _x_16 in
-          let _x_48 = _x_47 :: _x_5 in
-          let _x_49 = _x_45 :: _x_48 in
-          let _x_50 = _x_42 :: _x_49 in
-          let _x_51 = _x_39, _x_50 in
-          let _x_52 = _x_38, _x_51 in
-          let _x_53 = "field" in
-          let _x_54 = 4 in
-          let _x_55 = "mode" in
-          let _x_56 = _x_55, root_1 in
-          let _x_57 = "target" in
-          let _x_58 = Shape_named _x_24 in
-          let _x_59 = _x_57, _x_58 in
-          let _x_60 = "name" in
-          let _x_61 = _x_60, _x_11 in
-          let _x_62 = _x_61 :: _x_5 in
-          let _x_63 = _x_59 :: _x_62 in
-          let _x_64 = _x_56 :: _x_63 in
-          let _x_65 = _x_54, _x_64 in
-          let _x_66 = _x_53, _x_65 in
-          let _x_67 = "recordSet" in
-          let _x_68 = 5 in
-          let _x_69 = _x_7, _x_58 in
-          let _x_70 = _x_69 :: _x_5 in
-          let _x_71 = _x_61 :: _x_70 in
-          let _x_72 = _x_59 :: _x_71 in
-          let _x_73 = _x_68, _x_72 in
-          let _x_74 = _x_67, _x_73 in
-          let _x_75 = "tupleAt" in
-          let _x_76 = 6 in
-          let _x_77 = _x_59 :: _x_6 in
-          let _x_78 = _x_76, _x_77 in
-          let _x_79 = _x_75, _x_78 in
-          let _x_80 = "fold" in
-          let _x_81 = 7 in
-          let _x_82 = "accTy" in
-          let _x_83 = Shape_option _x_21 in
-          let _x_84 = _x_82, _x_83 in
-          let _x_85 = "list" in
-          let _x_86 = _x_85, _x_58 in
-          let _x_87 = "init" in
-          let _x_88 = _x_87, _x_58 in
-          let _x_89 = "body" in
-          let _x_90 = _x_89, _x_58 in
-          let _x_91 = _x_90 :: _x_5 in
-          let _x_92 = _x_88 :: _x_91 in
-          let _x_93 = _x_86 :: _x_92 in
-          let _x_94 = _x_84 :: _x_93 in
-          let _x_95 = _x_81, _x_94 in
-          let _x_96 = _x_80, _x_95 in
-          let _x_97 = _x_96 :: _x_5 in
-          let _x_98 = _x_79 :: _x_97 in
-          let _x_99 = _x_74 :: _x_98 in
-          let _x_100 = _x_66 :: _x_99 in
-          let _x_101 = _x_52 :: _x_100 in
-          let _x_102 = _x_37 :: _x_101 in
-          let _x_103 = _x_32 :: _x_102 in
-          let _x_104 = _x_28 :: _x_103 in
-          Shape_sum (_x_24, _x_104)))
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.TermC.TermsShape : Effect4.Store.Shape *)
-
-let store_program_gen_term_c_terms_shape : shape =
-  let _x_1 = "Terms" in
-  let _x_2 = "nil" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "cons" in
-  let _x_8 = 1 in
-  let _x_9 = "head" in
-  let _x_10 = "Term" in
-  let _x_11 = Shape_named _x_10 in
-  let _x_12 = _x_9, _x_11 in
-  let _x_13 = "tail" in
-  let _x_14 = Shape_named _x_1 in
-  let _x_15 = _x_13, _x_14 in
-  let _x_16 = _x_15 :: _x_4 in
-  let _x_17 = _x_12 :: _x_16 in
-  let _x_18 = _x_8, _x_17 in
-  let _x_19 = _x_7, _x_18 in
-  let _x_20 = _x_19 :: _x_4 in
-  let _x_21 = _x_6 :: _x_20 in
-  Shape_sum (_x_1, _x_21)
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.TermC.defs : List (Prod String Effect4.Store.Shape) *)
-
-let store_program_gen_term_c_defs : (string * shape) list =
-  let _x_1 = store_program_gen_lit_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { defs = defs; _ } -> (let _x_2 = [] in
-      let _x_3 = _x_2 @ defs in
-      let _x_4 = _x_3 @ _x_2 in
-      let _x_5 = store_program_gen_ty_c_defs in
-      let _x_6 = _x_2 @ _x_5 in
-      let _x_7 = store_program_gen_field_read_mode_c_shape_doc in
-      match (_x_7 : shape_doc) with
-        | _ -> (let _x_8 = _x_2 @ _x_6 in
-          let _x_9 = "Term" in
-          let _x_10 = store_program_gen_term_c_term_shape in
-          let _x_11 = _x_9, _x_10 in
-          let _x_12 = "Terms" in
-          let _x_13 = store_program_gen_term_c_terms_shape in
-          let _x_14 = _x_12, _x_13 in
-          let _x_15 = _x_4 @ _x_8 in
-          let _x_16 = _x_15 @ _x_2 in
-          let _x_17 = _x_16 @ _x_2 in
-          let _x_18 = _x_17 @ _x_5 in
-          let _x_19 = _x_14 :: _x_18 in
-          _x_11 :: _x_19))
-
-
-
 (* LCNF mono: Effect4.Store.ProgramGen.NativeOpC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_program_gen_native_op_c_shape_doc : shape_doc =
@@ -32365,39 +34102,6 @@ let store_program_gen_observer_mode_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.ProgramGen.DecisionC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_program_gen_decision_c_shape_doc : shape_doc =
-  let _x_1 = "Decision" in
-  let _x_2 = "bool" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "option" in
-  let _x_8 = 1 in
-  let _x_9 = _x_8, _x_4 in
-  let _x_10 = _x_7, _x_9 in
-  let _x_11 = "tag" in
-  let _x_12 = 2 in
-  let _x_13 = Shape_string in
-  let _x_14 = _x_11, _x_13 in
-  let _x_15 = _x_14 :: _x_4 in
-  let _x_16 = _x_12, _x_15 in
-  let _x_17 = _x_11, _x_16 in
-  let _x_18 = "recordTag" in
-  let _x_19 = 3 in
-  let _x_20 = _x_19, _x_15 in
-  let _x_21 = _x_18, _x_20 in
-  let _x_22 = _x_21 :: _x_4 in
-  let _x_23 = _x_17 :: _x_22 in
-  let _x_24 = _x_10 :: _x_23 in
-  let _x_25 = _x_6 :: _x_24 in
-  let _x_26 = Shape_sum (_x_1, _x_25) in
-  ({ root = _x_26; defs = _x_4 } : shape_doc)
-
-
-
 (* LCNF mono: Effect4.Store.ProgramGen.DefRoleC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_program_gen_def_role_c_shape_doc : shape_doc =
@@ -32555,66 +34259,6 @@ let store_program_gen_fork_options_c_shape_doc : shape_doc =
       let _x_14 = Shape_struct (_x_6, _x_13) in
       let _x_15 = _x_2 @ _x_2 in
       ({ root = _x_14; defs = _x_15 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.CauseTermC.CauseTermShape : Effect4.Store.Shape *)
-
-let store_program_gen_cause_term_c_cause_term_shape : shape =
-  let _x_1 = "CauseTerm" in
-  let _x_2 = "fail" in
-  let _x_3 = 0 in
-  let _x_4 = "error" in
-  let _x_5 = "Term" in
-  let _x_6 = Shape_named _x_5 in
-  let _x_7 = _x_4, _x_6 in
-  let _x_8 = [] in
-  let _x_9 = _x_7 :: _x_8 in
-  let _x_10 = _x_3, _x_9 in
-  let _x_11 = _x_2, _x_10 in
-  let _x_12 = "die" in
-  let _x_13 = 1 in
-  let _x_14 = "defect" in
-  let _x_15 = _x_14, _x_6 in
-  let _x_16 = _x_15 :: _x_8 in
-  let _x_17 = _x_13, _x_16 in
-  let _x_18 = _x_12, _x_17 in
-  let _x_19 = "interrupt" in
-  let _x_20 = 2 in
-  let _x_21 = "interruptor" in
-  let _x_22 = Shape_option _x_6 in
-  let _x_23 = _x_21, _x_22 in
-  let _x_24 = _x_23 :: _x_8 in
-  let _x_25 = _x_20, _x_24 in
-  let _x_26 = _x_19, _x_25 in
-  let _x_27 = "both" in
-  let _x_28 = 3 in
-  let _x_29 = "left" in
-  let _x_30 = Shape_named _x_1 in
-  let _x_31 = _x_29, _x_30 in
-  let _x_32 = "right" in
-  let _x_33 = _x_32, _x_30 in
-  let _x_34 = _x_33 :: _x_8 in
-  let _x_35 = _x_31 :: _x_34 in
-  let _x_36 = _x_28, _x_35 in
-  let _x_37 = _x_27, _x_36 in
-  let _x_38 = _x_37 :: _x_8 in
-  let _x_39 = _x_26 :: _x_38 in
-  let _x_40 = _x_18 :: _x_39 in
-  let _x_41 = _x_11 :: _x_40 in
-  Shape_sum (_x_1, _x_41)
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.CauseTermC.defs : List (Prod String Effect4.Store.Shape) *)
-
-let store_program_gen_cause_term_c_defs : (string * shape) list =
-  let _x_1 = "CauseTerm" in
-  let _x_2 = store_program_gen_cause_term_c_cause_term_shape in
-  let _x_3 = _x_1, _x_2 in
-  let _x_4 = store_program_gen_term_c_defs in
-  let _x_5 = _x_4 @ _x_4 in
-  _x_3 :: _x_5
 
 
 
@@ -33394,185 +35038,6 @@ let run_kit_program_shape : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.ProgramGen.LitC.toVal (x.1 : Effect4.Program.Lit) : Effect4.Store.Val *)
-
-let store_program_gen_lit_c_to_val (x_1 : Lit.t) : Val.t =
-  match (x_1 : Lit.t) with
-    | Lit.Unit -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | Lit.Nat value_5 -> (let _x_6 = 1 in
-      let _x_7 = Val.Nat value_5 in
-      let _x_8 = [] in
-      let _x_9 = _x_7 :: _x_8 in
-      Val.Ctor (_x_6, _x_9))
-    | Lit.Bool value_11 -> (let _x_12 = 2 in
-      let _x_13 = Val.Bool value_11 in
-      let _x_14 = [] in
-      let _x_15 = _x_13 :: _x_14 in
-      Val.Ctor (_x_12, _x_15))
-    | Lit.Str value_17 -> (let _x_18 = 3 in
-      let _x_19 = Val.Str value_17 in
-      let _x_20 = [] in
-      let _x_21 = _x_19 :: _x_20 in
-      Val.Ctor (_x_18, _x_21))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ProgramGen.TermC.toValTerm.spec_0 (a.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_0 (a_1 : (string * (bool * Ty.t)) list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, snd_1 -> (match snd_1 with
-            | fst_2, snd_2 -> (let _x_6 = Val.Str fst_1 in
-              let _x_7 = Val.Bool fst_2 in
-              let _x_8 = store_program_gen_ty_c_to_val_ty snd_2 in
-              let _x_9 = Val.Pair (_x_7, _x_8) in
-              let _x_10 = Val.Pair (_x_6, _x_9) in
-              let _x_11 = _x_10 :: a_2 in
-              list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_0 tail_5 _x_11)))
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.FieldReadModeC.toVal (x.1 : Effect4.Program.FieldReadMode) : Effect4.Store.Val *)
-
-let store_program_gen_field_read_mode_c_to_val (x_1 : FieldReadMode.t) : Val.t =
-  match (x_1 : FieldReadMode.t) with
-    | FieldReadMode.Required -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | FieldReadMode.Optional -> (let _x_5 = 1 in
-      let _x_6 = [] in
-      Val.Ctor (_x_5, _x_6))
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.TermC.toValTerm (x.1 : Effect4.Program.Term) : Effect4.Store.Val
-   Effect4.Store.ProgramGen.TermC.toValTerms (x.1 : Effect4.Program.Terms) : Effect4.Store.Val *)
-
-let rec store_program_gen_term_c_to_val_term (x_1 : Term.t) : Val.t =
-  match (x_1 : Term.t) with
-    | Term.Var index_2 -> (let _x_3 = 0 in
-      let _x_4 = Val.Nat index_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | Term.Lit value_8 -> (let _x_9 = 1 in
-      let _x_10 = store_program_gen_lit_c_to_val value_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-    | Term.App (atom_14, args_15) -> (let _x_16 = 2 in
-      let _x_17 = Val.Str atom_14 in
-      let _x_18 = store_program_gen_term_c_to_val_terms args_15 in
-      let _x_19 = [] in
-      let _x_20 = _x_18 :: _x_19 in
-      let _x_21 = _x_17 :: _x_20 in
-      Val.Ctor (_x_16, _x_21))
-    | Term.Record (fields_23, present_names_24, values_25) -> (let _x_26 = 3 in
-      let _x_27 = [] in
-      let _x_28 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_0 fields_23 _x_27 in
-      let _x_29 = Val.List _x_28 in
-      let _x_30 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 present_names_24 _x_27 in
-      let _x_31 = Val.List _x_30 in
-      let _x_32 = store_program_gen_term_c_to_val_terms values_25 in
-      let _x_33 = _x_32 :: _x_27 in
-      let _x_34 = _x_31 :: _x_33 in
-      let _x_35 = _x_29 :: _x_34 in
-      Val.Ctor (_x_26, _x_35))
-    | Term.Field (mode_37, target_38, name_39) -> (let _x_40 = 4 in
-      let _x_41 = store_program_gen_field_read_mode_c_to_val mode_37 in
-      let _x_42 = store_program_gen_term_c_to_val_term target_38 in
-      let _x_43 = Val.Str name_39 in
-      let _x_44 = [] in
-      let _x_45 = _x_43 :: _x_44 in
-      let _x_46 = _x_42 :: _x_45 in
-      let _x_47 = _x_41 :: _x_46 in
-      Val.Ctor (_x_40, _x_47))
-    | Term.RecordSet (target_49, name_50, value_51) -> (let _x_52 = 5 in
-      let _x_53 = store_program_gen_term_c_to_val_term target_49 in
-      let _x_54 = Val.Str name_50 in
-      let _x_55 = store_program_gen_term_c_to_val_term value_51 in
-      let _x_56 = [] in
-      let _x_57 = _x_55 :: _x_56 in
-      let _x_58 = _x_54 :: _x_57 in
-      let _x_59 = _x_53 :: _x_58 in
-      Val.Ctor (_x_52, _x_59))
-    | Term.TupleAt (target_61, index_62) -> (let _x_63 = 6 in
-      let _x_64 = store_program_gen_term_c_to_val_term target_61 in
-      let _x_65 = Val.Nat index_62 in
-      let _x_66 = [] in
-      let _x_67 = _x_65 :: _x_66 in
-      let _x_68 = _x_64 :: _x_67 in
-      Val.Ctor (_x_63, _x_68))
-    | Term.Fold (acc_ty_70, list_71, init_72, body_73) -> (let _x_74 = 7 in
-      let[@local always] _jp_75 = fun _y_76 -> let _x_77 = store_program_gen_term_c_to_val_term list_71 in
-      let _x_78 = store_program_gen_term_c_to_val_term init_72 in
-      let _x_79 = store_program_gen_term_c_to_val_term body_73 in
-      let _x_80 = [] in
-      let _x_81 = _x_79 :: _x_80 in
-      let _x_82 = _x_78 :: _x_81 in
-      let _x_83 = _x_77 :: _x_82 in
-      let _x_84 = _y_76 :: _x_83 in
-      Val.Ctor (_x_74, _x_84) in
-      match acc_ty_70 with
-        | None -> (let _x_86 = Val.None in
-          _jp_75 _x_86)
-        | Some val__87 -> (let _x_88 = store_program_gen_ty_c_to_val_ty val__87 in
-          let _x_89 = Val.Some _x_88 in
-          _jp_75 _x_89))
-
-and store_program_gen_term_c_to_val_terms (x_1 : Terms.t) : Val.t =
-  match (x_1 : Terms.t) with
-    | Terms.Nil -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | Terms.Cons (head_5, tail_6) -> (let _x_7 = 1 in
-      let _x_8 = store_program_gen_term_c_to_val_term head_5 in
-      let _x_9 = store_program_gen_term_c_to_val_terms tail_6 in
-      let _x_10 = [] in
-      let _x_11 = _x_9 :: _x_10 in
-      let _x_12 = _x_8 :: _x_11 in
-      Val.Ctor (_x_7, _x_12))
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.CauseTermC.toValCauseTerm (x.1 : Effect4.Program.CauseTerm) : Effect4.Store.Val *)
-
-let rec store_program_gen_cause_term_c_to_val_cause_term (x_1 : CauseTerm.t) : Val.t =
-  match (x_1 : CauseTerm.t) with
-    | CauseTerm.Fail error_2 -> (let _x_3 = 0 in
-      let _x_4 = store_program_gen_term_c_to_val_term error_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | CauseTerm.Die defect_8 -> (let _x_9 = 1 in
-      let _x_10 = store_program_gen_term_c_to_val_term defect_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-    | CauseTerm.Interrupt interruptor_14 -> (let _x_15 = 2 in
-      let[@local always] _jp_16 = fun _y_17 -> let _x_18 = [] in
-      let _x_19 = _y_17 :: _x_18 in
-      Val.Ctor (_x_15, _x_19) in
-      match interruptor_14 with
-        | None -> (let _x_21 = Val.None in
-          _jp_16 _x_21)
-        | Some val__22 -> (let _x_23 = store_program_gen_term_c_to_val_term val__22 in
-          let _x_24 = Val.Some _x_23 in
-          _jp_16 _x_24))
-    | CauseTerm.Both (left_25, right_26) -> (let _x_27 = 3 in
-      let _x_28 = store_program_gen_cause_term_c_to_val_cause_term left_25 in
-      let _x_29 = store_program_gen_cause_term_c_to_val_cause_term right_26 in
-      let _x_30 = [] in
-      let _x_31 = _x_29 :: _x_30 in
-      let _x_32 = _x_28 :: _x_31 in
-      Val.Ctor (_x_27, _x_32))
-
-
-
 (* LCNF mono: Effect4.Store.ProgramGen.FinalizerStrategyC.toVal (x.1 : Effect4.FinalizerStrategy) : Effect4.Store.Val *)
 
 let store_program_gen_finalizer_strategy_c_to_val (x_1 : FinalizerStrategy.t) : Val.t =
@@ -33738,40 +35203,6 @@ let store_program_gen_fork_options_c_to_val (x_1 : ForkOptions.t) : Val.t =
       let _x_11 = _x_7 :: _x_10 in
       let _x_12 = _x_6 :: _x_11 in
       Val.Ctor (_x_5, _x_12))
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ProgramGen.EffC.toValLayerTerm.spec_3 (a.1 : List Nat) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 (a_1 : int list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = Val.Nat head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.DecisionC.toVal (x.1 : Effect4.Program.Decision) : Effect4.Store.Val *)
-
-let store_program_gen_decision_c_to_val (x_1 : Decision.t) : Val.t =
-  match (x_1 : Decision.t) with
-    | Decision.Bool -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | Decision.Option -> (let _x_5 = 1 in
-      let _x_6 = [] in
-      Val.Ctor (_x_5, _x_6))
-    | Decision.Tag tag_8 -> (let _x_9 = 2 in
-      let _x_10 = Val.Str tag_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-    | Decision.RecordTag tag_14 -> (let _x_15 = 3 in
-      let _x_16 = Val.Str tag_14 in
-      let _x_17 = [] in
-      let _x_18 = _x_16 :: _x_17 in
-      Val.Ctor (_x_15, _x_18))
 
 
 
@@ -37273,54 +38704,10 @@ let run_kit_ty_to_val (t : Ty.t) : Val.t =
 
 
 
-(* LCNF mono: Effect4.Store.ProgramGen.EffTyC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_program_gen_eff_ty_c_shape_doc : shape_doc =
-  let _x_1 = store_program_gen_service_key_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "answer" in
-      let _x_3 = "Ty" in
-      let _x_4 = Shape_named _x_3 in
-      let _x_5 = _x_2, _x_4 in
-      let _x_6 = "EffTy" in
-      let _x_7 = store_program_gen_ty_c_defs in
-      let _x_8 = "error" in
-      let _x_9 = _x_8, _x_4 in
-      let _x_10 = "requires" in
-      let _x_11 = Shape_list root in
-      let _x_12 = _x_10, _x_11 in
-      let _x_13 = [] in
-      let _x_14 = _x_12 :: _x_13 in
-      let _x_15 = _x_9 :: _x_14 in
-      let _x_16 = _x_5 :: _x_15 in
-      let _x_17 = Shape_struct (_x_6, _x_16) in
-      let _x_18 = _x_7 @ defs in
-      ({ root = _x_17; defs = _x_18 } : shape_doc))
-
-
-
 (* LCNF mono: Effect4.Run.Kit.effTyShape : Effect4.Store.ShapeDoc *)
 
 let run_kit_eff_ty_shape : shape_doc =
   store_program_gen_eff_ty_c_shape_doc
-
-
-
-(* LCNF mono: Effect4.Store.ProgramGen.EffTyC.toVal (x.1 : Effect4.Program.EffTy) : Effect4.Store.Val *)
-
-let store_program_gen_eff_ty_c_to_val (x_1 : EffTy.t) : Val.t =
-  match (x_1 : EffTy.t) with
-    | { EffTy.answer = answer_2; EffTy.error = error_3; EffTy.requires = requires_4 } -> (let _x_5 = store_row_image_at_store_program_gen_ty_c_to_val_ty_spec_0 in
-      match (_x_5 : _ image) with
-        | { to_val = to_val; _ } -> (let _x_6 = 0 in
-          let _x_7 = store_program_gen_ty_c_to_val_ty answer_2 in
-          let _x_8 = store_program_gen_ty_c_to_val_ty error_3 in
-          let _x_9 = to_val requires_4 in
-          let _x_10 = [] in
-          let _x_11 = _x_9 :: _x_10 in
-          let _x_12 = _x_8 :: _x_11 in
-          let _x_13 = _x_7 :: _x_12 in
-          Val.Ctor (_x_6, _x_13)))
 
 
 
@@ -37331,1230 +38718,17 @@ let run_kit_eff_ty_to_val (t : EffTy.t) : Val.t =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_fold_typing_reason_c_shape_doc : shape_doc =
-  let _x_1 = "FoldTypingReason" in
-  let _x_2 = "notList" in
-  let _x_3 = 0 in
-  let _x_4 = "list" in
-  let _x_5 = "Ty" in
-  let _x_6 = Shape_named _x_5 in
-  let _x_7 = store_program_gen_ty_c_defs in
-  let _x_8 = _x_4, _x_6 in
-  let _x_9 = [] in
-  let _x_10 = _x_8 :: _x_9 in
-  let _x_11 = _x_3, _x_10 in
-  let _x_12 = _x_2, _x_11 in
-  let _x_13 = "initialNotAccumulator" in
-  let _x_14 = 1 in
-  let _x_15 = "initial" in
-  let _x_16 = _x_15, _x_6 in
-  let _x_17 = "accumulator" in
-  let _x_18 = _x_17, _x_6 in
-  let _x_19 = _x_18 :: _x_9 in
-  let _x_20 = _x_16 :: _x_19 in
-  let _x_21 = _x_14, _x_20 in
-  let _x_22 = _x_13, _x_21 in
-  let _x_23 = "bodyNotAccumulator" in
-  let _x_24 = 2 in
-  let _x_25 = "body" in
-  let _x_26 = _x_25, _x_6 in
-  let _x_27 = _x_26 :: _x_19 in
-  let _x_28 = _x_24, _x_27 in
-  let _x_29 = _x_23, _x_28 in
-  let _x_30 = _x_29 :: _x_9 in
-  let _x_31 = _x_22 :: _x_30 in
-  let _x_32 = _x_12 :: _x_31 in
-  let _x_33 = Shape_sum (_x_1, _x_32) in
-  ({ root = _x_33; defs = _x_7 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldTermRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_fold_term_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_fold_typing_reason_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "FoldTermRefusal" in
-      let _x_3 = "path" in
-      let _x_4 = Shape_nat in
-      let _x_5 = [] in
-      let _x_6 = Shape_list _x_4 in
-      let _x_7 = _x_3, _x_6 in
-      let _x_8 = "reason" in
-      let _x_9 = _x_8, root in
-      let _x_10 = _x_9 :: _x_5 in
-      let _x_11 = _x_7 :: _x_10 in
-      let _x_12 = Shape_struct (_x_2, _x_11) in
-      let _x_13 = _x_5 @ defs in
-      ({ root = _x_12; defs = _x_13 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldCauseRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_fold_cause_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_fold_term_refusal_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "FoldCauseRefusal" in
-      let _x_3 = "causePath" in
-      let _x_4 = Shape_nat in
-      let _x_5 = [] in
-      let _x_6 = Shape_list _x_4 in
-      let _x_7 = _x_3, _x_6 in
-      let _x_8 = "term" in
-      let _x_9 = _x_8, root in
-      let _x_10 = _x_9 :: _x_5 in
-      let _x_11 = _x_7 :: _x_10 in
-      let _x_12 = Shape_struct (_x_2, _x_11) in
-      let _x_13 = _x_5 @ defs in
-      ({ root = _x_12; defs = _x_13 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_record_typing_reason_c_shape_doc : shape_doc =
-  let _x_1 = 0 in
-  let _x_2 = "name" in
-  let _x_3 = Shape_string in
-  let _x_4 = [] in
-  let _x_5 = _x_2, _x_3 in
-  let _x_6 = _x_5 :: _x_4 in
-  let _x_7 = _x_1, _x_6 in
-  let _x_8 = 1 in
-  let _x_9 = _x_8, _x_6 in
-  let _x_10 = "actual" in
-  let _x_11 = "Ty" in
-  let _x_12 = Shape_named _x_11 in
-  let _x_13 = _x_10, _x_12 in
-  let _x_14 = "expected" in
-  let _x_15 = _x_14, _x_12 in
-  let _x_16 = _x_15 :: _x_4 in
-  let _x_17 = _x_13 :: _x_16 in
-  let _x_18 = _x_5 :: _x_17 in
-  let _x_19 = "names" in
-  let _x_20 = Shape_nat in
-  let _x_21 = _x_19, _x_20 in
-  let _x_22 = "values" in
-  let _x_23 = _x_22, _x_20 in
-  let _x_24 = _x_23 :: _x_4 in
-  let _x_25 = store_refusals_gen_formation_refusal_c_shape_doc in
-  match (_x_25 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_26 = 2 in
-      let _x_27 = _x_26, _x_6 in
-      let _x_28 = 6 in
-      let _x_29 = "branch" in
-      let _x_30 = _x_29, _x_12 in
-      let _x_31 = _x_30 :: _x_4 in
-      let _x_32 = _x_5 :: _x_31 in
-      let _x_33 = _x_28, _x_32 in
-      let _x_34 = "RecordTypingReason" in
-      let _x_35 = "duplicateDeclaration" in
-      let _x_36 = _x_35, _x_7 in
-      let _x_37 = "duplicateSupplied" in
-      let _x_38 = _x_37, _x_9 in
-      let _x_39 = "missingRequired" in
-      let _x_40 = _x_39, _x_27 in
-      let _x_41 = "unknownSupplied" in
-      let _x_42 = 3 in
-      let _x_43 = _x_42, _x_6 in
-      let _x_44 = _x_41, _x_43 in
-      let _x_45 = "fieldNotSubtype" in
-      let _x_46 = 4 in
-      let _x_47 = store_program_gen_ty_c_defs in
-      let _x_48 = _x_46, _x_18 in
-      let _x_49 = _x_45, _x_48 in
-      let _x_50 = "columnLengths" in
-      let _x_51 = 5 in
-      let _x_52 = _x_21 :: _x_24 in
-      let _x_53 = _x_51, _x_52 in
-      let _x_54 = _x_50, _x_53 in
-      let _x_55 = "missingReadField" in
-      let _x_56 = _x_55, _x_33 in
-      let _x_57 = "optionalReadField" in
-      let _x_58 = 7 in
-      let _x_59 = _x_58, _x_32 in
-      let _x_60 = _x_57, _x_59 in
-      let _x_61 = "declarationFormation" in
-      let _x_62 = 8 in
-      let _x_63 = "why" in
-      let _x_64 = _x_63, root in
-      let _x_65 = _x_64 :: _x_4 in
-      let _x_66 = _x_62, _x_65 in
-      let _x_67 = _x_61, _x_66 in
-      let _x_68 = _x_67 :: _x_4 in
-      let _x_69 = _x_60 :: _x_68 in
-      let _x_70 = _x_56 :: _x_69 in
-      let _x_71 = _x_54 :: _x_70 in
-      let _x_72 = _x_49 :: _x_71 in
-      let _x_73 = _x_44 :: _x_72 in
-      let _x_74 = _x_40 :: _x_73 in
-      let _x_75 = _x_38 :: _x_74 in
-      let _x_76 = _x_36 :: _x_75 in
-      let _x_77 = Shape_sum (_x_34, _x_76) in
-      let _x_78 = _x_4 @ _x_47 in
-      let _x_79 = _x_78 @ _x_4 in
-      let _x_80 = _x_79 @ defs in
-      ({ root = _x_77; defs = _x_80 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordTermRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_record_term_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_record_typing_reason_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "RecordTermRefusal" in
-      let _x_3 = "path" in
-      let _x_4 = Shape_nat in
-      let _x_5 = [] in
-      let _x_6 = Shape_list _x_4 in
-      let _x_7 = _x_3, _x_6 in
-      let _x_8 = "reason" in
-      let _x_9 = _x_8, root in
-      let _x_10 = _x_9 :: _x_5 in
-      let _x_11 = _x_7 :: _x_10 in
-      let _x_12 = Shape_struct (_x_2, _x_11) in
-      let _x_13 = _x_5 @ defs in
-      ({ root = _x_12; defs = _x_13 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordCauseRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_record_cause_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_record_term_refusal_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "RecordCauseRefusal" in
-      let _x_3 = "causePath" in
-      let _x_4 = Shape_nat in
-      let _x_5 = [] in
-      let _x_6 = Shape_list _x_4 in
-      let _x_7 = _x_3, _x_6 in
-      let _x_8 = "term" in
-      let _x_9 = _x_8, root in
-      let _x_10 = _x_9 :: _x_5 in
-      let _x_11 = _x_7 :: _x_10 in
-      let _x_12 = Shape_struct (_x_2, _x_11) in
-      let _x_13 = _x_5 @ defs in
-      ({ root = _x_12; defs = _x_13 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_tuple_typing_reason_c_shape_doc : shape_doc =
-  let _x_1 = "TupleTypingReason" in
-  let _x_2 = "nonTuple" in
-  let _x_3 = 0 in
-  let _x_4 = "branch" in
-  let _x_5 = "Ty" in
-  let _x_6 = Shape_named _x_5 in
-  let _x_7 = store_program_gen_ty_c_defs in
-  let _x_8 = _x_4, _x_6 in
-  let _x_9 = [] in
-  let _x_10 = _x_8 :: _x_9 in
-  let _x_11 = _x_3, _x_10 in
-  let _x_12 = _x_2, _x_11 in
-  let _x_13 = "outOfBounds" in
-  let _x_14 = 1 in
-  let _x_15 = "arity" in
-  let _x_16 = Shape_nat in
-  let _x_17 = _x_15, _x_16 in
-  let _x_18 = _x_17 :: _x_9 in
-  let _x_19 = _x_14, _x_18 in
-  let _x_20 = _x_13, _x_19 in
-  let _x_21 = _x_20 :: _x_9 in
-  let _x_22 = _x_12 :: _x_21 in
-  let _x_23 = Shape_sum (_x_1, _x_22) in
-  let _x_24 = _x_7 @ _x_9 in
-  ({ root = _x_23; defs = _x_24 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleTermRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_tuple_term_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_tuple_typing_reason_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = Shape_nat in
-      let _x_3 = Shape_list _x_2 in
-      let _x_4 = "TupleTermRefusal" in
-      let _x_5 = "path" in
-      let _x_6 = [] in
-      let _x_7 = _x_5, _x_3 in
-      let _x_8 = "index" in
-      let _x_9 = _x_8, _x_2 in
-      let _x_10 = "reason" in
-      let _x_11 = _x_10, root in
-      let _x_12 = _x_11 :: _x_6 in
-      let _x_13 = _x_9 :: _x_12 in
-      let _x_14 = _x_7 :: _x_13 in
-      let _x_15 = Shape_struct (_x_4, _x_14) in
-      let _x_16 = _x_6 @ _x_6 in
-      let _x_17 = _x_16 @ defs in
-      ({ root = _x_15; defs = _x_17 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleCauseRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_tuple_cause_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_tuple_term_refusal_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "TupleCauseRefusal" in
-      let _x_3 = "causePath" in
-      let _x_4 = Shape_nat in
-      let _x_5 = [] in
-      let _x_6 = Shape_list _x_4 in
-      let _x_7 = _x_3, _x_6 in
-      let _x_8 = "term" in
-      let _x_9 = _x_8, root in
-      let _x_10 = _x_9 :: _x_5 in
-      let _x_11 = _x_7 :: _x_10 in
-      let _x_12 = Shape_struct (_x_2, _x_11) in
-      let _x_13 = _x_5 @ defs in
-      ({ root = _x_12; defs = _x_13 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.RefFaultC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_ref_fault_c_shape_doc : shape_doc =
-  let _x_1 = "RefFault" in
-  let _x_2 = "notBefore" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "encloses" in
-  let _x_8 = 1 in
-  let _x_9 = _x_8, _x_4 in
-  let _x_10 = _x_7, _x_9 in
-  let _x_11 = "noLayer" in
-  let _x_12 = 2 in
-  let _x_13 = _x_12, _x_4 in
-  let _x_14 = _x_11, _x_13 in
-  let _x_15 = "toReference" in
-  let _x_16 = 3 in
-  let _x_17 = _x_16, _x_4 in
-  let _x_18 = _x_15, _x_17 in
-  let _x_19 = "otherScope" in
-  let _x_20 = 4 in
-  let _x_21 = _x_20, _x_4 in
-  let _x_22 = _x_19, _x_21 in
-  let _x_23 = _x_22 :: _x_4 in
-  let _x_24 = _x_18 :: _x_23 in
-  let _x_25 = _x_14 :: _x_24 in
-  let _x_26 = _x_10 :: _x_25 in
-  let _x_27 = _x_6 :: _x_26 in
-  let _x_28 = Shape_sum (_x_1, _x_27) in
-  ({ root = _x_28; defs = _x_4 } : shape_doc)
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TypeReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_type_reason_c_shape_doc : shape_doc =
-  let _x_1 = "t" in
-  let _x_2 = "Ty" in
-  let _x_3 = Shape_named _x_2 in
-  let _x_4 = _x_1, _x_3 in
-  let _x_5 = [] in
-  let _x_6 = _x_4 :: _x_5 in
-  let _x_7 = 37 in
-  let _x_8 = _x_7, _x_5 in
-  let _x_9 = "decls" in
-  let _x_10 = Shape_nat in
-  let _x_11 = _x_9, _x_10 in
-  let _x_12 = store_program_gen_eff_ty_c_shape_doc in
-  match (_x_12 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_13 = "bodies" in
-      let _x_14 = _x_13, _x_10 in
-      let _x_15 = _x_14 :: _x_5 in
-      let _x_16 = "name" in
-      let _x_17 = Shape_string in
-      let _x_18 = _x_16, _x_17 in
-      let _x_19 = _x_18 :: _x_5 in
-      let _x_20 = "body" in
-      let _x_21 = _x_20, root in
-      let _x_22 = _x_21 :: _x_5 in
-      let _x_23 = "params" in
-      let _x_24 = _x_23, _x_10 in
-      let _x_25 = "args" in
-      let _x_26 = _x_25, _x_10 in
-      let _x_27 = _x_26 :: _x_5 in
-      let _x_28 = "error" in
-      let _x_29 = _x_28, _x_3 in
-      let _x_30 = "spelling" in
-      let _x_31 = _x_30, _x_3 in
-      let _x_32 = _x_31 :: _x_5 in
-      let _x_33 = "param" in
-      let _x_34 = _x_33, _x_3 in
-      let _x_35 = store_refusals_gen_fold_term_refusal_c_shape_doc in
-      match (_x_35 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_36 = _x_34 :: _x_5 in
-          let _x_37 = "result" in
-          let _x_38 = _x_37, _x_3 in
-          let _x_39 = store_refusals_gen_fold_cause_refusal_c_shape_doc in
-          match (_x_39 : shape_doc) with
-            | { root = root_2; defs = defs_2 } -> (let _x_40 = "expected" in
-              let _x_41 = _x_40, _x_3 in
-              let _x_42 = _x_41 :: _x_5 in
-              let _x_43 = store_refusals_gen_record_term_refusal_c_shape_doc in
-              match (_x_43 : shape_doc) with
-                | { root = root_3; defs = defs_3 } -> (let _x_44 = "why" in
-                  let _x_45 = _x_44, root_1 in
-                  let _x_46 = _x_45 :: _x_5 in
-                  let _x_47 = store_refusals_gen_record_cause_refusal_c_shape_doc in
-                  match (_x_47 : shape_doc) with
-                    | { root = root_4; defs = defs_4 } -> (let _x_48 = _x_44, root_2 in
-                      let _x_49 = _x_48 :: _x_5 in
-                      let _x_50 = store_refusals_gen_tuple_term_refusal_c_shape_doc in
-                      match (_x_50 : shape_doc) with
-                        | { root = root_5; defs = defs_5 } -> (let _x_51 = _x_44, root_3 in
-                          let _x_52 = _x_51 :: _x_5 in
-                          let _x_53 = store_refusals_gen_tuple_cause_refusal_c_shape_doc in
-                          match (_x_53 : shape_doc) with
-                            | { root = root_6; defs = defs_6 } -> (let _x_54 = _x_44, root_4 in
-                              let _x_55 = _x_54 :: _x_5 in
-                              let _x_56 = _x_44, root_5 in
-                              let _x_57 = _x_56 :: _x_5 in
-                              let _x_58 = _x_44, root_6 in
-                              let _x_59 = _x_58 :: _x_5 in
-                              let _x_60 = "field" in
-                              let _x_61 = _x_60, _x_3 in
-                              let _x_62 = _x_61 :: _x_5 in
-                              let _x_63 = 21 in
-                              let _x_64 = _x_63, _x_5 in
-                              let _x_65 = store_program_gen_lit_c_shape_doc in
-                              match (_x_65 : shape_doc) with
-                                | { root = root_7; defs = defs_7 } -> (let _x_66 = 22 in
-                                  let _x_67 = _x_66, _x_5 in
-                                  let _x_68 = store_refusals_gen_formation_refusal_c_shape_doc in
-                                  match (_x_68 : shape_doc) with
-                                    | { root = root_8; defs = defs_8 } -> (let _x_69 = "row" in
-                                      let _x_70 = _x_69, _x_17 in
-                                      let _x_71 = _x_70 :: _x_36 in
-                                      let _x_72 = 23 in
-                                      let _x_73 = _x_72, _x_5 in
-                                      let _x_74 = 36 in
-                                      let _x_75 = _x_74, _x_6 in
-                                      let _x_76 = store_program_gen_service_key_c_shape_doc in
-                                      match (_x_76 : shape_doc) with
-                                        | { root = root_9; defs = defs_9 } -> (let _x_77 = "value" in
-                                          let _x_78 = _x_77, root_7 in
-                                          let _x_79 = _x_78 :: _x_5 in
-                                          let _x_80 = _x_44, root_8 in
-                                          let _x_81 = _x_80 :: _x_5 in
-                                          let _x_82 = "key" in
-                                          let _x_83 = _x_82, root_9 in
-                                          let _x_84 = _x_83 :: _x_5 in
-                                          let _x_85 = _x_77, _x_3 in
-                                          let _x_86 = store_refusals_gen_ref_fault_c_shape_doc in
-                                          match (_x_86 : shape_doc) with
-                                            | { root = root_10; _ } -> (let _x_87 = 15 in
-                                              let _x_88 = _x_87, _x_6 in
-                                              let _x_89 = "carrier" in
-                                              let _x_90 = _x_89, _x_3 in
-                                              let _x_91 = _x_90 :: _x_5 in
-                                              let _x_92 = 16 in
-                                              let _x_93 = _x_92, _x_6 in
-                                              let _x_94 = 10 in
-                                              let _x_95 = _x_94, _x_6 in
-                                              let _x_96 = 11 in
-                                              let _x_97 = _x_96, _x_6 in
-                                              let _x_98 = 12 in
-                                              let _x_99 = _x_98, _x_6 in
-                                              let _x_100 = 13 in
-                                              let _x_101 = _x_100, _x_6 in
-                                              let _x_102 = store_program_gen_decision_c_shape_doc in
-                                              match (_x_102 : shape_doc) with
-                                                | { root = root_11; _ } -> (let _x_103 = _x_18 :: _x_22 in
-                                                  let _x_104 = _x_29 :: _x_32 in
-                                                  let _x_105 = _x_38 :: _x_42 in
-                                                  let _x_106 = _x_70 :: _x_105 in
-                                                  let _x_107 = "target" in
-                                                  let _x_108 = Shape_list _x_10 in
-                                                  let _x_109 = _x_107, _x_108 in
-                                                  let _x_110 = _x_109 :: _x_5 in
-                                                  let _x_111 = 14 in
-                                                  let _x_112 = _x_111, _x_6 in
-                                                  let _x_113 = "TypeReason" in
-                                                  let _x_114 = "maskRestoreExpected" in
-                                                  let _x_115 = store_program_gen_ty_c_defs in
-                                                  let _x_116 = _x_114, _x_75 in
-                                                  let _x_117 = "definitionBlock" in
-                                                  let _x_118 = _x_117, _x_8 in
-                                                  let _x_119 = "definitionsMismatch" in
-                                                  let _x_120 = 38 in
-                                                  let _x_121 = _x_11 :: _x_15 in
-                                                  let _x_122 = _x_120, _x_121 in
-                                                  let _x_123 = _x_119, _x_122 in
-                                                  let _x_124 = "definitionColumns" in
-                                                  let _x_125 = 39 in
-                                                  let _x_126 = _x_125, _x_19 in
-                                                  let _x_127 = _x_124, _x_126 in
-                                                  let _x_128 = "bodyNotDeclared" in
-                                                  let _x_129 = 40 in
-                                                  let _x_130 = _x_129, _x_103 in
-                                                  let _x_131 = _x_128, _x_130 in
-                                                  let _x_132 = "invokeArity" in
-                                                  let _x_133 = 41 in
-                                                  let _x_134 = _x_24 :: _x_27 in
-                                                  let _x_135 = _x_18 :: _x_134 in
-                                                  let _x_136 = _x_133, _x_135 in
-                                                  let _x_137 = _x_132, _x_136 in
-                                                  let _x_138 = _x_137 :: _x_5 in
-                                                  let _x_139 = _x_131 :: _x_138 in
-                                                  let _x_140 = _x_127 :: _x_139 in
-                                                  let _x_141 = _x_123 :: _x_140 in
-                                                  let _x_142 = _x_118 :: _x_141 in
-                                                  let y_143 = _x_116 :: _x_142 in
-                                                  let _x_144 = "errorSpelling" in
-                                                  let _x_145 = 31 in
-                                                  let _x_146 = _x_145, _x_104 in
-                                                  let _x_147 = _x_144, _x_146 in
-                                                  let _x_148 = "binderTerm" in
-                                                  let _x_149 = 32 in
-                                                  let _x_150 = _x_149, _x_71 in
-                                                  let _x_151 = _x_148, _x_150 in
-                                                  let _x_152 = "resultNotSubtype" in
-                                                  let _x_153 = 33 in
-                                                  let _x_154 = _x_153, _x_106 in
-                                                  let _x_155 = _x_152, _x_154 in
-                                                  let _x_156 = "foldTerm" in
-                                                  let _x_157 = 34 in
-                                                  let _x_158 = _x_157, _x_46 in
-                                                  let _x_159 = _x_156, _x_158 in
-                                                  let _x_160 = "foldCause" in
-                                                  let _x_161 = 35 in
-                                                  let _x_162 = _x_161, _x_49 in
-                                                  let _x_163 = _x_160, _x_162 in
-                                                  let _x_164 = _x_163 :: y_143 in
-                                                  let _x_165 = _x_159 :: _x_164 in
-                                                  let _x_166 = _x_155 :: _x_165 in
-                                                  let _x_167 = _x_151 :: _x_166 in
-                                                  let y_168 = _x_147 :: _x_167 in
-                                                  let _x_169 = "recordTerm" in
-                                                  let _x_170 = 26 in
-                                                  let _x_171 = _x_170, _x_52 in
-                                                  let _x_172 = _x_169, _x_171 in
-                                                  let _x_173 = "recordCause" in
-                                                  let _x_174 = 27 in
-                                                  let _x_175 = _x_174, _x_55 in
-                                                  let _x_176 = _x_173, _x_175 in
-                                                  let _x_177 = "tupleTerm" in
-                                                  let _x_178 = 28 in
-                                                  let _x_179 = _x_178, _x_57 in
-                                                  let _x_180 = _x_177, _x_179 in
-                                                  let _x_181 = "tupleCause" in
-                                                  let _x_182 = 29 in
-                                                  let _x_183 = _x_182, _x_59 in
-                                                  let _x_184 = _x_181, _x_183 in
-                                                  let _x_185 = "errorPayloadField" in
-                                                  let _x_186 = 30 in
-                                                  let _x_187 = "path" in
-                                                  let _x_188 = Shape_list _x_17 in
-                                                  let _x_189 = _x_187, _x_188 in
-                                                  let _x_190 = _x_189 :: _x_62 in
-                                                  let _x_191 = _x_29 :: _x_190 in
-                                                  let _x_192 = _x_186, _x_191 in
-                                                  let _x_193 = _x_185, _x_192 in
-                                                  let _x_194 = _x_193 :: y_168 in
-                                                  let _x_195 = _x_184 :: _x_194 in
-                                                  let _x_196 = _x_180 :: _x_195 in
-                                                  let _x_197 = _x_176 :: _x_196 in
-                                                  let y_198 = _x_172 :: _x_197 in
-                                                  let _x_199 = "mergeAllEmpty" in
-                                                  let _x_200 = _x_199, _x_64 in
-                                                  let _x_201 = "returnNotLast" in
-                                                  let _x_202 = _x_201, _x_67 in
-                                                  let _x_203 = "breakOutsideLoop" in
-                                                  let _x_204 = _x_203, _x_73 in
-                                                  let _x_205 = "literalOutsideAlphabet" in
-                                                  let _x_206 = 24 in
-                                                  let _x_207 = _x_206, _x_79 in
-                                                  let _x_208 = _x_205, _x_207 in
-                                                  let _x_209 = "instantiatedFormation" in
-                                                  let _x_210 = 25 in
-                                                  let _x_211 = _x_70 :: _x_81 in
-                                                  let _x_212 = _x_210, _x_211 in
-                                                  let _x_213 = _x_209, _x_212 in
-                                                  let _x_214 = _x_213 :: y_198 in
-                                                  let _x_215 = _x_208 :: _x_214 in
-                                                  let _x_216 = _x_204 :: _x_215 in
-                                                  let _x_217 = _x_202 :: _x_216 in
-                                                  let y_218 = _x_200 :: _x_217 in
-                                                  let _x_219 = "snapshotExpected" in
-                                                  let _x_220 = _x_219, _x_88 in
-                                                  let _x_221 = "exitExpected" in
-                                                  let _x_222 = _x_221, _x_93 in
-                                                  let _x_223 = "serviceUnknown" in
-                                                  let _x_224 = 17 in
-                                                  let _x_225 = _x_224, _x_84 in
-                                                  let _x_226 = _x_223, _x_225 in
-                                                  let _x_227 = "valueNotSubtype" in
-                                                  let _x_228 = 18 in
-                                                  let _x_229 = _x_85 :: _x_91 in
-                                                  let _x_230 = _x_83 :: _x_229 in
-                                                  let _x_231 = _x_228, _x_230 in
-                                                  let _x_232 = _x_227, _x_231 in
-                                                  let _x_233 = "layerReference" in
-                                                  let _x_234 = 19 in
-                                                  let _x_235 = _x_234, _x_110 in
-                                                  let _x_236 = _x_233, _x_235 in
-                                                  let _x_237 = "referenceIllFormed" in
-                                                  let _x_238 = 20 in
-                                                  let _x_239 = _x_44, root_10 in
-                                                  let _x_240 = _x_239 :: _x_5 in
-                                                  let _x_241 = _x_109 :: _x_240 in
-                                                  let _x_242 = _x_238, _x_241 in
-                                                  let _x_243 = _x_237, _x_242 in
-                                                  let _x_244 = _x_243 :: y_218 in
-                                                  let _x_245 = _x_236 :: _x_244 in
-                                                  let _x_246 = _x_232 :: _x_245 in
-                                                  let _x_247 = _x_226 :: _x_246 in
-                                                  let _x_248 = _x_222 :: _x_247 in
-                                                  let y_249 = _x_220 :: _x_248 in
-                                                  let _x_250 = "notFiber" in
-                                                  let _x_251 = _x_250, _x_95 in
-                                                  let _x_252 = "scopeExpected" in
-                                                  let _x_253 = _x_252, _x_97 in
-                                                  let _x_254 = "natExpected" in
-                                                  let _x_255 = _x_254, _x_99 in
-                                                  let _x_256 = "listOfFibersExpected" in
-                                                  let _x_257 = _x_256, _x_101 in
-                                                  let _x_258 = "contextExpected" in
-                                                  let _x_259 = _x_258, _x_112 in
-                                                  let _x_260 = _x_259 :: y_249 in
-                                                  let _x_261 = _x_257 :: _x_260 in
-                                                  let _x_262 = _x_255 :: _x_261 in
-                                                  let _x_263 = _x_253 :: _x_262 in
-                                                  let y_264 = _x_251 :: _x_263 in
-                                                  let _x_265 = "predicateNotBool" in
-                                                  let _x_266 = 5 in
-                                                  let _x_267 = _x_266, _x_6 in
-                                                  let _x_268 = _x_265, _x_267 in
-                                                  let _x_269 = "notSelectable" in
-                                                  let _x_270 = 6 in
-                                                  let _x_271 = "decision" in
-                                                  let _x_272 = _x_271, root_11 in
-                                                  let _x_273 = "scrutinee" in
-                                                  let _x_274 = _x_273, _x_3 in
-                                                  let _x_275 = _x_274 :: _x_5 in
-                                                  let _x_276 = _x_272 :: _x_275 in
-                                                  let _x_277 = _x_270, _x_276 in
-                                                  let _x_278 = _x_269, _x_277 in
-                                                  let _x_279 = "stepNotCursor" in
-                                                  let _x_280 = 7 in
-                                                  let _x_281 = "step" in
-                                                  let _x_282 = _x_281, _x_3 in
-                                                  let _x_283 = "cursor" in
-                                                  let _x_284 = _x_283, _x_3 in
-                                                  let _x_285 = _x_284 :: _x_5 in
-                                                  let _x_286 = _x_282 :: _x_285 in
-                                                  let _x_287 = _x_280, _x_286 in
-                                                  let _x_288 = _x_279, _x_287 in
-                                                  let _x_289 = "initialNotCursor" in
-                                                  let _x_290 = 8 in
-                                                  let _x_291 = "initial" in
-                                                  let _x_292 = _x_291, _x_3 in
-                                                  let _x_293 = _x_292 :: _x_285 in
-                                                  let _x_294 = _x_290, _x_293 in
-                                                  let _x_295 = _x_289, _x_294 in
-                                                  let _x_296 = "releaseFails" in
-                                                  let _x_297 = 9 in
-                                                  let _x_298 = _x_29 :: _x_5 in
-                                                  let _x_299 = _x_297, _x_298 in
-                                                  let _x_300 = _x_296, _x_299 in
-                                                  let _x_301 = _x_300 :: y_264 in
-                                                  let _x_302 = _x_295 :: _x_301 in
-                                                  let _x_303 = _x_288 :: _x_302 in
-                                                  let _x_304 = _x_278 :: _x_303 in
-                                                  let y_305 = _x_268 :: _x_304 in
-                                                  let _x_306 = "term" in
-                                                  let _x_307 = 0 in
-                                                  let _x_308 = "Term" in
-                                                  let _x_309 = Shape_named _x_308 in
-                                                  let _x_310 = store_program_gen_term_c_defs in
-                                                  let _x_311 = _x_1, _x_309 in
-                                                  let _x_312 = _x_311 :: _x_5 in
-                                                  let _x_313 = _x_307, _x_312 in
-                                                  let _x_314 = _x_306, _x_313 in
-                                                  let _x_315 = "cause" in
-                                                  let _x_316 = 1 in
-                                                  let _x_317 = "c" in
-                                                  let _x_318 = "CauseTerm" in
-                                                  let _x_319 = Shape_named _x_318 in
-                                                  let _x_320 = store_program_gen_cause_term_c_defs in
-                                                  let _x_321 = _x_317, _x_319 in
-                                                  let _x_322 = _x_321 :: _x_5 in
-                                                  let _x_323 = _x_316, _x_322 in
-                                                  let _x_324 = _x_315, _x_323 in
-                                                  let _x_325 = "errorNotAdmitted" in
-                                                  let _x_326 = 2 in
-                                                  let _x_327 = _x_326, _x_298 in
-                                                  let _x_328 = _x_325, _x_327 in
-                                                  let _x_329 = "outsideDomain" in
-                                                  let _x_330 = 3 in
-                                                  let _x_331 = _x_70 :: _x_5 in
-                                                  let _x_332 = _x_330, _x_331 in
-                                                  let _x_333 = _x_329, _x_332 in
-                                                  let _x_334 = "requestNotSubtype" in
-                                                  let _x_335 = 4 in
-                                                  let _x_336 = "request" in
-                                                  let _x_337 = _x_336, _x_3 in
-                                                  let _x_338 = _x_337 :: _x_42 in
-                                                  let _x_339 = _x_70 :: _x_338 in
-                                                  let _x_340 = _x_335, _x_339 in
-                                                  let _x_341 = _x_334, _x_340 in
-                                                  let _x_342 = _x_341 :: y_305 in
-                                                  let _x_343 = _x_333 :: _x_342 in
-                                                  let _x_344 = _x_328 :: _x_343 in
-                                                  let _x_345 = _x_324 :: _x_344 in
-                                                  let _x_346 = _x_314 :: _x_345 in
-                                                  let _x_347 = Shape_sum (_x_113, _x_346) in
-                                                  let _x_348 = _x_310 @ _x_320 in
-                                                  let _x_349 = _x_348 @ _x_115 in
-                                                  let _x_350 = _x_349 @ _x_5 in
-                                                  let _x_351 = _x_350 @ _x_5 in
-                                                  let _x_352 = _x_351 @ defs_9 in
-                                                  let _x_353 = _x_352 @ _x_5 in
-                                                  let _x_354 = _x_353 @ _x_5 in
-                                                  let _x_355 = _x_354 @ defs_7 in
-                                                  let _x_356 = _x_355 @ defs_8 in
-                                                  let _x_357 = _x_356 @ defs_3 in
-                                                  let _x_358 = _x_357 @ defs_4 in
-                                                  let _x_359 = _x_358 @ defs_5 in
-                                                  let _x_360 = _x_359 @ defs_6 in
-                                                  let _x_361 = _x_360 @ _x_5 in
-                                                  let _x_362 = _x_361 @ defs_1 in
-                                                  let _x_363 = _x_362 @ defs_2 in
-                                                  let _x_364 = _x_363 @ _x_5 in
-                                                  let _x_365 = _x_364 @ defs in
-                                                  ({ root = _x_347; defs = _x_365 } : shape_doc)))))))))))))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TypeRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_type_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_type_reason_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "TypeRefusal" in
-      let _x_3 = "path" in
-      let _x_4 = Shape_nat in
-      let _x_5 = [] in
-      let _x_6 = Shape_list _x_4 in
-      let _x_7 = _x_3, _x_6 in
-      let _x_8 = "reason" in
-      let _x_9 = _x_8, root in
-      let _x_10 = _x_9 :: _x_5 in
-      let _x_11 = _x_7 :: _x_10 in
-      let _x_12 = Shape_struct (_x_2, _x_11) in
-      let _x_13 = _x_5 @ defs in
-      ({ root = _x_12; defs = _x_13 } : shape_doc))
-
-
-
 (* LCNF mono: Effect4.Run.Kit.refusalShape : Effect4.Store.ShapeDoc *)
 
 let run_kit_refusal_shape : shape_doc =
-  store_refusals_gen_type_refusal_c_shape_doc
+  store_refusals_gen_located_c_shape_doc
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RefFaultC.toVal (x.1 : Effect4.Program.RefFault) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Run.Kit.refusalToVal (r : Effect4.Located (List Nat) Effect4.Program.TypeReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_ref_fault_c_to_val (x_1 : ref_fault) : Val.t =
-  match (x_1 : ref_fault) with
-    | RefFault_notBefore -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | RefFault_encloses -> (let _x_5 = 1 in
-      let _x_6 = [] in
-      Val.Ctor (_x_5, _x_6))
-    | RefFault_noLayer -> (let _x_8 = 2 in
-      let _x_9 = [] in
-      Val.Ctor (_x_8, _x_9))
-    | RefFault_toReference -> (let _x_11 = 3 in
-      let _x_12 = [] in
-      Val.Ctor (_x_11, _x_12))
-    | RefFault_otherScope -> (let _x_14 = 4 in
-      let _x_15 = [] in
-      Val.Ctor (_x_14, _x_15))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordTypingReasonC.toVal (x.1 : Effect4.Program.RecordTypingReason) : Effect4.Store.Val *)
-
-let store_refusals_gen_record_typing_reason_c_to_val (x_1 : record_typing_reason) : Val.t =
-  match (x_1 : record_typing_reason) with
-    | RecordTypingReason_duplicateDeclaration name_2 -> (let _x_3 = 0 in
-      let _x_4 = Val.Str name_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | RecordTypingReason_duplicateSupplied name_8 -> (let _x_9 = 1 in
-      let _x_10 = Val.Str name_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-    | RecordTypingReason_missingRequired name_14 -> (let _x_15 = 2 in
-      let _x_16 = Val.Str name_14 in
-      let _x_17 = [] in
-      let _x_18 = _x_16 :: _x_17 in
-      Val.Ctor (_x_15, _x_18))
-    | RecordTypingReason_unknownSupplied name_20 -> (let _x_21 = 3 in
-      let _x_22 = Val.Str name_20 in
-      let _x_23 = [] in
-      let _x_24 = _x_22 :: _x_23 in
-      Val.Ctor (_x_21, _x_24))
-    | RecordTypingReason_fieldNotSubtype (name_26, actual_27, expected_28) -> (let _x_29 = 4 in
-      let _x_30 = Val.Str name_26 in
-      let _x_31 = store_program_gen_ty_c_to_val_ty actual_27 in
-      let _x_32 = store_program_gen_ty_c_to_val_ty expected_28 in
-      let _x_33 = [] in
-      let _x_34 = _x_32 :: _x_33 in
-      let _x_35 = _x_31 :: _x_34 in
-      let _x_36 = _x_30 :: _x_35 in
-      Val.Ctor (_x_29, _x_36))
-    | RecordTypingReason_columnLengths (names_38, values_39) -> (let _x_40 = 5 in
-      let _x_41 = Val.Nat names_38 in
-      let _x_42 = Val.Nat values_39 in
-      let _x_43 = [] in
-      let _x_44 = _x_42 :: _x_43 in
-      let _x_45 = _x_41 :: _x_44 in
-      Val.Ctor (_x_40, _x_45))
-    | RecordTypingReason_missingReadField (name_47, branch_48) -> (let _x_49 = 6 in
-      let _x_50 = Val.Str name_47 in
-      let _x_51 = store_program_gen_ty_c_to_val_ty branch_48 in
-      let _x_52 = [] in
-      let _x_53 = _x_51 :: _x_52 in
-      let _x_54 = _x_50 :: _x_53 in
-      Val.Ctor (_x_49, _x_54))
-    | RecordTypingReason_optionalReadField (name_56, branch_57) -> (let _x_58 = 7 in
-      let _x_59 = Val.Str name_56 in
-      let _x_60 = store_program_gen_ty_c_to_val_ty branch_57 in
-      let _x_61 = [] in
-      let _x_62 = _x_60 :: _x_61 in
-      let _x_63 = _x_59 :: _x_62 in
-      Val.Ctor (_x_58, _x_63))
-    | RecordTypingReason_declarationFormation why_65 -> (let _x_66 = 8 in
-      let _x_67 = store_refusals_gen_formation_refusal_c_to_val why_65 in
-      let _x_68 = [] in
-      let _x_69 = _x_67 :: _x_68 in
-      Val.Ctor (_x_66, _x_69))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordTermRefusalC.toVal (x.1 : Effect4.Program.RecordTermRefusal) : Effect4.Store.Val *)
-
-let store_refusals_gen_record_term_refusal_c_to_val (x_1 : record_term_refusal) : Val.t =
-  match (x_1 : record_term_refusal) with
-    | { path = path_2; reason = reason_3 } -> (let _x_4 = 0 in
-      let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_5 in
-      let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_record_typing_reason_c_to_val reason_3 in
-      let _x_9 = _x_8 :: _x_5 in
-      let _x_10 = _x_7 :: _x_9 in
-      Val.Ctor (_x_4, _x_10))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordCauseRefusalC.toVal (x.1 : Effect4.Program.RecordCauseRefusal) : Effect4.Store.Val *)
-
-let store_refusals_gen_record_cause_refusal_c_to_val (x_1 : record_cause_refusal) : Val.t =
-  match (x_1 : record_cause_refusal) with
-    | { cause_path = cause_path_2; term = term_3 } -> (let _x_4 = 0 in
-      let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 cause_path_2 _x_5 in
-      let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_record_term_refusal_c_to_val term_3 in
-      let _x_9 = _x_8 :: _x_5 in
-      let _x_10 = _x_7 :: _x_9 in
-      Val.Ctor (_x_4, _x_10))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleTypingReasonC.toVal (x.1 : Effect4.Program.TupleTypingReason) : Effect4.Store.Val *)
-
-let store_refusals_gen_tuple_typing_reason_c_to_val (x_1 : tuple_typing_reason) : Val.t =
-  match (x_1 : tuple_typing_reason) with
-    | TupleTypingReason_nonTuple branch_2 -> (let _x_3 = 0 in
-      let _x_4 = store_program_gen_ty_c_to_val_ty branch_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | TupleTypingReason_outOfBounds arity_8 -> (let _x_9 = 1 in
-      let _x_10 = Val.Nat arity_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleTermRefusalC.toVal (x.1 : Effect4.Program.TupleTermRefusal) : Effect4.Store.Val *)
-
-let store_refusals_gen_tuple_term_refusal_c_to_val (x_1 : tuple_term_refusal) : Val.t =
-  match (x_1 : tuple_term_refusal) with
-    | { path = path_2; index = index_3; reason = reason_4 } -> (let _x_5 = 0 in
-      let _x_6 = [] in
-      let _x_7 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_6 in
-      let _x_8 = Val.List _x_7 in
-      let _x_9 = Val.Nat index_3 in
-      let _x_10 = store_refusals_gen_tuple_typing_reason_c_to_val reason_4 in
-      let _x_11 = _x_10 :: _x_6 in
-      let _x_12 = _x_9 :: _x_11 in
-      let _x_13 = _x_8 :: _x_12 in
-      Val.Ctor (_x_5, _x_13))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleCauseRefusalC.toVal (x.1 : Effect4.Program.TupleCauseRefusal) : Effect4.Store.Val *)
-
-let store_refusals_gen_tuple_cause_refusal_c_to_val (x_1 : tuple_cause_refusal) : Val.t =
-  match (x_1 : tuple_cause_refusal) with
-    | { cause_path = cause_path_2; term = term_3 } -> (let _x_4 = 0 in
-      let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 cause_path_2 _x_5 in
-      let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_tuple_term_refusal_c_to_val term_3 in
-      let _x_9 = _x_8 :: _x_5 in
-      let _x_10 = _x_7 :: _x_9 in
-      Val.Ctor (_x_4, _x_10))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldTypingReasonC.toVal (x.1 : Effect4.Program.FoldTypingReason) : Effect4.Store.Val *)
-
-let store_refusals_gen_fold_typing_reason_c_to_val (x_1 : fold_typing_reason) : Val.t =
-  match (x_1 : fold_typing_reason) with
-    | FoldTypingReason_notList list_2 -> (let _x_3 = 0 in
-      let _x_4 = store_program_gen_ty_c_to_val_ty list_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | FoldTypingReason_initialNotAccumulator (initial_8, accumulator_9) -> (let _x_10 = 1 in
-      let _x_11 = store_program_gen_ty_c_to_val_ty initial_8 in
-      let _x_12 = store_program_gen_ty_c_to_val_ty accumulator_9 in
-      let _x_13 = [] in
-      let _x_14 = _x_12 :: _x_13 in
-      let _x_15 = _x_11 :: _x_14 in
-      Val.Ctor (_x_10, _x_15))
-    | FoldTypingReason_bodyNotAccumulator (body_17, accumulator_18) -> (let _x_19 = 2 in
-      let _x_20 = store_program_gen_ty_c_to_val_ty body_17 in
-      let _x_21 = store_program_gen_ty_c_to_val_ty accumulator_18 in
-      let _x_22 = [] in
-      let _x_23 = _x_21 :: _x_22 in
-      let _x_24 = _x_20 :: _x_23 in
-      Val.Ctor (_x_19, _x_24))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldTermRefusalC.toVal (x.1 : Effect4.Program.FoldTermRefusal) : Effect4.Store.Val *)
-
-let store_refusals_gen_fold_term_refusal_c_to_val (x_1 : fold_term_refusal) : Val.t =
-  match (x_1 : fold_term_refusal) with
-    | { path = path_2; reason = reason_3 } -> (let _x_4 = 0 in
-      let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_5 in
-      let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_fold_typing_reason_c_to_val reason_3 in
-      let _x_9 = _x_8 :: _x_5 in
-      let _x_10 = _x_7 :: _x_9 in
-      Val.Ctor (_x_4, _x_10))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldCauseRefusalC.toVal (x.1 : Effect4.Program.FoldCauseRefusal) : Effect4.Store.Val *)
-
-let store_refusals_gen_fold_cause_refusal_c_to_val (x_1 : fold_cause_refusal) : Val.t =
-  match (x_1 : fold_cause_refusal) with
-    | { cause_path = cause_path_2; term = term_3 } -> (let _x_4 = 0 in
-      let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 cause_path_2 _x_5 in
-      let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_fold_term_refusal_c_to_val term_3 in
-      let _x_9 = _x_8 :: _x_5 in
-      let _x_10 = _x_7 :: _x_9 in
-      Val.Ctor (_x_4, _x_10))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TypeReasonC.toVal (x.1 : Effect4.Program.TypeReason) : Effect4.Store.Val *)
-
-let store_refusals_gen_type_reason_c_to_val (x_1 : type_reason) : Val.t =
-  match (x_1 : type_reason) with
-    | TypeReason_term t_2 -> (let _x_3 = 0 in
-      let _x_4 = store_program_gen_term_c_to_val_term t_2 in
-      let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | TypeReason_cause c_8 -> (let _x_9 = 1 in
-      let _x_10 = store_program_gen_cause_term_c_to_val_cause_term c_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-    | TypeReason_errorNotAdmitted error_14 -> (let _x_15 = 2 in
-      let _x_16 = store_program_gen_ty_c_to_val_ty error_14 in
-      let _x_17 = [] in
-      let _x_18 = _x_16 :: _x_17 in
-      Val.Ctor (_x_15, _x_18))
-    | TypeReason_outsideDomain row_20 -> (let _x_21 = 3 in
-      let _x_22 = Val.Str row_20 in
-      let _x_23 = [] in
-      let _x_24 = _x_22 :: _x_23 in
-      Val.Ctor (_x_21, _x_24))
-    | TypeReason_requestNotSubtype (row_26, request_27, expected_28) -> (let _x_29 = 4 in
-      let _x_30 = Val.Str row_26 in
-      let _x_31 = store_program_gen_ty_c_to_val_ty request_27 in
-      let _x_32 = store_program_gen_ty_c_to_val_ty expected_28 in
-      let _x_33 = [] in
-      let _x_34 = _x_32 :: _x_33 in
-      let _x_35 = _x_31 :: _x_34 in
-      let _x_36 = _x_30 :: _x_35 in
-      Val.Ctor (_x_29, _x_36))
-    | TypeReason_predicateNotBool t_38 -> (let _x_39 = 5 in
-      let _x_40 = store_program_gen_ty_c_to_val_ty t_38 in
-      let _x_41 = [] in
-      let _x_42 = _x_40 :: _x_41 in
-      Val.Ctor (_x_39, _x_42))
-    | TypeReason_notSelectable (decision_44, scrutinee_45) -> (let _x_46 = 6 in
-      let _x_47 = store_program_gen_decision_c_to_val decision_44 in
-      let _x_48 = store_program_gen_ty_c_to_val_ty scrutinee_45 in
-      let _x_49 = [] in
-      let _x_50 = _x_48 :: _x_49 in
-      let _x_51 = _x_47 :: _x_50 in
-      Val.Ctor (_x_46, _x_51))
-    | TypeReason_stepNotCursor (step_53, cursor_54) -> (let _x_55 = 7 in
-      let _x_56 = store_program_gen_ty_c_to_val_ty step_53 in
-      let _x_57 = store_program_gen_ty_c_to_val_ty cursor_54 in
-      let _x_58 = [] in
-      let _x_59 = _x_57 :: _x_58 in
-      let _x_60 = _x_56 :: _x_59 in
-      Val.Ctor (_x_55, _x_60))
-    | TypeReason_initialNotCursor (initial_62, cursor_63) -> (let _x_64 = 8 in
-      let _x_65 = store_program_gen_ty_c_to_val_ty initial_62 in
-      let _x_66 = store_program_gen_ty_c_to_val_ty cursor_63 in
-      let _x_67 = [] in
-      let _x_68 = _x_66 :: _x_67 in
-      let _x_69 = _x_65 :: _x_68 in
-      Val.Ctor (_x_64, _x_69))
-    | TypeReason_releaseFails error_71 -> (let _x_72 = 9 in
-      let _x_73 = store_program_gen_ty_c_to_val_ty error_71 in
-      let _x_74 = [] in
-      let _x_75 = _x_73 :: _x_74 in
-      Val.Ctor (_x_72, _x_75))
-    | TypeReason_notFiber t_77 -> (let _x_78 = 10 in
-      let _x_79 = store_program_gen_ty_c_to_val_ty t_77 in
-      let _x_80 = [] in
-      let _x_81 = _x_79 :: _x_80 in
-      Val.Ctor (_x_78, _x_81))
-    | TypeReason_scopeExpected t_83 -> (let _x_84 = 11 in
-      let _x_85 = store_program_gen_ty_c_to_val_ty t_83 in
-      let _x_86 = [] in
-      let _x_87 = _x_85 :: _x_86 in
-      Val.Ctor (_x_84, _x_87))
-    | TypeReason_natExpected t_89 -> (let _x_90 = 12 in
-      let _x_91 = store_program_gen_ty_c_to_val_ty t_89 in
-      let _x_92 = [] in
-      let _x_93 = _x_91 :: _x_92 in
-      Val.Ctor (_x_90, _x_93))
-    | TypeReason_listOfFibersExpected t_95 -> (let _x_96 = 13 in
-      let _x_97 = store_program_gen_ty_c_to_val_ty t_95 in
-      let _x_98 = [] in
-      let _x_99 = _x_97 :: _x_98 in
-      Val.Ctor (_x_96, _x_99))
-    | TypeReason_contextExpected t_101 -> (let _x_102 = 14 in
-      let _x_103 = store_program_gen_ty_c_to_val_ty t_101 in
-      let _x_104 = [] in
-      let _x_105 = _x_103 :: _x_104 in
-      Val.Ctor (_x_102, _x_105))
-    | TypeReason_snapshotExpected t_107 -> (let _x_108 = 15 in
-      let _x_109 = store_program_gen_ty_c_to_val_ty t_107 in
-      let _x_110 = [] in
-      let _x_111 = _x_109 :: _x_110 in
-      Val.Ctor (_x_108, _x_111))
-    | TypeReason_exitExpected t_113 -> (let _x_114 = 16 in
-      let _x_115 = store_program_gen_ty_c_to_val_ty t_113 in
-      let _x_116 = [] in
-      let _x_117 = _x_115 :: _x_116 in
-      Val.Ctor (_x_114, _x_117))
-    | TypeReason_serviceUnknown key_119 -> (let _x_120 = 17 in
-      let _x_121 = store_program_gen_service_key_c_to_val key_119 in
-      let _x_122 = [] in
-      let _x_123 = _x_121 :: _x_122 in
-      Val.Ctor (_x_120, _x_123))
-    | TypeReason_valueNotSubtype (key_125, value_126, carrier_127) -> (let _x_128 = 18 in
-      let _x_129 = store_program_gen_service_key_c_to_val key_125 in
-      let _x_130 = store_program_gen_ty_c_to_val_ty value_126 in
-      let _x_131 = store_program_gen_ty_c_to_val_ty carrier_127 in
-      let _x_132 = [] in
-      let _x_133 = _x_131 :: _x_132 in
-      let _x_134 = _x_130 :: _x_133 in
-      let _x_135 = _x_129 :: _x_134 in
-      Val.Ctor (_x_128, _x_135))
-    | TypeReason_layerReference target_137 -> (let _x_138 = 19 in
-      let _x_139 = [] in
-      let _x_140 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 target_137 _x_139 in
-      let _x_141 = Val.List _x_140 in
-      let _x_142 = _x_141 :: _x_139 in
-      Val.Ctor (_x_138, _x_142))
-    | TypeReason_referenceIllFormed (target_144, why_145) -> (let _x_146 = 20 in
-      let _x_147 = [] in
-      let _x_148 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 target_144 _x_147 in
-      let _x_149 = Val.List _x_148 in
-      let _x_150 = store_refusals_gen_ref_fault_c_to_val why_145 in
-      let _x_151 = _x_150 :: _x_147 in
-      let _x_152 = _x_149 :: _x_151 in
-      Val.Ctor (_x_146, _x_152))
-    | TypeReason_mergeAllEmpty -> (let _x_154 = 21 in
-      let _x_155 = [] in
-      Val.Ctor (_x_154, _x_155))
-    | TypeReason_returnNotLast -> (let _x_157 = 22 in
-      let _x_158 = [] in
-      Val.Ctor (_x_157, _x_158))
-    | TypeReason_breakOutsideLoop -> (let _x_160 = 23 in
-      let _x_161 = [] in
-      Val.Ctor (_x_160, _x_161))
-    | TypeReason_literalOutsideAlphabet value_163 -> (let _x_164 = 24 in
-      let _x_165 = store_program_gen_lit_c_to_val value_163 in
-      let _x_166 = [] in
-      let _x_167 = _x_165 :: _x_166 in
-      Val.Ctor (_x_164, _x_167))
-    | TypeReason_instantiatedFormation (row_169, why_170) -> (let _x_171 = 25 in
-      let _x_172 = Val.Str row_169 in
-      let _x_173 = store_refusals_gen_formation_refusal_c_to_val why_170 in
-      let _x_174 = [] in
-      let _x_175 = _x_173 :: _x_174 in
-      let _x_176 = _x_172 :: _x_175 in
-      Val.Ctor (_x_171, _x_176))
-    | TypeReason_recordTerm why_178 -> (let _x_179 = 26 in
-      let _x_180 = store_refusals_gen_record_term_refusal_c_to_val why_178 in
-      let _x_181 = [] in
-      let _x_182 = _x_180 :: _x_181 in
-      Val.Ctor (_x_179, _x_182))
-    | TypeReason_recordCause why_184 -> (let _x_185 = 27 in
-      let _x_186 = store_refusals_gen_record_cause_refusal_c_to_val why_184 in
-      let _x_187 = [] in
-      let _x_188 = _x_186 :: _x_187 in
-      Val.Ctor (_x_185, _x_188))
-    | TypeReason_tupleTerm why_190 -> (let _x_191 = 28 in
-      let _x_192 = store_refusals_gen_tuple_term_refusal_c_to_val why_190 in
-      let _x_193 = [] in
-      let _x_194 = _x_192 :: _x_193 in
-      Val.Ctor (_x_191, _x_194))
-    | TypeReason_tupleCause why_196 -> (let _x_197 = 29 in
-      let _x_198 = store_refusals_gen_tuple_cause_refusal_c_to_val why_196 in
-      let _x_199 = [] in
-      let _x_200 = _x_198 :: _x_199 in
-      Val.Ctor (_x_197, _x_200))
-    | TypeReason_errorPayloadField (error_202, path_203, field_204) -> (let _x_205 = 30 in
-      let _x_206 = store_program_gen_ty_c_to_val_ty error_202 in
-      let _x_207 = [] in
-      let _x_208 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 path_203 _x_207 in
-      let _x_209 = Val.List _x_208 in
-      let _x_210 = store_program_gen_ty_c_to_val_ty field_204 in
-      let _x_211 = _x_210 :: _x_207 in
-      let _x_212 = _x_209 :: _x_211 in
-      let _x_213 = _x_206 :: _x_212 in
-      Val.Ctor (_x_205, _x_213))
-    | TypeReason_errorSpelling (error_215, spelling_216) -> (let _x_217 = 31 in
-      let _x_218 = store_program_gen_ty_c_to_val_ty error_215 in
-      let _x_219 = store_program_gen_ty_c_to_val_ty spelling_216 in
-      let _x_220 = [] in
-      let _x_221 = _x_219 :: _x_220 in
-      let _x_222 = _x_218 :: _x_221 in
-      Val.Ctor (_x_217, _x_222))
-    | TypeReason_binderTerm (row_224, param_225) -> (let _x_226 = 32 in
-      let _x_227 = Val.Str row_224 in
-      let _x_228 = store_program_gen_ty_c_to_val_ty param_225 in
-      let _x_229 = [] in
-      let _x_230 = _x_228 :: _x_229 in
-      let _x_231 = _x_227 :: _x_230 in
-      Val.Ctor (_x_226, _x_231))
-    | TypeReason_resultNotSubtype (row_233, result_234, expected_235) -> (let _x_236 = 33 in
-      let _x_237 = Val.Str row_233 in
-      let _x_238 = store_program_gen_ty_c_to_val_ty result_234 in
-      let _x_239 = store_program_gen_ty_c_to_val_ty expected_235 in
-      let _x_240 = [] in
-      let _x_241 = _x_239 :: _x_240 in
-      let _x_242 = _x_238 :: _x_241 in
-      let _x_243 = _x_237 :: _x_242 in
-      Val.Ctor (_x_236, _x_243))
-    | TypeReason_foldTerm why_245 -> (let _x_246 = 34 in
-      let _x_247 = store_refusals_gen_fold_term_refusal_c_to_val why_245 in
-      let _x_248 = [] in
-      let _x_249 = _x_247 :: _x_248 in
-      Val.Ctor (_x_246, _x_249))
-    | TypeReason_foldCause why_251 -> (let _x_252 = 35 in
-      let _x_253 = store_refusals_gen_fold_cause_refusal_c_to_val why_251 in
-      let _x_254 = [] in
-      let _x_255 = _x_253 :: _x_254 in
-      Val.Ctor (_x_252, _x_255))
-    | TypeReason_maskRestoreExpected t_257 -> (let _x_258 = 36 in
-      let _x_259 = store_program_gen_ty_c_to_val_ty t_257 in
-      let _x_260 = [] in
-      let _x_261 = _x_259 :: _x_260 in
-      Val.Ctor (_x_258, _x_261))
-    | TypeReason_definitionBlock -> (let _x_263 = 37 in
-      let _x_264 = [] in
-      Val.Ctor (_x_263, _x_264))
-    | TypeReason_definitionsMismatch (decls_266, bodies_267) -> (let _x_268 = 38 in
-      let _x_269 = Val.Nat decls_266 in
-      let _x_270 = Val.Nat bodies_267 in
-      let _x_271 = [] in
-      let _x_272 = _x_270 :: _x_271 in
-      let _x_273 = _x_269 :: _x_272 in
-      Val.Ctor (_x_268, _x_273))
-    | TypeReason_definitionColumns name_275 -> (let _x_276 = 39 in
-      let _x_277 = Val.Str name_275 in
-      let _x_278 = [] in
-      let _x_279 = _x_277 :: _x_278 in
-      Val.Ctor (_x_276, _x_279))
-    | TypeReason_bodyNotDeclared (name_281, body_282) -> (let _x_283 = 40 in
-      let _x_284 = Val.Str name_281 in
-      let _x_285 = store_program_gen_eff_ty_c_to_val body_282 in
-      let _x_286 = [] in
-      let _x_287 = _x_285 :: _x_286 in
-      let _x_288 = _x_284 :: _x_287 in
-      Val.Ctor (_x_283, _x_288))
-    | TypeReason_invokeArity (name_290, params_291, args_292) -> (let _x_293 = 41 in
-      let _x_294 = Val.Str name_290 in
-      let _x_295 = Val.Nat params_291 in
-      let _x_296 = Val.Nat args_292 in
-      let _x_297 = [] in
-      let _x_298 = _x_296 :: _x_297 in
-      let _x_299 = _x_295 :: _x_298 in
-      let _x_300 = _x_294 :: _x_299 in
-      Val.Ctor (_x_293, _x_300))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TypeRefusalC.toVal (x.1 : Effect4.Program.TypeRefusal) : Effect4.Store.Val *)
-
-let store_refusals_gen_type_refusal_c_to_val (x_1 : type_refusal) : Val.t =
-  match (x_1 : type_refusal) with
-    | { path = path_2; reason = reason_3 } -> (let _x_4 = 0 in
-      let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_5 in
-      let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_type_reason_c_to_val reason_3 in
-      let _x_9 = _x_8 :: _x_5 in
-      let _x_10 = _x_7 :: _x_9 in
-      Val.Ctor (_x_4, _x_10))
-
-
-
-(* LCNF mono: Effect4.Run.Kit.refusalToVal (r : Effect4.Program.TypeRefusal) : Effect4.Store.Val *)
-
-let run_kit_refusal_to_val (r : type_refusal) : Val.t =
-  store_refusals_gen_type_refusal_c_to_val r
+let run_kit_refusal_to_val (r : (int list, type_reason) located) : Val.t =
+  store_refusals_gen_located_c_to_val r
 
 
 
@@ -41999,38 +42173,37 @@ let rec list_map_tr_loop_at_program_check_internal_join_bodies_spec_0 (x_1 : int
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.List.mapTR.loop._at_.Effect4.Program.Check.Internal.place.spec_0.spec_0 (base : List Nat) (a.1 : List Effect4.Program.Table.Entry) (a.2 : List Effect4.Program.Table.Entry) : List Effect4.Program.Table.Entry *)
+(* LCNF mono: Effect4.Located.under._redArg._lam_0 (p : List Nat) (x.1 : List Nat) : List Nat *)
 
-let rec list_map_tr_loop_at_list_map_tr_loop_at_program_check_internal_place_spec_0_spec_0 (base : int list) (a_1 : entry list) (a_2 : entry list) : entry list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let[@local always] _jp_6 = fun _y_7 -> let _x_8 = _y_7 :: a_2 in
-      list_map_tr_loop_at_list_map_tr_loop_at_program_check_internal_place_spec_0_spec_0 base tail_5 _x_8 in
-      match (head_4 : entry) with
-        | { path = path; env = env; result = result } -> (let _x_10 = base @ path in
-          let[@local always] _jp_11 = fun _y_12 -> let _x_13 = Some _y_12 in
-          let _x_14 = ({ path = _x_10; env = env; result = _x_13 } : entry) in
-          _jp_6 _x_14 in
-          match result with
-            | None -> (let _x_15 = ({ path = _x_10; env = env; result = result } : entry) in
-              _jp_6 _x_15)
-            | Some val__16 -> (match val__16 with
-                | Error a_17 -> (match (a_17 : type_refusal) with
-                    | { path = path_1; reason = reason } -> (let _x_18 = base @ path_1 in
-                      let _x_19 = ({ path = _x_18; reason = reason } : type_refusal) in
-                      let _x_20 = Error _x_19 in
-                      _jp_11 _x_20))
-                | Ok _ -> _jp_11 val__16)))
+let located_under__red_arg__lam_0 (p : int list) (x_1 : int list) : int list =
+  p @ x_1
+
+
+
+(* LCNF mono: Effect4.Located.mapSite._redArg (f : lcAny -> lcAny) (r : Effect4.Located lcAny lcAny) : Effect4.Located lcAny lcAny *)
+
+let located_map_site (f : _ -> _) (r : (_, _) located) : (_, _) located =
+  match (r : (_, _) located) with
+    | { site = site; reason = reason } -> (let _x_1 = f site in
+      ({ site = _x_1; reason = reason } : (_, _) located))
+
+
+
+(* LCNF mono: Effect4.Located.under._redArg (p : List Nat) (r : Effect4.Located (List Nat) lcAny) : Effect4.Located (List Nat) lcAny *)
+
+let located_under (p : int list) (r : (int list, _) located) : (int list, _) located =
+  let _f_1 = located_under__red_arg__lam_0 p in
+  located_map_site _f_1 r
 
 
 
 (* LCNF mono: List.mapTR.loop._at_.Effect4.Program.Check.Internal.place.spec_0 (base : List Nat) (a.1 : List Effect4.Program.Table.Entry) (a.2 : List Effect4.Program.Table.Entry) : List Effect4.Program.Table.Entry *)
 
-let list_map_tr_loop_at_program_check_internal_place_spec_0 (base : int list) (a_1 : entry list) (a_2 : entry list) : entry list =
+let rec list_map_tr_loop_at_program_check_internal_place_spec_0 (base : int list) (a_1 : entry list) (a_2 : entry list) : entry list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let[@local always] _jp_6 = fun _y_7 -> let _x_8 = _y_7 :: a_2 in
-      list_map_tr_loop_at_list_map_tr_loop_at_program_check_internal_place_spec_0_spec_0 base tail_5 _x_8 in
+      list_map_tr_loop_at_program_check_internal_place_spec_0 base tail_5 _x_8 in
       match (head_4 : entry) with
         | { path = path; env = env; result = result } -> (let _x_10 = base @ path in
           let[@local always] _jp_11 = fun _y_12 -> let _x_13 = Some _y_12 in
@@ -42040,11 +42213,9 @@ let list_map_tr_loop_at_program_check_internal_place_spec_0 (base : int list) (a
             | None -> (let _x_15 = ({ path = _x_10; env = env; result = result } : entry) in
               _jp_6 _x_15)
             | Some val__16 -> (match val__16 with
-                | Error a_17 -> (match (a_17 : type_refusal) with
-                    | { path = path_1; reason = reason } -> (let _x_18 = base @ path_1 in
-                      let _x_19 = ({ path = _x_18; reason = reason } : type_refusal) in
-                      let _x_20 = Error _x_19 in
-                      _jp_11 _x_20))
+                | Error a_17 -> (let _x_18 = located_under base a_17 in
+                  let _x_19 = Error _x_18 in
+                  _jp_11 _x_19)
                 | Ok _ -> _jp_11 val__16)))
 
 
@@ -42057,18 +42228,16 @@ let program_check_internal_place (base : int list) (v : verdict) : verdict =
       let _x_4 = list_map_tr_loop_at_program_check_internal_place_spec_0 base table _x_3 in
       ({ result = _y_2; table = _x_4 } : verdict) in
       match result with
-        | Error a_6 -> (match (a_6 : type_refusal) with
-            | { path = path; reason = reason } -> (let _x_7 = base @ path in
-              let _x_8 = ({ path = _x_7; reason = reason } : type_refusal) in
-              let _x_9 = Error _x_8 in
-              _jp_1 _x_9))
+        | Error a_6 -> (let _x_7 = located_under base a_6 in
+          let _x_8 = Error _x_7 in
+          _jp_1 _x_8)
         | Ok _ -> _jp_1 result)
 
 
 
-(* LCNF mono: Effect4.Program.Check.Internal.joinBodies (x.1 : List Effect4.Program.DefDecl) (x.2 : Effect4.Program.Effs Effect4.Program.NativeOp) (x.3 : List Nat) (x.4 : List Effect4.Program.Check.Verdict) : Option (Prod (List Effect4.Program.Table.Entry) (Prod (Except Effect4.Program.TypeRefusal PUnit) (List Effect4.Program.Check.Verdict))) *)
+(* LCNF mono: Effect4.Program.Check.Internal.joinBodies (x.1 : List Effect4.Program.DefDecl) (x.2 : Effect4.Program.Effs Effect4.Program.NativeOp) (x.3 : List Nat) (x.4 : List Effect4.Program.Check.Verdict) : Option (Prod (List Effect4.Program.Table.Entry) (Prod (Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) PUnit) (List Effect4.Program.Check.Verdict))) *)
 
-let rec program_check_internal_join_bodies (x_1 : DefDecl.t list) (x_2 : NativeOp.t Effs.t) (x_3 : int list) (x_4 : verdict list) : (entry list * ((unit, type_refusal) result * verdict list)) option =
+let rec program_check_internal_join_bodies (x_1 : DefDecl.t list) (x_2 : NativeOp.t Effs.t) (x_3 : int list) (x_4 : verdict list) : (entry list * ((unit, (int list, type_reason) located) result * verdict list)) option =
   let[@local always] _jp_5 = fun base vs -> let _x_6 = None in
   let _x_7 = ({ path = base; env = _x_6; result = _x_6 } : entry) in
   let _x_8 = [] in
@@ -42135,11 +42304,11 @@ let rec program_check_internal_join_bodies (x_1 : DefDecl.t list) (x_2 : NativeO
                                   | Ok a_75 -> (let _x_76 = program_def_decl_admits head_39 a_75 in
                                     if _x_76 then _jp_60 fst_54 else (match (head_39 : DefDecl.t) with
                                         | { DefDecl.name = name_1; _ } -> (let _x_77 = TypeReason_bodyNotDeclared (name_1, a_75) in
-                                          let _x_78 = ({ path = _x_58; reason = _x_77 } : type_refusal) in
+                                          let _x_78 = ({ site = _x_58; reason = _x_77 } : (_, _) located) in
                                           let _x_79 = Error _x_78 in
                                           _jp_60 _x_79))))) else (match (head_39 : DefDecl.t) with
                               | { DefDecl.name = name; _ } -> (let _x_70 = TypeReason_definitionColumns name in
-                                let _x_71 = ({ path = _x_58; reason = _x_70 } : type_refusal) in
+                                let _x_71 = ({ site = _x_58; reason = _x_70 } : (_, _) located) in
                                 let _x_72 = Error _x_71 in
                                 _jp_60 _x_72))))))))
 
@@ -42160,12 +42329,11 @@ let program_check_internal_layer_path (x_1 : int list) : int list =
 
 
 
-(* LCNF mono: Effect4.Program.Check.Internal.layerRefusal (r : Effect4.Program.TypeRefusal) : Effect4.Program.TypeRefusal *)
+(* LCNF mono: Effect4.Program.Check.Internal.layerRefusal (r : Effect4.Located (List Nat) Effect4.Program.TypeReason) : Effect4.Located (List Nat) Effect4.Program.TypeReason *)
 
-let program_check_internal_layer_refusal (r : type_refusal) : type_refusal =
-  match (r : type_refusal) with
-    | { path = path; reason = reason } -> (let _x_1 = program_check_internal_layer_path path in
-      ({ path = _x_1; reason = reason } : type_refusal))
+let program_check_internal_layer_refusal (r : (int list, type_reason) located) : (int list, type_reason) located =
+  let _x_1 = program_check_internal_layer_path in
+  located_map_site _x_1 r
 
 
 
@@ -42214,18 +42382,18 @@ let program_check_internal_layer_table (v : verdict) : entry list =
 let program_check_internal_join_module (holes : Row.t list) (p : NativeOp.t Eff.t) (vs : verdict list) : verdict option =
   let s = ({ program = p; holes = holes } : sketch) in
   let[@local always] _jp_1 = fun _y_2 _y_3 _y_4 -> let _x_5 = program_sketch_sites s in
-  let _x_6 = program_table_at_source _x_5 _y_2 _y_3 in
+  let _x_6 = program_table_at_source _x_5 _y_3 _y_2 in
   let _x_7 = ({ result = _y_4; table = _x_6 } : verdict) in
   Some _x_7 in
   let[@local always] _jp_9 = fun fst_10 snd_11 -> let _x_12 = program_eff_first_ref_fault p in
   match _x_12 with
-    | None -> _jp_1 _x_12 snd_11 fst_10
+    | None -> _jp_1 snd_11 _x_12 fst_10
     | Some val__13 -> (match val__13 with
         | fst_14, snd_15 -> (match snd_15 with
             | fst_16, snd_17 -> (let _x_18 = TypeReason_referenceIllFormed (fst_16, snd_17) in
-              let _x_19 = ({ path = fst_14; reason = _x_18 } : type_refusal) in
+              let _x_19 = ({ site = fst_14; reason = _x_18 } : (_, _) located) in
               let _x_20 = Error _x_19 in
-              _jp_1 _x_12 snd_11 _x_20))) in
+              _jp_1 snd_11 _x_12 _x_20))) in
   let _x_21 = program_eff_expand_refs p in
   match (_x_21 : _ Eff.t) with
     | Eff.Defs (decls_22, bodies_23, _, layers_25) -> (let _x_26 = 0 in
@@ -42264,7 +42432,7 @@ let program_check_internal_join_module (holes : Row.t list) (p : NativeOp.t Eff.
                                       | Error a_67 -> (let _x_68 = Error a_67 in
                                         _jp_42 snd_54 _x_68)
                                       | Ok _ -> _jp_42 snd_54 result)))) else (let _x_59 = TypeReason_definitionsMismatch (_x_55, _x_57) in
-                        let _x_60 = ({ path = _x_27; reason = _x_59 } : type_refusal) in
+                        let _x_60 = ({ site = _x_27; reason = _x_59 } : (_, _) located) in
                         let _x_61 = Error _x_60 in
                         _jp_42 snd_54 _x_61) in
                       match (layers_25 : _ LayerTerms.t) with
@@ -44411,6 +44579,44 @@ let program_check_typed_program (sig_ : _ signature) (program : _ Eff.t) : EffTy
 
 
 
+(* LCNF mono: Effect4.Program.Checker.refusal._redArg (x.1 : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) lcAny) : Option (Effect4.Located (List Nat) Effect4.Program.TypeReason) *)
+
+let program_checker_refusal (x_1 : (_, (int list, type_reason) located) result) : (int list, type_reason) located option =
+  match x_1 with
+    | Error a_2 -> Some a_2
+    | Ok _ -> None
+
+
+
+(* LCNF mono: Effect4.Program.programRefusal._redArg (sig : Effect4.Program.Signature lcAny) (program : Effect4.Program.Eff lcAny) : Option (Effect4.Located (List Nat) Effect4.Program.TypeReason) *)
+
+let program_program_refusal (sig_ : _ signature) (program : _ Eff.t) : (int list, type_reason) located option =
+  let _x_1 = program_eff_first_ref_fault program in
+  match _x_1 with
+    | None -> (let _x_2 = program_eff_expand_refs program in
+      let _x_3 = program_checker_check_module sig_ _x_2 in
+      program_checker_refusal _x_3)
+    | Some val__5 -> (match val__5 with
+        | fst_6, snd_7 -> (match snd_7 with
+            | fst_8, snd_9 -> (let _x_10 = TypeReason_referenceIllFormed (fst_8, snd_9) in
+              let _x_11 = ({ site = fst_6; reason = _x_10 } : (_, _) located) in
+              Some _x_11)))
+
+
+
+(* LCNF mono: Effect4.Program.programTyping._redArg (sig : Effect4.Program.Signature lcAny) (program : Effect4.Program.Eff lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy *)
+
+let program_program_typing (sig_ : _ signature) (program : _ Eff.t) : (EffTy.t, (int list, type_reason) located) result =
+  let _x_1 = program_check_typed_program sig_ program in
+  match _x_1 with
+    | None -> (let _x_2 = program_program_refusal sig_ program in
+      match _x_2 with
+        | None -> assert false
+        | Some val__3 -> Error val__3)
+    | Some val__5 -> Ok val__5
+
+
+
 (* LCNF mono: Effect4.Program.admitProgram (program : Effect4.Program.Eff Effect4.Program.NativeOp) (app : Effect4.Program.SigApp) : Except Effect4.Program.AdmitRefusal Effect4.Program.EffTy *)
 
 let program_admit_program (program : NativeOp.t Eff.t) (app : sig_app) : (EffTy.t, admit_refusal) result =
@@ -44422,17 +44628,17 @@ let program_admit_program (program : NativeOp.t Eff.t) (app : sig_app) : (EffTy.
         | { rows = rows; services = services; types = types } -> (let _x_6 = program_formation_check_input_at_program_admit_program_spec_0 program rows services in
           match _x_6 with
             | None -> (let _x_7 = program_sig_app_signature app in
-              let _x_8 = program_check_typed_program _x_7 program in
+              let _x_8 = program_program_typing _x_7 program in
               match _x_8 with
-                | None -> (let _x_9 = AdmitRefusal_illTyped in
-                  Error _x_9)
-                | Some val__11 -> (let _x_12 = program_find_empty_column_in_eff_ty types val__11 in
-                  match _x_12 with
-                    | None -> Ok val__11
-                    | Some val__14 -> (let _x_15 = AdmitRefusal_emptyColumn val__14 in
-                      Error _x_15)))
-            | Some val__17 -> (let _x_18 = AdmitRefusal_formation val__17 in
-              Error _x_18)))
+                | Error a_9 -> (let _x_10 = AdmitRefusal_illTyped a_9 in
+                  Error _x_10)
+                | Ok a_12 -> (let _x_13 = program_find_empty_column_in_eff_ty types a_12 in
+                  match _x_13 with
+                    | None -> Ok a_12
+                    | Some val__15 -> (let _x_16 = AdmitRefusal_emptyColumn val__15 in
+                      Error _x_16)))
+            | Some val__18 -> (let _x_19 = AdmitRefusal_formation val__18 in
+              Error _x_19)))
 
 
 
@@ -47350,38 +47556,46 @@ let rec list_is_prefix_of_at_program_check_refusal_site_spec_0 (x_1 : int list) 
 
 
 
-(* LCNF mono: List.find?._at_.Effect4.Program.Check.refusalSite.spec_1 (why : Effect4.Program.TypeRefusal) (x.1 : List (Prod (List Nat) (List Nat))) : Option (Prod (List Nat) (List Nat)) *)
+(* LCNF mono: List.find?._at_.Effect4.Program.Check.refusalSite.spec_1 (why : Effect4.Located (List Nat) Effect4.Program.TypeReason) (x.1 : List (Prod (List Nat) (List Nat))) : Option (Prod (List Nat) (List Nat)) *)
 
-let rec list_find_opt_at_program_check_refusal_site_spec_1 (why : type_refusal) (x_1 : (int list * int list) list) : (int list * int list) option =
+let rec list_find_opt_at_program_check_refusal_site_spec_1 (why : (int list, type_reason) located) (x_1 : (int list * int list) list) : (int list * int list) option =
   match x_1 with
     | [] -> None
     | head_3 :: tail_4 -> (let[@local always] _jp_5 = fun _y_6 -> if _y_6 then Some head_3 else list_find_opt_at_program_check_refusal_site_spec_1 why tail_4 in
       match head_3 with
-        | fst_1, _ -> (match (why : type_refusal) with
-            | { path = path; _ } -> (let _x_9 = list_is_prefix_of_at_program_check_refusal_site_spec_0 fst_1 path in
+        | fst_1, _ -> (match (why : (_, _) located) with
+            | { site = site; _ } -> (let _x_9 = list_is_prefix_of_at_program_check_refusal_site_spec_0 fst_1 site in
               if _x_9 then (let _x_10 = fun _b1 _b2 -> _b1 = _b2 in
-                let _x_11 = inst_decidable_eq_list _x_10 fst_1 path in
+                let _x_11 = inst_decidable_eq_list _x_10 fst_1 site in
                 if _x_11 then list_find_opt_at_program_check_refusal_site_spec_1 why tail_4 else _jp_5 _x_9) else _jp_5 _x_9)))
 
 
 
-(* LCNF mono: Effect4.Program.Check.refusalSite (i : Effect4.Program.Check.CheckInput) (why : Effect4.Program.TypeRefusal) : Effect4.Program.Check.Site *)
+(* LCNF mono: Effect4.Program.Check.refusalSite (i : Effect4.Program.Check.CheckInput) (why : Effect4.Located (List Nat) Effect4.Program.TypeReason) : Effect4.Program.Check.Site *)
 
-let program_check_refusal_site (i : check_input) (why : type_refusal) : site =
+let program_check_refusal_site (i : check_input) (why : (int list, type_reason) located) : site =
   match (i : check_input) with
     | CheckInput_module (_, _, program_3) -> (let _x_4 = [] in
       let _x_5 = program_eff_ref_sites _x_4 program_3 in
       let _x_6 = list_find_opt_at_program_check_refusal_site_spec_1 why _x_5 in
       match _x_6 with
-        | None -> (match (why : type_refusal) with
-            | { path = path; reason = reason } -> (match (reason : type_reason) with
-                | TypeReason_definitionColumns _ -> Site_column path
-                | _ -> Site_address path))
+        | None -> (match (why : (_, _) located) with
+            | { site = site; reason = reason } -> (match (reason : type_reason) with
+                | TypeReason_definitionColumns _ -> Site_column site
+                | _ -> Site_address site))
         | Some val__10 -> (match val__10 with
-            | fst_11, _ -> (match (why : type_refusal) with
-                | { path = path_1; _ } -> Site_inCopy (fst_11, path_1))))
-    | CheckInput_part (_, _, _) -> (match (why : type_refusal) with
-        | { path = path_2; _ } -> Site_address path_2)
+            | fst_11, _ -> (match (why : (_, _) located) with
+                | { site = site_1; _ } -> Site_inCopy (fst_11, site_1))))
+    | CheckInput_part (_, _, _) -> (match (why : (_, _) located) with
+        | { site = site_2; _ } -> Site_address site_2)
+
+
+
+(* LCNF mono: Effect4.Program.instDecidableEqTypeRefusal._lam_0 (a : List Nat) (b : List Nat) : Bool *)
+
+let program_inst_decidable_eq_type_refusal__lam_0 (a : int list) (b : int list) : bool =
+  let _x_1 = fun _b1 _b2 -> _b1 = _b2 in
+  inst_decidable_eq_list _x_1 a b
 
 
 
@@ -47431,6 +47645,9 @@ let program_type_reason_ctor_idx (x : type_reason) : int =
     | TypeReason_definitionColumns _ -> 39
     | TypeReason_bodyNotDeclared (_, _) -> 40
     | TypeReason_invokeArity (_, _, _) -> 41
+    | TypeReason_unboundVariable (_, _, _) -> 42
+    | TypeReason_unknownAtom (_, _) -> 43
+    | TypeReason_refusedArguments (_, _, _) -> 44
 
 
 
@@ -47783,25 +48000,51 @@ let program_inst_decidable_eq_type_reason_dec_eq (x_1 : type_reason) (x_2 : type
             if _x_63 then (let _x_64 = params = params_1 in
               if _x_64 then args = args_1 else _x_64) else _x_63)
           | _ -> assert false)
+      | TypeReason_unboundVariable (path_2, index, depth) -> (match (x_2 : type_reason) with
+          | TypeReason_unboundVariable (path_3, index_1, depth_1) -> (let _x_66 = fun _b1 _b2 -> _b1 = _b2 in
+            let _x_67 = inst_decidable_eq_list _x_66 path_2 path_3 in
+            if _x_67 then (let _x_68 = index = index_1 in
+              if _x_68 then depth = depth_1 else _x_68) else _x_67)
+          | _ -> assert false)
+      | TypeReason_unknownAtom (path_4, atom) -> (match (x_2 : type_reason) with
+          | TypeReason_unknownAtom (path_5, atom_1) -> (let _x_70 = fun _b1 _b2 -> _b1 = _b2 in
+            let _x_71 = inst_decidable_eq_list _x_70 path_4 path_5 in
+            if _x_71 then atom = atom_1 else _x_71)
+          | _ -> assert false)
+      | TypeReason_refusedArguments (path_6, atom_2, args_2) -> (match (x_2 : type_reason) with
+          | TypeReason_refusedArguments (path_7, atom_3, args_3) -> (let _x_73 = fun _b1 _b2 -> _b1 = _b2 in
+            let _x_74 = inst_decidable_eq_list _x_73 path_6 path_7 in
+            if _x_74 then (let _x_75 = atom_2 = atom_3 in
+              if _x_75 then (let _x_76 = program_inst_decidable_eq_ty in
+                inst_decidable_eq_list _x_76 args_2 args_3) else _x_75) else _x_74)
+          | _ -> assert false)
       | _ -> _x_5) else _x_5
 
 
 
-(* LCNF mono: Effect4.Program.instDecidableEqTypeRefusal.decEq (x.1 : Effect4.Program.TypeRefusal) (x.2 : Effect4.Program.TypeRefusal) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqTypeReason (x.1 : Effect4.Program.TypeReason) (x.2 : Effect4.Program.TypeReason) : Bool *)
 
-let program_inst_decidable_eq_type_refusal_dec_eq (x_1 : type_refusal) (x_2 : type_refusal) : bool =
-  match (x_1 : type_refusal) with
-    | { path = path_3; reason = reason_4 } -> (match (x_2 : type_refusal) with
-        | { path = path_5; reason = reason_6 } -> (let _x_7 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_8 = inst_decidable_eq_list _x_7 path_3 path_5 in
-          if _x_8 then program_inst_decidable_eq_type_reason_dec_eq reason_4 reason_6 else _x_8))
+let program_inst_decidable_eq_type_reason (x_1 : type_reason) (x_2 : type_reason) : bool =
+  program_inst_decidable_eq_type_reason_dec_eq x_1 x_2
 
 
 
-(* LCNF mono: Effect4.Program.instDecidableEqTypeRefusal (x.1 : Effect4.Program.TypeRefusal) (x.2 : Effect4.Program.TypeRefusal) : Bool *)
+(* LCNF mono: Effect4.instDecidableEqLocated.decEq._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (x.3 : Effect4.Located lcAny lcAny) (x.4 : Effect4.Located lcAny lcAny) : Bool *)
 
-let program_inst_decidable_eq_type_refusal (x_1 : type_refusal) (x_2 : type_refusal) : bool =
-  program_inst_decidable_eq_type_refusal_dec_eq x_1 x_2
+let inst_decidable_eq_located_dec_eq (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (x_3 : (_, _) located) (x_4 : (_, _) located) : bool =
+  match (x_3 : (_, _) located) with
+    | { site = site_5; reason = reason_6 } -> (match (x_4 : (_, _) located) with
+        | { site = site_7; reason = reason_8 } -> (let _x_9 = inst_1 site_5 site_7 in
+          if _x_9 then inst_2 reason_6 reason_8 else _x_9))
+
+
+
+(* LCNF mono: Effect4.Program.instDecidableEqTypeRefusal (a : Effect4.Located (List Nat) Effect4.Program.TypeReason) (b : Effect4.Located (List Nat) Effect4.Program.TypeReason) : Bool *)
+
+let program_inst_decidable_eq_type_refusal (a : (int list, type_reason) located) (b : (int list, type_reason) located) : bool =
+  let _f_1 = program_inst_decidable_eq_type_refusal__lam_0 in
+  let _x_2 = program_inst_decidable_eq_type_reason in
+  inst_decidable_eq_located_dec_eq _f_1 _x_2 a b
 
 
 
@@ -47812,9 +48055,9 @@ let program_inst_decidable_eq_eff_ty (x_1 : EffTy.t) (x_2 : EffTy.t) : bool =
 
 
 
-(* LCNF mono: Effect4.Program.Check.locatedResult (d : Effect4.Program.Check.Internal.Dep) (v : Effect4.Program.Check.Verdict) : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy *)
+(* LCNF mono: Effect4.Program.Check.locatedResult (d : Effect4.Program.Check.Internal.Dep) (v : Effect4.Program.Check.Verdict) : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy *)
 
-let program_check_located_result (d : dep) (v : verdict) : (EffTy.t, type_refusal) result =
+let program_check_located_result (d : dep) (v : verdict) : (EffTy.t, (int list, type_reason) located) result =
   match (d : dep) with
     | { role = role; base = base; _ } -> (match (role : dep_role) with
         | DepRole_layers -> (match (v : verdict) with
@@ -47841,9 +48084,9 @@ let inst_decidable_eq_except_effect4_dec_eq (inst_1 : _ -> _ -> bool) (inst_2 : 
 
 
 
-(* LCNF mono: List.find?._at_.Effect4.Program.Check.explain.spec_0 (_x.1 : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy) (x.2 : List (Prod Effect4.Program.Check.Internal.Dep (Prod Effect4.Program.Check.CheckInput Effect4.Program.Check.Verdict))) : Option (Prod Effect4.Program.Check.Internal.Dep (Prod Effect4.Program.Check.CheckInput Effect4.Program.Check.Verdict)) *)
+(* LCNF mono: List.find?._at_.Effect4.Program.Check.explain.spec_0 (_x.1 : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy) (x.2 : List (Prod Effect4.Program.Check.Internal.Dep (Prod Effect4.Program.Check.CheckInput Effect4.Program.Check.Verdict))) : Option (Prod Effect4.Program.Check.Internal.Dep (Prod Effect4.Program.Check.CheckInput Effect4.Program.Check.Verdict)) *)
 
-let rec list_find_opt_at_program_check_explain_spec_0 (_x_1 : (EffTy.t, type_refusal) result) (x_2 : (dep * (check_input * verdict)) list) : (dep * (check_input * verdict)) option =
+let rec list_find_opt_at_program_check_explain_spec_0 (_x_1 : (EffTy.t, (int list, type_reason) located) result) (x_2 : (dep * (check_input * verdict)) list) : (dep * (check_input * verdict)) option =
   match x_2 with
     | [] -> None
     | head_4 :: tail_5 -> (match head_4 with
@@ -50424,23 +50667,12 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_place_refusal_c_to_val
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_Check_46_CheckInputC.toVal.spec_0 (a.1 : List Effect4.Program.Ty) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.CheckGen.T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41__32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_C.toVal (x.1 : Except (Effect4.Located (List Nat) Effect4.Program.TypeReason) Effect4.Program.EffTy) : Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 (a_1 : Ty.t list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_program_gen_ty_c_to_val_ty head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: Effect4.Store.CheckGen.T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41__32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_C.toVal (x.1 : Except Effect4.Program.TypeRefusal Effect4.Program.EffTy) : Effect4.Store.Val *)
-
-let store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_46_program_46_type_refusal_41__32__40__95_root_95__46_effect4_46_program_46_eff_ty_41_c_to_val (x_1 : (EffTy.t, type_refusal) result) : Val.t =
+let store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_46_program_46_type_refusal_41__32__40__95_root_95__46_effect4_46_program_46_eff_ty_41_c_to_val (x_1 : (EffTy.t, (int list, type_reason) located) result) : Val.t =
   match x_1 with
     | Error a_2 -> (let _x_3 = 0 in
-      let _x_4 = store_refusals_gen_type_refusal_c_to_val a_2 in
+      let _x_4 = store_refusals_gen_located_c_to_val a_2 in
       let _x_5 = [] in
       let _x_6 = _x_4 :: _x_5 in
       Val.Ctor (_x_3, _x_6))
@@ -50452,12 +50684,12 @@ let store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_4
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_FeedRefusalC.toVal.spec_0 (a.1 : List Effect4.Program.TypeRefusal) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_FeedRefusalC.toVal.spec_0 (a.1 : List (Effect4.Located (List Nat) Effect4.Program.TypeReason)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val_spec_0 (a_1 : type_refusal list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val_spec_0 (a_1 : (int list, type_reason) located list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_refusals_gen_type_refusal_c_to_val head_4 in
+    | head_4 :: tail_5 -> (let _x_6 = store_refusals_gen_located_c_to_val head_4 in
       let _x_7 = _x_6 :: a_2 in
       list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val_spec_0 tail_5 _x_7)
 
@@ -50482,7 +50714,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val 
     | FeedRefusal_notKept (focus_16, verdict_17) -> (match focus_16 with
         | fst_1, snd_1 -> (let _x_18 = 2 in
           let _x_19 = [] in
-          let _x_20 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 fst_1 _x_19 in
+          let _x_20 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 fst_1 _x_19 in
           let _x_21 = Val.List _x_20 in
           let _x_22 = store_program_gen_eff_ty_c_to_val snd_1 in
           let _x_23 = Val.Pair (_x_21, _x_22) in
@@ -50497,44 +50729,45 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val 
       let _x_33 = _x_32 :: _x_30 in
       Val.Ctor (_x_29, _x_33))
     | FeedRefusal_typeChanged (old_35, new__36) -> (let _x_37 = 4 in
-      let[@local always] _jp_38 = fun _y_39 -> let _x_40 = store_program_gen_eff_ty_c_to_val new__36 in
-      let _x_41 = [] in
-      let _x_42 = _x_40 :: _x_41 in
-      let _x_43 = _y_39 :: _x_42 in
-      Val.Ctor (_x_37, _x_43) in
-      match old_35 with
-        | None -> (let _x_45 = Val.None in
-          _jp_38 _x_45)
-        | Some val__46 -> (let _x_47 = store_program_gen_eff_ty_c_to_val val__46 in
-          let _x_48 = Val.Some _x_47 in
-          _jp_38 _x_48))
-    | FeedRefusal_localChanged (old_49, new__50) -> (let _x_51 = 5 in
-      let[@local always] _jp_52 = fun _y_53 _y_54 -> let _x_55 = [] in
-      let _x_56 = _y_54 :: _x_55 in
-      let _x_57 = _y_53 :: _x_56 in
-      Val.Ctor (_x_51, _x_57) in
-      let[@local always] _jp_59 = fun _y_60 -> match new__50 with
-        | None -> (let _x_61 = Val.None in
-          _jp_52 _y_60 _x_61)
-        | Some val__62 -> (match val__62 with
-            | fst_2, snd_2 -> (let _x_63 = [] in
-              let _x_64 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 fst_2 _x_63 in
-              let _x_65 = Val.List _x_64 in
-              let _x_66 = store_program_gen_eff_ty_c_to_val snd_2 in
-              let _x_67 = Val.Pair (_x_65, _x_66) in
-              let _x_68 = Val.Some _x_67 in
-              _jp_52 _y_60 _x_68)) in
-      match old_49 with
-        | None -> (let _x_69 = Val.None in
-          _jp_59 _x_69)
-        | Some val__70 -> (match val__70 with
-            | fst_3, snd_3 -> (let _x_71 = [] in
-              let _x_72 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 fst_3 _x_71 in
-              let _x_73 = Val.List _x_72 in
-              let _x_74 = store_program_gen_eff_ty_c_to_val snd_3 in
-              let _x_75 = Val.Pair (_x_73, _x_74) in
-              let _x_76 = Val.Some _x_75 in
-              _jp_59 _x_76)))
+      let _x_38 = store_program_gen_eff_ty_c_to_val old_35 in
+      let _x_39 = store_program_gen_eff_ty_c_to_val new__36 in
+      let _x_40 = [] in
+      let _x_41 = _x_39 :: _x_40 in
+      let _x_42 = _x_38 :: _x_41 in
+      Val.Ctor (_x_37, _x_42))
+    | FeedRefusal_localChanged (old_44, new__45) -> (let _x_46 = 5 in
+      let[@local always] _jp_47 = fun _y_48 _y_49 -> let _x_50 = [] in
+      let _x_51 = _y_49 :: _x_50 in
+      let _x_52 = _y_48 :: _x_51 in
+      Val.Ctor (_x_46, _x_52) in
+      let[@local always] _jp_54 = fun _y_55 -> match new__45 with
+        | None -> (let _x_56 = Val.None in
+          _jp_47 _y_55 _x_56)
+        | Some val__57 -> (match val__57 with
+            | fst_2, snd_2 -> (let _x_58 = [] in
+              let _x_59 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 fst_2 _x_58 in
+              let _x_60 = Val.List _x_59 in
+              let _x_61 = store_program_gen_eff_ty_c_to_val snd_2 in
+              let _x_62 = Val.Pair (_x_60, _x_61) in
+              let _x_63 = Val.Some _x_62 in
+              _jp_47 _y_55 _x_63)) in
+      match old_44 with
+        | None -> (let _x_64 = Val.None in
+          _jp_54 _x_64)
+        | Some val__65 -> (match val__65 with
+            | fst_3, snd_3 -> (let _x_66 = [] in
+              let _x_67 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 fst_3 _x_66 in
+              let _x_68 = Val.List _x_67 in
+              let _x_69 = store_program_gen_eff_ty_c_to_val snd_3 in
+              let _x_70 = Val.Pair (_x_68, _x_69) in
+              let _x_71 = Val.Some _x_70 in
+              _jp_54 _x_71)))
+    | FeedRefusal_rootRefused refusals_72 -> (let _x_73 = 6 in
+      let _x_74 = [] in
+      let _x_75 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val_spec_0 refusals_72 _x_74 in
+      let _x_76 = Val.List _x_75 in
+      let _x_77 = _x_76 :: _x_74 in
+      Val.Ctor (_x_73, _x_77))
 
 
 
@@ -50717,7 +50950,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_view_c_to_val (x_1 :
         | None -> (let _x_19 = Val.None in
           _jp_12 _x_19)
         | Some val__20 -> (match val__20 with
-            | fst_1, snd_1 -> (let _x_21 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 fst_1 _x_9 in
+            | fst_1, snd_1 -> (let _x_21 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 fst_1 _x_9 in
               let _x_22 = Val.List _x_21 in
               let _x_23 = store_program_gen_eff_ty_c_to_val snd_1 in
               let _x_24 = Val.Pair (_x_22, _x_23) in
@@ -50734,6 +50967,35 @@ let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_d
     | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_view_c_to_val head_4 in
       let _x_7 = _x_6 :: a_2 in
       list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_0 tail_5 _x_7)
+
+
+
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_HoleDeclC.toVal (x.1 : Effect4.Tool.HoleDecl) : Effect4.Store.Val *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_decl_c_to_val (x_1 : hole_decl) : Val.t =
+  match (x_1 : hole_decl) with
+    | { index = index_2; name = name_3; perform = perform_4; performed = performed_5 } -> (let _x_6 = 0 in
+      let _x_7 = Val.Nat index_2 in
+      let _x_8 = Val.Str name_3 in
+      let _x_9 = store_program_gen_eff_c_to_val_eff perform_4 in
+      let _x_10 = Val.Bool performed_5 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      let _x_13 = _x_9 :: _x_12 in
+      let _x_14 = _x_8 :: _x_13 in
+      let _x_15 = _x_7 :: _x_14 in
+      Val.Ctor (_x_6, _x_15))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_DocViewC.toVal.spec_1 (a.1 : List Effect4.Tool.HoleDecl) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_1 (a_1 : hole_decl list) (a_2 : Val.t list) : Val.t list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_decl_c_to_val head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_1 tail_5 _x_7)
 
 
 
@@ -50785,13 +51047,13 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_node_env_c_to_val (x_
   match (x_1 : node_env) with
     | NodeEnv_env env_2 -> (let _x_3 = 0 in
       let _x_4 = [] in
-      let _x_5 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 env_2 _x_4 in
+      let _x_5 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 env_2 _x_4 in
       let _x_6 = Val.List _x_5 in
       let _x_7 = _x_6 :: _x_4 in
       Val.Ctor (_x_3, _x_7))
     | NodeEnv_body (env_9, in_loop_10) -> (let _x_11 = 1 in
       let _x_12 = [] in
-      let _x_13 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 env_9 _x_12 in
+      let _x_13 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 env_9 _x_12 in
       let _x_14 = Val.List _x_13 in
       let _x_15 = Val.Bool in_loop_10 in
       let _x_16 = _x_15 :: _x_12 in
@@ -50802,7 +51064,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_node_env_c_to_val (x_
       Val.Ctor (_x_19, _x_20))
     | NodeEnv_slots (env_22, qs_23) -> (let _x_24 = 3 in
       let _x_25 = [] in
-      let _x_26 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 env_22 _x_25 in
+      let _x_26 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 env_22 _x_25 in
       let _x_27 = Val.List _x_26 in
       let _x_28 = list_map_tr_loop_at_store_program_gen_def_decl_c_to_val_spec_0 qs_23 _x_25 in
       let _x_29 = Val.List _x_28 in
@@ -50846,7 +51108,7 @@ let store_tool_gen_t_64__95_root_95__46_effect4_46_program_46_focus_32__40__95_r
     | { program = program_2; env = env_3; ty = ty_4 } -> (let _x_5 = 0 in
       let _x_6 = store_program_gen_eff_c_to_val_eff program_2 in
       let _x_7 = [] in
-      let _x_8 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 env_3 _x_7 in
+      let _x_8 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 env_3 _x_7 in
       let _x_9 = Val.List _x_8 in
       let _x_10 = store_program_gen_eff_ty_c_to_val ty_4 in
       let _x_11 = _x_10 :: _x_7 in
@@ -50876,7 +51138,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val (x_1 
       let[@local always] _jp_25 = fun _y_26 _y_27 -> match refusal_7 with
         | None -> (let _x_28 = Val.None in
           _jp_14 _y_27 _y_26 _x_28)
-        | Some val__29 -> (let _x_30 = store_refusals_gen_type_refusal_c_to_val val__29 in
+        | Some val__29 -> (let _x_30 = store_refusals_gen_located_c_to_val val__29 in
           let _x_31 = Val.Some _x_30 in
           _jp_14 _y_27 _y_26 _x_31) in
       let[@local always] _jp_32 = fun _y_33 -> match entry_6 with
@@ -50898,31 +51160,34 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val (x_1 
 
 let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val (x_1 : doc_view) : Val.t =
   match (x_1 : doc_view) with
-    | { snap = snap_2; type_ = type__3; refusals = refusals_4; holes = holes_5; inspection = inspection_6 } -> (let _x_7 = 0 in
-      let _x_8 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_to_val snap_2 in
-      let[@local always] _jp_9 = fun _y_10 _y_11 _y_12 _y_13 _y_14 -> let _x_15 = _y_14 :: _y_13 in
-      let _x_16 = _y_11 :: _x_15 in
-      let _x_17 = _y_12 :: _x_16 in
-      let _x_18 = _y_10 :: _x_17 in
-      let _x_19 = _x_8 :: _x_18 in
-      Val.Ctor (_x_7, _x_19) in
-      let[@local always] _jp_21 = fun _y_22 -> let _x_23 = [] in
-      let _x_24 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val_spec_0 refusals_4 _x_23 in
-      let _x_25 = Val.List _x_24 in
-      let _x_26 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_0 holes_5 _x_23 in
-      let _x_27 = Val.List _x_26 in
-      match inspection_6 with
-        | None -> (let _x_28 = Val.None in
-          _jp_9 _y_22 _x_27 _x_25 _x_23 _x_28)
-        | Some val__29 -> (let _x_30 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val val__29 in
-          let _x_31 = Val.Some _x_30 in
-          _jp_9 _y_22 _x_27 _x_25 _x_23 _x_31) in
+    | { snap = snap_2; type_ = type__3; refusals = refusals_4; holes = holes_5; declared = declared_6; inspection = inspection_7 } -> (let _x_8 = 0 in
+      let _x_9 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_to_val snap_2 in
+      let[@local always] _jp_10 = fun _y_11 _y_12 _y_13 _y_14 _y_15 _y_16 -> let _x_17 = _y_16 :: _y_11 in
+      let _x_18 = _y_12 :: _x_17 in
+      let _x_19 = _y_14 :: _x_18 in
+      let _x_20 = _y_15 :: _x_19 in
+      let _x_21 = _y_13 :: _x_20 in
+      let _x_22 = _x_9 :: _x_21 in
+      Val.Ctor (_x_8, _x_22) in
+      let[@local always] _jp_24 = fun _y_25 -> let _x_26 = [] in
+      let _x_27 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val_spec_0 refusals_4 _x_26 in
+      let _x_28 = Val.List _x_27 in
+      let _x_29 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_0 holes_5 _x_26 in
+      let _x_30 = Val.List _x_29 in
+      let _x_31 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val_spec_1 declared_6 _x_26 in
+      let _x_32 = Val.List _x_31 in
+      match inspection_7 with
+        | None -> (let _x_33 = Val.None in
+          _jp_10 _x_26 _x_32 _y_25 _x_30 _x_28 _x_33)
+        | Some val__34 -> (let _x_35 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val val__34 in
+          let _x_36 = Val.Some _x_35 in
+          _jp_10 _x_26 _x_32 _y_25 _x_30 _x_28 _x_36) in
       match type__3 with
-        | None -> (let _x_32 = Val.None in
-          _jp_21 _x_32)
-        | Some val__33 -> (let _x_34 = store_program_gen_eff_ty_c_to_val val__33 in
-          let _x_35 = Val.Some _x_34 in
-          _jp_21 _x_35))
+        | None -> (let _x_37 = Val.None in
+          _jp_24 _x_37)
+        | Some val__38 -> (let _x_39 = store_program_gen_eff_ty_c_to_val val__38 in
+          let _x_40 = Val.Some _x_39 in
+          _jp_24 _x_40))
 
 
 
@@ -50999,18 +51264,20 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_add_refusal_c_to_val (
     | AddRefusal_unknownAddress -> (let _x_5 = 1 in
       let _x_6 = [] in
       Val.Ctor (_x_5, _x_6))
-    | AddRefusal_notCertified -> (let _x_8 = 2 in
-      let _x_9 = [] in
-      Val.Ctor (_x_8, _x_9))
-    | AddRefusal_conflict -> (let _x_11 = 3 in
-      let _x_12 = [] in
-      Val.Ctor (_x_11, _x_12))
-    | AddRefusal_overlap existing_14 -> (let _x_15 = 4 in
-      let _x_16 = [] in
-      let _x_17 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 existing_14 _x_16 in
-      let _x_18 = Val.List _x_17 in
-      let _x_19 = _x_18 :: _x_16 in
-      Val.Ctor (_x_15, _x_19))
+    | AddRefusal_notCertified why_8 -> (let _x_9 = 2 in
+      let _x_10 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val why_8 in
+      let _x_11 = [] in
+      let _x_12 = _x_10 :: _x_11 in
+      Val.Ctor (_x_9, _x_12))
+    | AddRefusal_conflict -> (let _x_14 = 3 in
+      let _x_15 = [] in
+      Val.Ctor (_x_14, _x_15))
+    | AddRefusal_overlap existing_17 -> (let _x_18 = 4 in
+      let _x_19 = [] in
+      let _x_20 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 existing_17 _x_19 in
+      let _x_21 = Val.List _x_20 in
+      let _x_22 = _x_21 :: _x_19 in
+      Val.Ctor (_x_18, _x_22))
 
 
 
@@ -51251,16 +51518,16 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_call_view_c_to_val (x_1 :
       let _x_7 = store_runner_gen_await_c_to_val await_2 in
       let[@local always] _jp_8 = fun _y_9 _y_10 _y_11 -> let _x_12 = [] in
       let _x_13 = _y_11 :: _x_12 in
-      let _x_14 = _y_9 :: _x_13 in
-      let _x_15 = _y_10 :: _x_14 in
+      let _x_14 = _y_10 :: _x_13 in
+      let _x_15 = _y_9 :: _x_14 in
       let _x_16 = _x_7 :: _x_15 in
       Val.Ctor (_x_6, _x_16) in
       let[@local always] _jp_18 = fun _y_19 _y_20 -> match held_5 with
         | None -> (let _x_21 = Val.None in
-          _jp_8 _y_20 _y_19 _x_21)
+          _jp_8 _y_19 _y_20 _x_21)
         | Some val__22 -> (let _x_23 = store_tool_gen_t_95_root_95__46_effect4_46_live_46_held_call_c_to_val val__22 in
           let _x_24 = Val.Some _x_23 in
-          _jp_8 _y_20 _y_19 _x_24) in
+          _jp_8 _y_19 _y_20 _x_24) in
       let[@local always] _jp_25 = fun _y_26 -> match checked_4 with
         | None -> (let _x_27 = Val.None in
           _jp_18 _y_26 _x_27)
@@ -51712,7 +51979,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_
     | CheckInput_part (sig__15, env_16, program_17) -> (let _x_18 = 1 in
       let _x_19 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_data_c_to_val sig__15 in
       let _x_20 = [] in
-      let _x_21 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 env_16 _x_20 in
+      let _x_21 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 env_16 _x_20 in
       let _x_22 = Val.List _x_21 in
       let _x_23 = store_program_gen_eff_c_to_val_eff program_17 in
       let _x_24 = _x_23 :: _x_20 in
@@ -51739,7 +52006,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_suggest_46_evidence_c_
       let _x_15 = _x_11 :: _x_14 in
       Val.Ctor (_x_10, _x_15))
     | Evidence_refused why_17 -> (let _x_18 = 2 in
-      let _x_19 = store_refusals_gen_type_refusal_c_to_val why_17 in
+      let _x_19 = store_refusals_gen_located_c_to_val why_17 in
       let _x_20 = [] in
       let _x_21 = _x_19 :: _x_20 in
       Val.Ctor (_x_18, _x_21))
@@ -51750,9 +52017,9 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_suggest_46_evidence_c_
       Val.Ctor (_x_24, _x_27))
     | Evidence_differentEnv (source_env_29, target_env_30) -> (let _x_31 = 4 in
       let _x_32 = [] in
-      let _x_33 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 source_env_29 _x_32 in
+      let _x_33 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 source_env_29 _x_32 in
       let _x_34 = Val.List _x_33 in
-      let _x_35 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 target_env_30 _x_32 in
+      let _x_35 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 target_env_30 _x_32 in
       let _x_36 = Val.List _x_35 in
       let _x_37 = _x_36 :: _x_32 in
       let _x_38 = _x_34 :: _x_37 in
@@ -52507,7 +52774,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_slot_view_c_to_val (x_1 :
         | None -> (let _x_27 = Val.None in
           _jp_18 _y_26 _x_27)
         | Some val__28 -> (let _x_29 = [] in
-          let _x_30 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val_spec_0 val__28 _x_29 in
+          let _x_30 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 val__28 _x_29 in
           let _x_31 = Val.List _x_30 in
           let _x_32 = Val.Some _x_31 in
           _jp_18 _y_26 _x_32) in
@@ -52696,42 +52963,28 @@ let tool_native_answer__lam_0 (__do_lift_1 : (state * reply envelope, effect4_to
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.supportedMethods.spec_0 (a.1 : List String) (a.2 : List (Prod String (List Nat))) : List (Prod String (List Nat)) *)
+(* LCNF mono: Effect4.Tool.MethodKey.all : List Effect4.Tool.MethodKey *)
 
-let rec list_map_tr_loop_at_tool_supported_methods_spec_0 (a_1 : string list) (a_2 : (string * int list) list) : (string * int list) list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = 1 in
-      let _x_7 = [] in
-      let _x_8 = _x_6 :: _x_7 in
-      let _x_9 = head_4, _x_8 in
-      let _x_10 = _x_9 :: a_2 in
-      list_map_tr_loop_at_tool_supported_methods_spec_0 tail_5 _x_10)
-
-
-
-(* LCNF mono: Effect4.Tool.supportedMethods : List (Prod String (List Nat)) *)
-
-let tool_supported_methods : (string * int list) list =
-  let _x_1 = "open" in
-  let _x_2 = "edit" in
-  let _x_3 = "fill" in
-  let _x_4 = "publish" in
-  let _x_5 = "reset" in
-  let _x_6 = "start" in
-  let _x_7 = "restore" in
-  let _x_8 = "play" in
-  let _x_9 = "doc" in
-  let _x_10 = "history" in
-  let _x_11 = "fills" in
-  let _x_12 = "suggest" in
-  let _x_13 = "run" in
-  let _x_14 = "preview" in
-  let _x_15 = "dry" in
-  let _x_16 = "discover" in
-  let _x_17 = "table" in
-  let _x_18 = "addresses" in
-  let _x_19 = "slots" in
+let tool_method_key_all : method_key list =
+  let _x_1 = MethodKey_open_ in
+  let _x_2 = MethodKey_edit in
+  let _x_3 = MethodKey_fill in
+  let _x_4 = MethodKey_publish in
+  let _x_5 = MethodKey_reset in
+  let _x_6 = MethodKey_start in
+  let _x_7 = MethodKey_restore in
+  let _x_8 = MethodKey_play in
+  let _x_9 = MethodKey_doc in
+  let _x_10 = MethodKey_history in
+  let _x_11 = MethodKey_fills in
+  let _x_12 = MethodKey_suggest in
+  let _x_13 = MethodKey_run in
+  let _x_14 = MethodKey_preview in
+  let _x_15 = MethodKey_dry in
+  let _x_16 = MethodKey_discover in
+  let _x_17 = MethodKey_table in
+  let _x_18 = MethodKey_addresses in
+  let _x_19 = MethodKey_slots in
   let _x_20 = [] in
   let _x_21 = _x_19 :: _x_20 in
   let _x_22 = _x_18 :: _x_21 in
@@ -52751,8 +53004,64 @@ let tool_supported_methods : (string * int list) list =
   let _x_36 = _x_4 :: _x_35 in
   let _x_37 = _x_3 :: _x_36 in
   let _x_38 = _x_2 :: _x_37 in
-  let _x_39 = _x_1 :: _x_38 in
-  list_map_tr_loop_at_tool_supported_methods_spec_0 _x_39 _x_20
+  _x_1 :: _x_38
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.name (k : Effect4.Tool.MethodKey) : String *)
+
+let tool_method_key_name (k : method_key) : string =
+  match (k : method_key) with
+    | MethodKey_open_ -> "open"
+    | MethodKey_edit -> "edit"
+    | MethodKey_fill -> "fill"
+    | MethodKey_publish -> "publish"
+    | MethodKey_reset -> "reset"
+    | MethodKey_start -> "start"
+    | MethodKey_restore -> "restore"
+    | MethodKey_play -> "play"
+    | MethodKey_doc -> "doc"
+    | MethodKey_history -> "history"
+    | MethodKey_fills -> "fills"
+    | MethodKey_suggest -> "suggest"
+    | MethodKey_run -> "run"
+    | MethodKey_preview -> "preview"
+    | MethodKey_dry -> "dry"
+    | MethodKey_discover -> "discover"
+    | MethodKey_table -> "table"
+    | MethodKey_addresses -> "addresses"
+    | MethodKey_slots -> "slots"
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.versions (x.1 : Effect4.Tool.MethodKey) : List Nat *)
+
+let tool_method_key_versions (x_1 : method_key) : int list =
+  let _x_2 = 1 in
+  let _x_3 = [] in
+  _x_2 :: _x_3
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.supportedMethods.spec_0 (a.1 : List Effect4.Tool.MethodKey) (a.2 : List (Prod String (List Nat))) : List (Prod String (List Nat)) *)
+
+let rec list_map_tr_loop_at_tool_supported_methods_spec_0 (a_1 : method_key list) (a_2 : (string * int list) list) : (string * int list) list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = tool_method_key_name head_4 in
+      let _x_7 = tool_method_key_versions head_4 in
+      let _x_8 = _x_6, _x_7 in
+      let _x_9 = _x_8 :: a_2 in
+      list_map_tr_loop_at_tool_supported_methods_spec_0 tail_5 _x_9)
+
+
+
+(* LCNF mono: Effect4.Tool.supportedMethods : List (Prod String (List Nat)) *)
+
+let tool_supported_methods : (string * int list) list =
+  let _x_1 = tool_method_key_all in
+  let _x_2 = [] in
+  list_map_tr_loop_at_tool_supported_methods_spec_0 _x_1 _x_2
 
 
 
@@ -52849,31 +53158,39 @@ let tool_wire_connection_valid (connection : (string * int) list) : bool =
 
 
 
-(* LCNF mono: Effect4.Tool.Request.method (x.1 : Effect4.Tool.Request) : String *)
+(* LCNF mono: Effect4.Tool.Request.methodKey (r : Effect4.Tool.Request) : Effect4.Tool.MethodKey *)
 
-let tool_request_method_ (x_1 : request) : string =
-  match (x_1 : request) with
-    | Request_act a_2 -> (match (a_2 : action) with
-        | Action_open_ (_, _, _) -> "open"
-        | Action_edit (_, _) -> "edit"
-        | Action_fill (_, _) -> "fill"
-        | Action_publish _ -> "publish"
-        | Action_reset -> "reset"
-        | Action_start (_, _) -> "start"
-        | Action_restore _ -> "restore"
-        | Action_play (_, _) -> "play")
-    | Request_ask q_24 -> (match (q_24 : query) with
-        | Query_doc _ -> "doc"
-        | Query_history -> "history"
-        | Query_fills -> "fills"
-        | Query_suggest (_, _, _, _, _) -> "suggest"
-        | Query_run (_, _) -> "run"
-        | Query_preview _ -> "preview"
-        | Query_dry _ -> "dry"
-        | Query_discover -> "discover"
-        | Query_table -> "table"
-        | Query_addresses -> "addresses"
-        | Query_slots (_, _) -> "slots")
+let tool_request_method_key (r : request) : method_key =
+  match (r : request) with
+    | Request_act a_1 -> (match (a_1 : action) with
+        | Action_open_ (_, _, _) -> MethodKey_open_
+        | Action_edit (_, _) -> MethodKey_edit
+        | Action_fill (_, _) -> MethodKey_fill
+        | Action_publish _ -> MethodKey_publish
+        | Action_reset -> MethodKey_reset
+        | Action_start (_, _) -> MethodKey_start
+        | Action_restore _ -> MethodKey_restore
+        | Action_play (_, _) -> MethodKey_play)
+    | Request_ask q_23 -> (match (q_23 : query) with
+        | Query_doc _ -> MethodKey_doc
+        | Query_history -> MethodKey_history
+        | Query_fills -> MethodKey_fills
+        | Query_suggest (_, _, _, _, _) -> MethodKey_suggest
+        | Query_run (_, _) -> MethodKey_run
+        | Query_preview _ -> MethodKey_preview
+        | Query_dry _ -> MethodKey_dry
+        | Query_discover -> MethodKey_discover
+        | Query_table -> MethodKey_table
+        | Query_addresses -> MethodKey_addresses
+        | Query_slots (_, _) -> MethodKey_slots)
+
+
+
+(* LCNF mono: Effect4.Tool.Request.method (r : Effect4.Tool.Request) : String *)
+
+let tool_request_method_ (r : request) : string =
+  let _x_1 = tool_request_method_key r in
+  tool_method_key_name _x_1
 
 
 
@@ -52932,18 +53249,9 @@ let program_source_session_shown (s : source_session) : edit_session =
 
 
 
-(* LCNF mono: Effect4.Program.Checker.refusal._redArg (x.1 : Except Effect4.Program.TypeRefusal lcAny) : Option Effect4.Program.TypeRefusal *)
+(* LCNF mono: List.filterMapTR.go._at_.Effect4.Program.refusals.spec_0 (a.1 : List Effect4.Program.Table.Entry) (a.2 : Array (Effect4.Located (List Nat) Effect4.Program.TypeReason)) : List (Effect4.Located (List Nat) Effect4.Program.TypeReason) *)
 
-let program_checker_refusal (x_1 : (_, type_refusal) result) : type_refusal option =
-  match x_1 with
-    | Error a_2 -> Some a_2
-    | Ok _ -> None
-
-
-
-(* LCNF mono: List.filterMapTR.go._at_.Effect4.Program.refusals.spec_0 (a.1 : List Effect4.Program.Table.Entry) (a.2 : Array Effect4.Program.TypeRefusal) : List Effect4.Program.TypeRefusal *)
-
-let rec list_filter_map_tr_go_at_program_refusals_spec_0 (a_1 : entry list) (a_2 : type_refusal Lcnf_array.t) : type_refusal list =
+let rec list_filter_map_tr_go_at_program_refusals_spec_0 (a_1 : entry list) (a_2 : (int list, type_reason) located Lcnf_array.t) : (int list, type_reason) located list =
   match a_1 with
     | [] -> Lcnf_array.to_list a_2
     | head_4 :: tail_5 -> (match (head_4 : entry) with
@@ -52957,10 +53265,10 @@ let rec list_filter_map_tr_go_at_program_refusals_spec_0 (a_1 : entry list) (a_2
 
 
 
-(* LCNF mono: List.eraseDups._at_.Effect4.Program.refusals.spec_1 (as : List Effect4.Program.TypeRefusal) : List Effect4.Program.TypeRefusal *)
+(* LCNF mono: List.eraseDups._at_.Effect4.Program.refusals.spec_1 (as : List (Effect4.Located (List Nat) Effect4.Program.TypeReason)) : List (Effect4.Located (List Nat) Effect4.Program.TypeReason) *)
 
-let list_erase_dups_at_program_refusals_spec_1 (as_ : type_refusal list) : type_refusal list =
-  let _f_1 = program_inst_decidable_eq_type_refusal_dec_eq in
+let list_erase_dups_at_program_refusals_spec_1 (as_ : (int list, type_reason) located list) : (int list, type_reason) located list =
+  let _f_1 = program_inst_decidable_eq_type_refusal in
   list_erase_dups_by _f_1 as_
 
 
@@ -53021,6 +53329,19 @@ let program_edit_session_view (l : edit_session) : effect4_program_edit_session_
 let program_source_session_view (s : source_session) : effect4_program_edit_session_view =
   let _x_1 = program_source_session_shown s in
   program_edit_session_view _x_1
+
+
+
+(* LCNF mono: Effect4.Program.Sketch.hole (app : Effect4.Program.SigApp) (k : Nat) : Effect4.Program.Eff Effect4.Program.NativeOp *)
+
+let program_sketch_hole (app : sig_app) (k : int) : NativeOp.t Eff.t =
+  match (app : sig_app) with
+    | { rows = rows; _ } -> (let _x_1 = List.length rows in
+      let _x_2 = _x_1 + k in
+      let _x_3 = NativeOp.External _x_2 in
+      let _x_4 = Lit.Unit in
+      let _x_5 = Term.Lit _x_4 in
+      Eff.Perform (_x_3, _x_5))
 
 
 
@@ -54894,43 +55215,47 @@ let program_inst_decidable_eq_node_dec_eq (inst_1 : _ -> _ -> bool) (x_2 : _ nod
 
 
 
-(* LCNF mono: List.filterTR.loop._at_.Effect4.Tool.Internal.docView.spec_0._lam_0 (a : Effect4.Program.Node Effect4.Program.NativeOp) (b : Effect4.Program.Node Effect4.Program.NativeOp) : Bool *)
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Tool.Internal.docView.spec_1._lam_0 (a : Effect4.Program.Node Effect4.Program.NativeOp) (b : Effect4.Program.Node Effect4.Program.NativeOp) : Bool *)
 
-let list_filter_tr_loop_at_tool_internal_doc_view_spec_0__lam_0 (a : NativeOp.t node) (b : NativeOp.t node) : bool =
+let list_filter_tr_loop_at_tool_internal_doc_view_spec_1__lam_0 (a : NativeOp.t node) (b : NativeOp.t node) : bool =
   let _x_1 = program_inst_decidable_eq_native_op in
   program_inst_decidable_eq_node_dec_eq _x_1 a b
 
 
 
-(* LCNF mono: Effect4.Program.Sketch.hole (app : Effect4.Program.SigApp) (k : Nat) : Effect4.Program.Eff Effect4.Program.NativeOp *)
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Tool.Internal.docView.spec_1 (program : Effect4.Program.Eff Effect4.Program.NativeOp) (term : Effect4.Program.Eff Effect4.Program.NativeOp) (a.1 : List (List Nat)) (a.2 : List (List Nat)) : List (List Nat) *)
 
-let program_sketch_hole (app : sig_app) (k : int) : NativeOp.t Eff.t =
-  match (app : sig_app) with
-    | { rows = rows; _ } -> (let _x_1 = List.length rows in
-      let _x_2 = _x_1 + k in
-      let _x_3 = NativeOp.External _x_2 in
-      let _x_4 = Lit.Unit in
-      let _x_5 = Term.Lit _x_4 in
-      Eff.Perform (_x_3, _x_5))
+let rec list_filter_tr_loop_at_tool_internal_doc_view_spec_1 (program : NativeOp.t Eff.t) (term : NativeOp.t Eff.t) (a_1 : int list list) (a_2 : int list list) : int list list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _f_6 = list_filter_tr_loop_at_tool_internal_doc_view_spec_1__lam_0 in
+      let _x_7 = Node_eff program in
+      let _x_8 = program_node_at_ _x_7 head_4 in
+      let _x_9 = Node_eff term in
+      let _x_10 = Some _x_9 in
+      let _x_11 = option_inst_decidable_eq _f_6 _x_8 _x_10 in
+      if _x_11 then (let _x_13 = head_4 :: a_2 in
+        list_filter_tr_loop_at_tool_internal_doc_view_spec_1 program term tail_5 _x_13) else list_filter_tr_loop_at_tool_internal_doc_view_spec_1 program term tail_5 a_2)
 
 
 
-(* LCNF mono: List.filterTR.loop._at_.Effect4.Tool.Internal.docView.spec_0 (_x.1 : Effect4.Program.SourceSession) (snd.2 : Nat) (a.3 : List (List Nat)) (a.4 : List (List Nat)) : List (List Nat) *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Internal.docView.spec_2 (_x.1 : Effect4.Program.SourceSession) (program : Effect4.Program.Eff Effect4.Program.NativeOp) (a.2 : List (Prod Effect4.Program.Row Nat)) (a.3 : List (Prod Effect4.Program.Row (Prod Nat (Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List (List Nat)))))) : List (Prod Effect4.Program.Row (Prod Nat (Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List (List Nat))))) *)
 
-let rec list_filter_tr_loop_at_tool_internal_doc_view_spec_0 (_x_1 : source_session) (snd_2 : int) (a_3 : int list list) (a_4 : int list list) : int list list =
-  match a_3 with
-    | [] -> List.rev a_4
-    | head_6 :: tail_7 -> (match (_x_1 : source_session) with
-        | { app = app; sketch = sketch; _ } -> (match (sketch : sketch) with
-            | { program = program; _ } -> (let _f_8 = list_filter_tr_loop_at_tool_internal_doc_view_spec_0__lam_0 in
+let rec list_map_tr_loop_at_tool_internal_doc_view_spec_2 (_x_1 : source_session) (program : NativeOp.t Eff.t) (a_2 : (Row.t * int) list) (a_3 : (Row.t * (int * (NativeOp.t Eff.t * int list list))) list) : (Row.t * (int * (NativeOp.t Eff.t * int list list))) list =
+  match a_2 with
+    | [] -> List.rev a_3
+    | head_5 :: tail_6 -> (match head_5 with
+        | fst_7, snd_8 -> (match (_x_1 : source_session) with
+            | { app = app; _ } -> (let term = program_sketch_hole app snd_8 in
               let _x_9 = Node_eff program in
-              let _x_10 = program_node_at_ _x_9 head_6 in
-              let _x_11 = program_sketch_hole app snd_2 in
-              let _x_12 = Node_eff _x_11 in
-              let _x_13 = Some _x_12 in
-              let _x_14 = option_inst_decidable_eq _f_8 _x_10 _x_13 in
-              if _x_14 then (let _x_16 = head_6 :: a_4 in
-                list_filter_tr_loop_at_tool_internal_doc_view_spec_0 _x_1 snd_2 tail_7 _x_16) else list_filter_tr_loop_at_tool_internal_doc_view_spec_0 _x_1 snd_2 tail_7 a_4)))
+              let _x_10 = program_node_addresses _x_9 in
+              let _x_11 = [] in
+              let _x_12 = list_filter_tr_loop_at_tool_internal_doc_view_spec_1 program term _x_10 _x_11 in
+              let _x_13 = term, _x_12 in
+              let _x_14 = snd_8, _x_13 in
+              let _x_15 = fst_7, _x_14 in
+              let _x_16 = _x_15 :: a_3 in
+              list_map_tr_loop_at_tool_internal_doc_view_spec_2 _x_1 program tail_6 _x_16)))
 
 
 
@@ -54954,41 +55279,58 @@ let program_source_session_focus_at (s : source_session) (path : int list) : Nat
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Internal.docView.spec_1 (_x.1 : Effect4.Program.SourceSession) (snd.2 : Nat) (fst.3 : Effect4.Program.Row) (a.4 : List (List Nat)) (a.5 : List Effect4.Tool.HoleView) : List Effect4.Tool.HoleView *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Internal.docView.spec_0 (_x.1 : Effect4.Program.SourceSession) (fst.2 : Nat) (fst.3 : Effect4.Program.Row) (a.4 : List (List Nat)) (a.5 : List Effect4.Tool.HoleView) : List Effect4.Tool.HoleView *)
 
-let rec list_map_tr_loop_at_tool_internal_doc_view_spec_1 (_x_1 : source_session) (snd_2 : int) (fst_3 : Row.t) (a_4 : int list list) (a_5 : hole_view list) : hole_view list =
+let rec list_map_tr_loop_at_tool_internal_doc_view_spec_0 (_x_1 : source_session) (fst_2 : int) (fst_3 : Row.t) (a_4 : int list list) (a_5 : hole_view list) : hole_view list =
   match a_4 with
     | [] -> List.rev a_5
     | head_7 :: tail_8 -> (let[@local always] _jp_9 = fun _y_10 -> let _x_11 = _y_10 :: a_5 in
-      list_map_tr_loop_at_tool_internal_doc_view_spec_1 _x_1 snd_2 fst_3 tail_8 _x_11 in
+      list_map_tr_loop_at_tool_internal_doc_view_spec_0 _x_1 fst_2 fst_3 tail_8 _x_11 in
       let _x_13 = program_source_session_focus_at _x_1 head_7 in
       match _x_13 with
         | None -> (let _x_14 = None in
-          let _x_15 = ({ index = snd_2; row = fst_3; path = head_7; focus = _x_14 } : hole_view) in
+          let _x_15 = ({ index = fst_2; row = fst_3; path = head_7; focus = _x_14 } : hole_view) in
           _jp_9 _x_15)
         | Some val__16 -> (match (val__16 : _ focus) with
             | { env = env; ty = ty; _ } -> (let _x_17 = env, ty in
               let _x_18 = Some _x_17 in
-              let _x_19 = ({ index = snd_2; row = fst_3; path = head_7; focus = _x_18 } : hole_view) in
+              let _x_19 = ({ index = fst_2; row = fst_3; path = head_7; focus = _x_18 } : hole_view) in
               _jp_9 _x_19)))
 
 
 
-(* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Tool.Internal.docView.spec_2 (_x.1 : Effect4.Program.SourceSession) (a.2 : List (Prod Effect4.Program.Row Nat)) (a.3 : Array Effect4.Tool.HoleView) : List Effect4.Tool.HoleView *)
+(* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Tool.Internal.docView.spec_3 (_x.1 : Effect4.Program.SourceSession) (a.2 : List (Prod Effect4.Program.Row (Prod Nat (Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List (List Nat)))))) (a.3 : Array Effect4.Tool.HoleView) : List Effect4.Tool.HoleView *)
 
-let rec list_flat_map_tr_go_at_tool_internal_doc_view_spec_2 (_x_1 : source_session) (a_2 : (Row.t * int) list) (a_3 : hole_view Lcnf_array.t) : hole_view list =
+let rec list_flat_map_tr_go_at_tool_internal_doc_view_spec_3 (_x_1 : source_session) (a_2 : (Row.t * (int * (NativeOp.t Eff.t * int list list))) list) (a_3 : hole_view Lcnf_array.t) : hole_view list =
   match a_2 with
     | [] -> Lcnf_array.to_list a_3
     | head_5 :: tail_6 -> (match head_5 with
-        | fst_7, snd_8 -> (match (_x_1 : source_session) with
-            | { sketch = sketch; _ } -> (match (sketch : sketch) with
-                | { program = program; _ } -> (let _x_9 = Node_eff program in
-                  let _x_10 = program_node_addresses _x_9 in
-                  let _x_11 = [] in
-                  let paths = list_filter_tr_loop_at_tool_internal_doc_view_spec_0 _x_1 snd_8 _x_10 _x_11 in
-                  let _x_12 = list_map_tr_loop_at_tool_internal_doc_view_spec_1 _x_1 snd_8 fst_7 paths _x_11 in
-                  let _x_13 = Lcnf_array.append_list a_3 _x_12 in
-                  list_flat_map_tr_go_at_tool_internal_doc_view_spec_2 _x_1 tail_6 _x_13))))
+        | fst_7, snd_8 -> (match snd_8 with
+            | fst_9, snd_10 -> (match snd_10 with
+                | _, snd_12 -> (let _x_13 = [] in
+                  let _x_14 = list_map_tr_loop_at_tool_internal_doc_view_spec_0 _x_1 fst_9 fst_7 snd_12 _x_13 in
+                  let _x_15 = Lcnf_array.append_list a_3 _x_14 in
+                  list_flat_map_tr_go_at_tool_internal_doc_view_spec_3 _x_1 tail_6 _x_15))))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Internal.docView.spec_4 (a.1 : List (Prod Effect4.Program.Row (Prod Nat (Prod (Effect4.Program.Eff Effect4.Program.NativeOp) (List (List Nat)))))) (a.2 : List Effect4.Tool.HoleDecl) : List Effect4.Tool.HoleDecl *)
+
+let rec list_map_tr_loop_at_tool_internal_doc_view_spec_4 (a_1 : (Row.t * (int * (NativeOp.t Eff.t * int list list))) list) (a_2 : hole_decl list) : hole_decl list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let[@local always] _jp_6 = fun _y_7 -> let _x_8 = _y_7 :: a_2 in
+      list_map_tr_loop_at_tool_internal_doc_view_spec_4 tail_5 _x_8 in
+      match head_4 with
+        | fst_10, snd_11 -> (match snd_11 with
+            | fst_12, snd_13 -> (match snd_13 with
+                | fst_14, snd_15 -> (match (fst_10 : Row.t) with
+                    | { Row.name = name; _ } -> (let _x_16 = snd_15 = [] in
+                      if _x_16 then (let _x_19 = false in
+                        let _x_20 = ({ index = fst_12; name = name; perform = fst_14; performed = _x_19 } : hole_decl) in
+                        _jp_6 _x_20) else (let _x_17 = true in
+                        let _x_18 = ({ index = fst_12; name = name; perform = fst_14; performed = _x_17 } : hole_decl) in
+                        _jp_6 _x_18))))))
 
 
 
@@ -55008,15 +55350,18 @@ let tool_internal_doc_view (d : doc) : doc_view =
   let _x_1 = program_doc_session d in
   match (_x_1 : source_session) with
     | { sketch = sketch; _ } -> (match (sketch : sketch) with
-        | { holes = holes; _ } -> (let v = program_source_session_view _x_1 in
+        | { program = program; holes = holes } -> (let v = program_source_session_view _x_1 in
+          let _x_2 = 0 in
+          let _x_3 = list_zip_idx_tr holes _x_2 in
+          let _x_4 = [] in
+          let found = list_map_tr_loop_at_tool_internal_doc_view_spec_2 _x_1 program _x_3 _x_4 in
           match (v : effect4_program_edit_session_view) with
-            | { refusals = refusals; type_ = type_; _ } -> (let _x_2 = 0 in
-              let _x_3 = list_zip_idx_tr holes _x_2 in
-              let _x_4 = Lcnf_array.with_capacity _x_2 in
-              let holes_1 = list_flat_map_tr_go_at_tool_internal_doc_view_spec_2 _x_1 _x_3 _x_4 in
-              let _x_5 = program_doc_snap d in
-              let _x_6 = None in
-              ({ snap = _x_5; type_ = type_; refusals = refusals; holes = holes_1; inspection = _x_6 } : doc_view))))
+            | { refusals = refusals; type_ = type_; _ } -> (let _x_5 = Lcnf_array.with_capacity _x_2 in
+              let holes_1 = list_flat_map_tr_go_at_tool_internal_doc_view_spec_3 _x_1 found _x_5 in
+              let declared = list_map_tr_loop_at_tool_internal_doc_view_spec_4 found _x_4 in
+              let _x_6 = program_doc_snap d in
+              let _x_7 = None in
+              ({ snap = _x_6; type_ = type_; refusals = refusals; holes = holes_1; declared = declared; inspection = _x_7 } : doc_view))))
 
 
 
@@ -55368,9 +55713,9 @@ let program_source_session_candidate_part_key (s : source_session) (path : int l
 
 
 
-(* LCNF mono: List.beq._at_.Option.instBEq.beq._at_.Effect4.Program.SourceSession.finish.spec_1.spec_1 (x.1 : List Effect4.Program.Ty) (x.2 : List Effect4.Program.Ty) : Bool *)
+(* LCNF mono: List.beq._at_.Option.instBEq.beq._at_.Effect4.Program.SourceSession.finish.spec_0.spec_0 (x.1 : List Effect4.Program.Ty) (x.2 : List Effect4.Program.Ty) : Bool *)
 
-let rec list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_1_spec_1 (x_1 : Ty.t list) (x_2 : Ty.t list) : bool =
+let rec list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_0_spec_0 (x_1 : Ty.t list) (x_2 : Ty.t list) : bool =
   match x_1 with
     | [] -> (match x_2 with
         | [] -> true
@@ -55378,13 +55723,13 @@ let rec list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_1_
     | head_7 :: tail_8 -> (match x_2 with
         | [] -> false
         | head_10 :: tail_11 -> (let _x_12 = program_ty_beq head_7 head_10 in
-          if _x_12 then list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_1_spec_1 tail_8 tail_11 else _x_12))
+          if _x_12 then list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_0_spec_0 tail_8 tail_11 else _x_12))
 
 
 
-(* LCNF mono: Option.instBEq.beq._at_.Effect4.Program.SourceSession.finish.spec_1 (x.1 : Option (Prod (List Effect4.Program.Ty) Effect4.Program.EffTy)) (x.2 : Option (Prod (List Effect4.Program.Ty) Effect4.Program.EffTy)) : Bool *)
+(* LCNF mono: Option.instBEq.beq._at_.Effect4.Program.SourceSession.finish.spec_0 (x.1 : Option (Prod (List Effect4.Program.Ty) Effect4.Program.EffTy)) (x.2 : Option (Prod (List Effect4.Program.Ty) Effect4.Program.EffTy)) : Bool *)
 
-let option_inst_beq_beq_at_program_source_session_finish_spec_1 (x_1 : (Ty.t list * EffTy.t) option) (x_2 : (Ty.t list * EffTy.t) option) : bool =
+let option_inst_beq_beq_at_program_source_session_finish_spec_0 (x_1 : (Ty.t list * EffTy.t) option) (x_2 : (Ty.t list * EffTy.t) option) : bool =
   match x_1 with
     | None -> (match x_2 with
         | None -> true
@@ -55393,21 +55738,8 @@ let option_inst_beq_beq_at_program_source_session_finish_spec_1 (x_1 : (Ty.t lis
         | None -> false
         | Some val__8 -> (match val__6 with
             | fst_9, snd_10 -> (match val__8 with
-                | fst_11, snd_12 -> (let _x_13 = list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_1_spec_1 fst_9 fst_11 in
+                | fst_11, snd_12 -> (let _x_13 = list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_0_spec_0 fst_9 fst_11 in
                   if _x_13 then program_inst_decidable_eq_eff_ty_dec_eq snd_10 snd_12 else _x_13))))
-
-
-
-(* LCNF mono: Option.instBEq.beq._at_.Effect4.Program.SourceSession.finish.spec_0 (x.1 : Option Effect4.Program.EffTy) (x.2 : Option Effect4.Program.EffTy) : Bool *)
-
-let option_inst_beq_beq_at_program_source_session_finish_spec_0 (x_1 : EffTy.t option) (x_2 : EffTy.t option) : bool =
-  match x_1 with
-    | None -> (match x_2 with
-        | None -> true
-        | Some _ -> false)
-    | Some val__6 -> (match x_2 with
-        | None -> false
-        | Some val__8 -> program_inst_decidable_eq_eff_ty_dec_eq val__6 val__8)
 
 
 
@@ -55433,7 +55765,7 @@ let program_source_session_finish (policy : feed_policy) (s : source_session) (n
   let[@local always] _jp_4 = fun _y_5 _y_6 _y_7 -> match (next : source_session) with
     | { table = table; _ } -> (let _x_8 = program_table_typed_at _y_5 _y_7 in
       let _x_9 = program_table_typed_at table _y_7 in
-      let _x_10 = option_inst_beq_beq_at_program_source_session_finish_spec_1 _x_8 _x_9 in
+      let _x_10 = option_inst_beq_beq_at_program_source_session_finish_spec_0 _x_8 _x_9 in
       if _x_10 then _jp_1 () else (let _x_11 = program_table_typed_at _y_5 _y_6 in
         let _x_12 = program_table_typed_at table _y_6 in
         let _x_13 = FeedRefusal_localChanged (_x_11, _x_12) in
@@ -55445,28 +55777,30 @@ let program_source_session_finish (policy : feed_policy) (s : source_session) (n
   match (policy : feed_policy) with
     | FeedPolicy_draft -> (let _x_19 = next, step in
       Ok _x_19)
-    | FeedPolicy_keepExact -> (match (v : verdict) with
-        | { result = result; _ } -> (match result with
-            | Error _ -> _jp_15 ()
-            | Ok a_22 -> (let _x_23 = program_source_session_view s in
-              match (_x_23 : effect4_program_edit_session_view) with
-                | { type_ = type_; _ } -> (let _x_24 = Some a_22 in
-                  let _x_25 = option_inst_beq_beq_at_program_source_session_finish_spec_0 type_ _x_24 in
-                  let[@local always] _jp_26 = fun _y_27 -> let _x_28 = [] in
-                  let _x_29 = list_beq_at_lean_macro_scopes_view_equal_scope_spec_0 _y_27 _x_28 in
-                  if _x_29 then _jp_1 () else if _x_25 then (match (s : source_session) with
-                        | { table = table_1; _ } -> (match (edit : edit) with
-                            | Edit_fill (path_30, _) -> _jp_4 table_1 _y_27 path_30
-                            | Edit_omitAt (path_32, _) -> _jp_4 table_1 _y_27 path_32)) else _jp_1 () in
-                  if _x_25 then (match (edit : edit) with
-                      | Edit_fill (path_36, _) -> _jp_26 path_36
-                      | Edit_omitAt (path_38, _) -> _jp_26 path_38) else (let _x_34 = FeedRefusal_typeChanged (type_, a_22) in
-                    Error _x_34)))))
+    | FeedPolicy_keepExact -> (let _x_21 = program_source_session_view s in
+      match (_x_21 : effect4_program_edit_session_view) with
+        | { refusals = refusals_1; type_ = type_; _ } -> (match type_ with
+            | None -> (let _x_22 = FeedRefusal_rootRefused refusals_1 in
+              Error _x_22)
+            | Some val__24 -> (match (v : verdict) with
+                | { result = result; _ } -> (match result with
+                    | Error _ -> _jp_15 ()
+                    | Ok a_26 -> (let _x_27 = program_inst_decidable_eq_eff_ty_dec_eq val__24 a_26 in
+                      let[@local always] _jp_28 = fun _y_29 -> let _x_30 = [] in
+                      let _x_31 = list_beq_at_lean_macro_scopes_view_equal_scope_spec_0 _y_29 _x_30 in
+                      if _x_31 then _jp_1 () else if _x_27 then (match (s : source_session) with
+                            | { table = table_1; _ } -> (match (edit : edit) with
+                                | Edit_fill (path_32, _) -> _jp_4 table_1 _y_29 path_32
+                                | Edit_omitAt (path_34, _) -> _jp_4 table_1 _y_29 path_34)) else _jp_1 () in
+                      if _x_27 then (match (edit : edit) with
+                          | Edit_fill (path_38, _) -> _jp_28 path_38
+                          | Edit_omitAt (path_40, _) -> _jp_28 path_40) else (let _x_36 = FeedRefusal_typeChanged (val__24, a_26) in
+                        Error _x_36))))))
     | FeedPolicy_recheck -> (match (v : verdict) with
         | { result = result_1; _ } -> (match result_1 with
             | Error _ -> _jp_15 ()
-            | Ok _ -> (let _x_42 = next, step in
-              Ok _x_42)))
+            | Ok _ -> (let _x_44 = next, step in
+              Ok _x_44)))
 
 
 
@@ -55723,30 +56057,35 @@ let program_source_session_can_splice (s : source_session) (candidate : sketch) 
 
 
 
-(* LCNF mono: Effect4.Program.SourceSession.feed._lam_1 (val.1 : Effect4.Program.Focus Effect4.Program.NativeOp) (o : Effect4.Program.Check.CheckInput -> Effect4.Program.Check.Verdict) (policy : Effect4.Program.FeedPolicy) (s : Effect4.Program.SourceSession) (val.2 : Effect4.Program.Sketch) (edit : Effect4.Program.Edit) (e.3 : Effect4.Program.Eff Effect4.Program.NativeOp) (part : Effect4.Program.Check.Verdict) : Effect4.Program.Check.Checked (Except Effect4.Program.FeedRefusal (Prod Effect4.Program.SourceSession Effect4.Program.Edit.Step)) *)
+(* LCNF mono: Effect4.Program.SourceSession.feed._lam_1 (val.1 : Effect4.Program.Focus Effect4.Program.NativeOp) (edit : Effect4.Program.Edit) (o : Effect4.Program.Check.CheckInput -> Effect4.Program.Check.Verdict) (policy : Effect4.Program.FeedPolicy) (s : Effect4.Program.SourceSession) (val.2 : Effect4.Program.Sketch) (e.3 : Effect4.Program.Eff Effect4.Program.NativeOp) (part : Effect4.Program.Check.Verdict) : Effect4.Program.Check.Checked (Except Effect4.Program.FeedRefusal (Prod Effect4.Program.SourceSession Effect4.Program.Edit.Step)) *)
 
-let program_source_session_feed__lam_1 (val__1 : NativeOp.t focus) (o : check_input -> verdict) (policy : feed_policy) (s : source_session) (val__2 : sketch) (edit : edit) (e_3 : NativeOp.t Eff.t) (part : verdict) : (source_session * effect4_program_edit_step, feed_refusal) result checked =
+let program_source_session_feed__lam_1 (val__1 : NativeOp.t focus) (edit : edit) (o : check_input -> verdict) (policy : feed_policy) (s : source_session) (val__2 : sketch) (e_3 : NativeOp.t Eff.t) (part : verdict) : (source_session * effect4_program_edit_step, feed_refusal) result checked =
   let[@local always] _jp_4 = fun _y_5 -> if _y_5 then (let _x_7 = program_source_session_splice s val__2 edit e_3 part in
     let _x_8 = Ok _x_7 in
     program_check_checked_pure' _x_8) else program_source_session_recheck o policy s val__2 edit e_3 in
   match (part : verdict) with
     | { result = result; _ } -> (match result with
-        | Error _ -> (match (val__1 : _ focus) with
+        | Error a_10 -> (match (val__1 : _ focus) with
             | { env = env; ty = ty; _ } -> (let _x_11 = env, ty in
-              let _x_12 = FeedRefusal_notKept (_x_11, result) in
-              let _x_13 = Error _x_12 in
-              program_check_checked_pure' _x_13))
-        | Ok a_15 -> (match (val__1 : _ focus) with
-            | { env = env_1; ty = ty_1; _ } -> (let _x_16 = program_inst_decidable_eq_eff_ty_dec_eq a_15 ty_1 in
-              if _x_16 then (let _x_21 = program_source_session_can_splice s val__2 edit in
-                if _x_21 then (let _x_22 = program_source_session_view s in
-                  match (_x_22 : effect4_program_edit_session_view) with
+              let[@local always] _jp_12 = fun _y_13 -> let _x_14 = located_under _y_13 a_10 in
+              let _x_15 = Error _x_14 in
+              let _x_16 = FeedRefusal_notKept (_x_11, _x_15) in
+              let _x_17 = Error _x_16 in
+              program_check_checked_pure' _x_17 in
+              match (edit : edit) with
+                | Edit_fill (path_19, _) -> _jp_12 path_19
+                | Edit_omitAt (path_21, _) -> _jp_12 path_21))
+        | Ok a_23 -> (match (val__1 : _ focus) with
+            | { env = env_1; ty = ty_1; _ } -> (let _x_24 = program_inst_decidable_eq_eff_ty_dec_eq a_23 ty_1 in
+              if _x_24 then (let _x_29 = program_source_session_can_splice s val__2 edit in
+                if _x_29 then (let _x_30 = program_source_session_view s in
+                  match (_x_30 : effect4_program_edit_session_view) with
                     | { type_ = type_; _ } -> (match type_ with
                         | None -> program_source_session_recheck o policy s val__2 edit e_3
-                        | Some _ -> _jp_4 _x_21)) else _jp_4 _x_21) else (let _x_17 = env_1, ty_1 in
-                let _x_18 = FeedRefusal_notKept (_x_17, result) in
-                let _x_19 = Error _x_18 in
-                program_check_checked_pure' _x_19))))
+                        | Some _ -> _jp_4 _x_29)) else _jp_4 _x_29) else (let _x_25 = env_1, ty_1 in
+                let _x_26 = FeedRefusal_notKept (_x_25, result) in
+                let _x_27 = Error _x_26 in
+                program_check_checked_pure' _x_27))))
 
 
 
@@ -55798,18 +56137,18 @@ let program_source_session_feed (o : check_input -> verdict) (policy : feed_poli
   let[@local always] _jp_6 = fun () -> match (edit : edit) with
     | Edit_fill (path_7, _) -> _jp_1 path_7
     | Edit_omitAt (path_9, _) -> _jp_1 path_9 in
-  let[@local always] _jp_11 = fun _y_12 _y_13 _y_14 -> let _x_15 = program_source_session_candidate_part_key s _y_14 _y_13 in
+  let[@local always] _jp_11 = fun _y_12 _y_13 _y_14 -> let _x_15 = program_source_session_candidate_part_key s _y_14 _y_12 in
   match _x_15 with
     | None -> _jp_6 ()
     | Some val__16 -> (let _x_17 = program_check_checked_ask o val__16 in
-      program_check_checked_bind' _x_17 _y_12) in
+      program_check_checked_bind' _x_17 _y_13) in
   let[@local always] _jp_19 = fun _y_20 _y_21 _y_22 _y_23 -> let _x_24 = program_source_session_focus_at s _y_23 in
   match _x_24 with
     | None -> _jp_6 ()
-    | Some val__25 -> (let _f_26 = program_source_session_feed__lam_1 val__25 o policy s _y_21 edit _y_20 in
+    | Some val__25 -> (let _f_26 = program_source_session_feed__lam_1 val__25 edit o policy s _y_20 _y_21 in
       match (edit : edit) with
-        | Edit_fill (path_27, _) -> _jp_11 _f_26 _y_22 path_27
-        | Edit_omitAt (path_29, _) -> _jp_11 _f_26 _y_22 path_29) in
+        | Edit_fill (path_27, _) -> _jp_11 _y_22 _f_26 path_27
+        | Edit_omitAt (path_29, _) -> _jp_11 _y_22 _f_26 path_29) in
   let[@local always] _jp_31 = fun _y_32 -> let _x_33 = FeedRefusal_noProgram _y_32 in
   let _x_34 = Error _x_33 in
   program_check_checked_pure' _x_34 in
@@ -55823,35 +56162,35 @@ let program_source_session_feed (o : check_input -> verdict) (policy : feed_poli
     | _ -> (match (edit : edit) with
         | Edit_fill (path_43, _) -> _jp_31 path_43
         | Edit_omitAt (path_45, _) -> _jp_31 path_45) in
-  let[@local always] _jp_47 = fun _y_48 _y_49 _y_50 _y_51 -> let _x_52 = program_source_session_candidate_part_key s _y_51 _y_50 in
+  let[@local always] _jp_47 = fun _y_48 _y_49 _y_50 _y_51 -> let _x_52 = program_source_session_candidate_part_key s _y_51 _y_48 in
   match _x_52 with
-    | None -> program_source_session_recheck o policy s _y_50 edit _y_49
+    | None -> program_source_session_recheck o policy s _y_48 edit _y_49
     | Some val__54 -> (let _x_55 = program_check_checked_ask o val__54 in
-      program_check_checked_bind' _x_55 _y_48) in
+      program_check_checked_bind' _x_55 _y_50) in
   let[@local always] _jp_57 = fun _y_58 _y_59 _y_60 _y_61 _y_62 -> let _x_63 = program_source_session_focus_at s _y_62 in
   match _x_63 with
     | Some val__64 -> (let _x_65 = program_source_session_view s in
       match (_x_65 : effect4_program_edit_session_view) with
         | { type_ = type_; _ } -> (match type_ with
-            | Some _ -> (let _x_67 = program_source_session_can_splice s _y_61 edit in
+            | Some _ -> (let _x_67 = program_source_session_can_splice s _y_60 edit in
               if _x_67 then (match (val__64 : _ focus) with
                   | { ty = ty; _ } -> (let _x_69 = program_source_session_draft_omit_allows edit ty in
-                    if _x_69 then (let _f_71 = program_source_session_feed__lam_0 o policy s _y_59 edit _y_58 ty in
+                    if _x_69 then (let _f_71 = program_source_session_feed__lam_0 o policy s _y_58 edit _y_59 ty in
                       match (edit : edit) with
-                        | Edit_fill (path_72, _) -> _jp_47 _f_71 _y_60 _y_61 path_72
-                        | Edit_omitAt (path_74, _) -> _jp_47 _f_71 _y_60 _y_61 path_74) else program_source_session_recheck o policy s _y_61 edit _y_60)) else program_source_session_recheck o policy s _y_61 edit _y_60)
-            | _ -> program_source_session_recheck o policy s _y_61 edit _y_60))
-    | _ -> program_source_session_recheck o policy s _y_61 edit _y_60 in
+                        | Edit_fill (path_72, _) -> _jp_47 _y_60 _y_61 _f_71 path_72
+                        | Edit_omitAt (path_74, _) -> _jp_47 _y_60 _y_61 _f_71 path_74) else program_source_session_recheck o policy s _y_60 edit _y_61)) else program_source_session_recheck o policy s _y_60 edit _y_61)
+            | _ -> program_source_session_recheck o policy s _y_60 edit _y_61))
+    | _ -> program_source_session_recheck o policy s _y_60 edit _y_61 in
   let[@local always] _jp_78 = fun _y_79 _y_80 _y_81 _y_82 -> match _y_82 with
-    | [] -> program_source_session_recheck o policy s _y_80 edit _y_81
+    | [] -> program_source_session_recheck o policy s _y_79 edit _y_81
     | _ :: _ -> (match (policy : feed_policy) with
         | FeedPolicy_draft -> (match (edit : edit) with
-            | Edit_fill (path_86, _) -> _jp_57 _y_79 _y_80 _y_81 _y_80 path_86
-            | Edit_omitAt (path_88, _) -> _jp_57 _y_79 _y_80 _y_81 _y_80 path_88)
+            | Edit_fill (path_86, _) -> _jp_57 _y_79 _y_80 _y_79 _y_81 path_86
+            | Edit_omitAt (path_88, _) -> _jp_57 _y_79 _y_80 _y_79 _y_81 path_88)
         | FeedPolicy_keepExact -> (match (edit : edit) with
-            | Edit_fill (path_90, _) -> _jp_19 _y_79 _y_80 _y_80 path_90
-            | Edit_omitAt (path_92, _) -> _jp_19 _y_79 _y_80 _y_80 path_92)
-        | FeedPolicy_recheck -> program_source_session_recheck o policy s _y_80 edit _y_81) in
+            | Edit_fill (path_90, _) -> _jp_19 _y_79 _y_80 _y_79 path_90
+            | Edit_omitAt (path_92, _) -> _jp_19 _y_79 _y_80 _y_79 path_92)
+        | FeedPolicy_recheck -> program_source_session_recheck o policy s _y_79 edit _y_81) in
   match (s : source_session) with
     | { app = app; sketch = sketch; _ } -> (match (sketch : sketch) with
         | { program = program; _ } -> (let _x_95 = Node_eff program in
@@ -55861,8 +56200,8 @@ let program_source_session_feed (o : check_input -> verdict) (policy : feed_poli
                 | Node_eff e_100 -> (let _x_101 = program_sketch_edit sketch app edit in
                   match _x_101 with
                     | Some val__102 -> (match (edit : edit) with
-                        | Edit_fill (path_103, _) -> _jp_78 e_100 val__102 e_100 path_103
-                        | Edit_omitAt (path_105, _) -> _jp_78 e_100 val__102 e_100 path_105)
+                        | Edit_fill (path_103, _) -> _jp_78 val__102 e_100 e_100 path_103
+                        | Edit_omitAt (path_105, _) -> _jp_78 val__102 e_100 e_100 path_105)
                     | _ -> _jp_36 ())
                 | _ -> _jp_36 ())
             | _ -> _jp_36 () in
@@ -56127,7 +56466,7 @@ let rec list_find_opt_at_program_fill_set_internal_add_entry_spec_0 (p : int lis
 
 let program_fill_set_internal_add_entry__lam_0 (p : int list) (entries : (int list * NativeOp.t Eff.t) list) (q : NativeOp.t Eff.t) (__do_lift_1 : (source_session * effect4_program_edit_step, feed_refusal) result) : ((int list * NativeOp.t Eff.t) list * add_outcome) checked =
   match __do_lift_1 with
-    | Error _ -> (let _x_3 = AddRefusal_notCertified in
+    | Error a_2 -> (let _x_3 = AddRefusal_notCertified a_2 in
       let _x_4 = AddOutcome_refused (p, _x_3) in
       let _x_5 = entries, _x_4 in
       program_check_checked_pure' _x_5)
@@ -56950,28 +57289,19 @@ let program_inst_decidable_eq_sig_refusal_dec_eq (x_1 : sig_refusal) (x_2 : sig_
 
 let program_inst_decidable_eq_admit_refusal_dec_eq (x_1 : admit_refusal) (x_2 : admit_refusal) : bool =
   match (x_1 : admit_refusal) with
-    | AdmitRefusal_illTyped -> (match (x_2 : admit_refusal) with
-        | AdmitRefusal_illTyped -> true
+    | AdmitRefusal_illTyped why_3 -> (match (x_2 : admit_refusal) with
+        | AdmitRefusal_illTyped why_4 -> program_inst_decidable_eq_type_refusal why_3 why_4
         | _ -> false)
-    | AdmitRefusal_signature why_5 -> (let _x_6 = false in
-      match (x_2 : admit_refusal) with
-        | AdmitRefusal_illTyped -> _x_6
-        | AdmitRefusal_signature why_7 -> (let _x_8 = program_inst_decidable_eq_sig_refusal_dec_eq why_5 why_7 in
-          if _x_8 then _x_8 else _x_6)
-        | _ -> _x_6)
-    | AdmitRefusal_emptyColumn at_9 -> (let _x_10 = false in
-      match (x_2 : admit_refusal) with
-        | AdmitRefusal_illTyped -> _x_10
-        | AdmitRefusal_emptyColumn at_11 -> (let _x_12 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_13 = inst_decidable_eq_list _x_12 at_9 at_11 in
-          if _x_13 then _x_13 else _x_10)
-        | _ -> _x_10)
-    | AdmitRefusal_formation why_14 -> (let _x_15 = false in
-      match (x_2 : admit_refusal) with
-        | AdmitRefusal_illTyped -> _x_15
-        | AdmitRefusal_formation why_16 -> (let _x_17 = program_inst_decidable_eq_formation_refusal_dec_eq why_14 why_16 in
-          if _x_17 then _x_17 else _x_15)
-        | _ -> _x_15)
+    | AdmitRefusal_signature why_7 -> (match (x_2 : admit_refusal) with
+        | AdmitRefusal_signature why_8 -> program_inst_decidable_eq_sig_refusal_dec_eq why_7 why_8
+        | _ -> false)
+    | AdmitRefusal_emptyColumn at_11 -> (match (x_2 : admit_refusal) with
+        | AdmitRefusal_emptyColumn at_12 -> (let _x_13 = fun _b1 _b2 -> _b1 = _b2 in
+          inst_decidable_eq_list _x_13 at_11 at_12)
+        | _ -> false)
+    | AdmitRefusal_formation why_16 -> (match (x_2 : admit_refusal) with
+        | AdmitRefusal_formation why_17 -> program_inst_decidable_eq_formation_refusal_dec_eq why_16 why_17
+        | _ -> false)
 
 
 
@@ -57434,20 +57764,19 @@ let rec list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 (target
   match a_2 with
     | [] -> Lcnf_array.to_list a_3
     | head_5 :: tail_6 -> (match (head_5 : entry) with
-        | { path = path; env = env; _ } -> (let _x_7 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_8 = inst_decidable_eq_list _x_7 path target_path in
-          if _x_8 then list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 a_3 else (match (_x_1 : sketch) with
-              | { program = program; _ } -> (let _x_9 = Node_eff program in
-                let _x_10 = program_node_at_ _x_9 path in
-                match _x_10 with
-                  | Some val__11 -> (match (val__11 : _ node) with
-                      | Node_eff e_12 -> (match env with
-                          | Some val__13 -> (match (val__13 : node_env) with
-                              | NodeEnv_env env_14 -> (let _x_15 = Some path in
-                                let _x_16 = env_14, e_12 in
-                                let _x_17 = _x_15, _x_16 in
-                                let _x_18 = Lcnf_array.push a_3 _x_17 in
-                                list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 _x_18)
+        | { path = path; env = env; _ } -> (let _x_7 = list_is_prefix_of_at_program_table_under_spec_0 path target_path in
+          if _x_7 then list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 a_3 else (match (_x_1 : sketch) with
+              | { program = program; _ } -> (let _x_8 = Node_eff program in
+                let _x_9 = program_node_at_ _x_8 path in
+                match _x_9 with
+                  | Some val__10 -> (match (val__10 : _ node) with
+                      | Node_eff e_11 -> (match env with
+                          | Some val__12 -> (match (val__12 : node_env) with
+                              | NodeEnv_env env_13 -> (let _x_14 = Some path in
+                                let _x_15 = env_13, e_11 in
+                                let _x_16 = _x_14, _x_15 in
+                                let _x_17 = Lcnf_array.push a_3 _x_16 in
+                                list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 _x_17)
                               | _ -> list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 a_3)
                           | _ -> list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 a_3)
                       | _ -> list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 target_path _x_1 tail_6 a_3)
@@ -57455,9 +57784,24 @@ let rec list_filter_map_tr_go_at_program_suggest_local_candidates_spec_3 (target
 
 
 
-(* LCNF mono: Option.instBEq.beq._at_.List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_4.spec_4 (x.1 : Option (List Nat)) (x.2 : Option (List Nat)) : Bool *)
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Program.Suggest.localCandidates.spec_4 (focus : Effect4.Program.Focus Effect4.Program.NativeOp) (a.1 : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp)))) (a.2 : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp)))) : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) *)
 
-let option_inst_beq_beq_at_list_erase_dups_at_program_suggest_local_candidates_spec_4_spec_4 (x_1 : int list option) (x_2 : int list option) : bool =
+let rec list_filter_tr_loop_at_program_suggest_local_candidates_spec_4 (focus : NativeOp.t focus) (a_1 : (int list option * (Ty.t list * NativeOp.t Eff.t)) list) (a_2 : (int list option * (Ty.t list * NativeOp.t Eff.t)) list) : (int list option * (Ty.t list * NativeOp.t Eff.t)) list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (match head_4 with
+        | _, snd_1 -> (match snd_1 with
+            | _, snd_2 -> (match (focus : _ focus) with
+                | { program = program; _ } -> (let _x_6 = program_inst_decidable_eq_native_op in
+                  let _x_7 = program_inst_decidable_eq_eff_dec_eq_1 _x_6 snd_2 program in
+                  if _x_7 then list_filter_tr_loop_at_program_suggest_local_candidates_spec_4 focus tail_5 a_2 else (let _x_8 = head_4 :: a_2 in
+                    list_filter_tr_loop_at_program_suggest_local_candidates_spec_4 focus tail_5 _x_8)))))
+
+
+
+(* LCNF mono: Option.instBEq.beq._at_.List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_5.spec_5 (x.1 : Option (List Nat)) (x.2 : Option (List Nat)) : Bool *)
+
+let option_inst_beq_beq_at_list_erase_dups_at_program_suggest_local_candidates_spec_5_spec_5 (x_1 : int list option) (x_2 : int list option) : bool =
   match x_1 with
     | None -> (match x_2 with
         | None -> true
@@ -57468,24 +57812,24 @@ let option_inst_beq_beq_at_list_erase_dups_at_program_suggest_local_candidates_s
 
 
 
-(* LCNF mono: List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_4._lam_0 (x1.1 : Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) (x2.2 : Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) : Bool *)
+(* LCNF mono: List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_5._lam_0 (x1.1 : Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) (x2.2 : Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) : Bool *)
 
-let list_erase_dups_at_program_suggest_local_candidates_spec_4__lam_0 (x1_1 : int list option * (Ty.t list * NativeOp.t Eff.t)) (x2_2 : int list option * (Ty.t list * NativeOp.t Eff.t)) : bool =
+let list_erase_dups_at_program_suggest_local_candidates_spec_5__lam_0 (x1_1 : int list option * (Ty.t list * NativeOp.t Eff.t)) (x2_2 : int list option * (Ty.t list * NativeOp.t Eff.t)) : bool =
   match x1_1 with
     | fst_3, snd_4 -> (match x2_2 with
-        | fst_5, snd_6 -> (let _x_7 = option_inst_beq_beq_at_list_erase_dups_at_program_suggest_local_candidates_spec_4_spec_4 fst_3 fst_5 in
+        | fst_5, snd_6 -> (let _x_7 = option_inst_beq_beq_at_list_erase_dups_at_program_suggest_local_candidates_spec_5_spec_5 fst_3 fst_5 in
           if _x_7 then (match snd_4 with
               | fst_8, snd_9 -> (match snd_6 with
-                  | fst_10, snd_11 -> (let _x_12 = list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_1_spec_1 fst_8 fst_10 in
+                  | fst_10, snd_11 -> (let _x_12 = list_beq_at_option_inst_beq_beq_at_program_source_session_finish_spec_0_spec_0 fst_8 fst_10 in
                     if _x_12 then (let _x_13 = program_inst_decidable_eq_native_op in
                       program_inst_decidable_eq_eff_dec_eq_1 _x_13 snd_9 snd_11) else _x_12))) else _x_7))
 
 
 
-(* LCNF mono: List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_4 (as : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp)))) : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) *)
+(* LCNF mono: List.eraseDups._at_.Effect4.Program.Suggest.localCandidates.spec_5 (as : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp)))) : List (Prod (Option (List Nat)) (Prod (List Effect4.Program.Ty) (Effect4.Program.Eff Effect4.Program.NativeOp))) *)
 
-let list_erase_dups_at_program_suggest_local_candidates_spec_4 (as_ : (int list option * (Ty.t list * NativeOp.t Eff.t)) list) : (int list option * (Ty.t list * NativeOp.t Eff.t)) list =
-  let _f_1 = list_erase_dups_at_program_suggest_local_candidates_spec_4__lam_0 in
+let list_erase_dups_at_program_suggest_local_candidates_spec_5 (as_ : (int list option * (Ty.t list * NativeOp.t Eff.t)) list) : (int list option * (Ty.t list * NativeOp.t Eff.t)) list =
+  let _f_1 = list_erase_dups_at_program_suggest_local_candidates_spec_5__lam_0 in
   list_erase_dups_by _f_1 as_
 
 
@@ -57512,7 +57856,8 @@ let program_suggest_local_candidates (d : doc) (target_path : int list) (focus :
                   let _x_9 = supplied_items @ var_items in
                   let _x_10 = _x_9 @ row_items in
                   let _x_11 = _x_10 @ table_items in
-                  list_erase_dups_at_program_suggest_local_candidates_spec_4 _x_11))))
+                  let _x_12 = list_filter_tr_loop_at_program_suggest_local_candidates_spec_4 focus _x_11 _x_3 in
+                  list_erase_dups_at_program_suggest_local_candidates_spec_5 _x_12))))
 
 
 
@@ -57556,30 +57901,27 @@ let program_suggest_suggest_page__lam_1 (_f_1 : feed_refusal -> (suggestion list
 
 
 
-(* LCNF mono: Effect4.Program.Suggest.suggestOne._lam_0 (program : Effect4.Program.Eff Effect4.Program.NativeOp) (sourcePath : Option (List Nat)) (val.1 : Effect4.Program.Check.CheckInput) (path : List Nat) (ty : Effect4.Program.EffTy) (__do_lift.2 : Except Effect4.Program.FeedRefusal (Prod Effect4.Program.SourceSession Effect4.Program.Edit.Step)) : Effect4.Program.Check.Checked (Except Effect4.Program.FeedRefusal Effect4.Program.Suggest.Suggestion) *)
+(* LCNF mono: Effect4.Program.Suggest.suggestOne._lam_0 (program : Effect4.Program.Eff Effect4.Program.NativeOp) (sourcePath : Option (List Nat)) (val.1 : Effect4.Program.Check.CheckInput) (ty : Effect4.Program.EffTy) (__do_lift.2 : Except Effect4.Program.FeedRefusal (Prod Effect4.Program.SourceSession Effect4.Program.Edit.Step)) : Effect4.Program.Check.Checked (Except Effect4.Program.FeedRefusal Effect4.Program.Suggest.Suggestion) *)
 
-let program_suggest_suggest_one__lam_0 (program : NativeOp.t Eff.t) (source_path : int list option) (val__1 : check_input) (path : int list) (ty : EffTy.t) (__do_lift_2 : (source_session * effect4_program_edit_step, feed_refusal) result) : (suggestion, feed_refusal) result checked =
+let program_suggest_suggest_one__lam_0 (program : NativeOp.t Eff.t) (source_path : int list option) (val__1 : check_input) (ty : EffTy.t) (__do_lift_2 : (source_session * effect4_program_edit_step, feed_refusal) result) : (suggestion, feed_refusal) result checked =
   let[@local always] _jp_3 = fun _y_4 -> let _x_5 = ({ program = program; source_path = source_path; key = val__1; evidence = _y_4 } : suggestion) in
   let _x_6 = Ok _x_5 in
   program_check_checked_pure' _x_6 in
   match __do_lift_2 with
     | Error a_8 -> (match (a_8 : feed_refusal) with
         | FeedRefusal_notKept (_, verdict_10) -> (match verdict_10 with
-            | Error a_11 -> (match (a_11 : type_refusal) with
-                | { path = path_1; reason = reason } -> (let _x_12 = path @ path_1 in
-                  let _x_13 = ({ path = _x_12; reason = reason } : type_refusal) in
-                  let _x_14 = Evidence_refused _x_13 in
-                  _jp_3 _x_14))
-            | Ok a_15 -> (let _x_16 = Evidence_typeMismatch (ty, a_15) in
-              _jp_3 _x_16))
-        | _ -> (let _x_17 = Evidence_feedRefused a_8 in
-          let _x_18 = ({ program = program; source_path = source_path; key = val__1; evidence = _x_17 } : suggestion) in
-          let _x_19 = Ok _x_18 in
-          program_check_checked_pure' _x_19))
-    | Ok _ -> (let _x_22 = Evidence_exactFit ty in
-      let _x_23 = ({ program = program; source_path = source_path; key = val__1; evidence = _x_22 } : suggestion) in
-      let _x_24 = Ok _x_23 in
-      program_check_checked_pure' _x_24)
+            | Error a_11 -> (let _x_12 = Evidence_refused a_11 in
+              _jp_3 _x_12)
+            | Ok a_13 -> (let _x_14 = Evidence_typeMismatch (ty, a_13) in
+              _jp_3 _x_14))
+        | _ -> (let _x_15 = Evidence_feedRefused a_8 in
+          let _x_16 = ({ program = program; source_path = source_path; key = val__1; evidence = _x_15 } : suggestion) in
+          let _x_17 = Ok _x_16 in
+          program_check_checked_pure' _x_17))
+    | Ok _ -> (let _x_20 = Evidence_exactFit ty in
+      let _x_21 = ({ program = program; source_path = source_path; key = val__1; evidence = _x_20 } : suggestion) in
+      let _x_22 = Ok _x_21 in
+      program_check_checked_pure' _x_22)
 
 
 
@@ -57594,13 +57936,13 @@ let program_source_session_part_key (s : source_session) (path : int list) (q : 
 
 
 
-(* LCNF mono: Effect4.Program.Suggest.suggestOne._lam_1 (focus : Effect4.Program.Focus Effect4.Program.NativeOp) (sourceEnv : List Effect4.Program.Ty) (program : Effect4.Program.Eff Effect4.Program.NativeOp) (sourcePath : Option (List Nat)) (path : List Nat) (d : Effect4.Program.Doc) (o : Effect4.Program.Check.CheckInput -> Effect4.Program.Check.Verdict) (candidate : Except Effect4.Program.FeedRefusal Effect4.Program.Sketch) : Effect4.Program.Check.Checked (Except Effect4.Program.FeedRefusal Effect4.Program.Suggest.Suggestion) *)
+(* LCNF mono: Effect4.Program.Suggest.suggestOne._lam_1 (focus : Effect4.Program.Focus Effect4.Program.NativeOp) (sourceEnv : List Effect4.Program.Ty) (program : Effect4.Program.Eff Effect4.Program.NativeOp) (sourcePath : Option (List Nat)) (d : Effect4.Program.Doc) (path : List Nat) (o : Effect4.Program.Check.CheckInput -> Effect4.Program.Check.Verdict) (candidate : Except Effect4.Program.FeedRefusal Effect4.Program.Sketch) : Effect4.Program.Check.Checked (Except Effect4.Program.FeedRefusal Effect4.Program.Suggest.Suggestion) *)
 
-let program_suggest_suggest_one__lam_1 (focus : NativeOp.t focus) (source_env : Ty.t list) (program : NativeOp.t Eff.t) (source_path : int list option) (path : int list) (d : doc) (o : check_input -> verdict) (candidate : (sketch, feed_refusal) result) : (suggestion, feed_refusal) result checked =
+let program_suggest_suggest_one__lam_1 (focus : NativeOp.t focus) (source_env : Ty.t list) (program : NativeOp.t Eff.t) (source_path : int list option) (d : doc) (path : int list) (o : check_input -> verdict) (candidate : (sketch, feed_refusal) result) : (suggestion, feed_refusal) result checked =
   let[@local always] _jp_1 = fun val__2 -> match (focus : _ focus) with
     | { env = env; ty = ty; _ } -> (let _x_3 = program_inst_decidable_eq_ty in
       let _x_4 = inst_decidable_eq_list _x_3 source_env env in
-      if _x_4 then (let _f_9 = program_suggest_suggest_one__lam_0 program source_path val__2 path ty in
+      if _x_4 then (let _f_9 = program_suggest_suggest_one__lam_0 program source_path val__2 ty in
         let _x_10 = FeedPolicy_keepExact in
         let _x_11 = program_doc_session d in
         let _x_12 = Edit_fill (path, program) in
@@ -57639,7 +57981,7 @@ let program_suggest_suggest_one__lam_2 (_f_1 : (sketch, feed_refusal) result -> 
 let program_suggest_suggest_one (o : check_input -> verdict) (d : doc) (focus : NativeOp.t focus) (path : int list) (source_path : int list option) (source_env : Ty.t list) (program : NativeOp.t Eff.t) : (suggestion, feed_refusal) result checked =
   let _x_1 = program_doc_session d in
   match (_x_1 : source_session) with
-    | { sketch = sketch; _ } -> (let _f_2 = program_suggest_suggest_one__lam_1 focus source_env program source_path path d o in
+    | { sketch = sketch; _ } -> (let _f_2 = program_suggest_suggest_one__lam_1 focus source_env program source_path d path o in
       let _x_3 = program_sketch_fill_at sketch path program in
       match _x_3 with
         | None -> (let _f_4 = program_suggest_suggest_one__lam_2 _f_2 in
@@ -58153,9 +58495,9 @@ let tool_internal_query (o : check_input -> verdict) (st : raw) (x_1 : query) : 
                   program_check_checked_pure' _x_22)
                 | Ok a_24 -> (let _x_25 = tool_internal_doc_view a_14 in
                   match (_x_25 : doc_view) with
-                    | { snap = snap; type_ = type_; refusals = refusals; holes = holes; _ } -> (let _x_26 = None in
+                    | { snap = snap; type_ = type_; refusals = refusals; holes = holes; declared = declared; _ } -> (let _x_26 = None in
                       let _x_27 = Some a_24 in
-                      let _x_28 = ({ snap = snap; type_ = type_; refusals = refusals; holes = holes; inspection = _x_27 } : doc_view) in
+                      let _x_28 = ({ snap = snap; type_ = type_; refusals = refusals; holes = holes; declared = declared; inspection = _x_27 } : doc_view) in
                       let _x_29 = Answer_doc _x_28 in
                       let _x_30 = Ok _x_29 in
                       program_check_checked_pure' _x_30)))))
@@ -59613,7 +59955,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_place_refusal_c_shape_
 (* LCNF mono: Effect4.Store.CheckGen.T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41__32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_46_program_46_type_refusal_41__32__40__95_root_95__46_effect4_46_program_46_eff_ty_41_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_type_refusal_c_shape_doc in
+  let _x_1 = store_refusals_gen_located_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_program_gen_eff_ty_c_shape_doc in
       match (_x_2 : shape_doc) with
@@ -59647,7 +59989,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_shape_d
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_46_program_46_type_refusal_41__32__40__95_root_95__46_effect4_46_program_46_eff_ty_41_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_refusals_gen_type_refusal_c_shape_doc in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_refusals_gen_located_c_shape_doc in
           match (_x_3 : shape_doc) with
             | { root = root_2; defs = defs_2 } -> (let _x_4 = 0 in
               let _x_5 = "path" in
@@ -59691,37 +60033,43 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_shape_d
               let _x_43 = "typeChanged" in
               let _x_44 = 4 in
               let _x_45 = "old" in
-              let _x_46 = Shape_option root in
-              let _x_47 = _x_45, _x_46 in
-              let _x_48 = "new" in
-              let _x_49 = _x_48, root in
-              let _x_50 = _x_49 :: _x_7 in
-              let _x_51 = _x_47 :: _x_50 in
-              let _x_52 = _x_44, _x_51 in
-              let _x_53 = _x_43, _x_52 in
-              let _x_54 = "localChanged" in
-              let _x_55 = 5 in
-              let _x_56 = Shape_option _x_26 in
-              let _x_57 = _x_45, _x_56 in
-              let _x_58 = _x_48, _x_56 in
-              let _x_59 = _x_58 :: _x_7 in
-              let _x_60 = _x_57 :: _x_59 in
-              let _x_61 = _x_55, _x_60 in
-              let _x_62 = _x_54, _x_61 in
-              let _x_63 = _x_62 :: _x_7 in
-              let _x_64 = _x_53 :: _x_63 in
-              let _x_65 = _x_42 :: _x_64 in
-              let _x_66 = _x_34 :: _x_65 in
-              let _x_67 = _x_18 :: _x_66 in
-              let _x_68 = _x_14 :: _x_67 in
-              let _x_69 = Shape_sum (_x_12, _x_68) in
-              let _x_70 = _x_7 @ _x_27 in
-              let _x_71 = _x_70 @ defs_1 in
-              let _x_72 = _x_71 @ defs_2 in
-              let _x_73 = _x_72 @ defs in
-              let _x_74 = _x_73 @ defs in
-              let _x_75 = _x_74 @ _x_27 in
-              ({ root = _x_69; defs = _x_75 } : shape_doc))))
+              let _x_46 = _x_45, root in
+              let _x_47 = "new" in
+              let _x_48 = _x_47, root in
+              let _x_49 = _x_48 :: _x_7 in
+              let _x_50 = _x_46 :: _x_49 in
+              let _x_51 = _x_44, _x_50 in
+              let _x_52 = _x_43, _x_51 in
+              let _x_53 = "localChanged" in
+              let _x_54 = 5 in
+              let _x_55 = Shape_option _x_26 in
+              let _x_56 = _x_45, _x_55 in
+              let _x_57 = _x_47, _x_55 in
+              let _x_58 = _x_57 :: _x_7 in
+              let _x_59 = _x_56 :: _x_58 in
+              let _x_60 = _x_54, _x_59 in
+              let _x_61 = _x_53, _x_60 in
+              let _x_62 = "rootRefused" in
+              let _x_63 = 6 in
+              let _x_64 = "refusals" in
+              let _x_65 = _x_64, _x_38 in
+              let _x_66 = _x_65 :: _x_7 in
+              let _x_67 = _x_63, _x_66 in
+              let _x_68 = _x_62, _x_67 in
+              let _x_69 = _x_68 :: _x_7 in
+              let _x_70 = _x_61 :: _x_69 in
+              let _x_71 = _x_52 :: _x_70 in
+              let _x_72 = _x_42 :: _x_71 in
+              let _x_73 = _x_34 :: _x_72 in
+              let _x_74 = _x_18 :: _x_73 in
+              let _x_75 = _x_14 :: _x_74 in
+              let _x_76 = Shape_sum (_x_12, _x_75) in
+              let _x_77 = _x_7 @ _x_27 in
+              let _x_78 = _x_77 @ defs_1 in
+              let _x_79 = _x_78 @ defs_2 in
+              let _x_80 = _x_79 @ defs in
+              let _x_81 = _x_80 @ _x_27 in
+              ({ root = _x_76; defs = _x_81 } : shape_doc))))
 
 
 
@@ -60042,6 +60390,37 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_view_c_shape_doc : s
 
 
 
+(* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_HoleDeclC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_decl_c_shape_doc : shape_doc =
+  let _x_1 = "Effect4.Tool.HoleDecl" in
+  let _x_2 = "index" in
+  let _x_3 = Shape_nat in
+  let _x_4 = [] in
+  let _x_5 = _x_2, _x_3 in
+  let _x_6 = "name" in
+  let _x_7 = Shape_string in
+  let _x_8 = _x_6, _x_7 in
+  let _x_9 = "perform" in
+  let _x_10 = "Eff" in
+  let _x_11 = Shape_named _x_10 in
+  let _x_12 = store_program_gen_eff_c_defs in
+  let _x_13 = _x_9, _x_11 in
+  let _x_14 = "performed" in
+  let _x_15 = Shape_bool in
+  let _x_16 = _x_14, _x_15 in
+  let _x_17 = _x_16 :: _x_4 in
+  let _x_18 = _x_13 :: _x_17 in
+  let _x_19 = _x_8 :: _x_18 in
+  let _x_20 = _x_5 :: _x_19 in
+  let _x_21 = Shape_struct (_x_1, _x_20) in
+  let _x_22 = _x_4 @ _x_4 in
+  let _x_23 = _x_22 @ _x_12 in
+  let _x_24 = _x_23 @ _x_4 in
+  ({ root = _x_21; defs = _x_24 } : shape_doc)
+
+
+
 (* LCNF mono: Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_PartSigC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_check_gen_t_95_root_95__46_effect4_46_program_46_part_sig_c_shape_doc : shape_doc =
@@ -60227,7 +60606,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_shape_doc : 
       match (_x_2 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_3 = store_check_gen_t_95_root_95__46_effect4_46_program_46_table_46_entry_c_shape_doc in
           match (_x_3 : shape_doc) with
-            | { root = root_2; defs = defs_2 } -> (let _x_4 = store_refusals_gen_type_refusal_c_shape_doc in
+            | { root = root_2; defs = defs_2 } -> (let _x_4 = store_refusals_gen_located_c_shape_doc in
               match (_x_4 : shape_doc) with
                 | { root = root_3; defs = defs_3 } -> (let _x_5 = "Effect4.Tool.Inspection" in
                   let _x_6 = "path" in
@@ -60274,39 +60653,46 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_shape_doc : sh
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_program_gen_eff_ty_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_refusals_gen_type_refusal_c_shape_doc in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_refusals_gen_located_c_shape_doc in
           match (_x_3 : shape_doc) with
             | { root = root_2; defs = defs_2 } -> (let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_view_c_shape_doc in
               match (_x_4 : shape_doc) with
-                | { root = root_3; defs = defs_3 } -> (let _x_5 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_shape_doc in
+                | { root = root_3; defs = defs_3 } -> (let _x_5 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_decl_c_shape_doc in
                   match (_x_5 : shape_doc) with
-                    | { root = root_4; defs = defs_4 } -> (let _x_6 = "Effect4.Tool.DocView" in
-                      let _x_7 = "snap" in
-                      let _x_8 = _x_7, root in
-                      let _x_9 = "type" in
-                      let _x_10 = Shape_option root_1 in
-                      let _x_11 = _x_9, _x_10 in
-                      let _x_12 = "refusals" in
-                      let _x_13 = Shape_list root_2 in
-                      let _x_14 = _x_12, _x_13 in
-                      let _x_15 = "holes" in
-                      let _x_16 = Shape_list root_3 in
-                      let _x_17 = _x_15, _x_16 in
-                      let _x_18 = "inspection" in
-                      let _x_19 = Shape_option root_4 in
-                      let _x_20 = _x_18, _x_19 in
-                      let _x_21 = [] in
-                      let _x_22 = _x_20 :: _x_21 in
-                      let _x_23 = _x_17 :: _x_22 in
-                      let _x_24 = _x_14 :: _x_23 in
-                      let _x_25 = _x_11 :: _x_24 in
-                      let _x_26 = _x_8 :: _x_25 in
-                      let _x_27 = Shape_struct (_x_6, _x_26) in
-                      let _x_28 = defs @ defs_1 in
-                      let _x_29 = _x_28 @ defs_2 in
-                      let _x_30 = _x_29 @ defs_3 in
-                      let _x_31 = _x_30 @ defs_4 in
-                      ({ root = _x_27; defs = _x_31 } : shape_doc))))))
+                    | { root = root_4; defs = defs_4 } -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_shape_doc in
+                      match (_x_6 : shape_doc) with
+                        | { root = root_5; defs = defs_5 } -> (let _x_7 = "Effect4.Tool.DocView" in
+                          let _x_8 = "snap" in
+                          let _x_9 = _x_8, root in
+                          let _x_10 = "type" in
+                          let _x_11 = Shape_option root_1 in
+                          let _x_12 = _x_10, _x_11 in
+                          let _x_13 = "refusals" in
+                          let _x_14 = Shape_list root_2 in
+                          let _x_15 = _x_13, _x_14 in
+                          let _x_16 = "holes" in
+                          let _x_17 = Shape_list root_3 in
+                          let _x_18 = _x_16, _x_17 in
+                          let _x_19 = "declared" in
+                          let _x_20 = Shape_list root_4 in
+                          let _x_21 = _x_19, _x_20 in
+                          let _x_22 = "inspection" in
+                          let _x_23 = Shape_option root_5 in
+                          let _x_24 = _x_22, _x_23 in
+                          let _x_25 = [] in
+                          let _x_26 = _x_24 :: _x_25 in
+                          let _x_27 = _x_21 :: _x_26 in
+                          let _x_28 = _x_18 :: _x_27 in
+                          let _x_29 = _x_15 :: _x_28 in
+                          let _x_30 = _x_12 :: _x_29 in
+                          let _x_31 = _x_9 :: _x_30 in
+                          let _x_32 = Shape_struct (_x_7, _x_31) in
+                          let _x_33 = defs @ defs_1 in
+                          let _x_34 = _x_33 @ defs_2 in
+                          let _x_35 = _x_34 @ defs_3 in
+                          let _x_36 = _x_35 @ defs_4 in
+                          let _x_37 = _x_36 @ defs_5 in
+                          ({ root = _x_32; defs = _x_37 } : shape_doc)))))))
 
 
 
@@ -60389,40 +60775,46 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_receipt_c_shape_doc : 
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Program_46_AddRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_add_refusal_c_shape_doc : shape_doc =
-  let _x_1 = "Effect4.Program.AddRefusal" in
-  let _x_2 = "root" in
-  let _x_3 = 0 in
-  let _x_4 = [] in
-  let _x_5 = _x_3, _x_4 in
-  let _x_6 = _x_2, _x_5 in
-  let _x_7 = "unknownAddress" in
-  let _x_8 = 1 in
-  let _x_9 = _x_8, _x_4 in
-  let _x_10 = _x_7, _x_9 in
-  let _x_11 = "notCertified" in
-  let _x_12 = 2 in
-  let _x_13 = _x_12, _x_4 in
-  let _x_14 = _x_11, _x_13 in
-  let _x_15 = "conflict" in
-  let _x_16 = 3 in
-  let _x_17 = _x_16, _x_4 in
-  let _x_18 = _x_15, _x_17 in
-  let _x_19 = "overlap" in
-  let _x_20 = 4 in
-  let _x_21 = "existing" in
-  let _x_22 = Shape_nat in
-  let _x_23 = Shape_list _x_22 in
-  let _x_24 = _x_21, _x_23 in
-  let _x_25 = _x_24 :: _x_4 in
-  let _x_26 = _x_20, _x_25 in
-  let _x_27 = _x_19, _x_26 in
-  let _x_28 = _x_27 :: _x_4 in
-  let _x_29 = _x_18 :: _x_28 in
-  let _x_30 = _x_14 :: _x_29 in
-  let _x_31 = _x_10 :: _x_30 in
-  let _x_32 = _x_6 :: _x_31 in
-  let _x_33 = Shape_sum (_x_1, _x_32) in
-  ({ root = _x_33; defs = _x_4 } : shape_doc)
+  let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      let _x_4 = _x_2, _x_3 in
+      let _x_5 = "Effect4.Program.AddRefusal" in
+      let _x_6 = "root" in
+      let _x_7 = _x_6, _x_4 in
+      let _x_8 = "unknownAddress" in
+      let _x_9 = 1 in
+      let _x_10 = _x_9, _x_3 in
+      let _x_11 = _x_8, _x_10 in
+      let _x_12 = "notCertified" in
+      let _x_13 = 2 in
+      let _x_14 = "why" in
+      let _x_15 = _x_14, root in
+      let _x_16 = _x_15 :: _x_3 in
+      let _x_17 = _x_13, _x_16 in
+      let _x_18 = _x_12, _x_17 in
+      let _x_19 = "conflict" in
+      let _x_20 = 3 in
+      let _x_21 = _x_20, _x_3 in
+      let _x_22 = _x_19, _x_21 in
+      let _x_23 = "overlap" in
+      let _x_24 = 4 in
+      let _x_25 = "existing" in
+      let _x_26 = Shape_nat in
+      let _x_27 = Shape_list _x_26 in
+      let _x_28 = _x_25, _x_27 in
+      let _x_29 = _x_28 :: _x_3 in
+      let _x_30 = _x_24, _x_29 in
+      let _x_31 = _x_23, _x_30 in
+      let _x_32 = _x_31 :: _x_3 in
+      let _x_33 = _x_22 :: _x_32 in
+      let _x_34 = _x_18 :: _x_33 in
+      let _x_35 = _x_11 :: _x_34 in
+      let _x_36 = _x_7 :: _x_35 in
+      let _x_37 = Shape_sum (_x_5, _x_36) in
+      let _x_38 = defs @ _x_3 in
+      ({ root = _x_37; defs = _x_38 } : shape_doc))
 
 
 
@@ -60431,14 +60823,14 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_add_refusal_c_shape_do
 let store_tool_gen_t_95_root_95__46_effect4_46_program_46_add_outcome_c_shape_doc : shape_doc =
   let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_add_refusal_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = 0 in
-      let _x_4 = "path" in
-      let _x_5 = Shape_nat in
-      let _x_6 = Shape_list _x_5 in
-      let _x_7 = _x_4, _x_6 in
-      let _x_8 = _x_7 :: _x_2 in
-      let _x_9 = _x_3, _x_8 in
+    | { root = root; defs = defs } -> (let _x_2 = 0 in
+      let _x_3 = "path" in
+      let _x_4 = Shape_nat in
+      let _x_5 = [] in
+      let _x_6 = Shape_list _x_4 in
+      let _x_7 = _x_3, _x_6 in
+      let _x_8 = _x_7 :: _x_5 in
+      let _x_9 = _x_2, _x_8 in
       let _x_10 = "Effect4.Program.AddOutcome" in
       let _x_11 = "applied" in
       let _x_12 = _x_11, _x_9 in
@@ -60450,15 +60842,15 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_add_outcome_c_shape_do
       let _x_18 = 2 in
       let _x_19 = "why" in
       let _x_20 = _x_19, root in
-      let _x_21 = _x_20 :: _x_2 in
+      let _x_21 = _x_20 :: _x_5 in
       let _x_22 = _x_7 :: _x_21 in
       let _x_23 = _x_18, _x_22 in
       let _x_24 = _x_17, _x_23 in
-      let _x_25 = _x_24 :: _x_2 in
+      let _x_25 = _x_24 :: _x_5 in
       let _x_26 = _x_16 :: _x_25 in
       let _x_27 = _x_12 :: _x_26 in
       let _x_28 = Shape_sum (_x_10, _x_27) in
-      let _x_29 = _x_2 @ _x_2 in
+      let _x_29 = _x_5 @ defs in
       ({ root = _x_28; defs = _x_29 } : shape_doc))
 
 
@@ -61347,7 +61739,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_suggest_46_evidence_c_
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = "ty" in
       let _x_3 = _x_2, root in
-      let _x_4 = store_refusals_gen_type_refusal_c_shape_doc in
+      let _x_4 = store_refusals_gen_located_c_shape_doc in
       match (_x_4 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_5 = [] in
           let _x_6 = _x_3 :: _x_5 in
@@ -63752,173 +64144,289 @@ let tool_methods_definitions_of (defs : (string * shape) list) (tools : string l
 
 
 
-(* LCNF mono: Effect4.Tool.Methods.argumentSchema (defs : List (Prod String Effect4.Store.Shape)) (tools : List String) (fields : List (Prod String Effect4.Store.Shape)) : String *)
+(* LCNF mono: Effect4.Tool.Methods.fieldsSchema (defs : List (Prod String Effect4.Store.Shape)) (tools : List String) (lazy : Bool) (fields : List (Prod String Effect4.Store.Shape)) : String *)
 
-let tool_methods_argument_schema (defs : (string * shape) list) (tools : string list) (fields : (string * shape) list) : string =
-  let _x_1 = true in
-  let _x_2 = tool_methods_definitions_of defs tools _x_1 fields in
-  match _x_2 with
-    | fst_3, snd_4 -> (let _x_5 = "type" in
-      let _x_6 = "object" in
-      let _x_7 = tool_methods_quote _x_6 in
-      let _x_8 = _x_5, _x_7 in
-      let _x_9 = tool_methods_schema_fields fst_3 fields in
-      let _x_10 = tool_methods_exactly _x_9 in
-      let _x_11 = _x_8 :: _x_10 in
-      let[@local always] _jp_12 = fun _y_13 -> let _x_14 = _x_11 @ _y_13 in
-      tool_methods_object_ _x_14 in
-      let _x_16 = snd_4 = [] in
-      if _x_16 then (let _x_22 = [] in
-        _jp_12 _x_22) else (let _x_17 = "$defs" in
-        let _x_18 = tool_methods_object_ snd_4 in
-        let _x_19 = _x_17, _x_18 in
-        let _x_20 = [] in
-        let _x_21 = _x_19 :: _x_20 in
-        _jp_12 _x_21))
-
-
-
-(* LCNF mono: Effect4.Tool.Methods.descriptions : List (Prod String (Prod String String)) *)
-
-let tool_methods_descriptions : (string * (string * string)) list =
-  let _x_1 = "open_" in
-  let _x_2 = "open" in
-  let _x_3 = "Open a document: a program with holes (the sketch: the program and its hole table) at an application (its host rows, services and types), under a name. It replaces the open document and drops pending fills. Answers the document's view: its snapshot, the program's type or the located refusals of Lean's checker, and every hole with its address and typed focus." in
-  let _x_4 = _x_2, _x_3 in
-  let _x_5 = _x_1, _x_4 in
-  let _x_6 = "edit" in
-  let _x_7 = "Apply one document action at the snapshot you read (`at_`): a commit of several changes under one feed policy, one draft edit, or the revert of an accepted entry. A moved document refuses `stale` and changes nothing. Answers the new view and a receipt of what each change did." in
-  let _x_8 = _x_6, _x_7 in
-  let _x_9 = _x_6, _x_8 in
-  let _x_10 = "fill" in
-  let _x_11 = "Add pending fills at a snapshot: each item puts a program at an address, and each is certified alone against the snapshot's typed source (kept exact). Answers one outcome per item: applied, already there, or refused with its reason. Nothing changes the document until `publish`." in
-  let _x_12 = _x_10, _x_11 in
-  let _x_13 = _x_10, _x_12 in
-  let _x_14 = "publish" in
-  let _x_15 = "Publish the pending fills as one commit at the snapshot they were certified at. Refuses when no fill is pending or the document moved since." in
-  let _x_16 = _x_14, _x_15 in
-  let _x_17 = _x_14, _x_16 in
-  let _x_18 = "reset" in
-  let _x_19 = "Drop the pending fills. Answers the fillings it dropped." in
-  let _x_20 = _x_18, _x_19 in
-  let _x_21 = _x_18, _x_20 in
-  let _x_22 = "start" in
-  let _x_23 = "Admit the document's program at its application and start a live run on the machine, under a budget. Answers the run's id, where it came from, and the run's view: its state, outcome, the host calls it waits on, and its internal waits." in
-  let _x_24 = _x_22, _x_23 in
-  let _x_25 = _x_22, _x_24 in
-  let _x_26 = "restore" in
-  let _x_27 = "Restore a saved run record (from `run` with form `record`): it reruns admission and replays the record's journal, so the restored run is the saved one. Answers the new run id and its view." in
-  let _x_28 = _x_26, _x_27 in
-  let _x_29 = _x_26, _x_28 in
-  let _x_30 = "play" in
-  let _x_31 = "Feed host events to a run in order: control decisions, holding a call, receiving and applying a reply. An event whose call selector does not resolve refuses the whole list and changes nothing. Answers each event's verdict and the run's view." in
-  let _x_32 = _x_30, _x_31 in
-  let _x_33 = _x_30, _x_32 in
-  let _x_34 = "doc" in
-  let _x_35 = "Read the document's view; with an address, also inspect it: the sub-program there, its signature context, its typed focus, its table entry and any refusal there." in
-  let _x_36 = _x_34, _x_35 in
-  let _x_37 = _x_34, _x_36 in
-  let _x_38 = "history" in
-  let _x_39 = "Read the document's accepted actions, oldest first." in
-  let _x_40 = _x_38, _x_39 in
-  let _x_41 = _x_38, _x_40 in
-  let _x_42 = "fills" in
-  let _x_43 = "Read the pending fills and the snapshot they are anchored at." in
-  let _x_44 = _x_42, _x_43 in
-  let _x_45 = _x_42, _x_44 in
-  let _x_46 = "suggest" in
-  let _x_47 = "Suggest programs for a place (a hole by index, or an address with the program expected there): your supplied candidates, the variables in scope, unit requests of the rows and typed sub-programs elsewhere, each checked at the place as a fill would be, with its evidence (fits exactly, type mismatch, refused, another scope). Paged by cursor and limit; the answer gives the next cursor." in
-  let _x_48 = _x_46, _x_47 in
-  let _x_49 = _x_46, _x_48 in
-  let _x_50 = "run" in
-  let _x_51 = "Read a run (by id) in one form: its view, its saved record (for `restore`), or its ordered journal." in
-  let _x_52 = _x_50, _x_51 in
-  let _x_53 = _x_50, _x_52 in
-  let _x_54 = "preview" in
-  let _x_55 = "Run the document's program in the call tree, without starting a run: settle it under a reply tape at the least budget that does not cut it, answer its runs at every budget up to a limit (frames), or explore its paths with replies drawn from the rows' types." in
-  let _x_56 = _x_54, _x_55 in
-  let _x_57 = _x_54, _x_56 in
-  let _x_58 = "dry" in
-  let _x_59 = "Answer an action as if it were applied, and change nothing." in
-  let _x_60 = _x_58, _x_59 in
-  let _x_61 = _x_58, _x_60 in
-  let _x_62 = "discover" in
-  let _x_63 = "List the supported methods and their versions." in
-  let _x_64 = _x_62, _x_63 in
-  let _x_65 = _x_62, _x_64 in
-  let _x_66 = "table" in
-  let _x_67 = "Read the program's whole address table: for every address, the typing environment there and, at a program, Lean's checker answer." in
-  let _x_68 = _x_66, _x_67 in
-  let _x_69 = _x_66, _x_68 in
-  let _x_70 = "addresses" in
-  let _x_71 = "List every address of the program as written, in the table's order." in
-  let _x_72 = _x_70, _x_71 in
-  let _x_73 = _x_70, _x_72 in
-  let _x_74 = "slots" in
-  let _x_75 = "Read the term slots of the node at an address (one named slot, or every slot): each slot's term, the environment it reads and its type there." in
-  let _x_76 = _x_74, _x_75 in
-  let _x_77 = _x_74, _x_76 in
-  let _x_78 = [] in
-  let _x_79 = _x_77 :: _x_78 in
-  let _x_80 = _x_73 :: _x_79 in
-  let _x_81 = _x_69 :: _x_80 in
-  let _x_82 = _x_65 :: _x_81 in
-  let _x_83 = _x_61 :: _x_82 in
-  let _x_84 = _x_57 :: _x_83 in
-  let _x_85 = _x_53 :: _x_84 in
-  let _x_86 = _x_49 :: _x_85 in
-  let _x_87 = _x_45 :: _x_86 in
-  let _x_88 = _x_41 :: _x_87 in
-  let _x_89 = _x_37 :: _x_88 in
-  let _x_90 = _x_33 :: _x_89 in
-  let _x_91 = _x_29 :: _x_90 in
-  let _x_92 = _x_25 :: _x_91 in
-  let _x_93 = _x_21 :: _x_92 in
-  let _x_94 = _x_17 :: _x_93 in
-  let _x_95 = _x_13 :: _x_94 in
-  let _x_96 = _x_9 :: _x_95 in
-  _x_5 :: _x_96
+let tool_methods_fields_schema (defs : (string * shape) list) (tools : string list) (lazy_ : bool) (fields : (string * shape) list) : string =
+  let _x_1 = tool_methods_definitions_of defs tools lazy_ fields in
+  match _x_1 with
+    | fst_2, snd_3 -> (let _x_4 = "type" in
+      let _x_5 = "object" in
+      let _x_6 = tool_methods_quote _x_5 in
+      let _x_7 = _x_4, _x_6 in
+      let _x_8 = tool_methods_schema_fields fst_2 fields in
+      let _x_9 = tool_methods_exactly _x_8 in
+      let _x_10 = _x_7 :: _x_9 in
+      let[@local always] _jp_11 = fun _y_12 -> let _x_13 = _x_10 @ _y_12 in
+      tool_methods_object_ _x_13 in
+      let _x_15 = snd_3 = [] in
+      if _x_15 then (let _x_21 = [] in
+        _jp_11 _x_21) else (let _x_16 = "$defs" in
+        let _x_17 = tool_methods_object_ snd_3 in
+        let _x_18 = _x_16, _x_17 in
+        let _x_19 = [] in
+        let _x_20 = _x_18 :: _x_19 in
+        _jp_11 _x_20))
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Methods.entries.spec_1 (fst.1 : String) (fst.2 : String) (a.3 : List (Prod String (Prod Nat (List (Prod String Effect4.Store.Shape))))) (a.4 : List Effect4.Tool.Methods.Entry) : List Effect4.Tool.Methods.Entry *)
+(* LCNF mono: Effect4.Tool.Methods.docSchema (tools : List String) (lazy : Bool) (doc : Effect4.Store.ShapeDoc) : String *)
 
-let rec list_map_tr_loop_at_tool_methods_entries_spec_1 (fst_1 : string) (fst_2 : string) (a_3 : (string * (int * (string * shape) list)) list) (a_4 : effect4_tool_methods_entry list) : effect4_tool_methods_entry list =
-  match a_3 with
-    | [] -> List.rev a_4
-    | head_6 :: tail_7 -> (match head_6 with
-        | fst_8, snd_9 -> (match snd_9 with
-            | _, snd_11 -> (let _x_12 = tool_methods_groups in
-              let _x_13 = [] in
-              let tools = list_map_tr_loop_at_tool_methods_entries_spec_0 _x_12 _x_13 in
-              let[@local always] _jp_14 = fun fst_15 snd_16 -> let _x_17 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_request_c_shape_doc in
-              match (_x_17 : shape_doc) with
-                | { defs = defs; _ } -> (let _x_18 = tool_methods_argument_schema defs tools snd_11 in
-                  let _x_19 = ({ name = fst_15; description = snd_16; kind = fst_1; field = fst_2; case_name = fst_8; schema = _x_18 } : effect4_tool_methods_entry) in
-                  let _x_20 = _x_19 :: a_4 in
-                  list_map_tr_loop_at_tool_methods_entries_spec_1 fst_1 fst_2 tail_7 _x_20) in
-              let _x_22 = tool_methods_descriptions in
-              let _x_23 = list_lookup_at_store_arrays_fields_spec_2 fst_8 _x_22 in
-              match _x_23 with
-                | None -> (let _x_24 = "" in
-                  _jp_14 fst_8 _x_24)
-                | Some val__25 -> (match val__25 with
-                    | fst_26, snd_27 -> _jp_14 fst_26 snd_27))))
+let tool_methods_doc_schema (tools : string list) (lazy_ : bool) (doc : shape_doc) : string =
+  match (doc : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_1 = store_head_shape defs root in
+      match (_x_1 : shape) with
+        | Shape_struct (_, fields_3) -> tool_methods_fields_schema defs tools lazy_ fields_3
+        | _ -> (let _x_5 = "" in
+          let _x_6 = _x_5, _x_1 in
+          let _x_7 = [] in
+          let _x_8 = _x_6 :: _x_7 in
+          let _x_9 = tool_methods_definitions_of defs tools lazy_ _x_8 in
+          match _x_9 with
+            | fst_10, snd_11 -> (let _x_12 = "type" in
+              let _x_13 = "object" in
+              let _x_14 = tool_methods_quote _x_13 in
+              let _x_15 = _x_12, _x_14 in
+              let _x_16 = "allOf" in
+              let _x_17 = tool_methods_schema_in fst_10 _x_1 in
+              let _x_18 = _x_17 :: _x_7 in
+              let _x_19 = tool_methods_array _x_18 in
+              let _x_20 = _x_16, _x_19 in
+              let _x_21 = _x_20 :: _x_7 in
+              let _x_22 = _x_15 :: _x_21 in
+              let[@local always] _jp_23 = fun _y_24 -> let _x_25 = _x_22 @ _y_24 in
+              tool_methods_object_ _x_25 in
+              let _x_27 = snd_11 = [] in
+              if _x_27 then _jp_23 _x_7 else (let _x_28 = "$defs" in
+                let _x_29 = tool_methods_object_ snd_11 in
+                let _x_30 = _x_28, _x_29 in
+                let _x_31 = _x_30 :: _x_7 in
+                _jp_23 _x_31))))
 
 
 
-(* LCNF mono: _private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Tool.Methods.entries.spec_2 (a.1 : List (Prod String (Prod String (Prod String (List (Prod String (Prod Nat (List (Prod String Effect4.Store.Shape))))))))) (a.2 : Array Effect4.Tool.Methods.Entry) : List Effect4.Tool.Methods.Entry *)
+(* LCNF mono: Effect4.Tool.Methods.replySchema : String *)
 
-let rec list_flat_map_tr_go_at_tool_methods_entries_spec_2 (a_1 : (string * (string * (string * (string * (int * (string * shape) list)) list))) list) (a_2 : effect4_tool_methods_entry Lcnf_array.t) : effect4_tool_methods_entry list =
+let tool_methods_reply_schema : string =
+  let _x_1 = [] in
+  let _x_2 = false in
+  let _x_3 = store_tool_gen_t_64__95_root_95__46_effect4_46_tool_46_wire_46_envelope_32__40__95_root_95__46_effect4_46_tool_46_reply_41_c_shape_doc in
+  tool_methods_doc_schema _x_1 _x_2 _x_3
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.caseName (k : Effect4.Tool.MethodKey) : String *)
+
+let tool_method_key_case_name (k : method_key) : string =
+  match (k : method_key) with
+    | MethodKey_open_ -> "open_"
+    | MethodKey_edit -> "edit"
+    | MethodKey_fill -> "fill"
+    | MethodKey_publish -> "publish"
+    | MethodKey_reset -> "reset"
+    | MethodKey_start -> "start"
+    | MethodKey_restore -> "restore"
+    | MethodKey_play -> "play"
+    | MethodKey_doc -> "doc"
+    | MethodKey_history -> "history"
+    | MethodKey_fills -> "fills"
+    | MethodKey_suggest -> "suggest"
+    | MethodKey_run -> "run"
+    | MethodKey_preview -> "preview"
+    | MethodKey_dry -> "dry"
+    | MethodKey_discover -> "discover"
+    | MethodKey_table -> "table"
+    | MethodKey_addresses -> "addresses"
+    | MethodKey_slots -> "slots"
+
+
+
+(* LCNF mono: List.find?._at_.Effect4.Tool.Methods.caseOf.spec_0 (k : Effect4.Tool.MethodKey) (x.1 : List (Prod String (Prod Nat (List (Prod String Effect4.Store.Shape))))) : Option (Prod String (Prod Nat (List (Prod String Effect4.Store.Shape)))) *)
+
+let rec list_find_opt_at_tool_methods_case_of_spec_0 (k : method_key) (x_1 : (string * (int * (string * shape) list)) list) : (string * (int * (string * shape) list)) option =
+  match x_1 with
+    | [] -> None
+    | head_3 :: tail_4 -> (match head_3 with
+        | fst_1, _ -> (let _x_5 = tool_method_key_case_name k in
+          let _x_6 = fst_1 = _x_5 in
+          if _x_6 then Some head_3 else list_find_opt_at_tool_methods_case_of_spec_0 k tail_4))
+
+
+
+(* LCNF mono: List.findSome?._at_.Effect4.Tool.Methods.caseOf.spec_1 (k : Effect4.Tool.MethodKey) (x.1 : List (Prod String (Prod String (Prod String (List (Prod String (Prod Nat (List (Prod String Effect4.Store.Shape))))))))) : Option (Prod String (Prod String (List (Prod String Effect4.Store.Shape)))) *)
+
+let rec list_find_some_opt_at_tool_methods_case_of_spec_1 (k : method_key) (x_1 : (string * (string * (string * (string * (int * (string * shape) list)) list))) list) : (string * (string * (string * shape) list)) option =
+  match x_1 with
+    | [] -> None
+    | head_3 :: tail_4 -> (match head_3 with
+        | fst_5, snd_6 -> (match snd_6 with
+            | fst_7, snd_8 -> (match snd_8 with
+                | _, snd_10 -> (let _x_11 = list_find_opt_at_tool_methods_case_of_spec_0 k snd_10 in
+                  match _x_11 with
+                    | None -> list_find_some_opt_at_tool_methods_case_of_spec_1 k tail_4
+                    | Some val__13 -> (match val__13 with
+                        | _, snd_1 -> (match snd_1 with
+                            | _, snd_2 -> (let _x_14 = fst_7, snd_2 in
+                              let _x_15 = fst_5, _x_14 in
+                              Some _x_15)))))))
+
+
+
+(* LCNF mono: Effect4.Tool.Methods.caseOf (k : Effect4.Tool.MethodKey) : Option (Prod String (Prod String (List (Prod String Effect4.Store.Shape)))) *)
+
+let tool_methods_case_of (k : method_key) : (string * (string * (string * shape) list)) option =
+  let _x_1 = tool_methods_groups in
+  list_find_some_opt_at_tool_methods_case_of_spec_1 k _x_1
+
+
+
+(* LCNF mono: Effect4.Tool.Methods.caseFor (k : Effect4.Tool.MethodKey) : Prod String (Prod String (List (Prod String Effect4.Store.Shape))) *)
+
+let tool_methods_case_for (k : method_key) : string * (string * (string * shape) list) =
+  let _x_1 = tool_methods_case_of k in
+  match _x_1 with
+    | None -> assert false
+    | Some val__2 -> val__2
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.kind (k : Effect4.Tool.MethodKey) : Effect4.Tool.MethodKind *)
+
+let tool_method_key_kind (k : method_key) : method_kind =
+  match (k : method_key) with
+    | MethodKey_open_ -> MethodKind_action
+    | MethodKey_edit -> MethodKind_action
+    | MethodKey_fill -> MethodKind_action
+    | MethodKey_publish -> MethodKind_action
+    | MethodKey_reset -> MethodKind_action
+    | MethodKey_start -> MethodKind_action
+    | MethodKey_restore -> MethodKind_action
+    | MethodKey_play -> MethodKind_action
+    | _ -> MethodKind_query
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.description (x.1 : Effect4.Tool.MethodKey) : String *)
+
+let tool_method_key_description (x_1 : method_key) : string =
+  match (x_1 : method_key) with
+    | MethodKey_open_ -> "Open a document: a program with holes (the sketch: the program and its hole table) at an application (its host rows, services and types), under a name. It replaces the open document and drops pending fills. Answers the document's view: its snapshot, the program's type or the located refusals of Lean's checker, every hole occurrence with its address and typed focus, and every declared hole with the exact program that performs it (with n application rows, hole k is external row n + k) and whether the program performs it."
+    | MethodKey_edit -> "Apply one document action at the snapshot you read (`at_`): a commit of several changes under one feed policy, one draft edit, or the revert of an accepted entry. A moved document refuses `stale` and changes nothing. A refused change names its item and its reason, located at the program's own address; a kept-exact commit at a document whose root does not type refuses `rootRefused`, and a draft edit repairs it. Answers the new view and a receipt of what each change did."
+    | MethodKey_fill -> "Add pending fills at a snapshot: each item puts a program at an address, and each is certified alone against the snapshot's typed source (kept exact). Answers one outcome per item: applied, already there, or refused with its reason, a refused certification with the feed's own refusal at the program's address. Nothing changes the document until `publish`."
+    | MethodKey_publish -> "Publish the pending fills as one commit at the snapshot they were certified at. Refuses when no fill is pending or the document moved since."
+    | MethodKey_reset -> "Drop the pending fills. Answers the fillings it dropped."
+    | MethodKey_start -> "Admit the document's program at its application and start a live run on the machine, under a budget. A program that does not type is refused with the checker's refusal at its address. Answers the run's id, where it came from, and the run's view: its state, outcome, the host calls it waits on, and its internal waits."
+    | MethodKey_restore -> "Restore a saved run record (from `run` with form `record`): it reruns admission and replays the record's journal, so the restored run is the saved one. Answers the new run id and its view."
+    | MethodKey_play -> "Feed host events to a run in order: control decisions, holding a call, receiving and applying a reply. An event whose call selector does not resolve refuses the whole list and changes nothing. Answers each event's verdict and the run's view."
+    | MethodKey_doc -> "Read the document's view: its type or its located refusals, its hole occurrences, and every declared hole with its exact `perform` program; with an address, also inspect it: the sub-program there, its signature context, its typed focus, its table entry and any refusal there."
+    | MethodKey_history -> "Read the document's accepted actions, oldest first."
+    | MethodKey_fills -> "Read the pending fills and the snapshot they are anchored at."
+    | MethodKey_suggest -> "Suggest programs for a place (a hole by index, or an address with the program expected there): your supplied candidates, the variables in scope, unit requests of the rows and typed sub-programs elsewhere, each checked at the place as a fill would be, with its evidence (fits exactly, type mismatch, refused at its address, another scope). The place's own program and the programs that enclose the place are not offered. Paged by cursor and limit; the answer gives the next cursor."
+    | MethodKey_run -> "Read a run (by id) in one form: its view, its saved record (for `restore`), or its ordered journal."
+    | MethodKey_preview -> "Run the document's program in the call tree, without starting a run: settle it under a reply tape at the least budget that does not cut it, answer its runs at every budget up to a limit (frames), or explore its paths with replies drawn from the rows' types."
+    | MethodKey_dry -> "Answer an action as if it were applied, and change nothing."
+    | MethodKey_discover -> "List the supported methods and their versions."
+    | MethodKey_table -> "Read the program's whole address table: for every address, the typing environment there and, at a program, Lean's checker answer."
+    | MethodKey_addresses -> "List every address of the program as written, in the table's order."
+    | MethodKey_slots -> "Read the term slots of the node at an address (one named slot, or every slot): each slot's term, the environment it reads and its type there."
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKind.ctorIdx (x : Effect4.Tool.MethodKind) : Nat *)
+
+let tool_method_kind_ctor_idx (x : method_kind) : int =
+  match (x : method_kind) with
+    | MethodKind_action -> 0
+    | MethodKind_query -> 1
+
+
+
+(* LCNF mono: Effect4.Tool.instDecidableEqMethodKind (x.1 : Effect4.Tool.MethodKind) (y.2 : Effect4.Tool.MethodKind) : Bool *)
+
+let tool_inst_decidable_eq_method_kind (x_1 : method_kind) (y_2 : method_kind) : bool =
+  let _x_3 = tool_method_kind_ctor_idx x_1 in
+  let _x_4 = tool_method_kind_ctor_idx y_2 in
+  _x_3 = _x_4
+
+
+
+(* LCNF mono: Effect4.Tool.MethodKey.hints (x.1 : Effect4.Tool.MethodKey) : Effect4.Tool.MethodHints *)
+
+let tool_method_key_hints (x_1 : method_key) : method_hints =
+  let[@local always] _jp_2 = fun () -> let _x_3 = false in
+  ({ destructive = _x_3; idempotent = _x_3; open_world = _x_3 } : method_hints) in
+  match (x_1 : method_key) with
+    | MethodKey_open_ -> (let _x_5 = true in
+      let _x_6 = false in
+      ({ destructive = _x_5; idempotent = _x_6; open_world = _x_6 } : method_hints))
+    | MethodKey_reset -> (let _x_8 = true in
+      let _x_9 = false in
+      ({ destructive = _x_8; idempotent = _x_8; open_world = _x_9 } : method_hints))
+    | MethodKey_start -> _jp_2 ()
+    | MethodKey_restore -> _jp_2 ()
+    | MethodKey_play -> _jp_2 ()
+    | _ -> (let _x_11 = false in
+      let _x_12 = true in
+      ({ destructive = _x_11; idempotent = _x_12; open_world = _x_11 } : method_hints))
+
+
+
+(* LCNF mono: Effect4.Tool.methodDescriptor (k : Effect4.Tool.MethodKey) : Effect4.Tool.MethodDescriptor *)
+
+let tool_method_descriptor (k : method_key) : method_descriptor =
+  let _x_1 = tool_method_key_name k in
+  let _x_2 = tool_method_key_kind k in
+  let _x_3 = tool_method_key_versions k in
+  let _x_4 = tool_method_key_case_name k in
+  let _x_5 = tool_methods_case_for k in
+  match _x_5 with
+    | _, snd_1 -> (match snd_1 with
+        | _, snd_2 -> (let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_request_c_shape_doc in
+          match (_x_6 : shape_doc) with
+            | { defs = defs; _ } -> (let _x_7 = Shape_struct (_x_4, snd_2) in
+              let _x_8 = ({ root = _x_7; defs = defs } : shape_doc) in
+              let _x_9 = store_tool_gen_t_64__95_root_95__46_effect4_46_tool_46_wire_46_envelope_32__40__95_root_95__46_effect4_46_tool_46_reply_41_c_shape_doc in
+              let _x_10 = tool_method_key_description k in
+              let _x_11 = MethodKind_query in
+              let _x_12 = tool_inst_decidable_eq_method_kind _x_2 _x_11 in
+              let _x_13 = tool_method_key_hints k in
+              ({ name = _x_1; kind = _x_2; versions = _x_3; arguments = _x_8; result = _x_9; description = _x_10; read_only = _x_12; hints = _x_13 } : method_descriptor))))
+
+
+
+(* LCNF mono: Effect4.Tool.Methods.listingOf (tools : List String) (output : String) (d : Effect4.Tool.MethodDescriptor) : Effect4.Tool.Methods.Listing *)
+
+let tool_methods_listing_of (tools : string list) (output : string) (d : method_descriptor) : listing =
+  match (d : method_descriptor) with
+    | { name = name; arguments = arguments; description = description; read_only = read_only; hints = hints; _ } -> (match (hints : method_hints) with
+        | { destructive = destructive; idempotent = idempotent; open_world = open_world } -> (let _x_1 = true in
+          let _x_2 = tool_methods_doc_schema tools _x_1 arguments in
+          ({ name = name; description = description; input_schema = _x_2; output_schema = output; read_only = read_only; destructive = destructive; idempotent = idempotent; open_world = open_world } : listing)))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Tool.Methods.entriesAt.spec_0 (tools : List String) (output : String) (a.1 : List Effect4.Tool.MethodKey) (a.2 : List Effect4.Tool.Methods.Entry) : List Effect4.Tool.Methods.Entry *)
+
+let rec list_map_tr_loop_at_tool_methods_entries_at_spec_0 (tools : string list) (output : string) (a_1 : method_key list) (a_2 : effect4_tool_methods_entry list) : effect4_tool_methods_entry list =
   match a_1 with
-    | [] -> Lcnf_array.to_list a_2
-    | head_4 :: tail_5 -> (match head_4 with
-        | fst_6, snd_7 -> (match snd_7 with
-            | fst_8, snd_9 -> (match snd_9 with
-                | _, snd_11 -> (let _x_12 = [] in
-                  let _x_13 = list_map_tr_loop_at_tool_methods_entries_spec_1 fst_6 fst_8 snd_11 _x_12 in
-                  let _x_14 = Lcnf_array.append_list a_2 _x_13 in
-                  list_flat_map_tr_go_at_tool_methods_entries_spec_2 tail_5 _x_14))))
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = tool_methods_case_for head_4 in
+      match _x_6 with
+        | fst_7, snd_8 -> (match snd_8 with
+            | fst_9, _ -> (let _x_11 = tool_method_descriptor head_4 in
+              let _x_12 = tool_methods_listing_of tools output _x_11 in
+              let _x_13 = tool_method_key_case_name head_4 in
+              let _x_14 = ({ listing = _x_12; kind = fst_7; field = fst_9; case_name = _x_13 } : effect4_tool_methods_entry) in
+              let _x_15 = _x_14 :: a_2 in
+              list_map_tr_loop_at_tool_methods_entries_at_spec_0 tools output tail_5 _x_15)))
+
+
+
+(* LCNF mono: Effect4.Tool.Methods.entriesAt (tools : List String) (output : String) : List Effect4.Tool.Methods.Entry *)
+
+let tool_methods_entries_at (tools : string list) (output : string) : effect4_tool_methods_entry list =
+  let _x_1 = tool_method_key_all in
+  let _x_2 = [] in
+  list_map_tr_loop_at_tool_methods_entries_at_spec_0 tools output _x_1 _x_2
 
 
 
@@ -63926,9 +64434,10 @@ let rec list_flat_map_tr_go_at_tool_methods_entries_spec_2 (a_1 : (string * (str
 
 let tool_methods_entries : effect4_tool_methods_entry list =
   let _x_1 = tool_methods_groups in
-  let _x_2 = 0 in
-  let _x_3 = Lcnf_array.with_capacity _x_2 in
-  list_flat_map_tr_go_at_tool_methods_entries_spec_2 _x_1 _x_3
+  let _x_2 = [] in
+  let _x_3 = list_map_tr_loop_at_tool_methods_entries_spec_0 _x_1 _x_2 in
+  let _x_4 = tool_methods_reply_schema in
+  tool_methods_entries_at _x_3 _x_4
 
 
 
@@ -64014,8 +64523,29 @@ let tool_methods_describe : describe =
       let _x_14 = _x_7, _x_13 in
       let _x_15 = _x_14 :: _x_2 in
       let _x_16 = tool_methods_object_schema _x_15 in
-      let _x_17 = list_map_tr_loop_at_tool_methods_describe_spec_1 names _x_2 in
-      ({ name = _x_5; description = _x_6; schema = _x_16; answers = _x_17 } : describe))
+      let _x_17 = "$ref" in
+      let _x_18 = "type" in
+      let _x_19 = "string" in
+      let _x_20 = tool_methods_quote _x_19 in
+      let _x_21 = _x_18, _x_20 in
+      let _x_22 = _x_21 :: _x_2 in
+      let _x_23 = tool_methods_object_ _x_22 in
+      let _x_24 = _x_17, _x_23 in
+      let _x_25 = "$defs" in
+      let _x_26 = "object" in
+      let _x_27 = tool_methods_quote _x_26 in
+      let _x_28 = _x_18, _x_27 in
+      let _x_29 = _x_28 :: _x_2 in
+      let _x_30 = tool_methods_object_ _x_29 in
+      let _x_31 = _x_25, _x_30 in
+      let _x_32 = _x_31 :: _x_2 in
+      let _x_33 = _x_24 :: _x_32 in
+      let _x_34 = tool_methods_object_schema _x_33 in
+      let _x_35 = true in
+      let _x_36 = false in
+      let _x_37 = ({ name = _x_5; description = _x_6; input_schema = _x_16; output_schema = _x_34; read_only = _x_35; destructive = _x_36; idempotent = _x_35; open_world = _x_36 } : listing) in
+      let _x_38 = list_map_tr_loop_at_tool_methods_describe_spec_1 names _x_2 in
+      ({ listing = _x_37; answers = _x_38 } : describe))
 
 
 

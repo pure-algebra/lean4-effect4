@@ -460,7 +460,7 @@ private def badEditedReadKey : Option (Except Api.BuildRefusal Api.Built) := do
 
 #guard badEditedReadKey.map (fun result => match result with
   | .error (.typing refusal) => some refusal
-  | _ => none) = some (some ⟨[1], .term (.var 1)⟩)
+  | _ => none) = some (some ⟨[1], .unboundVariable [] 1 1⟩)
 
 -- Identical local layer types can still erase a reference target elsewhere in the tree.
 private def rebuildLeaf : LayerTerm NativeOp := .succeed Counter.key (.nat 7)

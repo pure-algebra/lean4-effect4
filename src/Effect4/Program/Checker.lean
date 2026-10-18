@@ -122,6 +122,9 @@ def term? (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) : Except 
       | some (.record why) => .recordTerm why
       | some (.tuple why) => .tupleTerm why
       | some (.fold why) => .foldTerm why
+      | some (.unbound path index depth) => .unboundVariable path index depth
+      | some (.unknownAtom path atom) => .unknownAtom path atom
+      | some (.refusedArguments path atom args) => .refusedArguments path atom args
       | none => .term t⟩
 
 /-- A cause's type, or a located explanation when a leaf term failed. -/

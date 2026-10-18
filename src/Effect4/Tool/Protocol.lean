@@ -1,4 +1,5 @@
 import Effect4.Tool.Origin
+import Effect4.Tool.RequestSyntax
 import Effect4.Program.Typing.FillSet
 import Effect4.Program.Typing.Suggest
 import Effect4.Run.LiveRecord
@@ -17,6 +18,12 @@ stored, replayed and compared across drivers. `Tool.serve` (`Tool/Serve.lean`) o
   its view, the inspection at an address, the whole address table, the addresses, and the term
   slots of a node.
 - A `Reply` carries the answer or one located `Refusal`, and the current snapshot.
+
+One declaration owns the methods (`tool_requests`, `Tool/RequestSyntax.lean`). It declares the two
+sums from their cases, and beside them the finite `MethodKey`, one key for each case, with its wire
+name and its kind. `Request.method` and `supportedMethods` read the keys. The method table
+(`methodDescriptor`, `Tool/Methods.lean`) holds the same names and versions, with each method's
+shapes, what it does and its hints.
 
 Three outcome kinds stay apart: a refused request leaves the state unchanged; a refused item inside
 a fill batch is an outcome inside an accepted answer; a run command whose phase refuses is recorded
@@ -41,41 +48,52 @@ inductive PreviewQuery where
   | frames (tape : List Machine.ExitV) (limit : Nat)
   | explore (budget width : Nat)
 
+/-- **A method's kind**: an action changes the state when it is accepted, and a query reads it. -/
+inductive MethodKind where
+  | action
+  | query
+deriving DecidableEq
+
+tool_requests
+  actions [
+    | open_ (name : String) (app : SigApp) (sketch : Sketch) wire "open"
+    | edit (at_ : Program.Snap) (a : Program.DocAction)
+    /-- pending additions: per-item outcomes inside a successful answer -/
+    | fill (at_ : Program.Snap) (batch : List (List Nat × NativeEff))
+    | publish (at_ : Program.Snap)
+    | reset
+    | start (at_ : Program.Snap) (budget : Api.Budget)
+    | restore (record : LiveRecord)
+    /-- events folded over a temporary run; an unresolved selector refuses the whole request -/
+    | play (run : RunId) (events : List Run.Event)
+  ]
+  queries [
+    | doc (at_ : Option (List Nat))
+    | history
+    | fills
+    | suggest (at_ : Program.Snap) (place : Program.Place) (supplied : List NativeEff)
+        (cursor limit : Nat)
+    | run (id : RunId) (form : RunForm)
+    | preview (q : PreviewQuery)
+    | dry (a : Action)
+    /-- the supported method versions; selection is the connection's, outside the state -/
+    | discover
+    /-- the whole address table, one entry for each address of the program as written -/
+    | table
+    /-- the addresses of the program as written, in the table's order -/
+    | addresses
+    /-- the term slots of the node at an address: the one slot named, or every slot -/
+    | slots (at_ : List Nat) (slot : Option ExtSlot)
+  ]
+
 /-- **A request that changes the state when accepted.** -/
-inductive Action where
-  | open_ (name : String) (app : SigApp) (sketch : Sketch)
-  | edit (at_ : Program.Snap) (a : Program.DocAction)
-  /-- pending additions: per-item outcomes inside a successful answer -/
-  | fill (at_ : Program.Snap) (batch : List (List Nat × NativeEff))
-  | publish (at_ : Program.Snap)
-  | reset
-  | start (at_ : Program.Snap) (budget : Api.Budget)
-  | restore (record : LiveRecord)
-  /-- events folded over a temporary run; an unresolved selector refuses the whole request -/
-  | play (run : RunId) (events : List Run.Event)
+add_decl_doc Action
 
 /-- **A request that reads the state.** -/
-inductive Query where
-  | doc (at_ : Option (List Nat))
-  | history
-  | fills
-  | suggest (at_ : Program.Snap) (place : Program.Place) (supplied : List NativeEff) (cursor limit : Nat)
-  | run (id : RunId) (form : RunForm)
-  | preview (q : PreviewQuery)
-  | dry (a : Action)
-  /-- the supported method versions; selection is the connection's, outside the state -/
-  | discover
-  /-- the whole address table, one entry for each address of the program as written -/
-  | table
-  /-- the addresses of the program as written, in the table's order -/
-  | addresses
-  /-- the term slots of the node at an address: the one slot named, or every slot -/
-  | slots (at_ : List Nat) (slot : Option ExtSlot)
+add_decl_doc Query
 
 /-- **A request**: an action or a query. -/
-inductive Request where
-  | act (a : Action)
-  | ask (q : Query)
+add_decl_doc Request
 
 /-- **One hole occurrence** in the document: its row, its address and its typed focus. -/
 structure HoleView where
@@ -83,6 +101,17 @@ structure HoleView where
   row : Program.Row
   path : List Nat
   focus : Option (TyEnv × EffTy)
+
+/-- **One declared hole**: its index in the hole table, its name, the exact program that performs
+it (`Sketch.hole`: the row after the application's rows, on a unit request), and whether the
+program performs it anywhere. A declared hole the program never performs shows here: hole 0 of
+an application with one row is `external 1`, never `external 0`. -/
+structure HoleDecl where
+  index : Nat
+  name : String
+  perform : NativeEff
+  performed : Bool
+deriving DecidableEq
 
 /-- **What the tool answers at an address**: the sub-program, its signature context, its focus,
 its table entry and any refusal there. -/
@@ -102,13 +131,14 @@ structure SlotView where
   env : Option TyEnv
   ty : Option Ty
 
-/-- **What the tool shows of a document**: snapshot, root type, refusals, holes and an optional
-inspection. -/
+/-- **What the tool shows of a document**: snapshot, root type, refusals, every hole occurrence,
+every declared hole with its exact `perform` term, and an optional inspection. -/
 structure DocView where
   snap : Program.Snap
   type : Option EffTy
   refusals : List TypeRefusal
   holes : List HoleView
+  declared : List HoleDecl
   inspection : Option Inspection
 
 /-- In this order: `noDocument`, then the document's own (`foreign`, `stale`, …), then the action's. -/
@@ -183,38 +213,21 @@ structure Reply where
   now : Option Program.Snap
 
 
-/-- **A request's method name**, as the wire and `discover` spell it. -/
-def Request.method : Request → String
-  | .act (.open_ ..) => "open"
-  | .act (.edit ..) => "edit"
-  | .act (.fill ..) => "fill"
-  | .act (.publish ..) => "publish"
-  | .act .reset => "reset"
-  | .act (.start ..) => "start"
-  | .act (.restore ..) => "restore"
-  | .act (.play ..) => "play"
-  | .ask (.doc ..) => "doc"
-  | .ask .history => "history"
-  | .ask .fills => "fills"
-  | .ask (.suggest ..) => "suggest"
-  | .ask (.run ..) => "run"
-  | .ask (.preview ..) => "preview"
-  | .ask (.dry ..) => "dry"
-  | .ask .discover => "discover"
-  | .ask .table => "table"
-  | .ask .addresses => "addresses"
-  | .ask (.slots ..) => "slots"
+/-- **A method's versions**: every method is at version 1. -/
+def MethodKey.versions (_ : MethodKey) : List Nat := [1]
 
-/-- **The supported methods**, each at version 1 (`method_supported`). Selection is the connection's,
-outside the state. -/
+/-- **A request's method name**, as the wire and `discover` spell it: its key's wire name, which
+is its descriptor's name (`method_name_agrees`, `Laws/Tool/Wire.lean`). -/
+def Request.method (r : Request) : String := r.methodKey.name
+
+/-- **The supported methods**: every key's wire name with its versions, in the keys' order, as the
+descriptors hold them (`supportedMethods_descriptors`, `Laws/Tool/Wire.lean`). Selection is the
+connection's, outside the state. -/
 def supportedMethods : List (String × List Nat) :=
-  ["open","edit","fill","publish","reset","start","restore","play",
-    "doc","history","fills","suggest","run","preview","dry","discover","table","addresses",
-    "slots"].map
-    fun name => (name,[1])
+  MethodKey.all.map fun k => (k.name, k.versions)
 
-/-- Every request's method is supported: a new request fails this proof until `supportedMethods`
-lists its method. -/
+/-- Every request's method is supported: the supported methods are every key's, and each request
+has a key. -/
 theorem method_supported (r : Request) : (supportedMethods.lookup r.method).isSome = true := by
   cases r with
   | act a => cases a <;> rfl

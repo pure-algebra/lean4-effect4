@@ -19,8 +19,8 @@
 --    Effect4.Live.WaitView Effect4.Live.View Effect4.Run.Preview.Refusal Effect4.Run.Tree.Step \
 --    Effect4.Run.Tree.Stop Effect4.Run.Tree.Path Effect4.Tool.Origin Effect4.Tool.RunId \
 --    Effect4.Tool.RunForm Effect4.Tool.PreviewQuery Effect4.Tool.Action Effect4.Program.ExtSlot \
---    Effect4.Tool.Query Effect4.Tool.Request Effect4.Tool.HoleView Effect4.Tool.SlotView \
---    Effect4.Tool.Inspection Effect4.Tool.DocView Effect4.Tool.Refusal \
+--    Effect4.Tool.Query Effect4.Tool.Request Effect4.Tool.HoleView Effect4.Tool.HoleDecl \
+--    Effect4.Tool.SlotView Effect4.Tool.Inspection Effect4.Tool.DocView Effect4.Tool.Refusal \
 --    Effect4.Tool.ActionAnswer Except@Effect4.Tool.Refusal@Effect4.Tool.ActionAnswer \
 --    Effect4.Program.Suggest.Suggestion Effect4.Tool.RunAnswer Effect4.Tool.PreviewRun \
 --    Effect4.Tool.PreviewAnswer Effect4.Tool.Answer \
@@ -895,16 +895,17 @@ def shapeDoc : ShapeDoc :=
         ("focus", (shape (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy))).root),
         ("verdict", (shape (@_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy))).root)]),
       ("refused", 3, [("why", (shape (@_root_.List (_root_.Effect4.Program.TypeRefusal))).root)]),
-      ("typeChanged", 4, [("old", (shape (@_root_.Option (_root_.Effect4.Program.EffTy))).root),
+      ("typeChanged", 4, [("old", (shape _root_.Effect4.Program.EffTy).root),
         ("new", (shape _root_.Effect4.Program.EffTy).root)]),
       ("localChanged", 5, [
         ("old", (shape (@_root_.Option (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy)))).root),
-        ("new", (shape (@_root_.Option (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy)))).root)])],
+        ("new", (shape (@_root_.Option (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy)))).root)]),
+      ("rootRefused", 6, [
+        ("refusals", (shape (@_root_.List (_root_.Effect4.Program.TypeRefusal))).root)])],
    (shape (@_root_.List (_root_.Nat))).defs ++
      (shape (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy))).defs ++
      (shape (@_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy))).defs ++
      (shape (@_root_.List (_root_.Effect4.Program.TypeRefusal))).defs ++
-     (shape (@_root_.Option (_root_.Effect4.Program.EffTy))).defs ++
      (shape _root_.Effect4.Program.EffTy).defs ++
      (shape (@_root_.Option (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy)))).defs⟩
 
@@ -915,6 +916,7 @@ def toVal : _root_.Effect4.Program.FeedRefusal → Val
   | .refused a0 => .ctor 3 [Canonical.toVal a0]
   | .typeChanged a0 a1 => .ctor 4 [Canonical.toVal a0, Canonical.toVal a1]
   | .localChanged a0 a1 => .ctor 5 [Canonical.toVal a0, Canonical.toVal a1]
+  | .rootRefused a0 => .ctor 6 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.FeedRefusal)
   | .ctor 0 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0).map .noProgram
@@ -927,7 +929,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.FeedRefusal)
     | _, _ => none
   | .ctor 3 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.TypeRefusal))) v0).map .refused
   | .ctor 4 [v0, v1] =>
-    match Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.EffTy))) v0,
+    match Canonical.ofVal (α := _root_.Effect4.Program.EffTy) v0,
         Canonical.ofVal (α := _root_.Effect4.Program.EffTy) v1 with
     | some a0, some a1 => some (.typeChanged a0 a1)
     | _, _ => none
@@ -937,6 +939,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.FeedRefusal)
         Canonical.ofVal (α := (@_root_.Option (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy)))) v1 with
     | some a0, some a1 => some (.localChanged a0 a1)
     | _, _ => none
+  | .ctor 6 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.TypeRefusal))) v0).map .rootRefused
   | _ => none
 
 /-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
@@ -959,7 +962,7 @@ theorem ofVal_arm3 (v0 : Val) :
       (Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.TypeRefusal))) v0).map .refused := rfl
 theorem ofVal_arm4 (v0 : Val) (v1 : Val) :
     ofVal (.ctor 4 [v0, v1]) =
-      (match Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.EffTy))) v0,
+      (match Canonical.ofVal (α := _root_.Effect4.Program.EffTy) v0,
           Canonical.ofVal (α := _root_.Effect4.Program.EffTy) v1 with
       | some a0, some a1 => some (.typeChanged a0 a1)
       | _, _ => none) := rfl
@@ -970,6 +973,9 @@ theorem ofVal_arm5 (v0 : Val) (v1 : Val) :
           Canonical.ofVal (α := (@_root_.Option (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy)))) v1 with
       | some a0, some a1 => some (.localChanged a0 a1)
       | _, _ => none) := rfl
+theorem ofVal_arm6 (v0 : Val) :
+    ofVal (.ctor 6 [v0]) =
+      (Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.TypeRefusal))) v0).map .rootRefused := rfl
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.FeedRefusal) : ofVal (toVal a) = some a := by
   cases a with
@@ -979,28 +985,24 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.FeedRefusal) : ofVal (toVal a) =
   | «refused» a0 => simp only [toVal, ofVal_arm3, Canonical.ofVal_toVal, Option.map_some]
   | «typeChanged» a0 a1 => simp only [toVal, ofVal_arm4, Canonical.ofVal_toVal]
   | «localChanged» a0 a1 => simp only [toVal, ofVal_arm5, Canonical.ofVal_toVal]
+  | «rootRefused» a0 => simp only [toVal, ofVal_arm6, Canonical.ofVal_toVal, Option.map_some]
 
 theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Nat_41_ (x : (@_root_.List (_root_.Nat))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Nat))).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_Prod_32__40__95_root_95__46_Effect4_46_Program_46_TyEnv_41__32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_ (x : (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy))) :
     acceptsIn shapeDoc.defs (shape (@_root_.Prod (_root_.Effect4.Program.TyEnv) (_root_.Effect4.Program.EffTy))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41__32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_ (x : (@_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy))) :
     acceptsIn shapeDoc.defs (shape (@_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41_ (x : (@_root_.List (_root_.Effect4.Program.TypeRefusal))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Program.TypeRefusal))).root
-      (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
-    _ _ (Canonical.fits x)
-theorem lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_ (x : (@_root_.Option (_root_.Effect4.Program.EffTy))) :
-    acceptsIn shapeDoc.defs (shape (@_root_.Option (_root_.Effect4.Program.EffTy))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
     _ _ (Canonical.fits x)
@@ -1032,12 +1034,15 @@ theorem fits (a : _root_.Effect4.Program.FeedRefusal) : shapeDoc.accepts (toVal 
       (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41_ a0) (acceptsFields_nil _))
   | «typeChanged» a0 a1 =>
     exact accepts_sum _ _ _ 4 "typeChanged" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_ a0)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_EffTy a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_EffTy a1) (acceptsFields_nil _)))
   | «localChanged» a0 a1 =>
     exact accepts_sum _ _ _ 5 "localChanged" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__64__95_root_95__46_Prod_32__40__95_root_95__46_Effect4_46_Program_46_TyEnv_41__32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41__41_ a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__64__95_root_95__46_Prod_32__40__95_root_95__46_Effect4_46_Program_46_TyEnv_41__32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41__41_ a1) (acceptsFields_nil _)))
+  | «rootRefused» a0 =>
+    exact accepts_sum _ _ _ 6 "rootRefused" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41_ a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.FeedRefusal) :=
   ⟨shapeDoc, toVal, guarded toVal ofVal,
@@ -1238,28 +1243,31 @@ def shapeDoc : ShapeDoc :=
   ⟨.sum "Effect4.Program.AddRefusal"
      [("root", 0, []),
       ("unknownAddress", 1, []),
-      ("notCertified", 2, []),
+      ("notCertified", 2, [("why", (shape _root_.Effect4.Program.FeedRefusal).root)]),
       ("conflict", 3, []),
       ("overlap", 4, [("existing", (shape (@_root_.List (_root_.Nat))).root)])],
-   (shape (@_root_.List (_root_.Nat))).defs⟩
+   (shape _root_.Effect4.Program.FeedRefusal).defs ++ (shape (@_root_.List (_root_.Nat))).defs⟩
 
 def toVal : _root_.Effect4.Program.AddRefusal → Val
   | .root => .ctor 0 []
   | .unknownAddress => .ctor 1 []
-  | .notCertified => .ctor 2 []
+  | .notCertified a0 => .ctor 2 [Canonical.toVal a0]
   | .conflict => .ctor 3 []
   | .overlap a0 => .ctor 4 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.AddRefusal)
   | .ctor 0 [] => some .root
   | .ctor 1 [] => some .unknownAddress
-  | .ctor 2 [] => some .notCertified
+  | .ctor 2 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FeedRefusal) v0).map .notCertified
   | .ctor 3 [] => some .conflict
   | .ctor 4 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0).map .overlap
   | _ => none
 
 /-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
 
+theorem ofVal_arm2 (v0 : Val) :
+    ofVal (.ctor 2 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Program.FeedRefusal) v0).map .notCertified := rfl
 theorem ofVal_arm4 (v0 : Val) :
     ofVal (.ctor 4 [v0]) =
       (Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0).map .overlap := rfl
@@ -1268,13 +1276,18 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.AddRefusal) : ofVal (toVal a) = 
   cases a with
   | «root» => rfl
   | «unknownAddress» => rfl
-  | «notCertified» => rfl
+  | «notCertified» a0 => simp only [toVal, ofVal_arm2, Canonical.ofVal_toVal, Option.map_some]
   | «conflict» => rfl
   | «overlap» a0 => simp only [toVal, ofVal_arm4, Canonical.ofVal_toVal, Option.map_some]
 
+theorem lift_T_95_root_95__46_Effect4_46_Program_46_FeedRefusal (x : _root_.Effect4.Program.FeedRefusal) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FeedRefusal).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+    _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Nat_41_ (x : (@_root_.List (_root_.Nat))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Nat))).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => hp)
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
 
 theorem fits (a : _root_.Effect4.Program.AddRefusal) : shapeDoc.accepts (toVal a) = true := by
@@ -1283,8 +1296,9 @@ theorem fits (a : _root_.Effect4.Program.AddRefusal) : shapeDoc.accepts (toVal a
     exact accepts_sum _ _ _ 0 "root" [] [] rfl (acceptsFields_nil _)
   | «unknownAddress» =>
     exact accepts_sum _ _ _ 1 "unknownAddress" [] [] rfl (acceptsFields_nil _)
-  | «notCertified» =>
-    exact accepts_sum _ _ _ 2 "notCertified" [] [] rfl (acceptsFields_nil _)
+  | «notCertified» a0 =>
+    exact accepts_sum _ _ _ 2 "notCertified" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_FeedRefusal a0) (acceptsFields_nil _))
   | «conflict» =>
     exact accepts_sum _ _ _ 3 "conflict" [] [] rfl (acceptsFields_nil _)
   | «overlap» a0 =>
@@ -1385,13 +1399,14 @@ def shapeDoc : ShapeDoc :=
      [("exactFit", 0, [("ty", (shape _root_.Effect4.Program.EffTy).root)]),
       ("typeMismatch", 1, [("expected", (shape _root_.Effect4.Program.EffTy).root),
         ("actual", (shape _root_.Effect4.Program.EffTy).root)]),
-      ("refused", 2, [("why", (shape _root_.Effect4.Program.TypeRefusal).root)]),
+      ("refused", 2, [
+        ("why", (shape (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))).root)]),
       ("feedRefused", 3, [("why", (shape _root_.Effect4.Program.FeedRefusal).root)]),
       ("differentEnv", 4, [
         ("sourceEnv", (shape (@_root_.List (_root_.Effect4.Program.Ty))).root),
         ("targetEnv", (shape (@_root_.List (_root_.Effect4.Program.Ty))).root)])],
    (shape _root_.Effect4.Program.EffTy).defs ++
-     (shape _root_.Effect4.Program.TypeRefusal).defs ++
+     (shape (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))).defs ++
      (shape _root_.Effect4.Program.FeedRefusal).defs ++
      (shape (@_root_.List (_root_.Effect4.Program.Ty))).defs⟩
 
@@ -1409,7 +1424,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.Suggest.Evidence)
         Canonical.ofVal (α := _root_.Effect4.Program.EffTy) v1 with
     | some a0, some a1 => some (.typeMismatch a0 a1)
     | _, _ => none
-  | .ctor 2 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.TypeRefusal) v0).map .refused
+  | .ctor 2 [v0] => (Canonical.ofVal (α := (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))) v0).map .refused
   | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FeedRefusal) v0).map .feedRefused
   | .ctor 4 [v0, v1] =>
     match Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.Ty))) v0,
@@ -1431,7 +1446,7 @@ theorem ofVal_arm1 (v0 : Val) (v1 : Val) :
       | _, _ => none) := rfl
 theorem ofVal_arm2 (v0 : Val) :
     ofVal (.ctor 2 [v0]) =
-      (Canonical.ofVal (α := _root_.Effect4.Program.TypeRefusal) v0).map .refused := rfl
+      (Canonical.ofVal (α := (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))) v0).map .refused := rfl
 theorem ofVal_arm3 (v0 : Val) :
     ofVal (.ctor 3 [v0]) =
       (Canonical.ofVal (α := _root_.Effect4.Program.FeedRefusal) v0).map .feedRefused := rfl
@@ -1455,8 +1470,8 @@ theorem lift_T_95_root_95__46_Effect4_46_Program_46_EffTy (x : _root_.Effect4.Pr
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))
     _ _ (Canonical.fits x)
-theorem lift_T_95_root_95__46_Effect4_46_Program_46_TypeRefusal (x : _root_.Effect4.Program.TypeRefusal) :
-    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.TypeRefusal).root
+theorem lift_T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TypeReason_41_ (x : (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
     _ _ (Canonical.fits x)
@@ -1482,7 +1497,7 @@ theorem fits (a : _root_.Effect4.Program.Suggest.Evidence) : shapeDoc.accepts (t
         (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_EffTy a1) (acceptsFields_nil _)))
   | «refused» a0 =>
     exact accepts_sum _ _ _ 2 "refused" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_TypeRefusal a0) (acceptsFields_nil _))
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TypeReason_41_ a0) (acceptsFields_nil _))
   | «feedRefused» a0 =>
     exact accepts_sum _ _ _ 3 "feedRefused" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_FeedRefusal a0) (acceptsFields_nil _))
@@ -6561,6 +6576,84 @@ instance instCanonical : Canonical (_root_.Effect4.Tool.HoleView) :=
 
 end T_95_root_95__46_Effect4_46_Tool_46_HoleViewC
 
+namespace T_95_root_95__46_Effect4_46_Tool_46_HoleDeclC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.struct "Effect4.Tool.HoleDecl" [("index", (shape _root_.Nat).root),
+     ("name", (shape _root_.String).root),
+     ("perform", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root),
+     ("performed", (shape _root_.Bool).root)],
+   (shape _root_.Nat).defs ++ (shape _root_.String).defs ++
+     (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).defs ++
+     (shape _root_.Bool).defs⟩
+
+def toVal : _root_.Effect4.Tool.HoleDecl → Val
+  | .mk a0 a1 a2 a3 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2,
+      Canonical.toVal a3]
+
+def ofVal : Val → Option (_root_.Effect4.Tool.HoleDecl)
+  | .ctor 0 [v0, v1, v2, v3] =>
+    match Canonical.ofVal (α := _root_.Nat) v0, Canonical.ofVal (α := _root_.String) v1,
+        Canonical.ofVal (α := (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))) v2,
+        Canonical.ofVal (α := _root_.Bool) v3 with
+    | some a0, some a1, some a2, some a3 => some ⟨a0, a1, a2, a3⟩
+    | _, _, _, _ => none
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Tool.HoleDecl) : ofVal (toVal a) = some a := by
+  obtain ⟨a0, a1, a2, a3⟩ := a
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Tool.HoleDecl} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · next v0 v1 v2 v3 =>
+    split at h
+    · next b0 b1 b2 b3 h0 h1 h2 h3 =>
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2,
+        Canonical.ofVal_exact h3]
+    · exact nomatch h
+  · exact nomatch h
+
+theorem lift_T_95_root_95__46_Nat (x : _root_.Nat) :
+    acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_T_95_root_95__46_String (x : _root_.String) :
+    acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_Effect4_46_Program_46_Eff_32__40__95_root_95__46_Effect4_46_Program_46_NativeOp_41_ (x : (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_T_95_root_95__46_Bool (x : _root_.Bool) :
+    acceptsIn shapeDoc.defs (shape _root_.Bool).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Tool.HoleDecl) : shapeDoc.accepts (toVal a) = true := by
+  obtain ⟨a0, a1, a2, a3⟩ := a
+  apply accepts_struct
+  exact
+    (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Nat a0)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_String a1)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Effect4_46_Program_46_Eff_32__40__95_root_95__46_Effect4_46_Program_46_NativeOp_41_ a2)
+          (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Bool a3) (acceptsFields_nil _)))))
+
+instance instCanonical : Canonical (_root_.Effect4.Tool.HoleDecl) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end T_95_root_95__46_Effect4_46_Tool_46_HoleDeclC
+
 namespace T_95_root_95__46_Effect4_46_Tool_46_SlotViewC
 
 def shapeDoc : ShapeDoc :=
@@ -6751,63 +6844,71 @@ def shapeDoc : ShapeDoc :=
      ("type", (shape (@_root_.Option (_root_.Effect4.Program.EffTy))).root),
      ("refusals", (shape (@_root_.List (_root_.Effect4.Program.TypeRefusal))).root),
      ("holes", (shape (@_root_.List (_root_.Effect4.Tool.HoleView))).root),
+     ("declared", (shape (@_root_.List (_root_.Effect4.Tool.HoleDecl))).root),
      ("inspection", (shape (@_root_.Option (_root_.Effect4.Tool.Inspection))).root)],
    (shape _root_.Effect4.Program.Snap).defs ++
      (shape (@_root_.Option (_root_.Effect4.Program.EffTy))).defs ++
      (shape (@_root_.List (_root_.Effect4.Program.TypeRefusal))).defs ++
      (shape (@_root_.List (_root_.Effect4.Tool.HoleView))).defs ++
+     (shape (@_root_.List (_root_.Effect4.Tool.HoleDecl))).defs ++
      (shape (@_root_.Option (_root_.Effect4.Tool.Inspection))).defs⟩
 
 def toVal : _root_.Effect4.Tool.DocView → Val
-  | .mk a0 a1 a2 a3 a4 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2,
-      Canonical.toVal a3, Canonical.toVal a4]
+  | .mk a0 a1 a2 a3 a4 a5 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2,
+      Canonical.toVal a3, Canonical.toVal a4, Canonical.toVal a5]
 
 def ofVal : Val → Option (_root_.Effect4.Tool.DocView)
-  | .ctor 0 [v0, v1, v2, v3, v4] =>
+  | .ctor 0 [v0, v1, v2, v3, v4, v5] =>
     match Canonical.ofVal (α := _root_.Effect4.Program.Snap) v0,
         Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.EffTy))) v1,
         Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.TypeRefusal))) v2,
         Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Tool.HoleView))) v3,
-        Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Tool.Inspection))) v4 with
-    | some a0, some a1, some a2, some a3, some a4 => some ⟨a0, a1, a2, a3, a4⟩
-    | _, _, _, _, _ => none
+        Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Tool.HoleDecl))) v4,
+        Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Tool.Inspection))) v5 with
+    | some a0, some a1, some a2, some a3, some a4, some a5 => some ⟨a0, a1, a2, a3, a4, a5⟩
+    | _, _, _, _, _, _ => none
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Tool.DocView) : ofVal (toVal a) = some a := by
-  obtain ⟨a0, a1, a2, a3, a4⟩ := a
+  obtain ⟨a0, a1, a2, a3, a4, a5⟩ := a
   simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Tool.DocView} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  · next v0 v1 v2 v3 v4 =>
+  · next v0 v1 v2 v3 v4 v5 =>
     split at h
-    · next b0 b1 b2 b3 b4 h0 h1 h2 h3 h4 =>
+    · next b0 b1 b2 b3 b4 b5 h0 h1 h2 h3 h4 h5 =>
       injection h with h
       subst h
       simp only [toVal]
       rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2,
-        Canonical.ofVal_exact h3, Canonical.ofVal_exact h4]
+        Canonical.ofVal_exact h3, Canonical.ofVal_exact h4, Canonical.ofVal_exact h5]
     · exact nomatch h
   · exact nomatch h
 
 theorem lift_T_95_root_95__46_Effect4_46_Program_46_Snap (x : _root_.Effect4.Program.Snap) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Snap).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_ (x : (@_root_.Option (_root_.Effect4.Program.EffTy))) :
     acceptsIn shapeDoc.defs (shape (@_root_.Option (_root_.Effect4.Program.EffTy))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41_ (x : (@_root_.List (_root_.Effect4.Program.TypeRefusal))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Program.TypeRefusal))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Tool_46_HoleView_41_ (x : (@_root_.List (_root_.Effect4.Tool.HoleView))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Tool.HoleView))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Tool_46_HoleDecl_41_ (x : (@_root_.List (_root_.Effect4.Tool.HoleDecl))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Tool.HoleDecl))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
     _ _ (Canonical.fits x)
@@ -6818,14 +6919,15 @@ theorem lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Tool_
     _ _ (Canonical.fits x)
 
 theorem fits (a : _root_.Effect4.Tool.DocView) : shapeDoc.accepts (toVal a) = true := by
-  obtain ⟨a0, a1, a2, a3, a4⟩ := a
+  obtain ⟨a0, a1, a2, a3, a4, a5⟩ := a
   apply accepts_struct
   exact
     (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_Snap a0)
       (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_ a1)
         (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41_ a2)
           (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Tool_46_HoleView_41_ a3)
-            (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Tool_46_Inspection_41_ a4) (acceptsFields_nil _))))))
+            (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Tool_46_HoleDecl_41_ a4)
+              (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Tool_46_Inspection_41_ a5) (acceptsFields_nil _)))))))
 
 instance instCanonical : Canonical (_root_.Effect4.Tool.DocView) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩

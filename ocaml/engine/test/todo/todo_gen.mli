@@ -323,6 +323,7 @@ and 'op signature = {
   service_ty : Eff_types.ServiceKey.t -> Eff_types.Ty.t option;
   dom : 'op -> bool;
   const_atom : string -> bool;
+  known_atom : string -> bool;
   term_of : 'op -> binder_term option;
   with_term : 'op -> Eff_types.Term.t -> 'op;
   type_args_of : 'op -> Eff_types.Ty.t list;
@@ -1136,7 +1137,7 @@ and leaf_head =
   | LeafHead_number
   | LeafHead_undefined
   | LeafHead_unit
-and type_refusal = { path : int list; reason : type_reason; }
+and ('site, 'reason) located = { site : 'site; reason : 'reason; }
 and type_reason =
     TypeReason_term of Eff_types.Term.t
   | TypeReason_cause of Eff_types.CauseTerm.t
@@ -1182,6 +1183,9 @@ and type_reason =
   | TypeReason_definitionColumns of string
   | TypeReason_bodyNotDeclared of string * Eff_types.EffTy.t
   | TypeReason_invokeArity of string * int * int
+  | TypeReason_unboundVariable of int list * int * int
+  | TypeReason_unknownAtom of int list * string
+  | TypeReason_refusedArguments of int list * string * Eff_types.Ty.t list
 and gen_ty = {
   answer : Eff_types.Ty.t option;
   error : Eff_types.Ty.t;
@@ -1217,6 +1221,10 @@ and term_typing_refusal =
     TermTypingRefusal_record of record_term_refusal
   | TermTypingRefusal_tuple of tuple_term_refusal
   | TermTypingRefusal_fold of fold_term_refusal
+  | TermTypingRefusal_unbound of int list * int * int
+  | TermTypingRefusal_unknownAtom of int list * string
+  | TermTypingRefusal_refusedArguments of int list * string *
+      Eff_types.Ty.t list
 and cause_typing_refusal =
     CauseTypingRefusal_record of record_cause_refusal
   | CauseTypingRefusal_tuple of tuple_cause_refusal
@@ -1231,7 +1239,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step =
   | FrameStep_finished of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
 and stmt_ty =
     StmtTy_step of gen_ty * Eff_types.Ty.t list
-  | StmtTy_ret of (Eff_types.Ty.t, type_refusal) result
+  | StmtTy_ret of (Eff_types.Ty.t, (int list, type_reason) located) result
   | StmtTy_pass
 and ('r_term, 'r_terms) term_algebra = {
   term_var : int -> 'r_term;

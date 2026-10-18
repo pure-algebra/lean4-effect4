@@ -133,5 +133,8 @@ val build : ?app:Kit.app -> ?defs:def list -> t -> (Kit.program, refusal) result
 
 val build_checked :
   ?app:Kit.app -> ?defs:def list -> t ->
-  (Kit.program * Eff_types.EffTy.t, [ `Name of refusal | `Type of Effect4_gen.Api_gen.type_refusal ]) result
+  ( Kit.program * Eff_types.EffTy.t,
+    [ `Name of refusal
+    | `Type of (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located ] )
+  result
 (** The program and its type, or the name or the node it is refused at. *)

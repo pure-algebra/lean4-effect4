@@ -81,11 +81,11 @@ and check_input =
   | CheckInput_part of sig_data * Eff_types.Ty.t list *
       Eff_types.NativeOp.t Eff_types.Eff.t
 and verdict = {
-  result : (Eff_types.EffTy.t, type_refusal) result;
+  result : (Eff_types.EffTy.t, (int list, type_reason) located) result;
   table : entry list;
 }
 and admit_refusal =
-    AdmitRefusal_illTyped
+    AdmitRefusal_illTyped of (int list, type_reason) located
   | AdmitRefusal_signature of sig_refusal
   | AdmitRefusal_emptyColumn of string list
   | AdmitRefusal_formation of formation_refusal
@@ -748,7 +748,7 @@ and step =
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
   | Step_celled of sync_op * Eff_types.Val.t
-and type_refusal = { path : int list; reason : type_reason; }
+and ('site, 'reason) located = { site : 'site; reason : 'reason; }
 and type_reason =
     TypeReason_term of Eff_types.Term.t
   | TypeReason_cause of Eff_types.CauseTerm.t
@@ -794,6 +794,9 @@ and type_reason =
   | TypeReason_definitionColumns of string
   | TypeReason_bodyNotDeclared of string * Eff_types.EffTy.t
   | TypeReason_invokeArity of string * int * int
+  | TypeReason_unboundVariable of int list * int * int
+  | TypeReason_unknownAtom of int list * string
+  | TypeReason_refusedArguments of int list * string * Eff_types.Ty.t list
 and sig_data = {
   app : sig_app;
   holes : Eff_types.Row.t list;
@@ -825,6 +828,7 @@ and 'op signature = {
   service_ty : Eff_types.ServiceKey.t -> Eff_types.Ty.t option;
   dom : 'op -> bool;
   const_atom : string -> bool;
+  known_atom : string -> bool;
   term_of : 'op -> binder_term option;
   with_term : 'op -> Eff_types.Term.t -> 'op;
   type_args_of : 'op -> Eff_types.Ty.t list;
@@ -886,7 +890,7 @@ and event =
   | Event_apply of sel
   | Event_wire of command
 and explanation = {
-  refusal : type_refusal;
+  refusal : (int list, type_reason) located;
   site : site;
   part : check_input option;
 }
@@ -907,12 +911,17 @@ and effect4_tool_wire_refusal =
   | Effect4_tool_wire_refusal_version of string * int * int
   | Effect4_tool_wire_refusal_method of string * string
   | Effect4_tool_wire_refusal_connection
-and describe = {
+and listing = {
   name : string;
   description : string;
-  schema : string;
-  answers : (string * string) list;
+  input_schema : string;
+  output_schema : string;
+  read_only : bool;
+  destructive : bool;
+  idempotent : bool;
+  open_world : bool;
 }
+and describe = { listing : listing; answers : (string * string) list; }
 and ctx = {
   services : Eff_types.Val.t context;
   max_ops_before_yield : int;
@@ -1095,12 +1104,16 @@ and node_env =
 and entry = {
   path : int list;
   env : node_env option;
-  result : (Eff_types.EffTy.t, type_refusal) result option;
+  result : (Eff_types.EffTy.t, (int list, type_reason) located) result option;
 }
 and term_typing_refusal =
     TermTypingRefusal_record of record_term_refusal
   | TermTypingRefusal_tuple of tuple_term_refusal
   | TermTypingRefusal_fold of fold_term_refusal
+  | TermTypingRefusal_unbound of int list * int * int
+  | TermTypingRefusal_unknownAtom of int list * string
+  | TermTypingRefusal_refusedArguments of int list * string *
+      Eff_types.Ty.t list
 and row_typing_refusal =
     RowTypingRefusal_requestNotSubtype
   | RowTypingRefusal_formation of formation_refusal
@@ -1266,7 +1279,7 @@ and 'op def_src = {
 }
 and stmt_ty =
     StmtTy_step of gen_ty * Eff_types.Ty.t list
-  | StmtTy_ret of (Eff_types.Ty.t, type_refusal) result
+  | StmtTy_ret of (Eff_types.Ty.t, (int list, type_reason) located) result
   | StmtTy_pass
 and cause_typing_refusal =
     CauseTypingRefusal_record of record_cause_refusal
@@ -1385,13 +1398,31 @@ and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
   layers_cons : 'r_layer -> 'r_layers -> 'r_layers;
 }
 and request = Request_act of action | Request_ask of query
+and method_key =
+    MethodKey_open_
+  | MethodKey_edit
+  | MethodKey_fill
+  | MethodKey_publish
+  | MethodKey_reset
+  | MethodKey_start
+  | MethodKey_restore
+  | MethodKey_play
+  | MethodKey_doc
+  | MethodKey_history
+  | MethodKey_fills
+  | MethodKey_suggest
+  | MethodKey_run
+  | MethodKey_preview
+  | MethodKey_dry
+  | MethodKey_discover
+  | MethodKey_table
+  | MethodKey_addresses
+  | MethodKey_slots
 and effect4_tool_methods_entry = {
-  name : string;
-  description : string;
+  listing : listing;
   kind : string;
   field : string;
   case_name : string;
-  schema : string;
 }
 and race_name =
     RaceName_empty
@@ -1534,8 +1565,9 @@ and answer =
 and doc_view = {
   snap : snap;
   type_ : Eff_types.EffTy.t option;
-  refusals : type_refusal list;
+  refusals : (int list, type_reason) located list;
   holes : hole_view list;
+  declared : hole_decl list;
   inspection : effect4_tool_inspection option;
 }
 and doc = {
@@ -1549,6 +1581,22 @@ and run_answer =
   | RunAnswer_record of live_record
   | RunAnswer_journal of command list
 and plan = { shared : string list; tools : string list; }
+and method_kind = MethodKind_action | MethodKind_query
+and method_descriptor = {
+  name : string;
+  kind : method_kind;
+  versions : int list;
+  arguments : shape_doc;
+  result : shape_doc;
+  description : string;
+  read_only : bool;
+  hints : method_hints;
+}
+and method_hints = {
+  destructive : bool;
+  idempotent : bool;
+  open_world : bool;
+}
 and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
 and fn_shape =
     FnShape_update
@@ -1687,7 +1735,7 @@ and view = {
 }
 and effect4_program_edit_session_view = {
   table : entry list;
-  refusals : type_refusal list;
+  refusals : (int list, type_reason) located list;
   type_ : Eff_types.EffTy.t option;
 }
 and effect4_tool_inspection = {
@@ -1696,7 +1744,7 @@ and effect4_tool_inspection = {
   context : sig_data;
   focus : Eff_types.NativeOp.t focus option;
   entry : entry option;
-  refusal : type_refusal option;
+  refusal : (int list, type_reason) located option;
 }
 and place_refusal =
     PlaceRefusal_outOfRange of int
@@ -1707,12 +1755,13 @@ and feed_refusal =
     FeedRefusal_noProgram of int list
   | FeedRefusal_noFocus of int list
   | FeedRefusal_notKept of (Eff_types.Ty.t list * Eff_types.EffTy.t) *
-      (Eff_types.EffTy.t, type_refusal) result
-  | FeedRefusal_refused of type_refusal list
-  | FeedRefusal_typeChanged of Eff_types.EffTy.t option * Eff_types.EffTy.t
+      (Eff_types.EffTy.t, (int list, type_reason) located) result
+  | FeedRefusal_refused of (int list, type_reason) located list
+  | FeedRefusal_typeChanged of Eff_types.EffTy.t * Eff_types.EffTy.t
   | FeedRefusal_localChanged of
       (Eff_types.Ty.t list * Eff_types.EffTy.t) option *
       (Eff_types.Ty.t list * Eff_types.EffTy.t) option
+  | FeedRefusal_rootRefused of (int list, type_reason) located list
 and preview_answer =
     PreviewAnswer_settled of (int * preview_run) option
   | PreviewAnswer_frames of preview_run list
@@ -1777,6 +1826,12 @@ and retired_call = {
   bound : bound_call;
   pending : effect4_api_host_session_reply option;
 }
+and hole_decl = {
+  index : int;
+  name : string;
+  perform : Eff_types.NativeOp.t Eff_types.Eff.t;
+  performed : bool;
+}
 and effect4_run_preview_refusal =
     Effect4_run_preview_refusal_admission of admit_refusal
   | Effect4_run_preview_refusal_outsideTree of int list
@@ -1813,7 +1868,7 @@ and undo_item = {
 and add_refusal =
     AddRefusal_root
   | AddRefusal_unknownAddress
-  | AddRefusal_notCertified
+  | AddRefusal_notCertified of feed_refusal
   | AddRefusal_conflict
   | AddRefusal_overlap of int list
 and add_outcome =
@@ -1914,7 +1969,7 @@ and fiber_status =
 and evidence =
     Evidence_exactFit of Eff_types.EffTy.t
   | Evidence_typeMismatch of Eff_types.EffTy.t * Eff_types.EffTy.t
-  | Evidence_refused of type_refusal
+  | Evidence_refused of (int list, type_reason) located
   | Evidence_feedRefused of feed_refusal
   | Evidence_differentEnv of Eff_types.Ty.t list * Eff_types.Ty.t list
 and wait_site = WaitSite_deferred of deferred_key | WaitSite_other
@@ -2146,7 +2201,7 @@ val run_tree_frames :
 val run_kit_check :
   sig_app ->
   Eff_types.NativeOp.t Eff_types.Eff.t ->
-  (Eff_types.EffTy.t, type_refusal) result
+  (Eff_types.EffTy.t, (int list, type_reason) located) result
 val run_kit_admit :
   sig_app -> Eff_types.NativeOp.t Eff_types.Eff.t -> admit_refusal option
 val run_kit_admit_shape : shape_doc
@@ -2182,7 +2237,8 @@ val run_kit_ty_to_val : Eff_types.Ty.t -> Eff_types.Val.t
 val run_kit_eff_ty_shape : shape_doc
 val run_kit_eff_ty_to_val : Eff_types.EffTy.t -> Eff_types.Val.t
 val run_kit_refusal_shape : shape_doc
-val run_kit_refusal_to_val : type_refusal -> Eff_types.Val.t
+val run_kit_refusal_to_val :
+  (int list, type_reason) located -> Eff_types.Val.t
 val run_kit_exit_shape : shape_doc
 val run_kit_exit_to_val :
   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)

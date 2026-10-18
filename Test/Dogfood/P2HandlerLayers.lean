@@ -226,8 +226,8 @@ def catchUnauthorizedModule : Module NativeOp :=
       | .success _ => false) = some true
 -- Green control: the tag with a string message types (DB-15's pair).
 #guard verdict (program (fail (app "pair" [str "NotFound", str "7"]))) = "built"
--- No atom turns a number into text (row 131): the term has no type.
-#guard verdict interpolateModule = "typing: term"
+-- No atom turns a number into text (row 131): `concat` refuses a number argument.
+#guard verdict interpolateModule = "typing: refusedArguments"
 
 /-- The builder route's `UserRepo`: its carrier is the SQL handle it captured (type code 8), and
 its methods are Lean functions (the model probe's `ProbeRefusals.lean`). -/
@@ -299,7 +299,7 @@ def stage : Reach :=
   { refused :=
       [ ("AppConfig as a string service", "serviceCarrier: signature none")
       , ("CurrentUser as a record service", "serviceCarrier: signature none")
-      , ("a number in a template string", "typing: term") ]
+      , ("a number in a template string", "typing: refusedArguments") ]
     admitted := true, answer := .rc112, printed := true, readBack := true }
 
 #guard measured = stage

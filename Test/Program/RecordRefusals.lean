@@ -50,7 +50,8 @@ def missing : Term := .record fields [] .nil
 #guard run (.recordSet missing "child" (.var 5)) = error (.missingRequired "name") [0]
 
 def genericFirst : Term := .app "pair" (.cons (.var 5) (.cons missing .nil))
-#guard run genericFirst = .error ⟨[2, 1], .term genericFirst⟩
+-- The first argument refuses first: its variable is past the empty environment.
+#guard run genericFirst = .error ⟨[2, 1], .unboundVariable [0] 5 0⟩
 
 -- The caller computes a record-specific reason only after the existing rule refuses.
 #guard run (.record fields ["name"] (.cons (.lit (.str "Ada")) .nil)) =

@@ -869,6 +869,7 @@ theorem finish_ok {policy : FeedPolicy} {s n : SourceSession} {e : Edit} {st : E
     rfl
   · cases h
   · cases h
+  · cases h
     rfl
   · split at h
     · cases h
@@ -1850,22 +1851,27 @@ theorem finish_keepExact_ok {s n : SourceSession} {e : Edit} {st : Edit.Step} {v
     {r : SourceSession × Edit.Step} (h : finish .keepExact s n e st v = .ok r) :
     ∃ ty, v.result = .ok ty ∧ s.view.type = some ty ∧
       (e.path ≠ [] → Table.typedAt s.table e.path = Table.typedAt n.table e.path) := by
-  cases hv : v.result with
-  | error why =>
-    simp only [finish, hv] at h
+  cases hs : s.view.type with
+  | none =>
+    simp only [finish, hs] at h
     cases h
-  | ok ty =>
-    simp only [finish, hv] at h
-    split at h
-    · cases h
-    · rename_i hty
+  | some old =>
+    cases hv : v.result with
+    | error why =>
+      simp only [finish, hs, hv] at h
+      cases h
+    | ok ty =>
+      simp only [finish, hs, hv] at h
       split at h
       · cases h
-      · rename_i hloc
-        refine ⟨ty, rfl, ?_, fun hne => ?_⟩
-        · simp only [bne_iff_ne, ne_eq, Decidable.not_not] at hty
-          exact hty
-        · simp only [bne_iff_ne, ne_eq, Bool.and_eq_true, not_and, Decidable.not_not] at hloc
+      · rename_i hty
+        split at h
+        · cases h
+        · rename_i hloc
+          simp only [bne_iff_ne, ne_eq, Decidable.not_not] at hty
+          subst hty
+          refine ⟨old, rfl, rfl, fun hne => ?_⟩
+          simp only [bne_iff_ne, ne_eq, Bool.and_eq_true, not_and, Decidable.not_not] at hloc
           exact hloc hne
 
 /-- **An accepted kept-exact recheck**: its session and step, a typed module check equal to the old

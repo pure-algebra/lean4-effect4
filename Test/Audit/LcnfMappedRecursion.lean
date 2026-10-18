@@ -1,17 +1,20 @@
 import OCaml5.Lcnf.Translate
 import Effect4.Program.Check
+import Effect4.Tool.Methods
 
-/-! Finite V1 control for recursion after Lean specializes a mapped checker entry.
-The source flag remains set on a wrapper whose emitted body no longer names itself.
-The nested helper still needs its recursive binding.
+/-! Finite V1 control for recursion after Lean specializes a mapped loop.
+Both specializations of `List.mapTR.loop` below are recursive in the source.
+The first one's emitted body no longer names itself, so it loses `rec`.
+The second one's body names itself through `Located.under`, so it keeps `rec`.
+The names are the compiler's: a source change that moves them repoints this control.
 This fixture establishes no general translation theorem. -/
 open Lean Elab Command OCaml5.Lcnf
 
 run_cmd liftTermElabM do
-  let wrapper : Name := `List.mapTR.loop._at_.Effect4.Program.Check.Internal.place.spec_0
-  let helper : Name := `List.mapTR.loop._at_.List.mapTR.loop._at_.Effect4.Program.Check.Internal.place.spec_0.spec_0
+  let dropped : Name := `List.mapTR.loop._at_.Effect4.Tool.Methods.definitionsOf.spec_7
+  let kept : Name := `List.mapTR.loop._at_.Effect4.Program.Check.Internal.place.spec_0
   let env ← getEnv
-  for (name, expected) in [(wrapper, false), (helper, true)] do
+  for (name, expected) in [(dropped, false), (kept, true)] do
     let some decl ← monoDecl? name
       | throwError "recursion control: no current mono declaration {name}"
     unless decl.recursive do

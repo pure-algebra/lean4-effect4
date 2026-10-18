@@ -1,4 +1,5 @@
 import Effect4.Tool.Wire
+import Effect4.Tool.Methods
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -320,5 +321,37 @@ theorem serve_answers : ∀ (o : Oracle) (s : State) (r : Request),
     | ok answer =>
       simp only [Wire.responds]
       exact query_pairs o s.raw q answer hq
+
+/-! ## The method table names the wire's methods
+
+Placement: concept `exact-codecs`, the request codec's compatibility with its faces (R8). Question:
+the proposed claim `tool-method-descriptor`, role compatibility. Reach: every request and every
+key: the names and versions the wire core checks (`Wire.check`, `Connection.valid`) and `discover`
+answers are the method descriptors' (`methodDescriptor`, `Tool/Methods.lean`), which the MCP table
+lists (`Methods.entries`). Not established: decoding a request, the transport, or the schemas'
+exactness, which the finite checks of `scripts/check-mcp-protocol.py` read. -/
+
+/-- **A request's wire name is its descriptor's** (proposed claim `tool-method-descriptor`). Its
+consumers are the wire core's method check (`Wire.check`) and the MCP table (`Methods.entries`),
+which read the one descriptor. -/
+@[semantics "exact-codecs" (requirement := R8)]
+theorem method_name_agrees (r : Request) : (methodDescriptor r.methodKey).name = r.method := rfl
+
+/-- **The supported methods are the descriptors' names and versions**, in the keys' order (proposed
+claim `tool-method-descriptor`). Its consumers are `discover`'s answer and the connection's version
+check (`Connection.valid`). -/
+@[semantics "exact-codecs" (requirement := R8)]
+theorem supportedMethods_descriptors :
+    supportedMethods =
+      MethodKey.all.map fun k => ((methodDescriptor k).name, (methodDescriptor k).versions) := rfl
+
+/-- **A method's output schema is its descriptor's result, closed** (proposed claim
+`tool-method-descriptor`): the table renders the reply's schema once (`Methods.replySchema`), and
+that is the closed schema of each descriptor's result. Its consumer is the MCP table
+(`Methods.entries`), which gives every method that one schema. -/
+@[semantics "exact-codecs" (requirement := R8)]
+theorem listing_outputSchema (tools : List String) (k : MethodKey) :
+    (Methods.listingOf tools Methods.replySchema (methodDescriptor k)).outputSchema =
+      Methods.docSchema [] false (methodDescriptor k).result := rfl
 
 end Effect4.Tool

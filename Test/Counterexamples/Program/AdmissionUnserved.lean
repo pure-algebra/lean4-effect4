@@ -96,7 +96,8 @@ theorem admitted_reads_declared :
   decide +kernel
 
 /-- Red: with no declaration the key has no carrier, and the read does not type. -/
-theorem refused_reads_undeclared : refusalOf (admitProgram readIt) = some .illTyped := by
+theorem refused_reads_undeclared :
+    refusalOf (admitProgram readIt) = some (.illTyped ⟨[], .serviceUnknown appKey⟩) := by
   decide +kernel
 
 /-- The table of clause 1 is no lawful source, which is why admission refuses it. -/

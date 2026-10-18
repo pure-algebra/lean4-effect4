@@ -4,6 +4,7 @@ import Effect4.Laws.Api.Runner
 import Effect4.Laws.Api.HostSession
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Program.Admit
+import Effect4.Laws.Program.CheckedTyping
 import Effect4.Laws.Auto.Obligations
 
 /-!
@@ -215,10 +216,8 @@ theorem admitted_unique (program : Api.Program) (app : SigApp)
 field of the certificate, so none of them can fail. This is the fact full admission
 needs and the tree did not have. -/
 theorem admitProgram_certificate (program : Api.Program) (app : SigApp)
-    (c : AdmittedProgram program app) : admitProgram program app = .ok c := by
-  have hformed := (Formation.checkInput_eq_none_iff program app.rows app.services).mpr c.formed
-  aesop (add norm unfold [admitProgram, checkTypedProgram])
-    (add norm simp [c.signature, c.typed, hformed, c.columnsType]) (add safe apply admitted_unique)
+    (c : AdmittedProgram program app) : admitProgram program app = .ok c :=
+  admitProgram_eq_ok c
 
 /-! ## Small facts the answer rows need -/
 

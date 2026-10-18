@@ -43,7 +43,7 @@ let () =
     [nat; bad; block; empty; layers; mismatch];
   check "empty-spine-accepted" (Result.is_ok (ask A.program_check_oracle_uncached (key empty)).result);
   check "layer-refusal-projected" (match (ask A.program_check_oracle_uncached (key layers)).result with
-    | Error why -> why.path = [2;0;0] | Ok _ -> false);
+    | Error why -> why.site = [2;0;0] | Ok _ -> false);
   check "reference-precedes-mismatch" (match (ask A.program_check_oracle_uncached (key mismatch)).result with
     | Error { reason = A.TypeReason_referenceIllFormed _; _ } -> true | _ -> false);
   let old = A.program_check_checked_ask A.program_check_oracle_uncached (part sig1 0) in

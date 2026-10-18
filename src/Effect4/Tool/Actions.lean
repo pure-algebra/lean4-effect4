@@ -26,16 +26,22 @@ structure Raw where
   runs : List RunEntry := []
   generation : Nat := 0
 
-/-- **The document view**: snapshot, root type, refusals and every hole occurrence. -/
+/-- **The document view**: snapshot, root type, refusals, every hole occurrence, and every
+declared hole with its exact `perform` term (`Sketch.hole`) and whether the program performs it. -/
 def docView (d : Doc) : DocView :=
   let v := d.session.view
-  let holes := d.session.sketch.holes.zipIdx.flatMap fun (row,index) =>
-    let paths := (Node.addresses (.eff d.session.sketch.program)).filter fun p =>
-      decide ((Node.eff d.session.sketch.program).at_ p =
-        some (.eff (Sketch.hole d.session.app index)))
+  let program := d.session.sketch.program
+  let found : List (Program.Row × Nat × NativeEff × List (List Nat)) :=
+    d.session.sketch.holes.zipIdx.map fun (row,index) =>
+      let term := Sketch.hole d.session.app index
+      (row, index, term, (Node.addresses (Node.eff program)).filter fun p =>
+        decide ((Node.eff program).at_ p = some (.eff term)))
+  let holes := found.flatMap fun (row, index, _, paths) =>
     paths.map fun path =>
       HoleView.mk index row path ((d.session.focusAt path).map fun f => (f.env,f.ty))
-  ⟨d.snap,v.type,v.refusals,holes,none⟩
+  let declared := found.map fun (row, index, term, paths) =>
+    HoleDecl.mk index row.name term (!paths.isEmpty)
+  ⟨d.snap,v.type,v.refusals,holes,declared,none⟩
 
 /-- The current snapshot, where a document is open. -/
 def current (st : Raw) : Option Snap := st.doc.map Doc.snap

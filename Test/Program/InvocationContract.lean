@@ -222,7 +222,11 @@ def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitR
 #guard (Api.imageCertificate performSleep []).isSome
 #guard Api.readable performSleep
 -- The refusals, one fixture each.
-#guard refusal counterexample = some .illTyped
+-- The ill-typed refusal is located: the row is outside the empty table's domain, at the bind's
+-- continuation.
+#guard match refusal counterexample with
+  | some (.illTyped ⟨[1], .outsideDomain _⟩) => true
+  | _ => false
 #guard refusal performExternal [malformedRow] = some (.signature (.row 0 .notExternal))
 -- A sync row is refused by the table's signature under perform, which types against it.
 #guard refusal performExternal [syncRow] = some (.signature (.row 0 .notAsync))

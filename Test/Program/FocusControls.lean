@@ -245,9 +245,10 @@ def layerEnv (path : List Nat) : Option NodeEnv :=
 #guard layerEnv [1, 1] = some (.env [.nat])
 #guard layerEnv [1, 0] = some .closed
 #guard layerEnv [1, 0, 0] = some (.env [])
--- red (tested): a layer's body that reads the outer variable is refused, at the body
+-- red (tested): a layer's body that reads the outer variable is refused, at the body: its
+-- environment is empty
 #guard refusedAt (Checker.check app.signature [] [] (layered (.succeed (.var 0)))) =
-  some ([1, 0, 0], "term")
+  some ([1, 0, 0], "unboundVariable")
 
 /-! ## Red: an earlier sibling with no type -/
 
@@ -266,7 +267,7 @@ def badSecond : NativeEff := .bind (.succeed (.lit (.nat 1))) (.succeed (.var 9)
 
 -- tested: the checker refuses the program, and the child before the refused one keeps its
 -- focus: the function asks nothing of the program around the focus
-#guard refusedAt (Checker.check sig [] [] badSecond) = some ([1], "term")
+#guard refusedAt (Checker.check sig [] [] badSecond) = some ([1], "unboundVariable")
 #guard ((focusAt sig [] badSecond [0]).map fun f => (f.env, f.ty)) = some ([], numberTy)
 
 end Test.Program.FocusControls

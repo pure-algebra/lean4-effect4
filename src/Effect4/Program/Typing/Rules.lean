@@ -87,6 +87,11 @@ structure Signature (Op : Type) where
   DI-55): a string literal argument of such an atom keeps its literal type (`litArgTy`, the
   literal rule of DI-15). No atom is const-generic unless the signature says so. -/
   constAtom : String → Bool := fun _ => false
+  /-- The atoms this signature names, by name. Typing reads none of it: the term diagnostic
+  reads it to refuse an application of a name the signature does not name as an unknown atom,
+  and of a name it names as an atom at refused argument types (`TermRefusal.diagnose`). Every
+  name by default, so a signature that declares no catalogue refuses at the arguments. -/
+  knownAtom : String → Bool := fun _ => true
   /-- The binder term an operation carries, with its templates (the state plan's T3b); `none`
   for an operation that carries none. The checker types the term at the node's environment
   extended by the current value (`termUse`, `checkRow`). -/

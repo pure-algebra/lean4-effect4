@@ -34,7 +34,12 @@ refuses `noProgram`, except under `draft`, which records an unchanged step.
   refused part type refuses `notKept`. A kept part splices where `canSplice` holds and the root is
   typed. Otherwise it rechecks, and `finish` refuses unless the root and the local types are kept.
   So a kept-exact feed keeps a typed document's exact observations, and at a refused root it
-  refuses: there is no root type to keep. A refused document is edited under `draft`.
+  refuses `rootRefused`: there is no root type to keep. A refused document is edited under
+  `draft`.
+
+Every refusal a feed answers is located at the program's own addresses. A part check's verdict is
+rooted at the edited address, so the feed places it there once (`Located.under`, the one prefix
+rule): a caller reads it as it is.
 
 The session's invariant is `SourceSession.Coherent`: its table is the sketch's source table.
 The laws live in `Laws/Program/SourceTable.lean`. `EditSession.feed` (`Program/Edit.lean`) stays as
@@ -153,28 +158,34 @@ inductive FeedRefusal where
   | noProgram (path : List Nat)
   /-- the table holds no typed focus at the address -/
   | noFocus (path : List Nat)
-  /-- `keepExact`: the part's verdict differs from the focus's type -/
+  /-- `keepExact`: the part's verdict differs from the focus's type. A refused verdict is
+  located at its program address: the part's own address below the edited one. -/
   | notKept (focus : TyEnv × EffTy) (verdict : Except TypeRefusal EffTy)
   /-- the candidate does not check: its refusals -/
   | refused (why : List TypeRefusal)
   /-- `keepExact`: the root type would change -/
-  | typeChanged (old : Option EffTy) (new : EffTy)
+  | typeChanged (old new : EffTy)
   /-- `keepExact`: the focus's environment or type would change -/
   | localChanged (old new : Option (TyEnv × EffTy))
+  /-- `keepExact` at a document whose root is refused, with the document's refusals: there is no
+  root type to keep. Edit the document under `draft`, which never refuses. -/
+  | rootRefused (refusals : List TypeRefusal)
 deriving DecidableEq
 
 namespace SourceSession
 
-/-- **Finish a feed** after its module check: a draft accepts; any other policy refuses a candidate
-that does not check; `keepExact` also compares the root and local types. -/
+/-- **Finish a feed** after its module check: a draft accepts; `keepExact` refuses at a refused
+root with the root's refusals; any other policy refuses a candidate that does not check;
+`keepExact` also compares the root and local types. -/
 def finish (policy : FeedPolicy) (s next : SourceSession) (edit : Edit)
     (step : Edit.Step) (v : Verdict) : Except FeedRefusal (SourceSession × Edit.Step) :=
-  match policy, v.result with
-  | .draft, _ => .ok (next, step)
-  | _, .error _ => .error (.refused next.view.refusals)
-  | .recheck, .ok _ => .ok (next, step)
-  | .keepExact, .ok ty =>
-      if s.view.type != some ty then .error (.typeChanged s.view.type ty)
+  match policy, s.view.type, v.result with
+  | .draft, _, _ => .ok (next, step)
+  | .keepExact, none, _ => .error (.rootRefused s.view.refusals)
+  | _, _, .error _ => .error (.refused next.view.refusals)
+  | .recheck, _, .ok _ => .ok (next, step)
+  | .keepExact, some old, .ok ty =>
+      if old != ty then .error (.typeChanged old ty)
       else if edit.path != [] && Table.typedAt s.table edit.path != Table.typedAt next.table edit.path
       then .error (.localChanged (Table.typedAt s.table edit.path) (Table.typedAt next.table edit.path))
       else .ok (next, step)
@@ -242,7 +253,8 @@ def feed (o : Oracle) (policy : FeedPolicy) (s : SourceSession) (edit : Edit) :
                   | some key =>
                       let part ← Checked.ask o key
                       match part.result with
-                      | .error _ => pure (.error (.notKept (focus.env, focus.ty) part.result))
+                      | .error _ => pure (.error (.notKept (focus.env, focus.ty)
+                          (part.result.mapError (Located.under edit.path))))
                       | .ok ty =>
                           if ty != focus.ty then pure (.error (.notKept (focus.env, focus.ty) part.result))
                           else if s.canSplice candidate edit && s.view.type.isSome then

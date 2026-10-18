@@ -35,12 +35,18 @@ def exactFill := old.feed Oracle.uncached .keepExact (.fill [1] (.succeed (.var 
   | _ => false
 
 /-! A kept-exact feed keeps a typed document's exact observations. Beside an unrelated
-whole-program error the root has no type to keep, so a kept fill refuses with the root's
-refusals; the draft of the same fill is accepted and stays coherent. -/
+whole-program error the root has no type to keep, so a kept fill refuses `rootRefused` with the
+root's refusals, which names `draft` as the remedy; the draft of the same fill is accepted and
+stays coherent. -/
 def brokenElsewhere := opened ⟨.bind n1 (.succeed (.var 2)), []⟩
 #guard brokenElsewhere.table = brokenElsewhere.sketch.sourceTable {}
 #guard match (brokenElsewhere.feed Oracle.uncached .keepExact (.fill [0] n7)).value with
-  | .error (.refused _) => true
+  | .error (.rootRefused [⟨[1], .unboundVariable [] 2 1⟩]) => true
+  | _ => false
+-- The same at the root, where the candidate types (the probe's F13): no type changed, the root
+-- was refused.
+#guard match (brokenElsewhere.feed Oracle.uncached .keepExact (.fill [] n7)).value with
+  | .error (.rootRefused [⟨[1], .unboundVariable [] 2 1⟩]) => true
   | _ => false
 #guard (brokenElsewhere.feed Oracle.uncached .draft (.fill [0] n7)).value.toOption.map
   (fun r => (r.1.view.type, decide (r.1.table = r.1.sketch.sourceTable {}))) = some (none, true)

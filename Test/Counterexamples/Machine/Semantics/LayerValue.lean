@@ -114,7 +114,7 @@ theorem literal_refusal_first :
 /-- Existing effect-body refusal remains before the key lookup. -/
 theorem effect_body_refusal_first :
     Checker.checkLayer (nativeSignature []) [] (.effect unknownKey (.succeed (.var 0))) =
-      .error ⟨[0], .term (.var 0)⟩ := by
+      .error ⟨[0], .unboundVariable [] 0 0⟩ := by
   decide +kernel
 
 end Test.Counterexamples.LayerValue

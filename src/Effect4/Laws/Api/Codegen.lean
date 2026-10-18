@@ -55,7 +55,7 @@ theorem explain_eq_if_refsWF (program : Program) (table : RowTable) :
           (Effect4.Program.Checker.checkModule (nativeSignature table) program.expandRefs)
       else program.firstRefFault.map fun (site, target, why) =>
         ⟨site, .referenceIllFormed target why⟩ := by
-  unfold explain
+  unfold explain Effect4.Program.programRefusal
   cases h : program.firstRefFault with
   | none =>
     rw [if_pos ((Effect4.Program.Eff.firstRefFault_eq_none program).mp h)]

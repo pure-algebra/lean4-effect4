@@ -4,9 +4,14 @@ public import Effect4.Program.Typing.Rules
 public import Effect4.Program.Fold
 
 /-!
-Located reasons for failed record, tuple and list fold term typing. The diagnostic fold never
-returns a type. `argTy` and `argsTy` remain the acceptance rules; the caller invokes this fold
-only after failure. Program paths and nested term addresses remain separate data.
+Located reasons for a failed term: a variable past the environment, an application of an atom
+the signature does not name or at argument types it refuses, and the record, tuple and list fold
+reasons. The diagnostic fold never returns a type. `argTy` and `argsTy` remain the acceptance
+rules; the caller invokes this fold only after failure, and each arm names a premise of its rule
+only where that premise fails. Program paths and nested term addresses remain separate data.
+
+A literal always has a type (`argTy`'s literal arm), so no literal is a cause here; the literal
+outside the value alphabet is a layer value's reason (`TypeReason.literalOutsideAlphabet`).
 
 The fold's carrier takes the type environment: a list fold types its body under two more binders
 (decisions row 228), so a reason inside that body is found at the body's own environment.
@@ -86,11 +91,19 @@ structure FoldCauseRefusal where
   term : FoldTermRefusal
 deriving DecidableEq
 
-/-- The diagnostic fold's alternatives, independent of term acceptance. -/
+/-- The diagnostic fold's alternatives, independent of term acceptance. The last three are the
+rules of a variable and an application, each at its address within the refused term. -/
 inductive TermTypingRefusal
   | record (why : RecordTermRefusal)
   | tuple (why : TupleTermRefusal)
   | fold (why : FoldTermRefusal)
+  /-- `var index` past an environment that holds `depth` variables. -/
+  | unbound (path : List Nat) (index depth : Nat)
+  /-- An application of an atom the signature does not name (`Signature.knownAtom`). -/
+  | unknownAtom (path : List Nat) (atom : String)
+  /-- An application of an atom the signature names, at argument types it refuses: `args` are
+  the types the arguments have under the atom's literal rule. -/
+  | refusedArguments (path : List Nat) (atom : String) (args : List Ty)
 deriving DecidableEq
 
 /-- The corresponding diagnostic alternatives inside cause leaves. -/
@@ -158,14 +171,26 @@ private def Carrier : TermFam → Type
 set_option backward.privateInPublic true in
 /-- The generated term fold carries its raw node beside a diagnostic computation over the type
 environment. Only failed children are descended into, in the typing rule's order and literal
-mode, each at the environment the rule types it in: a fold's body under its two binders. -/
+mode, each at the environment the rule types it in: a fold's body under its two binders. A
+variable names the environment's length; an application whose arguments type names its atom,
+as unknown to the signature or as refused at the arguments' types. -/
 private def algebra (infer : TyEnv → Bool → Term → Option Ty)
     (inferArgs : TyEnv → Bool → Terms → Option (List Ty)) (constAtom : String → Bool)
-    (decls : TyDecls) : TermAlgebra Carrier where
-  term_var level := (.var level, fun _ _ _ => none)
+    (decls : TyDecls) (atomOf : String → List Ty → Option Ty) (knownAtom : String → Bool) :
+    TermAlgebra Carrier where
+  term_var level := (.var level, fun env _ path =>
+    match env[level]? with
+    | some _ => none
+    | none => some (.unbound path level env.length))
   term_lit value := (.lit value, fun _ _ _ => none)
   term_app atom args := (.app atom args.1, fun env _ path =>
-    args.2 env (constAtom atom) path 0)
+    match inferArgs env (constAtom atom) args.1 with
+    | none => args.2 env (constAtom atom) path 0
+    | some types =>
+      match atomOf atom types with
+      | some _ => none
+      | none => some (if knownAtom atom then .refusedArguments path atom types
+          else .unknownAtom path atom))
   term_record fields names values := (.record fields names values.1, fun env _ path =>
     match declaration fields with
     | some why => some (.record ⟨path, why⟩)
@@ -218,20 +243,24 @@ set_option backward.privateInPublic.warn false in
 /-- Diagnose a failed term. This function never supplies a successful type. -/
 def diagnose {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :
     Option TermTypingRefusal :=
-  (cata_term (algebra (argTy sig) (argsTy sig) sig.constAtom sig.types) term).2 env false []
+  (cata_term (algebra (argTy sig) (argsTy sig) sig.constAtom sig.types sig.atomOf sig.knownAtom)
+    term).2 env false []
 
 /-- Compatibility projection for callers that request record-specific diagnostics. -/
 def locate {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :
     Option RecordTermRefusal := do
   match ← diagnose sig env term with
   | .record why => some why
-  | .tuple _ | .fold _ => none
+  | _ => none
 
 set_option backward.privateInPublic true in
-private def inCause (path : List Nat) : TermTypingRefusal → CauseTypingRefusal
-  | .record why => .record ⟨path, why⟩
-  | .tuple why => .tuple ⟨path, why⟩
-  | .fold why => .fold ⟨path, why⟩
+/-- A term's refusal inside a cause leaf: the record, tuple and fold reasons keep both addresses.
+A variable's and an application's have no cause form; the cause's own refusal stays. -/
+private def inCause (path : List Nat) : TermTypingRefusal → Option CauseTypingRefusal
+  | .record why => some (.record ⟨path, why⟩)
+  | .tuple why => some (.tuple ⟨path, why⟩)
+  | .fold why => some (.fold ⟨path, why⟩)
+  | .unbound .. | .unknownAtom .. | .refusedArguments .. => none
 
 set_option backward.privateInPublic true in
 private def CauseCarrier (_ : CauseTermFam) : Type :=
@@ -242,16 +271,16 @@ private def causeAlgebra (inferCause : CauseTerm → Option Ty) (inferTerm : Ter
     (diagnose : Term → Option TermTypingRefusal) : CauseTermAlgebra CauseCarrier where
   cause_fail term := (.fail term, fun path =>
     match inferTerm term with
-    | none => (diagnose term).map (inCause path)
+    | none => (diagnose term).bind (inCause path)
     | some _ => none)
   cause_die term := (.die term, fun path =>
     match inferTerm term with
-    | none => (diagnose term).map (inCause path)
+    | none => (diagnose term).bind (inCause path)
     | some _ => none)
   cause_interrupt term := (.interrupt term, fun path => do
     let who ← term
     match inferTerm who with
-    | none => (diagnose who).map (inCause path)
+    | none => (diagnose who).bind (inCause path)
     | some _ => none)
   cause_both left right := (.both left.1 right.1, fun path =>
     match inferCause left.1 with

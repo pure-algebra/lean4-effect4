@@ -456,16 +456,18 @@ namespace T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Program_
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Except(Effect4.Program.TypeRefusal, Effect4.Program.EffTy)"
-     [("error", 0, [("arg0", (shape _root_.Effect4.Program.TypeRefusal).root)]),
+     [("error", 0, [
+        ("arg0", (shape (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))).root)]),
       ("ok", 1, [("arg0", (shape _root_.Effect4.Program.EffTy).root)])],
-   (shape _root_.Effect4.Program.TypeRefusal).defs ++ (shape _root_.Effect4.Program.EffTy).defs⟩
+   (shape (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))).defs ++
+     (shape _root_.Effect4.Program.EffTy).defs⟩
 
 def toVal : @_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy) → Val
   | .error a0 => .ctor 0 [Canonical.toVal a0]
   | .ok a0 => .ctor 1 [Canonical.toVal a0]
 
 def ofVal : Val → Option (@_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Effect4.Program.EffTy))
-  | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.TypeRefusal) v0).map .error
+  | .ctor 0 [v0] => (Canonical.ofVal (α := (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))) v0).map .error
   | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.EffTy) v0).map .ok
   | _ => none
 
@@ -473,7 +475,7 @@ def ofVal : Val → Option (@_root_.Except (_root_.Effect4.Program.TypeRefusal) 
 
 theorem ofVal_arm0 (v0 : Val) :
     ofVal (.ctor 0 [v0]) =
-      (Canonical.ofVal (α := _root_.Effect4.Program.TypeRefusal) v0).map .error := rfl
+      (Canonical.ofVal (α := (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))) v0).map .error := rfl
 theorem ofVal_arm1 (v0 : Val) :
     ofVal (.ctor 1 [v0]) =
       (Canonical.ofVal (α := _root_.Effect4.Program.EffTy) v0).map .ok := rfl
@@ -483,8 +485,8 @@ theorem ofVal_toVal (a : @_root_.Except (_root_.Effect4.Program.TypeRefusal) (_r
   | «error» a0 => simp only [toVal, ofVal_arm0, Canonical.ofVal_toVal, Option.map_some]
   | «ok» a0 => simp only [toVal, ofVal_arm1, Canonical.ofVal_toVal, Option.map_some]
 
-theorem lift_T_95_root_95__46_Effect4_46_Program_46_TypeRefusal (x : _root_.Effect4.Program.TypeRefusal) :
-    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.TypeRefusal).root
+theorem lift_T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TypeReason_41_ (x : (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
     _ _ (Canonical.fits x)
@@ -498,7 +500,7 @@ theorem fits (a : @_root_.Except (_root_.Effect4.Program.TypeRefusal) (_root_.Ef
   cases a with
   | «error» a0 =>
     exact accepts_sum _ _ _ 0 "error" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_TypeRefusal a0) (acceptsFields_nil _))
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TypeReason_41_ a0) (acceptsFields_nil _))
   | «ok» a0 =>
     exact accepts_sum _ _ _ 1 "ok" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_EffTy a0) (acceptsFields_nil _))
@@ -731,10 +733,10 @@ namespace T_95_root_95__46_Effect4_46_Program_46_Check_46_ExplanationC
 
 def shapeDoc : ShapeDoc :=
   ⟨.struct "Effect4.Program.Check.Explanation" [
-     ("refusal", (shape _root_.Effect4.Program.TypeRefusal).root),
+     ("refusal", (shape (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))).root),
      ("site", (shape _root_.Effect4.Program.Check.Site).root),
      ("part", (shape (@_root_.Option (_root_.Effect4.Program.Check.CheckInput))).root)],
-   (shape _root_.Effect4.Program.TypeRefusal).defs ++
+   (shape (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))).defs ++
      (shape _root_.Effect4.Program.Check.Site).defs ++
      (shape (@_root_.Option (_root_.Effect4.Program.Check.CheckInput))).defs⟩
 
@@ -743,7 +745,8 @@ def toVal : _root_.Effect4.Program.Check.Explanation → Val
 
 def ofVal : Val → Option (_root_.Effect4.Program.Check.Explanation)
   | .ctor 0 [v0, v1, v2] =>
-    match Canonical.ofVal (α := _root_.Effect4.Program.TypeRefusal) v0,
+    match
+        Canonical.ofVal (α := (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))) v0,
         Canonical.ofVal (α := _root_.Effect4.Program.Check.Site) v1,
         Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.Check.CheckInput))) v2 with
     | some a0, some a1, some a2 => some ⟨a0, a1, a2⟩
@@ -768,8 +771,8 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Check.Explanation} (h 
     · exact nomatch h
   · exact nomatch h
 
-theorem lift_T_95_root_95__46_Effect4_46_Program_46_TypeRefusal (x : _root_.Effect4.Program.TypeRefusal) :
-    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.TypeRefusal).root
+theorem lift_T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TypeReason_41_ (x : (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Effect4.Located (@_root_.List (_root_.Nat)) (_root_.Effect4.Program.TypeReason))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (hp)))
     _ _ (Canonical.fits x)
@@ -788,7 +791,7 @@ theorem fits (a : _root_.Effect4.Program.Check.Explanation) : shapeDoc.accepts (
   obtain ⟨a0, a1, a2⟩ := a
   apply accepts_struct
   exact
-    (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_TypeRefusal a0)
+    (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TypeReason_41_ a0)
       (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_Check_46_Site a1)
         (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Option_32__40__95_root_95__46_Effect4_46_Program_46_Check_46_CheckInput_41_ a2) (acceptsFields_nil _))))
 

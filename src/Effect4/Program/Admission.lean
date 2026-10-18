@@ -20,6 +20,8 @@ the signature's admission is part of program admission) when:
    distinct record names, valid map keys (rows 192 and 193), and no type variable outside a
    row's template (row 288, point 6 a).
 3. The program is well-typed at the signature (`typeOfProgram app.signature program = some ty`).
+   Refused as `illTyped why`, with the whole program's located refusal (`programTyping`,
+   `programRefusal`, `Program/CheckedTyping.lean`).
 4. The inferred answer and error are each inhabited or `never` (`admitColumn`, rows 127 and
    149; refused as `emptyColumn at`).
 
@@ -78,8 +80,9 @@ theorem findEmptyColumnInEffTy_eq_none_iff (decls : TyDecls) (ty : EffTy) :
 
 /-- Admission refusals, reporting the exact failure reason. -/
 inductive AdmitRefusal
-  /-- `Program.typeOf` answered `none` at the application's signature. -/
-  | illTyped
+  /-- The program does not type at the application's signature: the whole program's located
+  refusal (`programTyping`). -/
+  | illTyped (why : TypeRefusal)
   /-- The application's signature is not lawful, with its located refusal (`admitSig`,
   decisions row 21): a row, a row key, a service declaration, a service code or a required key
   with no carrier. -/
@@ -88,7 +91,7 @@ inductive AdmitRefusal
   | emptyColumn («at» : Path)
   /-- A raw type fails the shared formation judgment (rows 192 and 193). -/
   | formation (why : Formation.Refusal)
-deriving DecidableEq, Repr
+deriving DecidableEq
 
 /-- A program admitted to run against an application's signature: its type at
 `app.signature`, which reads the application's named types, the signature's admission, raw
@@ -101,9 +104,9 @@ structure AdmittedProgram (program : NativeEff) (app : SigApp)
   columnsType : findEmptyColumnInEffTy app.types ty = none
 
 /-- Decide admission: the signature's admission (`admitSig`), raw formation, the one typing
-certificate (`checkTypedProgram`, shared with code generation) at the signature, and last the
-inferred columns' column scan (rows 127, 149). Each certificate field records the exact check
-that admitted it. -/
+certificate (`programTyping`, the certificate of `checkTypedProgram` shared with code generation, or
+its located refusal) at the signature, and last the inferred columns' column scan (rows 127, 149).
+Each certificate field records the exact check that admitted it. -/
 def admitProgram (program : NativeEff) (app : SigApp := {}) :
     Except AdmitRefusal (AdmittedProgram program app) :=
   match hsig : admitSig app with
@@ -112,9 +115,9 @@ def admitProgram (program : NativeEff) (app : SigApp := {}) :
     match hformed : Formation.checkInput program app.rows app.services with
     | some why => .error (.formation why)
     | none =>
-      match checkTypedProgram app.signature program with
-      | none => .error .illTyped
-      | some typing =>
+      match programTyping app.signature program with
+      | .error why => .error (.illTyped why)
+      | .ok typing =>
         match hcolType : findEmptyColumnInEffTy app.types typing.ty with
         | some pos => .error (.emptyColumn pos)
         | none => .ok ⟨typing, hsig,
@@ -125,7 +128,7 @@ Outside-fragment refusal does not mean that the program is ill-typed. -/
 inductive StraightAdmitRefusal
   | admission (why : AdmitRefusal)
   | outsideFragment
-deriving DecidableEq, Repr
+deriving DecidableEq
 
 /-- Ordinary admission plus executable membership in the straight fragment. The
 existing runtime certificate remains available to the admitted run entry points.

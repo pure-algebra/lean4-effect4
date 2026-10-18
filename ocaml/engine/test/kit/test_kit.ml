@@ -213,7 +213,7 @@ let t4 () =
                     (Kit.ty_text t.EffTy.answer = "number" && Kit.ty_text t.EffTy.error = "never")
    | Error _ -> check "T4 doubling types" false)
 
-let reason_head (r : Effect4_gen.Api_gen.type_refusal) =
+let reason_head (r : (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located) =
   match Kit.Json.refusal_json r with
   | J.Object fields ->
     (match List.assoc_opt "reason" fields with
@@ -222,8 +222,8 @@ let reason_head (r : Effect4_gen.Api_gen.type_refusal) =
      | _ -> "?")
   | _ -> "?"
 
-let path_text (r : Effect4_gen.Api_gen.type_refusal) =
-  if r.path = [] then "." else String.concat "." (List.map string_of_int r.path)
+let path_text (r : (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located) =
+  if r.site = [] then "." else String.concat "." (List.map string_of_int r.site)
 
 let t5 corpus =
   let empty = Kit.app () in

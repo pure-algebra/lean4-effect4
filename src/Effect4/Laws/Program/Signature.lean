@@ -214,7 +214,7 @@ types keeps its carrier. -/
 theorem services_append (app : SigApp) (s' : List (ServiceKey × Ty))
     (fresh : ∀ entry ∈ s', FreshCode app entry) :
     SigExtends app.signature (SigApp.mk app.rows (app.services ++ s') app.types).signature := by
-  refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_, rfl, rfl, fun _ _ hk => hk, rfl, rfl⟩
+  refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_, rfl, rfl, fun _ _ hk => hk, rfl, rfl, rfl⟩
   intro key ty hk
   change app.serviceTy key = some ty at hk
   change SigApp.serviceTy ⟨app.rows, app.services ++ s', app.types⟩ key = some ty

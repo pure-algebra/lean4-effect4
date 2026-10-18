@@ -1,4 +1,4 @@
-{"method":"open","payload":{"now":{"doc":{"generation":0,"name":"default"},"revision":0},"result":{"_tag":"ok","arg0":{"_tag":"acted","a":{"_tag":"opened","view":{"holes":[],"inspection":null,"refusals":[],"snap":{"doc":{"generation":0,"name":"default"},"revision":0},"type":{"answer":{"_tag":"nat"},"error":{"_tag":"never"},"requires":[]}}}}}},"version":1}
+{"method":"open","payload":{"now":{"doc":{"generation":0,"name":"default"},"revision":0},"result":{"_tag":"ok","arg0":{"_tag":"acted","a":{"_tag":"opened","view":{"declared":[],"holes":[],"inspection":null,"refusals":[],"snap":{"doc":{"generation":0,"name":"default"},"revision":0},"type":{"answer":{"_tag":"nat"},"error":{"_tag":"never"},"requires":[]}}}}}},"version":1}
 {"method":"run","payload":{"now":{"doc":{"generation":0,"name":"default"},"revision":0},"result":{"_tag":"error","arg0":{"_tag":"noRun","id":{"n":9007199254740991}}}},"version":1}
 {"refused":{"_tag":"codec","why":"unreadable"}}
 {"refused":"not tree JSON: a number that binary64 rounds, or nesting past the depth"}

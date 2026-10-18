@@ -512,7 +512,9 @@ module Run :
         val check :
           Api_gen.sig_app ->
           Eff_types.NativeOp.t Eff_types.Eff.t ->
-          (Eff_types.EffTy.t, Api_gen.type_refusal) result
+          (Eff_types.EffTy.t,
+           (int list, Api_gen.type_reason) Api_gen.located)
+          result
         val eff_ty_shape : Api_gen.shape_doc
         val eff_ty_to_val : Eff_types.EffTy.t -> Eff_types.Val.t
         val exit_of_val :
@@ -533,7 +535,8 @@ module Run :
         val program_to_val :
           Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t
         val refusal_shape : Api_gen.shape_doc
-        val refusal_to_val : Api_gen.type_refusal -> Eff_types.Val.t
+        val refusal_to_val :
+          (int list, Api_gen.type_reason) Api_gen.located -> Eff_types.Val.t
         val replies :
           Api_gen.sig_app ->
           int ->

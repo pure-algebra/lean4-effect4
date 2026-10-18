@@ -98,7 +98,9 @@ refusal placed below `2`. A step of `checker-combine-deps`. Its consumer is
 theorem mapError_layer_rebase {α : Type} (x : Except TypeRefusal α) :
     (x.mapError (TypeRefusal.rebase [0, 0])).mapError layerRefusal =
       x.mapError (TypeRefusal.rebase [2]) := by
-  cases x <;> rfl
+  cases x with
+  | ok _ => rfl
+  | error r => exact congrArg Except.error (Located.mapSite_comp ([0, 0] ++ ·) layerPath r)
 
 /-- An entry of the layers' table placed below the module layers' part, read back at the
 block's child `2`, is the entry placed below `2`. A step of `checker-combine-deps`. Its consumer

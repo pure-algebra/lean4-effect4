@@ -60,7 +60,7 @@ def pStrBind : Program := .bind (.succeed (.lit (.str "a"))) (.succeed (.var 0))
 /-! Computed fragment admission uses the ordinary API without a Laws import. -/
 #guard (admitStraightProgram p42).isOk
 #guard match admitStraightProgram (.succeed (.var 0)) with
-  | .error (.admission .illTyped) => true
+  | .error (.admission (.illTyped ⟨[], .unboundVariable [] 0 0⟩)) => true
   | _ => false
 #guard match admitStraightProgram (.gen .nil) with
   | .error .outsideFragment => true

@@ -59,6 +59,11 @@ def nativeConstAtom (name : String) : Bool :=
 
 theorem nativeConstAtom_pair : nativeConstAtom "pair" = true := by decide
 
+/-- Which names the catalogue names (`NativeAtom.ofName?`): the term diagnostic's split between
+an unknown atom and an atom at refused argument types (`Signature.knownAtom`). -/
+def nativeKnownAtom (name : String) : Bool :=
+  (NativeAtom.ofName? name).isSome
+
 theorem nativeAtomTy_strings (tys : List Ty) :
     nativeAtomTy "strings" tys =
       if tys.all (·.sub .string) then some (.list .string) else none := rfl
@@ -642,6 +647,7 @@ def nativeSignature (table : RowTable := []) : Signature NativeOp :=
       | .call _ | .param _ => false
       | _ => true,
     constAtom := nativeConstAtom,
+    knownAtom := nativeKnownAtom,
     -- a read-modify-write row's binder term, at its shape's parameter and result templates
     termOf := fun op => op.binder?.map fun b => ⟨b.2, b.1.param, b.1.result⟩,
     -- a reader installs the function it read in the operation its row spells

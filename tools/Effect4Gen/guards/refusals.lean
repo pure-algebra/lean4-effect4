@@ -44,7 +44,8 @@ def signatures : List SigRefusal :=
     declReasons.map (SigRefusal.decl 3) ++ [.conflictingDecl "Todo", .unguardedDecl "Loop"]
 
 def admissions : List AdmitRefusal :=
-  [.illTyped] ++ signatures.map .signature ++
+  [.illTyped ⟨[1], .unboundVariable [] 3 1⟩, .illTyped ⟨[], .unknownAtom [0] "inc"⟩] ++
+    signatures.map .signature ++
     [.emptyColumn ["program", "answer"], .emptyColumn ["program", "error"]] ++
     formations.map .formation
 
@@ -65,7 +66,9 @@ def typings : List TypeRefusal :=
    ⟨[], .returnNotLast⟩, ⟨[], .breakOutsideLoop⟩, ⟨[], .literalOutsideAlphabet (.str "x")⟩,
    ⟨[], .errorPayloadField (.record [("_tag", false, .lit "E"), ("id", false, .int)]) ["id"] .int⟩,
    ⟨[], .errorSpelling (.record [("_tag", false, .lit "E"), ("message", false, .string)])
-     (.prod (.lit "E") .string)⟩] ++
+     (.prod (.lit "E") .string)⟩,
+   ⟨[1], .unboundVariable [] 3 1⟩, ⟨[1], .unboundVariable [0, 2] 4 3⟩, ⟨[1], .unknownAtom [] "inc"⟩,
+   ⟨[0], .refusedArguments [1] "succ" [.bool]⟩] ++
     formations.map (fun why => ⟨[0], .instantiatedFormation "Db.get" why⟩) ++
     recordTerms.map (fun why => ⟨[1], .recordTerm why⟩) ++
     recordCauses.map (fun why => ⟨[2], .recordCause why⟩)
@@ -119,7 +122,8 @@ def reasons : List TypeReason :=
    .foldCause ⟨[1], ⟨[0], .bodyNotAccumulator (.list .nat) (.list .never)⟩⟩,
    .maskRestoreExpected .bool, .definitionBlock, .definitionsMismatch 1 0,
    .definitionColumns "count", .bodyNotDeclared "count" (EffTy.pure .string),
-   .invokeArity "use" 1 0]
+   .invokeArity "use" 1 0, .unboundVariable [] 3 1, .unknownAtom [0] "inc",
+   .refusedArguments [] "succ" [.bool]]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/
@@ -213,8 +217,9 @@ def printedHead : Effect4.Json → String
 #guard prints.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard reads.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard builds.all fun x => Canonical.head x == printedHead (Canonical.print x)
--- A structure's head is its name, which its printed object does not carry.
-#guard typings.all fun x => Canonical.head x == "TypeRefusal" && printedHead (Canonical.print x) == ""
+-- A structure's head is its name, which its printed object does not carry: the program's refusal
+-- is a `Located` reason (`Data/Located.lean`).
+#guard typings.all fun x => Canonical.head x == "Located" && printedHead (Canonical.print x) == ""
 
 end RefusalsAcceptance
 
