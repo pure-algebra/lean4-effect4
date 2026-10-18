@@ -1,0 +1,5 @@
+; Red control of the public facade: Memo stays abstract through its facade alias: no list literal.
+; ../../check_install.sh expects this build to fail with the line of red.expected.
+(executable
+ (name red)
+ (libraries effect4_gen.effect4))

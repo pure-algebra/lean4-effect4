@@ -38,7 +38,7 @@ the OCaml estate plan): the manifest of every public name and the facade module 
   sealed row, one alias per owner type; a module that aliases an owner holds no other public name
   — *tested* (the controls below); *checked* by `ocamlopt` against the implementation before
   publication (`scripts/lib/lcnf_interfaces.py`) and by an outside project
-  (`scripts/check-public-facade.py`).
+  (the install lane, `ocaml/engine/test/install/check_install.sh`).
 -/
 
 namespace OCaml5.Lcnf.Public

@@ -5,6 +5,7 @@ library effect4_eff
 library effect4_engine
 library effect4_engine_cas
 library effect4_gen
+library effect4_gen.effect4
 library effect4_kit
 library effect4_lcnf
 package effect4_bytes

@@ -21,13 +21,18 @@
 #
 # Behaviours:
 #   I1 `dune install` fills the prefix with exactly INSTALLED_EXPECTED: one executable, bin/eff,
-#      eight packages, and their eight libraries, sub-libraries included, so no test library
-#      installs under any name.                                                        tested
+#      eight packages, and their nine libraries, the facade effect4_gen.effect4 included, so no
+#      test library installs under any name.                                          tested
 #   I2 Each ok fixture builds against the prefix alone and prints its ok.expected. consumer/ok
-#      links the installed kit, then checks and runs consumer/program.json.           tested
+#      links the installed kit, then checks and runs consumer/program.json. consumer/ok_facade
+#      names R6.2's frozen paths through the public facade and runs one program.      tested
 #   I3 The installed eff prints consumer/ok's two lines for `eff check` and `eff run`. tested
 #   I4 Red controls: each red fixture's build fails, and its output holds the line of its
-#      red.expected. consumer/red names the test library effect4_disk_test_support.   tested
+#      red.expected. consumer/red_test_library names the test library
+#      effect4_disk_test_support. The other eight are the facade's (R6.2): a coverage root named
+#      through the facade and through Api_gen, a linkage root named through the facade, and each
+#      sealed package (Built, Prepared, Checked, the tool Session, Memo) built or updated through
+#      a facade alias.                                                                 tested
 #   The prefix and the copy share one temporary directory, removed on every exit.
 #   Evidence: host-only, a finite run on this machine's switch; no theorem reaches it.
 set -euo pipefail

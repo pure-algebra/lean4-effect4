@@ -4,7 +4,7 @@
 ; Effect4.Run.Tree.of_program; each path aliases Api_gen or Eff_types with a type equality, and a
 ; sealed package stays abstract through it. Additive: Api_gen keeps its own names.
 ; `-open Effect4_gen` lets the generated text name Api_gen as the staged producer compiles it.
-; scripts/check-public-facade.py builds a project outside ocaml/ against the installed library.
+; ocaml/engine/test/install builds a project outside ocaml/ against the installed library.
 (library
  (name effect4)
  (public_name effect4_gen.effect4)

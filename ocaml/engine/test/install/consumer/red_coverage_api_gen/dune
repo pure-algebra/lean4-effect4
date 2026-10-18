@@ -1,0 +1,5 @@
+; Red control of the public facade: a coverage root is not exported by the installed Api_gen.
+; ../../check_install.sh expects this build to fail with the line of red.expected.
+(executable
+ (name red)
+ (libraries effect4_gen.effect4))
