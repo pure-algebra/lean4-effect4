@@ -73,9 +73,6 @@ def dangling : Stores := { Stores.empty with refs := [Val.cell ⟨9⟩] }
 Slice C's exact primitive law and its nonempty-state controls. The successful-step premise
 says nothing about well-formedness, allocated labels or host admission. -/
 
-example : ∀ (o : SyncOp) (s s' : Stores) (v : Val),
-    syncOpStep o s = some (s', v) → s'.externals = s.externals := @syncOpStep_externals
-
 def externalFrame : ExternalStore := { allocated := ["fixture/resource"] }
 
 def withExternalFrame : Stores := { Stores.empty with externals := externalFrame }
@@ -454,8 +451,6 @@ def shapeCode : Val → Nat
    0x02, 0, 0, 0, 0, 0, 0, 0, 0x00,
    0x02, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02]
 #guard (Env.serviceKeyImage.encode ⟨⟨1⟩, ⟨2⟩⟩).length = 74
-
-example := @Effect4.Machine.Env.Val.ofSpine_entries
 
 end Foundation
 

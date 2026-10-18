@@ -20,7 +20,7 @@ and what the typing theorems do not say by themselves.
    `Ref.modifyWith` under three names that `bindWith` minted, with no assumed capture.
 6. The connector to the store: `step_keeps_cell` on a step's typing.
 
-The comparison with the abstract model is `Test/Program/PoolAgreement.lean`. The runs on the
+The relation to the abstract model is `Test/Program/PoolRelation.lean`. The runs on the
 machine are `Test/Program/PoolScenarios.lean`.
 
 Placement. Concept `store-typing`, requirement R4. Every guard is a finite check, and every

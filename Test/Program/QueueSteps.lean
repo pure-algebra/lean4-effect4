@@ -7,8 +7,8 @@ import Effect4.Codegen.ListFold
 
 The module is `src/Effect4/Library/Queue/`: the cell's type and initial value (`Cell.lean`), and
 the six step terms (`Steps.lean`). This battery holds the finite controls of the module alone:
-the cell's type and value, and each step's type, size and reading domain. The comparison with
-the abstract model is `Test/Program/QueueAgreement.lean`. The runs on the machine are
+the cell's type and value, and each step's type, size and reading domain. The relation to the
+abstract model is `Test/Program/QueueRelation.lean`. The runs on the machine are
 `Test/Program/QueueScenarios.lean`.
 
 Placement. The typing controls are finite instances of the typing statements of

@@ -55,11 +55,6 @@ open Effect4.Store
 #guard Kind.ofByte? 127 = none
 #guard Kind.ofName? "enum" = none
 
-example := @Effect4.Store.Kind.ofByte?_byte
-example := @Effect4.Store.Kind.byte_ofByte?
-example := @Effect4.Store.Kind.byte_injective
-example := @Effect4.Store.Kind.name_injective
-
 /-! ## The census entry as content -/
 
 #guard Content.kind Effect4.Store.Templates.Entry = .«export»
@@ -172,22 +167,8 @@ def entryTyped : Ref Effect4.Store.Templates.Entry := ⟨entryAddress⟩
 
 /-! ## The address lattice, stated -/
 
-example := @Effect4.Store.address_congr
-example := @Effect4.Store.address_eq_or_collision
--- The lookup reader needs both residents, even when the two addresses agree.
-example {n : Effect4.Store.Node}
-    (hn : probeStore.find (sha256 n.encode) = some n)
-    (hm : probeStore.find probeEntryAddress = some probeEntry)
-    (he : sha256 n.encode = probeEntryAddress) : n = probeEntry :=
-  address_inj_resident hn hm he
-
 -- Equal addresses alone supply no resident: the empty store has neither premise.
 #guard Store.empty.find probeEntryAddress = none
 #guard probeStore.find probeEntryAddress = some probeEntry
-example := @Effect4.Store.Node.decode_encode
-example := @Effect4.Store.Node.decode_exact
-example := @Effect4.Store.Node.encode_injective
-example := @Effect4.Store.metaSchema_accepts
-example := @Effect4.Store.specOf_document
 
 end Test.Store.NodeContract

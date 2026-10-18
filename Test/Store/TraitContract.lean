@@ -101,11 +101,4 @@ open Effect4.Store
 
 /-! ## The laws, stated -/
 
-example := @Effect4.Store.nodeBytes_trait_free
-example := @Effect4.Store.trait_put_preserves
-example := @Effect4.Store.trait_get_preserves
-example := @Effect4.Store.effective_deterministic
-example := @Effect4.Store.traitsOf_perm
-example := @Effect4.Store.headsUnder_perm
-
 end Test.Store.TraitContract

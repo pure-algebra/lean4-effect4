@@ -7,7 +7,7 @@ Ruling input: `docs/research/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census
 
 Implementation fence: `src/Effect4/Schema/Representation.lean`
 
-Battery: `Test/Schema/RepresentationContract.lean`
+Battery: `git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Schema/RepresentationContract.lean`
 
 Counterexamples: `Test/Counterexamples/REGISTER.md`, rows
 `E4-SCHEMA-CE-017` through `E4-SCHEMA-CE-019`, with executable witnesses in
@@ -373,7 +373,7 @@ strictly weaker statement.
 
 FIXED-BY: ENSURES obligation 7 and a new paragraph under D2 state the per-tag
 scope and why the ordered equation cannot carry it.
-`Test/Schema/RepresentationContract.lean` gains 22 pointwise `tagName`
+`git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Schema/RepresentationContract.lean` gains 22 pointwise `tagName`
 examples and 22 pointwise `ofTagName` examples. The companion packet's battery
 gains the same treatment for its spelled alphabets. The mutation gate carries
 the permutation as its fifth specified mutant. No implementation declaration

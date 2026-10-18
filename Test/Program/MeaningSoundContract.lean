@@ -51,17 +51,4 @@ example (pw pd : Effects.Program StoreSig ExitV) (w : Typed.World) (a e : Ty) :
         Typed.ExitOk w' ⟨a, e, Env.Requirement.empty⟩ (runP pd w.state).1 :=
   ⟨fun h => ⟨h.independent, h.reaches⟩, fun h => ⟨h.1, h.2⟩⟩
 
-/-- `sound`: from every world whose store fits, in every environment typed there. -/
-example : ∀ (bad : ExitV) (e : NativeEff) (tys : TyEnv) (env : List Val) (w : Typed.World)
-    (t : EffTy), Straight e = true → effTy nativeSignature tys e = some t →
-    TypedAt tys env w → Sound bad e env w t :=
-  @sound
-
-/-- `meaning_stores`: the stores a typed straight program leaves are the state of a world whose
-store fits. -/
-example : ∀ (e : NativeEff) (t : EffTy), Straight e = true →
-    effTy nativeSignature [] e = some t →
-    ∃ w : Typed.World, w.state = (meaning e [] Stores.empty).2 ∧ StoreFits w :=
-  @meaning_stores
-
 end Test.Program.MeaningSoundContract

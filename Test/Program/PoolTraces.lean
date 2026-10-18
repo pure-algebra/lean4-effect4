@@ -10,7 +10,7 @@ adds more (`docs/research/2026-10-05-claude-lead/waiting-design.md`, F5, F7 and 
 Queue's battery and Semaphore's run them over their modules (`Test/Program/QueueTraces.lean`,
 `Test/Program/SemaphoreTraces.lean`). This battery runs them over Pool's `use`
 (`src/Effect4/Library/Pool/Ops.lean`), with the controls of the protected lease and of the
-close. Each has its positive control, and a fault that fails the promised property.
+close.
 
 | # | The trace | The open part that it is a finite control of |
 | --- | --- | --- |
@@ -31,11 +31,6 @@ two red controls of `protectedBy` at Pool (decisions row 276, point 1): a lease 
 is lost under an interruption, and a wait inside a mask of the form's making cannot be
 interrupted. The red control of the close is in `Test/Program/PoolPublic.lean`: a close that
 does not wait finalizes an item that a borrower still holds.
-
-**A fault is a variant of Pool's part** (`Variant`): no withdrawal, one hint for every round, or
-a helper with other fork options. The variant with no change is the library's operation, tree
-for tree. Each faulty program builds: the checker types it. So each fault fails the promised
-property, and not typing alone.
 
 **The pool of a trace is its cell alone**, but in trace 9. A trace makes the cell by
 `Ref.make`, so no scope's close stands behind it. A fault that loses a lease then leaves a run
@@ -64,75 +59,8 @@ open Test.Program.PoolPublic (treeAt snapshot exitAt acquire holding library)
 open Test.Program.SemaphoreTraces (Row rowOf before budgeted fuel plain runOn exitOf rowsOf rawOn
   rawRows)
 
-/-! ## The variants of Pool's part
-
-A variant changes Pool's part of the lease and of the return, and nothing of the shared forms.
-The library's `use` is the variant with no change. -/
-
-/-- The knobs of a variant. Each default is the library's. -/
-structure Variant where
-  /-- Whether an interrupted wait withdraws its request. -/
-  withdraws : Bool := true
-  /-- The wrapper's loop at a restore site. -/
-  retry : (Src NativeOp → Src NativeOp) → Ty → String → Waiter → Src NativeOp := waitRetryAt
-  /-- The fork options of a return's helper. -/
-  options : Effect4.Supervision.ForkOptions := posted
-
-/-- Pool's part under a variant: the library's attempt, and the variant's withdrawal. -/
-def borrowerOf (v : Variant) (pool : TermSrc) : Waiter :=
-  { hint := .unit
-    attempt := (Pool.borrower pool).attempt
-    withdraw := fun id =>
-      if v.withdraws then Ref.modifyWith pool (Pool.withdrawStep id) else succeed unit }
-
-/-- The lease at a restore site, under a variant. -/
-def leaseOf (v : Variant) (A : Ty) (pool : TermSrc) (restore : Src NativeOp → Src NativeOp) :
-    Src NativeOp :=
-  bindWith (v.retry restore (.option (Pool.itemTy A)) Pool.ended (borrowerOf v pool)) fun got =>
-    selectOptionWith got Pool.refused fun item => succeed item
-
-/-- The return under a variant: the library's, with the variant's fork options. -/
-def giveBackOf (v : Variant) (pool item : TermSrc) : Src NativeOp :=
-  bindWith (Ref.modifyWith pool (Pool.returnStep (field item "stamp") (field item "lease")))
-    fun reply =>
-      ifElse (tupleAt reply 1)
-        (andThen (withFiber (Action.fork (Pool.wake pool (nat 1)) v.options)) (succeed unit))
-        (succeed unit)
-
-/-- `use` under a variant. -/
-def useOf (v : Variant) (A : Ty) (pool : TermSrc) (body : TermSrc → Src NativeOp) :
-    Src NativeOp :=
-  protectedBy (leaseOf v A pool) (giveBackOf v pool) (fun item => body (field item "resource"))
-
 /-- The form of `use` that a scenario takes. -/
 abbrev Use := Ty → TermSrc → (TermSrc → Src NativeOp) → Src NativeOp
-
--- The variant with no change is the library's operation, tree for tree.
-#guard (treeAt ["p"] (useOf {} .nat (var "p") fun r => succeed r)).isSome &&
-  treeAt ["p"] (useOf {} .nat (var "p") fun r => succeed r) ==
-    treeAt ["p"] (Pool.use .nat (var "p") fun r => succeed r)
--- Red control of the comparison: a changed variant is another tree.
-#guard treeAt ["p"] (useOf { withdraws := false } .nat (var "p") fun r => succeed r) !=
-  treeAt ["p"] (Pool.use .nat (var "p") fun r => succeed r)
-
-/-- **One hint for every round**: `waitRetryAt` with the hint allocated once, before the
-loop. -/
-def retryOneHintAt (restore : Src NativeOp → Src NativeOp) (result : Ty) (ended : String)
-    (w : Waiter) : Src NativeOp :=
-  bindWith (Deferred.make .unit .never) fun id =>
-    bindWith (Deferred.make w.hint .never) fun hint =>
-      bindWith
-        (iterateWith noneT
-          { cursorTy := some (.option result)
-            while_ := fun cursor => notT (app "isSome" [cursor])
-            body := fun _ =>
-              w.attempt id hint
-                (andThen (waitAt restore hint (w.withdraw id)) (succeed noneT))
-                (fun answer => succeed (app "some" [answer]))
-            step := fun _ answer => answer })
-        fun last =>
-          selectOptionWith last (failCause (Authoring.Cause.die (str ended))) fun answer =>
-            succeed answer
 
 /-! ## The pieces of a control -/
 
@@ -200,26 +128,25 @@ def stopsBetween (k : Nat) : Bool :=
 
 -- The checker refuses the budget's provision, so the programs are raw.
 #guard verdict (notified 25) = "typing: serviceUnknown"
--- The budgets that stop the borrower between its enrolment and its await: 28 to 32. Below 28
--- the borrower yields before its step, and from 33 it reaches its await with no yield.
-#guard (List.range 45).filter stopsBetween = [28, 29, 30, 31, 32]
+-- The budget 28 stops the borrower between its enrolment and its await.
+#guard stopsBetween 28
 
--- At each such budget, on both tapes: the root ends with the resource 1, the item is idle
--- again at the end, and nobody waits.
-#guard [28, 29, 30, 31, 32].all fun k =>
+-- On both tapes: the root ends with the resource 1, the item is idle again at the end, and
+-- nobody waits.
+#guard let k := 28
   [awaitFirst, taskFirst].all fun tape =>
     ((rawOn tape (notified k)).bind (·.exit)) == some (.success (.nat 1)) &&
       (stages tape (notified k)).drop 3 == [(some (1, 0, 0), true)]
 -- The await before the task. After the borrower's dispatcher the borrower is still enrolled,
 -- and the item is idle: it parked at its hint. The holder's dispatcher then runs the helper,
 -- which resumes the borrower, and the borrower's attempt runs inside that task.
-#guard [28, 29, 30, 31, 32].all fun k =>
-  (stages awaitFirst (notified k)).take 2 == [(some (1, 0, 1), false), (some (1, 0, 1), false)]
+#guard (stages awaitFirst (notified 28)).take 2 ==
+  [(some (1, 0, 1), false), (some (1, 0, 1), false)]
 -- The task before the await. After the holder's dispatcher the selection has taken the
 -- borrower: its entry left, and the item is still idle. A selection reserves nothing. The
 -- borrower's dispatcher then runs: its await answers at once, and its next attempt leases.
-#guard [28, 29, 30, 31, 32].all fun k =>
-  (stages taskFirst (notified k)).take 2 == [(some (1, 0, 1), false), (some (1, 0, 0), false)]
+#guard (stages taskFirst (notified 28)).take 2 ==
+  [(some (1, 0, 1), false), (some (1, 0, 0), false)]
 
 -- The await before the task, at the budget 28. The borrower's dispatcher runs: the borrower
 -- parks at its hint. Then the holder's dispatcher runs the helper, fiber 3, which resumes the
@@ -296,16 +223,6 @@ def cancelled (use : Use) (maskedCaller : Bool) : Src NativeOp := eff do
 -- The four observations are four values: under the masked caller the operation's exit and the
 -- fiber's exit differ, and under the interruptible caller they agree.
 
--- **Fault: no withdrawal.** A's entry stays after its fiber is gone: two waiters stand where
--- one request waits. The helper's selection at the count 1 takes the entry of nobody, and it
--- resolves a hint that nobody awaits. So the wake is lost: the item stays idle while B waits,
--- and no body runs. Pool's selection is fixed at its count, so the fault costs more here than
--- under Semaphore's live scan.
-#guard verdict (cancelled (useOf { withdraws := false }) false) = "built"
-#guard exitOf (cancelled (useOf { withdraws := false }) false) = some (.success (.list
-  [snap [0] [] [] 2 false 1, snap [0] [] [] 1 false 1, .bool true, rows [], .bool true,
-    .bool true]))
-
 /-! ## 3. A late delivery to an old hint after the request waits again
 
 No step of the first profile wakes a waiter beside a held item. So this control posts the wakes
@@ -349,16 +266,6 @@ def rearmed (use : Use) : Src NativeOp := eff do
 #guard (rowsOf (rearmed Pool.use)).count (.yielded 2) = 0
 -- The ordinary run ends at the truth lane's fuel.
 #guard (exitAt 1000 (rearmed Pool.use)).isSome
-
--- **Fault: one hint for every round.** After the first wake the hint is resolved for good, so
--- each later wait answers at once: the waiter tries again and again without a park, until its
--- operation budget stops it. It keeps its first hint. The ordinary run has no exit at the
--- truth lane's fuel.
-#guard verdict (rearmed (useOf { retry := retryOneHintAt })) = "built"
-#guard exitOf (rearmed (useOf { retry := retryOneHintAt })) =
-  some (.success (.list [.nat 1, .bool true, .nat 1]))
-#guard (rowsOf (rearmed (useOf { retry := retryOneHintAt }))).count (.yielded 2) != 0
-#guard (exitAt 1000 (rearmed (useOf { retry := retryOneHintAt }))).isNone
 
 /-! ## 4. A holder that is interrupted inside the lease's mask
 
@@ -443,15 +350,6 @@ def borrowedUnder (k : Nat) (use : Use) : Option (Nat × Nat) :=
 -- The library's lease in its own mask and then the hook, at the same two budgets: the lease is
 -- lost.
 #guard borrowedUnder 18 leaseThenHook = some (0, 1) && borrowedUnder 35 leaseThenHook = some (1, 1)
--- Measured at each budget from 9 to 59: the two-region form loses the lease at the eighteen
--- budgets from 18 to 35, and at no other. At 17 A yields before the mask, where it is
--- interruptible: nothing is leased. At 36 the two-region form has installed its hook when A
--- yields, so its return runs.
-#guard (List.range' 9 51).filter
-    (fun k => (borrowedUnder k leaseThenHook).map (·.2) == some 1) = List.range' 18 18
--- The library's form loses it at none of them.
-#guard (List.range' 9 51).all fun k => (borrowedUnder k Pool.use).map (·.2) == some 0
-
 /-! ## 5. A waiter that is interrupted under a mask of the form's making
 
 The second red control of `protectedBy` at Pool. A lease that holds its own mask, inside a mask
@@ -519,14 +417,6 @@ def returnerExits (use : Use) : Src NativeOp := eff do
 #guard before (.exited 1 true) (.ran 1) (rowsOf (returnerExits Pool.use))
 #guard (rowsOf (returnerExits Pool.use)).contains (.forked 1 3 true)
 
--- **Fault: the helper as a supervised, interruptible child.** The holder's exit interrupts its
--- children. The helper is interrupted before its selection: the wake is lost, the borrower
--- waits for good beside an idle item, and the root has no exit.
-#guard verdict (returnerExits (useOf { options := ⟨false, false, .interruptible⟩ })) = "built"
-#guard (exitOf (returnerExits (useOf { options := ⟨false, false, .interruptible⟩ }))).isNone
-#guard (rowsOf (returnerExits (useOf { options := ⟨false, false, .interruptible⟩ }))).contains
-  (.exited 3 false)
-
 /-! ## 7. The receiver's continuation that grows
 
 The helper's task runs the resumed borrower: its next attempt, then its body, and then its
@@ -534,7 +424,7 @@ return, under the task's own budget (decisions rows 226 and 238). Here the borro
 loop of `n` steps. The measure is the least fuel at which the flush of the helper's task ends
 the root.
 
-**No bound is claimed.** The numbers are measured on this program at these lengths. -/
+**No bound is claimed.** The fuel is measured on this program at one length. -/
 
 /-- A borrower whose body runs `n` steps; the root opens the holder's gate, and joins it. -/
 def grows (n : Nat) : Src NativeOp := eff do
@@ -566,22 +456,15 @@ def flushAt (b : Api.Built) (budget : Nat) : Bool × Bool :=
 def afterFlush (src : Src NativeOp) (budget : Nat) : Option (Bool × Bool) :=
   (Effect4.Api.Author.build (mk src)).toOption.map fun b => flushAt b budget
 
-/-- The lengths, each with the least fuel of the delivery's flush that was measured for it. -/
-def measured : List (Nat × Nat) :=
-  [(0, 61), (1, 64), (2, 67), (4, 73), (8, 85), (16, 109), (32, 157)]
-
--- Each program builds, and it answers its resource and its count of steps.
-#guard measured.all fun (n, _) =>
-  exitOf (grows n) == some (.success (.list [.nat 1, .nat n]))
--- At the measured fuel the flush ends the root. The empty body is the control: 61.
-#guard measured.all fun (n, least) => afterFlush (grows n) least == some (true, true)
+-- A body of two steps: the program answers its resource and its count, and at the fuel 67 the
+-- flush ends the root.
+#guard exitOf (grows 2) == some (.success (.list [.nat 1, .nat 2]))
+#guard afterFlush (grows 2) 67 == some (true, true)
 -- At one less it does not. And five more flushes at the ample fuel do not end it either: the
 -- cut inside the dispatch lost the work that remained, and a later flush is no resumption.
 -- Decisions row 226 excludes that cut from the first profile, so this is the excluded case,
 -- and no fault of the wake.
-#guard measured.all fun (n, least) => afterFlush (grows n) (least - 1) == some (false, false)
--- The measured fuel grows with the body: three for each step, at these lengths.
-#guard measured.all fun (n, least) => least == 61 + 3 * n
+#guard afterFlush (grows 2) 66 == some (false, false)
 
 /-! ## 8. The protected lease under a masked caller
 

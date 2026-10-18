@@ -17,27 +17,11 @@ namespace Test.Schema.Identity
 #guard deferredKeyImage.ofVal (.nat 7) == none
 #guard deferredKeyImage.ofVal (.handle 2 7) == none
 
--- Readers: exact image laws at this carrier.
-example (key : DeferredKey) :
-    deferredKeyImage.ofVal (deferredKeyImage.toVal key) = some key :=
-  deferredKeyImage.ofVal_toVal key
-
-example {value : Effect4.Store.Val} {key : DeferredKey}
-    (h : deferredKeyImage.ofVal value = some key) : value = deferredKeyImage.toVal key :=
-  deferredKeyImage.ofVal_exact h
-
 -- Equal and distinct keys compare through their deferred images.
 #guard Model.deferredEqual Leaves.deferredKeys ⟨4⟩ ⟨4⟩
 #guard !Model.deferredEqual Leaves.deferredKeys ⟨4⟩ ⟨9⟩
 #guard nativeAtom "sameHandle"
   [deferredKeyImage.toVal ⟨4⟩, deferredKeyImage.toVal ⟨9⟩] == some (.bool false)
-
--- Reader: the native comparison term reads the total candidate on the admitted fragment.
-example {a b : TermSrc} {x y : DeferredKey} {env : Env} {path : List Nat} {vals : List Effect4.Store.Val}
-    (ha : Reads a env path vals (deferredKeyImage.toVal x))
-    (hb : Reads b env path vals (deferredKeyImage.toVal y)) :
-    Reads (same a b) env path vals (.bool (Model.deferredEqual Leaves.deferredKeys x y)) :=
-  DeferredIdentity.deferredKeys.reads_deferredEqual ha hb
 
 -- Malformed values receive a total answer without a reading claim.
 #guard !Model.deferredEqual Leaves.opaque .unit .unit

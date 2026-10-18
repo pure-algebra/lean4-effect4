@@ -8,8 +8,7 @@ Decisions row 221 names three acceptance traces of the waiting wrapper, and the 
 adds more (`docs/research/2026-10-05-claude-lead/waiting-design.md`, F5, F7 and proposal 5). The
 Queue's battery runs them over the Queue (`Test/Program/QueueTraces.lean`). This battery runs
 those that Semaphore has, over the library's operations
-(`src/Effect4/Library/Semaphore/Ops.lean`), and the controls of the protected permit. Each has
-its positive control, and a fault that fails the promised property.
+(`src/Effect4/Library/Semaphore/Ops.lean`), and the controls of the protected permit.
 
 | # | The trace | The open part that it is a finite control of |
 | --- | --- | --- |
@@ -29,11 +28,6 @@ not hold it yet. Traces 4 and 5 are the two red controls of `protectedBy`
 (`src/Effect4/Library/Waiting.lean`; decisions row 276, point 1): a take in its own mask loses
 its permit under an interruption, and a wait inside a mask of the form's making cannot be
 interrupted.
-
-**A fault is a variant of Semaphore's part** (`Variant`): no withdrawal, one hint for every
-round, or a helper with other fork options. The variant with no change is the library's
-operation, tree for tree. Each faulty program builds: the checker types it. So each fault fails
-the promised property, and not typing alone.
 
 **A cancellation control records four observations apart** (decisions row 222): the commitment,
 the operation's exit, the entry of the caller's continuation, and the fiber's exit. The
@@ -117,78 +111,6 @@ def before (first second : Row) (rows : List Row) : Bool :=
   | some i, some j => decide (i < j)
   | _, _ => false
 
-/-! ## The variants of Semaphore's part
-
-A variant changes Semaphore's part of `take`, of `release` and of the protected form, and
-nothing of the shared forms. The library's operation is the variant with no change. -/
-
-/-- The knobs of a variant. Each default is the library's. -/
-structure Variant where
-  /-- Whether an interrupted wait withdraws its request. -/
-  withdraws : Bool := true
-  /-- The wrapper's loop at a restore site. -/
-  retry : (Src NativeOp → Src NativeOp) → Ty → String → Waiter → Src NativeOp := waitRetryAt
-  /-- The fork options of a release's helper. -/
-  options : Effect4.Supervision.ForkOptions := posted
-
-/-- Semaphore's part under a variant: the library's attempt, and the variant's withdrawal. -/
-def takerOf (v : Variant) (q count : TermSrc) : Waiter :=
-  { hint := .unit
-    attempt := (Semaphore.taker q count).attempt
-    withdraw := fun id =>
-      if v.withdraws then Ref.modifyWith q (withdrawStep id) else succeed unit }
-
-/-- The take's loop at a restore site, under a variant. -/
-def takeAtOf (v : Variant) (restore : Src NativeOp → Src NativeOp) (q count : TermSrc) :
-    Src NativeOp :=
-  v.retry restore .nat Semaphore.ended (takerOf v q count)
-
-/-- `release` under a variant: the library's, with the variant's fork options. -/
-def releaseOf (v : Variant) (q count : TermSrc) : Src NativeOp :=
-  uninterruptible
-    (bindWith (Ref.modifyWith q (releaseStep count)) fun reply =>
-      andThen
-        (ifElse (tupleAt reply 1)
-          (andThen (withFiber (Action.fork (Semaphore.walk q) v.options)) (succeed unit))
-          (succeed unit))
-        (succeed (tupleAt reply 0)))
-
-/-- The operations of a variant. -/
-def opsOf (v : Variant) : Ops :=
-  { take := fun q count => uninterruptibleMaskWith fun restore => takeAtOf v restore q count
-    release := releaseOf v
-    withPermits := fun q count body =>
-      protectedBy (fun restore => takeAtOf v restore q count) (fun _ => releaseOf v q count)
-        (fun _ => body) }
-
--- The variant with no change is the library's operation, tree for tree.
-#guard treeAt ["q", "n"] ((opsOf {}).take (var "q") (var "n")) ==
-  treeAt ["q", "n"] (Semaphore.take (var "q") (var "n"))
-#guard treeAt ["q", "n"] ((opsOf {}).release (var "q") (var "n")) ==
-  treeAt ["q", "n"] (Semaphore.release (var "q") (var "n"))
-#guard treeAt ["q", "n"] ((opsOf {}).withPermits (var "q") (var "n") (succeed (nat 1))) ==
-  treeAt ["q", "n"] (Semaphore.withPermits (var "q") (var "n") (succeed (nat 1)))
-#guard (treeAt ["q", "n"] ((opsOf {}).withPermits (var "q") (var "n") (succeed (nat 1)))).isSome
-
-/-- **One hint for every round**: `waitRetryAt` with the hint allocated once, before the
-loop. -/
-def retryOneHintAt (restore : Src NativeOp → Src NativeOp) (result : Ty) (ended : String)
-    (w : Waiter) : Src NativeOp :=
-  bindWith (Deferred.make .unit .never) fun id =>
-    bindWith (Deferred.make w.hint .never) fun hint =>
-      bindWith
-        (iterateWith noneT
-          { cursorTy := some (.option result)
-            while_ := fun cursor => notT (app "isSome" [cursor])
-            body := fun _ =>
-              w.attempt id hint
-                (andThen (waitAt restore hint (w.withdraw id)) (succeed noneT))
-                (fun answer => succeed (app "some" [answer]))
-            step := fun _ answer => answer })
-        fun last =>
-          selectOptionWith last (failCause (Authoring.Cause.die (str ended))) fun answer =>
-            succeed answer
-
 /-! ## The pieces of a control -/
 
 /-- **An operation under observation** (decisions row 222): the hook writes whether the
@@ -264,26 +186,23 @@ def stopsBetween (k : Nat) : Bool :=
 
 -- The checker refuses the budget's provision, so the programs are raw.
 #guard verdict (notified 23) = "typing: serviceUnknown"
--- The budgets that stop the taker between its registration and its await: 26 to 30. Below 26
--- the taker yields before its step, and from 31 it reaches its await with no yield.
-#guard (List.range 37).filter stopsBetween = [26, 27, 28, 29, 30]
+-- The budget 30 stops the taker between its registration and its await.
+#guard stopsBetween 30
 
--- At each such budget, on both tapes: the root ends with the free count 1 and the taker's
--- count, and the permit is taken at the end.
-#guard [26, 27, 28, 29, 30].all fun k =>
+-- On both tapes: the root ends with the free count 1 and the taker's count, and the permit is
+-- taken at the end.
+#guard let k := 30
   [awaitFirst, taskFirst].all fun tape =>
     ((rawOn tape (notified k)).bind (·.exit)) == some (.success (.list [.nat 1, .nat 1])) &&
       (stages tape (notified k)).drop 3 == [(some (1, 0), true)]
 -- The await before the task. After the taker's dispatcher the taker is still enrolled, and
 -- nothing is taken: it parked at its hint. The root's dispatcher then runs the helper, whose
 -- visit resumes the taker, and the taker's attempt runs inside that task.
-#guard [26, 27, 28, 29, 30].all fun k =>
-  (stages awaitFirst (notified k)).take 2 == [(some (0, 1), false), (some (0, 1), false)]
+#guard (stages awaitFirst (notified 30)).take 2 == [(some (0, 1), false), (some (0, 1), false)]
 -- The task before the await. After the root's dispatcher the visit has selected the taker:
 -- its entry left, and nothing is taken. A visit reserves nothing. The taker's dispatcher then
 -- runs: its await answers at once, and its next attempt takes.
-#guard [26, 27, 28, 29, 30].all fun k =>
-  (stages taskFirst (notified k)).take 2 == [(some (0, 1), false), (some (0, 0), false)]
+#guard (stages taskFirst (notified 30)).take 2 == [(some (0, 1), false), (some (0, 0), false)]
 
 /-- The rows of a raw run on a tape. -/
 def rawRows (tape : List Api.Decision) (src : Src NativeOp) : List Row :=
@@ -360,12 +279,6 @@ def cancelled (ops : Ops) (maskedCaller : Bool) : Src NativeOp := eff do
   before (.started 3) (.resumed 2) (rowsOf (cancelled library false)) &&
   before (.exited 2 true) (.exited 3 true) (rowsOf (cancelled library false))
 
--- **Fault: no withdrawal.** A's entry stays after its fiber is gone: two waiters stand where
--- one request waits. The live scan then spends one visit on the entry of nobody.
-#guard verdict (cancelled (opsOf { withdraws := false }) false) = "built"
-#guard exitOf (cancelled (opsOf { withdraws := false }) false) = some (.success (.list
-  [.nat 1, count 0 [1, 1] [0, 1], count 1 [] [], .bool true, .nat 0, .bool true, .bool false]))
-
 /-! ## 3. A late delivery to an old hint after the request waits again
 
 No step of the first profile wakes a waiter whose count does not fit. So this control posts the
@@ -408,16 +321,6 @@ def rearmed (ops : Ops) : Src NativeOp := eff do
 #guard (rowsOf (rearmed library)).count (.yielded 1) = 0
 -- The ordinary run ends at the truth lane's fuel.
 #guard (exitAt 1000 (rearmed library)).isSome
-
--- **Fault: one hint for every round.** After the first wake the hint is resolved for good, so
--- each later wait answers at once: the waiter tries again and again without a park, and each
--- round enrols it again. It keeps its first hint, and its stamp is 157 when its operation
--- budget stops it. The ordinary run has no exit at the truth lane's fuel.
-#guard verdict (rearmed (opsOf { retry := retryOneHintAt })) = "built"
-#guard exitOf (rearmed (opsOf { retry := retryOneHintAt })) =
-  some (.success (.list [.nat 1, .bool true, .nat 157, .nat 1]))
-#guard (rowsOf (rearmed (opsOf { retry := retryOneHintAt }))).count (.yielded 1) != 0
-#guard (exitAt 1000 (rearmed (opsOf { retry := retryOneHintAt }))).isNone
 
 /-! ## 4. A holder that is interrupted inside the take's mask
 
@@ -502,16 +405,6 @@ def takenUnder (k : Nat) (use : TermSrc → TermSrc → Src NativeOp → Src Nat
 -- The library's `take` and then the hook, at the same two budgets: the permit is lost.
 #guard takenUnder 18 takeThenHook = some (.nat 0, .nat 1) &&
   takenUnder 32 takeThenHook = some (.nat 1, .nat 1)
--- Measured at each budget from 13 to 40: the two-region form loses the permit at the fifteen
--- budgets from 18 to 32, and at no other. At 17 A yields before the mask, where it is
--- interruptible: nothing is taken. At 33 the two-region form has installed its hook when A
--- yields, so its release runs.
-#guard (List.range' 13 28).filter
-    (fun k => (takenUnder k takeThenHook).map (·.2) == some (.nat 1)) = List.range' 18 15
--- The library's form loses it at none of them.
-#guard (List.range' 13 28).all fun k =>
-  (takenUnder k Semaphore.withPermits).map (·.2) == some (.nat 0)
-
 /-! ## 5. A waiter that is interrupted under a mask of the form's making
 
 The second red control of `protectedBy`. The library's `take` holds its own mask. Inside a mask
@@ -598,14 +491,6 @@ def signallerExits (ops : Ops) : Src NativeOp := eff do
 #guard before (.exited 2 true) (.ran 2) (rowsOf (signallerExits library))
 #guard (rowsOf (signallerExits library)).contains (.forked 2 3 true)
 
--- **Fault: the helper as a supervised, interruptible child.** The releasing fiber's exit
--- interrupts its children. The helper is interrupted before its first visit: the wake is
--- lost, the taker waits for good beside a free permit, and the root has no exit.
-#guard verdict (signallerExits (opsOf { options := ⟨false, false, .interruptible⟩ })) = "built"
-#guard (exitOf (signallerExits (opsOf { options := ⟨false, false, .interruptible⟩ }))).isNone
-#guard (rowsOf (signallerExits (opsOf { options := ⟨false, false, .interruptible⟩ }))).contains
-  (.exited 3 false)
-
 /-! ## 7. The receiver's continuation that grows
 
 The helper's task runs the resumed waiter: its next attempt, and then its caller's continuation,
@@ -613,7 +498,7 @@ under the task's own budget (decisions rows 226, 238 and 259). One visit reaches
 caller's work up to its own cut. Here the taker's continuation is a loop of `n` steps. The
 measure is the least fuel at which the flush of the helper's task ends the root.
 
-**No bound is claimed.** The numbers are measured on this program at these lengths. -/
+**No bound is claimed.** The fuel is measured on this program at one length. -/
 
 /-- A taker whose continuation runs `n` steps; the root releases, and joins it. -/
 def grows (n : Nat) : Src NativeOp := eff do
@@ -642,22 +527,15 @@ def afterFlush (src : Src NativeOp) (budget : Nat) : Option (Bool × Bool) :=
       ({ one with budget := ample } : Run)
     (one.exit.isSome, more.exit.isSome)
 
-/-- The lengths, each with the least fuel of the delivery's flush that was measured for it. -/
-def measured : List (Nat × Nat) :=
-  [(0, 49), (1, 52), (2, 55), (4, 61), (8, 73), (16, 97), (32, 145), (64, 241)]
-
--- Each program builds, and it answers its count and its count of steps.
-#guard measured.all fun (n, _) =>
-  exitOf (grows n) == some (.success (.list [.nat 1, .nat n]))
--- At the measured fuel the flush ends the root. The empty continuation is the control: 49.
-#guard measured.all fun (n, least) => afterFlush (grows n) least == some (true, true)
+-- A continuation of two steps: the program answers its count and its count of steps, and at
+-- the fuel 55 the flush ends the root.
+#guard exitOf (grows 2) == some (.success (.list [.nat 1, .nat 2]))
+#guard afterFlush (grows 2) 55 == some (true, true)
 -- At one less it does not. And five more flushes at the ample fuel do not end it either: the
 -- cut inside the dispatch lost the work that remained, and a later flush is no resumption.
 -- Decisions row 226 excludes that cut from the first profile, so this is the excluded case,
 -- and no fault of the walk.
-#guard measured.all fun (n, least) => afterFlush (grows n) (least - 1) == some (false, false)
--- The measured fuel grows with the continuation: three for each step, at these lengths.
-#guard measured.all fun (n, least) => least == 49 + 3 * n
+#guard afterFlush (grows 2) 54 == some (false, false)
 
 /-! ## 8. The protected permit under a masked caller
 

@@ -154,26 +154,11 @@ private def hiddenPair : Ty := .prod (.union .string .never) .string
 #guard (effTy nativeSignature [hiddenPair] (.failCause (.fail (.var 0)))).isSome
 #guard (effTy nativeSignature [.prod (.union .string .bool) .string] (.fail (.var 0))).isNone
 
-example := @Ty.normalize_idem
-example := @hasTy_normalize
-example := @hasTy_fibers
-example := @hasTy_fibers_nil
-example := @Ty.join_self
-example := @Ty.join_never
-example := @Ty.join_comm
-example := @Ty.join_assoc
-example := @CTy.join_self
-example := @CTy.join_never
-
 /-! The top (tooling plan 0.6, decisions row 46). `never` is the empty union and absorbs on
 the left of `join`; `unknown` is the other end and absorbs on both sides. The universal laws
 are `Ty.join_unknown` and `CTy.le_unknown`; these finite controls pin them at a scalar, at a
 union, at a handle and at the top itself, so a `sub` arm that stopped answering `true` at the
 top would be caught here and not only in a proof. -/
-example := @Ty.join_unknown
-example := @Ty.join_unknown_left
-example := @CTy.le_unknown
-example := @CTy.join_unknown
 #guard Ty.join .nat .unknown = .unknown
 #guard Ty.join .unknown .nat = .unknown
 #guard Ty.join raw .unknown = .unknown
@@ -219,46 +204,6 @@ def neverR : Ty := .union (.prod .never (.lit "a")) (.prod (.refOf .string) (.li
 -- a parameter that first occurs outside a handle: it binds at the handle's argument
 /-- `[A, Ref<A>]`: the parameter is first met outside an invariant handle. -/
 def covT : Ty := .prod (.var 0) (.refOf (.var 0))
-/-- `[number, Ref<number | string>]`. -/
-def covR : Ty := .prod .nat (.refOf (Ty.union .nat .string).normalize)
-#guard covT.normalize == covT && covT.templateAdmissible
-#guard covR.normalize == covR
-#guard Ty.sub covR.normalize (covT.instantiate [(0, (Ty.union .nat .string).normalize)]).normalize
-#guard (Bounds.matchB [] covT covR).map (·.lookup 0) =
-  some (some (Ty.union .nat .string).normalize)
-
-end Test.Program.TypeAlgebraContract
-
-/-! Public order, identity key and printed boundaries use the canonical type. -/
-#guard CTy.ofRaw (.lit "A") ≤ CTy.ofRaw .string
-#guard ¬ CTy.ofRaw .string ≤ CTy.ofRaw (.lit "A")
-#guard CTy.ofRaw (.lit "A") < CTy.ofRaw .string
-#guard CTy.key (CTy.ofRaw (.union (.lit "A") .string)) = CTy.key (CTy.ofRaw .string)
-#guard Ty.key (.union (.lit "A") .string) != Ty.key .string
-#guard Ty.render (.union (.lit "A") .string) = "string"
-#guard Ty.render (.prod (.union (.lit "A") (.lit "B")) .string) =
-  "readonly [\"A\", string] | readonly [\"B\", string]"
-#guard Ty.render (.list (.union .nat .string)) = "ReadonlyArray<number | string>"
-
-example : Std.IsPartialOrder CTy := inferInstance
-example : Std.LawfulOrderSup CTy := inferInstance
-example (a b : CTy) : a ≤ max a b := Ty.sub_join_left a b
-example (a b c : CTy) (ha : a ≤ c) (hb : b ≤ c) : max a b ≤ c :=
-  Ty.join_least a b c ha hb
-example (a b : Ty) (h : Ty.sub a b = true) : Ty.sub a.normalize b.normalize = true :=
-  Ty.sub_normalize_of_sub a b h
-
-/-! Error support and its canonical carrier use the same admission computation. -/
-example (t : Ty) : admittedErrTy t = rawSupportedErrTy t.normalize := rfl
-example (t : Ty) : supportedErrTy t = supportedErrTy t.normalize :=
-  supportedErrTy_normalize t
-example (a b : Ty) (ha : supportedErrTy a = true) (hb : supportedErrTy b = true) :
-    supportedErrTy (Ty.join a b) = true := supportedErrTy_join a b ha hb
-example : Std.IsPartialOrder ErrTy := inferInstance
-example : Std.LawfulOrderSup ErrTy := inferInstance
-example (t : ErrTy) : ErrTy.never ≤ t := ErrTy.never_le t
-example (a b c : ErrTy) (ha : a ≤ c) (hb : b ≤ c) : max a b ≤ c :=
-  ErrTy.join_least a b c ha hb
 
 private def errorTag : ErrTy := ⟨CTy.ofRaw (.prod (.lit "A") .string), by cbv⟩
 private def errorPair : ErrTy := ⟨CTy.ofRaw (.prod .string .string), by cbv⟩

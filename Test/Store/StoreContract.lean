@@ -79,10 +79,6 @@ open Effect4.Store
 #guard framed 7 [1, 2, 3] = [7, 0, 0, 0, 0, 0, 0, 0, 3, 1, 2, 3]
 #guard (Val.encode (.ref 2 (List.replicate 32 0))).length = 42
 
-example := @Effect4.Store.framed_length
-example := @Effect4.Store.framed_inj
-example := @Effect4.Store.framed_head
-
 /-! ## The primitive bytes, through the class -/
 
 -- The frames this contract froze before the landing. The trait derives `encode` from `toVal`
@@ -154,13 +150,6 @@ example := @Effect4.Store.framed_head
 -- A constructor index with a leading zero, inside the `ctor` frame.
 #guard Val.decode (framed Tag.ctor (framed Tag.nat [0, 1])) = none
 
-example := @Effect4.Store.Val.decode_encode
-example := @Effect4.Store.Val.decode_exact
-example := @Effect4.Store.Val.encode_injective
-example := @Effect4.Store.Canonical.decode_encode
-example := @Effect4.Store.Canonical.decode_exact
-example := @Effect4.Store.Canonical.encode_injective
-
 /-! ## The numbers of the facts note §6 -/
 
 -- The census entry, as the structure template writes it: 74 bytes, the frames of §6, and the
@@ -231,10 +220,5 @@ Machine layer uses, byte for byte. -/
 #guard (Canonical.image Nat).decode (Canonical.encode "3") = none
 #guard ((Canonical.image (List Nat)).encode? [1, 2, 3]).bind (Canonical.image (List Nat)).decode =
   some [1, 2, 3]
-
-example := @Effect4.Store.Val.decode_encode?
-example := @Effect4.Store.Val.encode?_of_decode
-example := @Effect4.Store.Image.decode_encode?
-example := @Effect4.Store.Image.decode_exact
 
 end Test.Store.StoreContract

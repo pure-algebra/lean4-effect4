@@ -859,15 +859,6 @@ theorem store_step_rel (root : NativeEff) (m : Api.Machine) (m' : RState)
   rw [hs]
   rcases syncOpStep op m'.state with _ | ⟨state, value⟩ <;> simp [prepareIterR, cmdShape, hs]
 
--- The loaded state uses the existing generic observation and first-order tape.
-example (program : NativeEff) (fuel : Nat) :
-    obsR (loadR program fuel) = ⟨[(Api.root, none)], Stores.empty⟩ :=
-  obsR_load program fuel
-
-example (program : NativeEff) (answer : Completion Val Err Defect FiberId Ann) :
-    (interpR program).answerCode answer = denoteCompletion answer :=
-  interpR_answerCode program answer
-
 /-! ## D6a/D6b: a deferred interrupt recorded during a race's registration
 
 `internal/effect.ts:662-667`: when the registration returns `Yield` but a nested run

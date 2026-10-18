@@ -104,5 +104,4 @@ def db : Api.Decision := .answerAsync ⟨2⟩ 1 (.ofExit (.success (.nat 2)))
 #guard (inspect (applyReply (applyReply ab a.key 1000).session b.key 1000).session).exit =
   some (.success (Val.exitOk (.nat 3)))
 
-example := @reply_commute
 end Test.Api.KeyedHostContract

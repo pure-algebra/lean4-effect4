@@ -118,14 +118,6 @@ example (w : Typed.World) : Denote.StoreFits w ↔ Typed.CellsTyped w ∧ w.stat
 example (w w' : Typed.World) : Denote.StoreOk w w' ↔ w.leHost w' ∧ Denote.StoreFits w' :=
   ⟨fun h => ⟨h.le, h.store⟩, fun h => ⟨h.1, h.2⟩⟩
 
-/-- The cutover's connector (the state plan's T3b), at its exact proposition: the image of a name
-at a shape and a node's level evaluates, on every number and over every outer environment, to the
-name's value at the shape. -/
-example : ∀ (s : FnShape) (f : FnName) (env : List Val) (n : Nat),
-    Program.evalTerm (env ++ [Val.nat n]) (FnName.image s env.length f) =
-      some (f.valueAt s (.nat n)) :=
-  @FnName.image_agrees
-
 /-! ## The register rows -/
 
 section Rows

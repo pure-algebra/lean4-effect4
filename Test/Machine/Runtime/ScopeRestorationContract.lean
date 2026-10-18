@@ -18,18 +18,6 @@ section Surface
 universe u v
 variable {κ φ ν τ : Type u} {β : Type v} {ε δ ι α σ : Type u}
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-example : PrimInterp ν τ β ε δ ι α → ScopeMachine.State κ φ β ε δ ι α →
-    FrameFiber ν τ β ε δ ι α →
-    Option (FrameStep ν τ β ε δ ι α × List (FrameEvent ν τ β ε δ ι α)) :=
-  ScopeRestoration.resumeClosedScope
-
-example
-    (interp : PrimInterp ν τ β ε δ ι α)
-    (machine : ScopeMachine.State κ φ β ε δ ι α)
-    (fiber : FrameFiber ν τ β ε δ ι α)
-    (unfinished : machine.phase ≠ .complete) :
-    ScopeRestoration.resumeClosedScope interp machine fiber = none :=
-  ScopeRestoration.resumeClosedScope_unfinished interp machine fiber unfinished
 
 example
     (interp : PrimInterp ν τ β ε δ ι α)
@@ -48,19 +36,6 @@ example
        { fiber with current := Prim.ofExit (Exit.restoreAfterFinalizer original cleanup) }),
       completed.2)) :=
   ScopeRestoration.resumeClosedScope_complete interp handler scope original fiber world
-
-example
-    (interp : PrimInterp ν τ β ε δ ι α)
-    (machine : ScopeMachine.State κ φ β ε δ ι α)
-    (current : Prim ν τ β ε δ ι α) (rest : List (Prim ν τ β ε δ ι α))
-    (value : β) (pending : Cause ε δ ι α)
-    (completed : ScopeMachine.restore? machine = some (.success value)) :
-    ScopeRestoration.resumeClosedScope interp machine
-      ⟨current, .setInterruptible true :: rest, false, some pending, false⟩ =
-    some (.running ⟨.failure pending, rest, true, some pending, false⟩,
-      [.popped (.setInterruptible true), .ranContAll (.setInterruptible true),
-       .substituted pending]) :=
-  ScopeRestoration.resumeClosedScope_success_pending interp machine current rest value pending completed
 
 example
     (interp : PrimInterp ν τ β ε δ ι α)
@@ -91,28 +66,6 @@ example
        [.popped (.setInterruptible true), .ranContAll (.setInterruptible true)]
         ++ continued.2)) :=
   ScopeRestoration.resumeClosedScope_success_no_pending interp machine current rest value completed
-
-example
-    (interp : PrimInterp ν τ β ε δ ι α)
-    (machine : ScopeMachine.State κ φ β ε δ ι α)
-    (fiber : FrameFiber ν τ β ε δ ι α)
-    (masked : fiber.interruptible = false) :
-    ScopeRestoration.resumeClosedScope interp machine fiber.uninterruptible =
-      ScopeRestoration.resumeClosedScope interp machine fiber :=
-  ScopeRestoration.resumeClosedScope_already_masked interp machine fiber masked
-
-example
-    (interp : PrimInterp ν τ β ε δ ι α)
-    (machine : ScopeMachine.State κ φ β ε δ ι α)
-    (current body : Prim ν τ β ε δ ι α)
-    (continuation : ν) (rest : List (Prim ν τ β ε δ ι α))
-    (value : β) (pending : Option (Cause ε δ ι α))
-    (completed : ScopeMachine.restore? machine = some (.success value)) :
-    ScopeRestoration.resumeClosedScope interp machine
-      ⟨current, .onSuccess body continuation :: rest, false, pending, false⟩ =
-    some (.running ⟨interp.contA continuation value, rest, false, pending, false⟩,
-      [.popped (.onSuccess body continuation)]) :=
-  ScopeRestoration.resumeClosedScope_masked_continuation interp machine current body continuation rest value pending completed
 
 example
     (interp : PrimInterp ν τ β ε δ ι α)

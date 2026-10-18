@@ -35,9 +35,4 @@ def aliasing : Table := { handle := fun _ => ⟨0⟩, hint := fun n => ⟨n⟩ }
 #guard Effect4.Schema.Model.deferredEqual Leaves.deferredKeys (aliasing.handle 1) (aliasing.handle 2)
 #guard (1 : Nat) != 2
 
--- Reader of the independent transition connector at every populated state and injective table.
-example (tb : Table) (s : State) (id n : Nat) (hint : DeferredKey) (injective : tb.Injective) :
-    Effect4.Semaphore.Data.take.eval Leaves.deferredKeys (takeInputs tb s id n hint) =
-      ((take s id n).2, cellC (tb.renew id hint) (take s id n).1) :=
-  take_eval tb s id n hint injective
 end Test.Program.SemaphoreData

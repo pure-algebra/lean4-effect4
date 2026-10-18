@@ -7,7 +7,7 @@ the two keys, `Representation.nodeAnnotations` with its law, `Data/Optic.lean` a
 document traversals remain live. The production
 fences are `src/Effect4/Data/Optic.lean`, `src/Effect4/Schema/Annotations.lean`, and an
 additive document-traversal section in `src/Effect4/Schema/Document.lean`.
-The breaker-owned batteries are `Test/Data/OpticContract.lean` and
+The breaker-owned batteries are `git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Data/OpticContract.lean` and
 `Test/Schema/AnnotationDataPlaneContract.lean`; the retained attacks
 are in `git:f0591f36:Test/Counterexamples/Schema/AnnotationDataPlane.lean` (deleted under row 39 at `d75f5c25`).
 

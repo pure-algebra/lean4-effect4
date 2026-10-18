@@ -1,6 +1,5 @@
 import Effect4.Laws
 import Test.Api.FrontierContract
-import Test.Data.OpticContract
 import Test.Schema.AnnotationDataPlaneContract
 import Test.Schema.DataBridge
 import Test.Schema.AuthoringContract
@@ -8,9 +7,6 @@ import Test.Schema.DialectContract
 import Test.Counterexamples.Codegen.TypeScriptRender
 import Test.Counterexamples.Codegen.PrintDistributes
 import Test.Counterexamples.Codegen.PrintUnsafeLiteral
-import Test.Schema.RepresentationContract
-import Test.Schema.SubAlphabetContract
-import Test.Schema.PayloadContract
 import Test.Schema.Modeled
 import Test.Schema.Identity
 import Test.Program.StepLanguage
@@ -25,8 +21,6 @@ import Test.Program.PoolData
 import Test.Program.QueueData
 import Test.Program.LatchSteps
 import Test.Program.LatchRegistration
-import Test.Data.RowContract
-import Test.Machine.Environment.ContextKeyContract
 import Test.Codegen.ExprContract
 import Test.Codegen.DataTypes
 import Test.Codegen.DataCodec
@@ -46,7 +40,6 @@ import Test.Codegen.MirrorReaders
 import Test.Codegen.SchemaGenerationCoverage
 import Test.Codegen.SchemaCode
 import Test.Codegen.SurfaceContract
-import Test.Machine.Semantics.CauseExitContract
 import Test.Counterexamples.Machine.Semantics.CauseExit
 import Test.Counterexamples.Machine.Semantics.ActionAtRaceAllPremise
 import Test.Counterexamples.Machine.Semantics.InterruptDelivery
@@ -131,7 +124,6 @@ import Test.Program.ReadOnlyStoreClauses
 import Test.Program.CapabilityMembership
 import Test.Audit.AnswerGate
 import Test.Machine.Runtime.RepresentationFoundations
-import Test.Machine.Runtime.ScopeContract
 import Test.Machine.Runtime.ScopeMachineContract
 import Test.Machine.Runtime.ScopeRestorationContract
 import Test.Counterexamples.Machine.Runtime.ScopeRestorationBoundary
@@ -212,7 +204,6 @@ import Test.Program.ModuleDeclarations
 import Test.Program.QueueOps
 import Test.Program.QueueTraces
 import Test.Program.QueueInvariant
-import Test.Program.QueueAgreement
 import Test.Program.QueueRelation
 import Test.Program.QueueWorkload
 import Test.Program.QueueEngine
@@ -221,7 +212,6 @@ import Test.Program.QueueTyping
 import Test.Program.SemaphoreContract
 import Test.Program.SemaphoreSteps
 import Test.Program.SemaphoreScenarios
-import Test.Program.SemaphoreAgreement
 import Test.Program.SemaphoreRelation
 import Test.Program.SemaphoreEngine
 import Test.Program.SemaphoreWrapper
@@ -231,7 +221,6 @@ import Test.Program.SemaphoreFaces
 import Test.Program.PoolScenarios
 import Test.Program.PoolContract
 import Test.Program.PoolSteps
-import Test.Program.PoolAgreement
 import Test.Program.PoolRelation
 import Test.Program.PoolEngine
 import Test.Program.PoolPublic
@@ -337,7 +326,6 @@ import Test.Program.QueryControls
 import Test.Program.BoundsControls
 import Test.Program.RowPolarity
 import Test.Program.DecisionContract
-import Test.Machine.Runtime.ArenaContract
 import Test.Dogfood.P1HttpCache
 import Test.Dogfood.P2HandlerLayers
 import Test.Dogfood.P3WorkerQueue

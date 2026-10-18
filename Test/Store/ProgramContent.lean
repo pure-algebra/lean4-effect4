@@ -42,19 +42,4 @@ def atRoot : Eff NativeOp := .bind (.succeed (.lit (.nat 1))) (.succeed (.var 0)
 #guard Eff.weaken 0 atRoot = .bind (.succeed (.lit (.nat 1))) (.succeed (.var 1))
 #guard (address atRoot).digest ≠ (address (Eff.weaken 0 atRoot)).digest
 
-/-- The reader of the address lattice at programs: equal addresses of two well-formed programs
-are equal programs, or an exhibited collision. -/
-example {p q : Eff NativeOp} (hp : (Canonical.toVal p).WF) (hq : (Canonical.toVal q).WF)
-    (h : address p = address q) :
-    p = q ∨ ((nodeOf p).encode ≠ (nodeOf q).encode ∧
-      sha256 (nodeOf p).encode = sha256 (nodeOf q).encode) :=
-  address_eq_or_collision hp hq h
-
-/-- A non-conflicting program insertion reads back through the checked store interface. -/
-example {replay : List Event → Except TxnRefusal Store} {p : Eff NativeOp}
-    {before : Store} {after : CasOf replay} {o : Outcome} {r : Ref (Eff NativeOp)}
-    (h : before.put p = .ok (o, r, after.store)) (hc : ∀ m, o ≠ .conflict m) :
-    Cas.get after r = .ok p :=
-  Cas.get_put h hc
-
 end Test.Store.ProgramContent

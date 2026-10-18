@@ -112,9 +112,6 @@ open Effect4.Program Effect4.Schema.Bridge
 #guard Ty.ofSchema (Ty.schema (.handle "Scope.Scope")) = some (.handle "Scope.Scope")
 #guard Ty.ofSchema (Ty.schema (.union .string .nat)) = some (.union .nat .string)
 
-example := @ofSchema_schema
-example := @ofSchema_schema_cty
-
 -- Row 6: what `schema` never writes, `ofSchema` refuses — a check `Ty` cannot carry, a declaration
 -- payload that is not `null`, a defect slot that is not the `Json` declaration, an optional
 -- tuple element. Annotations are read under row 179's policy: documentation keys erased, every
@@ -388,9 +385,6 @@ def rcNatDocument : Representation := .number none [rcIsIntFilter, rcNonNegative
 #guard ofSchema (.arrays none [] [Schema.element Schema.string
   (annotations := some [⟨"parseOptions", .obj []⟩]), Schema.element Schema.boolean] []) = none
 
-example := @ofSchema_exact
-example := @ofSchema_schema
-
 /-! ## S-3: the checked JSON boundary, owner amendment 2026-09-11 -/
 
 open Effect4.Program
@@ -505,11 +499,6 @@ example (v : Store.Val) (hv : Program.Val.hasTy v (.lit "User") = true) :
   Schema.encode_sub (s := CTy.ofRaw (.lit "User")) (t := CTy.ofRaw .string)
     (Ty.sub_lit_string "User") hv rfl
 
-example := @Schema.encode_of_hasTy
-example := @Schema.decode_encode
-example := @Schema.hasTy_decode
-example := @Schema.encode_sub
-
 /-! ### Row 128: the JSON pair is exact modulo `N_J` (`Schema.decode_iff`)
 
 The red control is row 128's witness (synthesis NS2) on `unionArmBefore`, `decodeRaw`'s union arm
@@ -597,10 +586,6 @@ did not evaluate to `true`
 -- round-trips at the union without choosing the integer arm.
 #guard Ty.decode (.union .int (.except .nat .nat)) jResultFailure = some (.ctor 0 [.nat 1])
 #guard Ty.encode (.union .int (.except .nat .nat)) (.ctor 0 [.nat 1]) = some jResultFailure
-
-example := @Schema.decode_iff
-example := @Schema.encode_of_decode
-example := @Schema.decode_of_encode
 
 /-! ## Stability of Core Language Constructs & Effect Reification -/
 

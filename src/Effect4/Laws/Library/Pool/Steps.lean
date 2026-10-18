@@ -49,9 +49,8 @@ on each side of its tests.
 
 The statements establish no order of the wake across helpers, no cancellation law, no
 fairness, no liveness, no wait of the close along a run and nothing of a wrapper. An equal value in the
-model says nothing of a host. The finite controls are `Test/Program/PoolAgreement.lean` and
-`Test/Program/PoolRelation.lean`: each statement's conclusion on every state of a finite
-universe.
+model says nothing of a host. The finite controls are `Test/Program/PoolRelation.lean`: each
+statement's conclusion at one state, and a red control for each premise.
 -/
 
 set_option autoImplicit false

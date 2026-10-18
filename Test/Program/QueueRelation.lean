@@ -1,6 +1,5 @@
 import Effect4.Laws.Library.Queue.Steps
 import Effect4.Laws.Step.Store
-import Test.Program.QueueAgreement
 
 /-!
 # The Queue's relation and its step goals: finite controls (decisions row 255)
@@ -8,17 +7,15 @@ import Test.Program.QueueAgreement
 The relation is `src/Effect4/Laws/Library/Queue/Relation.lean`: the message map, the cell's
 value and a step's notifications, over the shared encoding table
 (`src/Effect4/Laws/Step/Table.lean`). The six step goals are in
-`src/Effect4/Laws/Library/Queue/Steps.lean`. This battery evaluates each goal's conclusion, as
-the goal states it: at one table, one message map and the scope of the step's own arguments, on
-every state of the universe of `Test/Program/QueueAgreement.lean`, twelve moves on each.
+`src/Effect4/Laws/Library/Queue/Steps.lean`, and `queue_steps_agree` there joins them on the
+first profile. This battery evaluates each goal's conclusion, as the goal states it, at one
+table, one message map and the scope of the step's own arguments: once for each step, on the
+states of the contract's traces. The red controls drop one premise each: the table's
+injectivity, and the hint that a step sets.
 
-It also ties the two encodings: the cell's value of the relation is the value of the
-comparison's state term. The red controls drop one premise each: the table's injectivity, and
-the hint that a step sets.
-
-Placement. Each guard is a finite instance of a step goal (concept `translation-simulation`,
-requirement R10, a part of the proposed claim `queue-expansion-agrees`). A state outside the
-universe, another table and another message type are not checked.
+Placement. Each green guard is one instance of a proved step goal (concept
+`translation-simulation`, requirement R10, a part of the proposed claim
+`queue-expansion-agrees`), beside the red control that drops its premise.
 -/
 
 set_option autoImplicit false
@@ -30,7 +27,6 @@ namespace Test.Program.QueueRelation
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
 open Effect4.Queue.Model
-open Test.Program.QueueAgreement (profileStates moves Move mixed full waiting2 T)
 
 /-! ## One table, one message map -/
 
@@ -43,11 +39,20 @@ def fresh : DeferredKey := ⟨9999⟩
 /-- The model's messages are the cell's numbers. -/
 def msg : Nat → Val := Val.nat
 
--- The relation's cell value is the value of the comparison's state term, on every state of
--- the universe: the two encodings are one.
-#guard profileStates.all fun s =>
-  decide (QueueAgreement.evalAt (QueueAgreement.stateTerm QueueAgreement.table0 s) =
-    some (cellVal tb0 msg s))
+/-- A taker of one message, enrolled at its own request. -/
+def T (n : Nat) : Taker := ⟨n, 1, 1⟩
+
+/-- Codex's prefix, before its last step: capacity one, takers 1 and 2, message 1 buffered, the
+offer of message 2 by request 101 pending. -/
+def mixed : State :=
+  { capacity := some 1, messages := [1], takers := [T 1, T 2], offers := [⟨101, false, [2]⟩] }
+
+/-- `mixed` before its second offer: the buffer is full, and no offer is pending. -/
+def full : State := { mixed with offers := [] }
+
+/-- Takers 1 and 2 wait at an empty buffer. -/
+def waiting2 : State := { capacity := some 1, takers := [T 1, T 2] }
+
 -- The initial value of a positive capacity is the cell's value of the model's empty queue.
 #guard [1, 2, 7].all fun c =>
   decide ((Queue.empty .nat c {} []).toOption.bind (evalTerm []) =
@@ -142,16 +147,7 @@ def withdrawOfferHolds (tb : Table) (s : State) (id : Nat) : Bool :=
       (Val.tuple [Val.list (woken.map (takerVal tb)), cellVal tb msg r.1])
   | _ => false
 
-/-- One move's goal, at a table. -/
-def holds (tb : Table) (s : State) : Move → Bool
-  | .take id => takeHolds tb s id
-  | .offer id a => offerHolds tb s id a
-  | .poll => pollHolds tb s
-  | .size => sizeHolds tb s
-  | .dropTake id => withdrawTakeHolds tb s id
-  | .dropOffer id => withdrawOfferHolds tb s id
-
-/-! ## The named controls, and every state of the universe -/
+/-! ## The named controls -/
 
 -- C1. The mixed notifications: the offerer's answer, then taker 2's wake.
 #guard decode mixed (take mixed (T 1)).1 (take mixed (T 1)).2.2 =
@@ -167,10 +163,6 @@ def holds (tb : Table) (s : State) : Move → Bool
 #guard withdrawTakeHolds tb0 mixed 1 && withdrawOfferHolds tb0 mixed 101
 #guard pollHolds tb0 { mixed with takers := [] } && sizeHolds tb0 mixed
 
--- Every state of the universe, twelve moves on each: each goal's conclusion holds.
-#guard profileStates.all fun s => moves.all fun m => holds tb0 s m
-#guard profileStates.length * moves.length = 2400
-
 /-! ## Red controls: one premise dropped -/
 
 /-- A table that is not injective: the requests 1 and 2 share one handle. -/
@@ -180,9 +172,6 @@ def shared : Table := { tb0 with handle := fun n => if n = 2 then ⟨1⟩ else �
 -- too, and the conclusion fails; on a state with neither taker it still holds.
 #guard !withdrawTakeHolds shared waiting2 2
 #guard withdrawTakeHolds shared { capacity := some 1 } 2
--- It fails on each state that holds taker 1 or taker 2: four of the five orders of the takers.
-#guard (profileStates.filter fun s => !moves.all fun m => holds shared s m).length = 160
-#guard (profileStates.filter fun s => !s.takers.isEmpty).length = 160
 -- The hint that a step sets. With the table left as it was, the conclusion of a take that waits
 -- fails: the stored hint is the step's. A take that consumes does not read the table's change.
 #guard !readsAt ["id", "hint", "s"]

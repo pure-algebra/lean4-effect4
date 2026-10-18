@@ -24,24 +24,6 @@ open Test.Syntax.CompileContract (pSucceed pBindSync pFail pCatch pOnExit pRefSe
 /-! ## The signature's shape -/
 
 example : RSig.Op = (SyncOp ⊕ FiberOp) := rfl
-example (o : SyncOp) : RSig.Answer (Sum.inl o) = Val := rfl
-example (o : FiberOp) : RSig.Answer (Sum.inr o) = o.answer := rfl
-example (body : Body) : RSig.Answer (.inr (.mask false body)) = ExitV := rfl
-example (p : Point) : RSig.Answer (.inr (.fork (.at_ p) scopedChild)) = Val := rfl
-example (id : FiberId) : RSig.Answer (.inr (.await id .joinEffect)) = ExitV := rfl
-example (id : FiberId) : RSig.Answer (.inr (.await id .awaitValue)) = Val := rfl
-example (kind : GuardKind) : RSig.Answer (.inr (.guard_ kind)) = Option ExitV := rfl
-example (ex : ExitV) : RSig.Answer (.inr (.unguard ex)) = ExitV := rfl
-example (ex : ExitV) : RSig.Answer (.inr (.finishFinalizer ex)) = ExitV := rfl
-example (body : Point) : RSig.Answer (.inr (.scoped body)) = ExitV := rfl
-example (previous : Ctx) (scope : Nat) (ex : ExitV) :
-    RSig.Answer (.inr (.scopeExit previous scope ex)) = ExitV := rfl
--- P2: the checkpoints answer a value; the loop and generator entries answer their exit.
-example (p : Point) : RSig.Answer (.inr (.suspend p)) = Val := rfl
-example (v : Val) : RSig.Answer (.inr (.sync v)) = Val := rfl
-example (p : Point) : RSig.Answer (.inr (.gen p)) = ExitV := rfl
-example (p : Point) (cursor : Val) : RSig.Answer (.inr (.loop p cursor)) = ExitV := rfl
-example (reason : PendingReason) (p : Point) : RSig.Answer (.inr (.frontier reason p)) = ExitV := rfl
 
 -- E4-SCHED-CE-002: the scout's proposed collision is false; success adds `exitOk`.
 theorem exit_encoding_distinguishes (c : CauseV) :

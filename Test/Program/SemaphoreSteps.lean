@@ -19,8 +19,8 @@ alone, and what the typing theorems do not say by themselves.
    name, with no assumed capture.
 6. The connector to the store: `step_keeps_cell` on a step's typing.
 
-The comparison with the abstract model is `Test/Program/SemaphoreAgreement.lean`. The runs on
-the machine are `Test/Program/SemaphoreScenarios.lean`.
+The relation to the abstract model is `Test/Program/SemaphoreRelation.lean`. The runs on the
+machine are `Test/Program/SemaphoreScenarios.lean`.
 
 Placement. Concept `store-typing`, requirement R4. Every guard is a finite check, and every
 example is an instance of a theorem of `src/Effect4/Laws/Library/Semaphore/Typing.lean`. None

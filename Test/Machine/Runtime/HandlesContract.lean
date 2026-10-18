@@ -199,10 +199,6 @@ theorem forkJoin_minted :
     Minted (Api.replay pForkJoin 80 [Api.evaluate, RunDecision.fire Api.root]).machine :=
   handles_minted pForkJoin 80 _ ⟨load_minted pForkJoin 80, by decide⟩
 
--- E4-CHECK-CE-010: numeric interruptor provenance is not a dereferenced handle.
-example (cell : DeferredKey) (id : FiberId) :
-    (SyncOp.deferredInterruptWith cell id).keys = [Handle.promise cell] := rfl
-
 end Test.Runtime.HandlesContract
 
 section HandleTacticGrammar

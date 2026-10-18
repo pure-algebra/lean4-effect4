@@ -302,10 +302,6 @@ def stoppedWork : Run :=
 #guard stoppedWork.nextControl = none
 #guard stoppedWork.controlOnce.journal = []
 
-example (s : Run) (decision : Api.Decision) (chosen : s.nextControl = some decision) :
-    s.controlOnce.journal = s.journal ++ [.control decision] :=
-  Run.controlOnce_journal s decision chosen
-
 /-! ## One completion per call
 
 Once an answer has been applied the machine holds no call at that key, so a second answer
@@ -316,9 +312,5 @@ has no rows at all. -/
 #guard (driven.answer ⟨Api.root, 0⟩ (.ofExit (.success (.nat 2)))).journal = driven.journal
 
 /-! ## The ceilings -/
-
-example := @Effect4.Run.receive_rows
-example := @Effect4.Run.answer_rows
-example := @Effect4.Run.acceptReply_after_applied
 
 end Test.Run.RunContract

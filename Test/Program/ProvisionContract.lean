@@ -8,7 +8,7 @@ contract is `src/Effect4/Program/Provision.lean` (spiked as `src/Effect4/Program
 
 Every obligation below is ascribed at its exact proposition and supplied by name with `@`
 or with its type arguments fixed, so a declaration that keeps the frozen name but weakens
-the statement fails here (`Test/Machine/Environment/ContextKeyContract.lean` is the model).
+the statement fails here (`git:def8babcc:Test/Machine/Environment/ContextKeyContract.lean` held the model).
 The executable receipts are `#guard`s in the idiom of `Test/Program/CompileContract.lean`:
 a `#guard` that runs the Layer machine is a finite probe at one fuel and nothing more, and
 the machine halves of the four register rows stay `#guard`s on purpose (a kernel `decide`
@@ -51,8 +51,6 @@ end RowDiff
 
 section Algebra
 
-example : DecidableEq LayerTy := inferInstance
-
 end Algebra
 
 /-! ## D2 — the adjunction and the references -/
@@ -64,8 +62,6 @@ end Adjunction
 /-! ## D3 — the term, its typing, the app -/
 
 section Term
-
-example : DecidableEq (LayerTerm DocsOp) := inferInstance
 
 end Term
 

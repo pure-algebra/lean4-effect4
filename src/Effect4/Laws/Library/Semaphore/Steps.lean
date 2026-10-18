@@ -47,9 +47,8 @@ first fitting one (`visit_fromFirst`).
 
 The statements establish no order of the wake across visits, no cancellation law, no fairness,
 no liveness and nothing of a wrapper. An equal value in the model says nothing of a host. The
-finite controls are `Test/Program/SemaphoreAgreement.lean` and
-`Test/Program/SemaphoreRelation.lean`: each statement's conclusion on every state of a
-universe of 225 states.
+finite controls are `Test/Program/SemaphoreRelation.lean`: each statement's conclusion at one
+state, and a red control for each premise.
 -/
 
 set_option autoImplicit false

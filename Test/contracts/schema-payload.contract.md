@@ -27,7 +27,7 @@ The chain must import downward (`Check` -> `Document` -> `Representation` ->
 every declaration this packet names. `Effect4.Schema.Value` is reserved for
 the later denotation/value layer and owns none of D0-D7.
 
-Battery: `Test/Schema/PayloadContract.lean`
+Battery: `git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Schema/PayloadContract.lean`
 
 Counterexamples: `Test/Counterexamples/REGISTER.md`, rows
 `E4-SCHEMA-CE-026` through `E4-SCHEMA-CE-042`, with attack shapes in
@@ -1053,7 +1053,7 @@ the production gate remains intentionally red until the builder establishes
 the frozen `Effect4.Schema.Payload` ownership boundary.
 
 The same gate must materialize the exact `payloadBoundaryImportProbe` frozen
-in `Test/Schema/PayloadContract.lean` as a fresh module whose only
+in `git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Schema/PayloadContract.lean` as a fresh module whose only
 library import is `Effect4.Schema.Payload`. It must establish all of the
 following mechanically:
 
@@ -1215,7 +1215,7 @@ of the test tree. They froze constructor order and arity, owned names and
 receipts by hand, and every added declaration edited them; the derived projection
 guard (`tools/Effect4Gen/Check.lean`) holds the carrier's shape mechanically, the
 compatibility snapshot freezes its wire form, and the axiom gate is the receipt.
-The payload contract battery (`Test/Schema/PayloadContract.lean`) is unchanged.
+The payload contract battery (`git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Schema/PayloadContract.lean`) is unchanged.
 
 ## Fired findings
 

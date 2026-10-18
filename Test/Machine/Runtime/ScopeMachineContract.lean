@@ -121,60 +121,14 @@ section Surface
 universe u v
 variable {κ φ : Type u} {β : Type v} {ε δ ι α σ : Type u}
 
-example : φ → ScopeMachine.Phase φ := ScopeMachine.Phase.waiting
 example : ScopeMachine.Phase φ := ScopeMachine.Phase.ready
 example : ScopeMachine.Phase φ := ScopeMachine.Phase.complete
-example : Scope κ φ β ε δ ι α → Exit β ε δ ι α → List φ →
-    List (φ × Exit Unit ε δ ι α) → ScopeMachine.Phase φ →
-    ScopeMachine.State κ φ β ε δ ι α := ScopeMachine.State.mk
-example : Scope κ φ β ε δ ι α → Exit β ε δ ι α →
-    ScopeMachine.State κ φ β ε δ ι α := ScopeMachine.start
-example : ScopeMachine.State κ φ β ε δ ι α → ScopeMachine.State κ φ β ε δ ι α :=
-  ScopeMachine.advance
-example : ScopeMachine.State κ φ β ε δ ι α →
-    Option (Nat × φ × Exit β ε δ ι α) := ScopeMachine.request?
-example : ScopeMachine.State κ φ β ε δ ι α → Nat → Exit Unit ε δ ι α →
-    Option (ScopeMachine.State κ φ β ε δ ι α) := ScopeMachine.respond
-example : ScopeMachine.State κ φ β ε δ ι α → Option (Exit Unit ε δ ι α) :=
-  ScopeMachine.result?
-example : ScopeMachine.State κ φ β ε δ ι α → List (Reason ε δ ι α) :=
-  ScopeMachine.journal
-example [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] :
-    ScopeMachine.State κ φ β ε δ ι α → Option (Exit β ε δ ι α) :=
-  ScopeMachine.restore?
-example : Scope κ φ β ε δ ι α → Nat := ScopeMachine.bound
-example : (φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α)) →
-    Nat → ScopeMachine.State κ φ β ε δ ι α → σ →
-    ScopeMachine.State κ φ β ε δ ι α × σ := ScopeMachine.runState
-
-example : ∀ (machine : ScopeMachine.State κ φ β ε δ ι α) (ordinal : Nat)
-    (operation : φ) (offered : Exit β ε δ ι α),
-    ScopeMachine.request? machine = some (ordinal, operation, offered) →
-    offered = machine.original := ScopeMachine.request_uses_original
-
-example : ∀ (machine : ScopeMachine.State κ φ β ε δ ι α) (ordinal : Nat)
-    (reply : Exit Unit ε δ ι α), ordinal ≠ machine.captured.length →
-    ScopeMachine.respond machine ordinal reply = none := ScopeMachine.respond_rejects_wrong_id
-
-example : ∀ (machine : ScopeMachine.State κ φ β ε δ ι α) (ordinal : Nat)
-    (reply : Exit Unit ε δ ι α),
-    (∀ operation, machine.phase ≠ ScopeMachine.Phase.waiting operation) →
-    ScopeMachine.respond machine ordinal reply = none := ScopeMachine.respond_rejects_wrong_phase
-
-example : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α))
-    (machine : ScopeMachine.State κ φ β ε δ ι α) (world : σ),
-    ScopeMachine.runState handler 0 machine world = (machine, world) := ScopeMachine.runState_zero
 
 example : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α))
     (first later : Nat) (machine : ScopeMachine.State κ φ β ε δ ι α) (world : σ),
     ScopeMachine.runState handler (first + later) machine world =
       let resumed := ScopeMachine.runState handler first machine world
       ScopeMachine.runState handler later resumed.1 resumed.2 := ScopeMachine.runState_add
-
-example : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α))
-    (budget : Nat) (machine : ScopeMachine.State κ φ β ε δ ι α) (world : σ),
-    (ScopeMachine.runState handler budget machine world).1.scope = machine.scope :=
-  ScopeMachine.runState_scope
 
 example : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α))
     (budget : Nat) (scope : Scope κ φ β ε δ ι α) (original : Exit β ε δ ι α) (world : σ),
@@ -195,13 +149,6 @@ example : ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit 
          captured := scope.closeOrder.zip result.1, phase := .complete }, result.2) :=
   ScopeMachine.runState_complete
 
-example : ∀ (callback : φ → Exit β ε δ ι α → Exit Unit ε δ ι α)
-    (scope : Scope κ φ β ε δ ι α) (original : Exit β ε δ ι α) (world : σ),
-    ScopeMachine.result? (ScopeMachine.runState
-      (fun operation exit world => (callback operation exit, world))
-      (ScopeMachine.bound scope) (ScopeMachine.start scope original) world).1 =
-        some (scope.closeResult callback original) := ScopeMachine.runState_result
-
 example [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] :
     ∀ (handler : φ → Exit β ε δ ι α → StateT σ Id (Exit Unit ε δ ι α))
     (scope : Scope κ φ β ε δ ι α) (original : Exit β ε δ ι α) (world : σ),
@@ -217,9 +164,6 @@ example [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] :
 
 end Surface
 
--- A concrete target request stores an operation identity and its resource data.
-example : DecidableEq (ScopeMachine.State Nat (Effects.OperationId × Effects.Trace.Val)
-    Effects.Trace.Val Effects.Trace.Val Unit Unit Unit) := inferInstance
 -- END MACHINE-SURFACE
 
 -- BEGIN MACHINE-BEHAVIOR

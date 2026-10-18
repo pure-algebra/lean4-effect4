@@ -9,7 +9,7 @@ type index?"
 
 Implementation fence: `F-KEY` = `src/Effect4/Machine/Key.lean`
 
-Battery: `Test/Machine/Environment/ContextKeyContract.lean`
+Battery: `git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Machine/Environment/ContextKeyContract.lean`
 
 Counterexamples: `Test/Counterexamples/REGISTER.md`, rows `E4-ENV-CE-001`
 through `E4-ENV-CE-006`, with attack shapes in

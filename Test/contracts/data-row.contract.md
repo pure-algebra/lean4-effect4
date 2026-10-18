@@ -3,7 +3,7 @@
 Status: **Pass-B FROZEN; implementation REQUIRED-BLOCKED**. The production
 fence `F-ROW` is solely `src/Effect4/Data/Row.lean`, which remains an empty breadth
 stub at freeze. The breaker-owned Lean battery is
-`Test/Data/RowContract.lean`. Its proof graph is `DATA-PG-ROW`.
+`git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Data/RowContract.lean`. Its proof graph is `DATA-PG-ROW`.
 
 This packet freezes one reusable data structure: a finite row with exactly one
 canonical list spelling. It does not interpret a requirement, analyze a

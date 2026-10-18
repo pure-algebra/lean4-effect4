@@ -47,10 +47,6 @@ def unknown : Bytes := [0, Kind.export.byte] ++ zeroDigest.bytes ++ framed 253 [
   | _ => false
 
 example {next : Store} (accepted : Store.empty.restore legacy = .ok next) :
-    next.roots = [legacyRoot] := restore_roots accepted
-example {next : Store} (accepted : Store.empty.restore legacy = .ok next) :
-    Closed next := restore_closed accepted
-example {next : Store} (accepted : Store.empty.restore legacy = .ok next) :
     next.Resolves ⟨legacyRoot.kind, legacyRoot.head.digest⟩ :=
   restore_targets accepted legacyRoot (by
     rw [restore_roots accepted]

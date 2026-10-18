@@ -4,36 +4,13 @@ import Effect4.Laws.Program.Typed.Assembly
 badName and notImplemented are refused at typed exit boundaries, while ordinary defects,
 interruptions, and missingService remain admitted. Since decisions row 152 the exclusion is also
 part of membership at an exit type (`Fits`' `exitOf` arm reads `ShapeFree`), so base exit
-membership refuses them too; the earlier base judgment is kept below as history over a local
-copy of its `exitOf` arm (`oldExitFits`). Historical predicates below retain negative evidence
-and are not current admission rules. -/
+membership refuses them too. The earlier judgments are history at
+`git:def8babcc:Test/Program/H2PartOne.lean` (`oldExitFits`, `OldRacePayload`, `OldLoopProtocol`). -/
 set_option autoImplicit false
 namespace Test.Program.H2PartOne
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 open Effect4.Program.Typed
 abbrev W := Effect4.Program.Typed.World
-
-/-- History: membership at `Exit<a, e>` before decisions row 152, a local copy of `Fits`' old
-`exitOf` arm (the components read the current `Fits`): the encoded cause's failures fit the
-error column, and nothing else is asked of it. -/
-def oldExitFits (w : W) (v : Val) (a e : Ty) : Prop :=
-  match v with
-  | Val.exitOk x => Fits w x a
-  | Value.exitErr written =>
-    match causeImage.ofVal written with
-    | some c => CauseFits (fun x => Fits w x e) c
-    | none => False
-  | _ => False
-
-/-- History (red against the current judgment): the old base membership admitted a reified
-`die badName` at every exit type. -/
-theorem old_base_badName_fits (w : W) (ty : EffTy) :
-    oldExitFits w (reifyExitVal (.failure (Cause.die .badName))) ty.answer ty.error := by
-  show (match causeImage.ofVal (causeImage.toVal (Cause.die .badName)) with
-    | some c => CauseFits (fun x => Fits w x ty.error) c
-    | none => False)
-  rw [Store.Image.ofVal_toVal]
-  exact fitsCause_of_clean w ty.error _ rfl
 
 /-- The flip (decisions row 152): base exit membership refuses `die badName` at every type. -/
 theorem base_badName_refused (w : W) (ty : EffTy) :
@@ -112,9 +89,8 @@ theorem interrupt_admitted (w : W) (ty : EffTy) (who : Option FiberId) :
   subst member
   rfl
 
-/-! Race failure-buffer controls. The whole historical payload predicate isolates the missing
-exclusion; the current predicate refuses both forbidden buffers. The actual raceComplete
-equality shows why checking only the incoming callback is insufficient. These finite payload
+/-! Race failure-buffer controls. The current predicate refuses both forbidden buffers. The
+actual raceComplete equality shows why checking only the incoming callback is insufficient. These finite payload
 examples make no WorldValid, machine-reachability, or full transition claim. -/
 namespace RaceFailureBuffers
 
@@ -145,42 +121,6 @@ def race (cause : CauseV) : Effect4.Program.Typed.RRace where
   settled := false
   programs := []
   registering := false
-
-/-- Historical intermediate H2 contract: the failure buffer still used base membership,
-while accepted and cleanup exits already required ExitOk. It is retained only as negative
-evidence; current race admission uses RacePayload. -/
-structure OldRacePayload (root : ProgramSource) (w : W) (r : Effect4.Program.Typed.RRace)
-    (resultTy : EffTy) : Prop where
-  token : w.Θ r.host r.token = some resultTy
-  failures : FitsCause w resultTy.error ⟨r.state.failures⟩
-  winner : ∀ pair ∈ r.state.winner, Fits w pair.2 resultTy.answer
-  accepted : ∀ exit ∈ r.state.accepted, ExitOk w resultTy exit
-  cleanup : ∀ wait ∈ r.state.cleanup, ExitOk w resultTy wait.result
-  live : ∀ id ∈ r.state.live, ∀ childTy, w.Γ id = some childTy →
-    childTy.answer.sub resultTy.answer = true ∧ childTy.error.sub resultTy.error = true
-  programs : ∀ code ∈ r.programs, ∃ childTy, TypedProg root w childTy code ∧
-    childTy.answer.sub resultTy.answer = true ∧ childTy.error.sub resultTy.error = true
-
-theorem old_admitted (cause : CauseV) (clean : cleanExit (.failure cause) = true) :
-    OldRacePayload (program : ProgramSource) world (race cause) unitTy := by
-  refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · exact fitsCause_of_clean world unitTy.error cause clean
-  · intro pair member; cases member
-  · intro exit member; cases member
-  · intro wait member; cases member
-  · intro id member childTy declared
-    change some unitTy = some childTy at declared
-    cases declared
-    exact ⟨Ty.sub_refl _, Ty.sub_refl _⟩
-  · intro code member; cases member
-
-theorem old_badName_admitted :
-    OldRacePayload (program : ProgramSource) world (race (Cause.die .badName)) unitTy :=
-  old_admitted _ rfl
-
-theorem old_notImplemented_admitted :
-    OldRacePayload (program : ProgramSource) world (race (Cause.die .notImplemented)) unitTy :=
-  old_admitted _ rfl
 
 theorem new_badName_refused :
     ¬ RacePayload (program : ProgramSource) world (race (Cause.die .badName)) unitTy := by
@@ -265,9 +205,8 @@ part one's live ExitOk deliberately admits missingService at both rows.
 Decisions row 117's side condition (seat D1, 2026-10-01): the iterator and loop protocols keep
 the requirement row from emptying (`LoopProtocol.step`'s `rows`, the condition under which part
 two transports along the frame, `exitOk2_transport` in the formal pass's G5), so the witness's
-stack is refused (`loop_refused`); `old_loop_admitted` keeps it as history over a local copy of
-the protocol without the condition (`OldLoopProtocol`), and a loop frame that keeps the row is
-still accepted (`loop_kept_admitted`). Part two itself (`FullExitOk` as the live exit judgment)
+stack is refused (`loop_refused`), and a loop frame that keeps the row is still accepted
+(`loop_kept_admitted`). Part two itself (`FullExitOk` as the live exit judgment)
 is not landed: it needs the presence clause per position, which the walk does not carry (seat
 D1's receipt). -/
 namespace MissingServiceTransport
@@ -291,42 +230,6 @@ def outer : EffTy := EffTy.pure .unit
 def missing : CauseV := Cause.die .missingService
 def name : EffName := .abort
 def saved : RSaved := ⟨.pure (.success .unit), [], false, none, false⟩
-
-/-! History: the loop protocol before decisions row 117's side condition, a local copy of
-`LoopProtocol` without its `rows` field (every other clause the current one). -/
-mutual
-  inductive OldLoopProtocol (root : ProgramSource) : W → EffTy → EffTy → EffName → Val → Prop
-    | step {w : W} {tin tout : EffTy} {name : EffName} {cursor : Val}
-        (errors : tin.error = tout.error)
-        (next : ∀ w', w.leHost w' → ∀ v, Typed.Fits w' v tin.answer →
-          OldLoopAnswer root w' tout name ((interpR root.program).loopResume name cursor v)) :
-        OldLoopProtocol root w tin tout name cursor
-  inductive OldLoopAnswer (root : ProgramSource) :
-      W → EffTy → EffName → LoopNext Val RProgram → Prop
-    | continue {w : W} {tout : EffTy} {name : EffName} (cursor : Val) (body : RProgram)
-        (tin : EffTy) (typed : TypedProg root w tin body)
-        (tail : OldLoopProtocol root w tin tout name cursor) :
-        OldLoopAnswer root w tout name (.continue cursor body)
-    | finish {w : W} {tout : EffTy} {name : EffName} (code : RProgram)
-        (typed : TypedProg root w tout code) :
-        OldLoopAnswer root w tout name (.finish code)
-end
-
-/-- History: the hook arrows with the old loop protocol. -/
-def oldFrameProtocols (root : ProgramSource) : FrameProtocols :=
-  { frameProtocols root with loop := OldLoopProtocol root }
-
-/-- History (red against the current protocol): the answer-never loop met the old frame
-protocol, whose continuation is vacuous, from a row requiring the scope service to an empty
-one. -/
-theorem old_loop_admitted (src : ProgramSource) (w : W) :
-    StackAccepts (TypedProg src) FullExitOk (oldFrameProtocols src) w inner outer
-      [.loop name .unit] := by
-  apply Effect4.Contracts.Path.cons (middle := outer)
-  · apply FrameAccepts.loop
-    intro w' _
-    exact OldLoopProtocol.step (tin := inner) (tout := outer) rfl (fun _ _ _ h => False.elim h)
-  · exact Effect4.Contracts.Path.nil outer
 
 /-- **The flip** (decisions row 117's side condition, proved): the loop frame's protocol keeps
 the requirement row from emptying, and `inner` requires the scope service while `outer` requires

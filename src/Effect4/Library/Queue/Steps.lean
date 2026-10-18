@@ -44,9 +44,8 @@ The laws are in `src/Effect4/Laws/Library/Queue/`: the typing statements (`Typin
 relation to the model (`Relation.lean`) and the six step goals (`Steps.lean`). The connectors
 of a step to the store are shared (`src/Effect4/Laws/Step/Store.lean`). The batteries are
 under `Test/Program/`: `QueueSteps.lean` (types, sizes and the
-hygiene controls), `QueueScenarios.lean` (runs on the machine), `QueueAgreement.lean` (each step
-against the model, on every state of a finite universe) and `QueueRelation.lean` (each goal's
-conclusion on that universe).
+hygiene controls), `QueueScenarios.lean` (runs on the machine) and `QueueRelation.lean` (each
+goal's conclusion at one state, and its premises' red controls).
 -/
 
 @[expose] public section

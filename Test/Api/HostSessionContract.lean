@@ -120,12 +120,6 @@ def cancelled : Session program table := (advance pending0 100 (.interruptFrom n
 #guard cancelled.retired = [⟨⟨call0, 0⟩, some reply0⟩]
 #guard cancelled.pending = []
 
-example := @preflight_envelope
-example := @applyPending_zero
-example := @applied_guard_absent
-example := @applied_reply_refused
-example := @advance_answer_refuses
-
 /-! An accepted receipt reaches the actual preparation code and the selected row's membership
 judgment. This fixture consumes the session bridge; it does not infer a typed whole session. -/
 theorem received_prepares_nat (w : Typed.World) :

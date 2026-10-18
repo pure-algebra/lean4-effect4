@@ -18,7 +18,7 @@ whole run.
 | the seven typing statements of `src/Effect4/Laws/Library/Pool/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | `Test/Program/PoolSteps.lean` | tested: finite controls of the cell and of each step's type, size and hygiene |
 | the six step statements and `pool_steps_agree` in `src/Effect4/Laws/Library/Pool/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
-| `Test/Program/PoolAgreement.lean` and `PoolRelation.lean` in the same folder | tested: finite controls on 130 states, and five faults red at their own property |
+| `git:def8babcc:Test/Program/PoolAgreement.lean` and `Test/Program/PoolRelation.lean` | tested: finite controls on 130 states, and five faults red at their own property. The universe and the faults retired on 2026-10-18: `pool_steps_agree` covers every state |
 | `ocaml/engine/test/pool/test_pool.ml`, with `Test/Program/PoolEngine.lean` | tested: twelve runs give Lean's exit on the generated engine, on both carriers, one schedule each. Two are PP4 and the control of PP5 over the first battery's forms, and ten are the public cases |
 | `src/Effect4/Library/Pool/Ops.lean` | tested: the module builds in the runtime root, and the checker types each case over it |
 | the scope laws of `src/Effect4/Laws/Library/Pool/Ops.lean`, one for each step term, each part and each operation | proved; the axiom gate holds each to `[propext, Quot.sound]` |

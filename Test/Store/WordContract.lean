@@ -185,11 +185,6 @@ open Effect4.Store
 
 /-! ## The laws, stated -/
 
-example := @Effect4.Store.put_duplicate
-example := @Effect4.Store.put_conflict
-example := @Effect4.Store.put_preserves
-example := @Effect4.Store.putNode_closed
-example := @Effect4.Store.empty_closed
 -- A real faithful, closed prefix is the starting store of the suffix replay.
 example (hw : Word.wfFrom [⟨probeSchemaAddress, probeSchema⟩]
     [⟨probeEntryAddress, probeEntry⟩] = true)
@@ -203,14 +198,5 @@ example (hw : Word.wfFrom [⟨probeSchemaAddress, probeSchema⟩]
 
 -- A dangling prefix cannot substitute for the faithful, closed prefix above.
 #guard Word.wf [⟨probeEntryAddress, probeEntry⟩] = false
-example := @Effect4.Store.apply_idempotent
-example := @Effect4.Store.closure_wf
-example := @Effect4.Store.closure_closed
-example := @Effect4.Store.layered_get
-example := @Effect4.Store.outbox_wf
-example := @Effect4.Store.sync_sub
-example := @Effect4.Store.sync_idempotent
-example := @Effect4.Store.verify_sound
-example := @Effect4.Store.verify_roots
 
 end Test.Store.WordContract

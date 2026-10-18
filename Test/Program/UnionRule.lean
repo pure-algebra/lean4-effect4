@@ -50,19 +50,6 @@ open Effect4 Effect4.Program Effect4.Program.UnionRule
 
 /-! ## The two record rules are their definitions before the combinator -/
 
--- The right sides are the bodies at the base of this slice, word for word.
-example (optional : Bool) (target : Ty) (name : String) :
-    Record.fieldType optional target name =
-      ((Ty.members target.normalize).mapM (Record.fieldOf optional name)).map
-        Record.joinResults := rfl
-
-example (target : Ty) (name : String) (valueType : Ty) :
-    Record.setType target name valueType =
-      ((Ty.members target.normalize).mapM (Record.setOf name valueType)).map
-        Record.joinResults := rfl
-
-example (types : List Ty) : Record.joinResults types = types.foldl Ty.join .never := rfl
-
 /-! ## Green: `never`, a union of two records, a member that refuses -/
 
 /-- A record with the field `a` at `nat`. -/

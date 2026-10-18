@@ -144,16 +144,6 @@ def recordAnnotation : Term := .record [("x", true, duplicate)] [] .nil
   | .error (.formation why) => why.ty = duplicate
   | _ => false
 
--- Certificates expose the independent raw judgment.
-example (admitted : AdmittedProgram pureProgram ⟨validTable, [], []⟩) :
-    Formation.InputFormed pureProgram validTable := admitted.formed
-example (emission : Effect4.Codegen.ModuleEmission pureProgram validTable "main") :
-    Formation.InputFormed pureProgram validTable := emission.formed
-
-example {fuel : Nat} {tape : List Api.Decision} {inspection : Api.Inspection}
-    (accepted : Api.replayChecked pureProgram fuel tape validTable = .inl inspection) :
-    Formation.InputFormed pureProgram validTable := Api.replayChecked_formed accepted
-
 /-! The formation rule on a deferred's error column (the state plan's T3a, its D4): a deferred
 fails only with a value the error alphabet carries, so `Deferred.make<A, boolean>()` is refused at
 its instance, at the row's answer column; `Deferred.make<void, never>()` is formed. -/

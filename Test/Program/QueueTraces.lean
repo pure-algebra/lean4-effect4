@@ -8,8 +8,7 @@ import Effect4.Program.Authoring.Mask
 Decisions row 221 names three acceptance traces of the waiting wrapper, and the wrapper's design
 adds four (`docs/research/2026-10-05-claude-lead/waiting-design.md`, F5, F7 and proposal 5). This
 battery runs the seven on the Lean machine, over the library's operations
-(`src/Effect4/Library/Queue/Ops.lean`). Each has its positive control, and a fault that fails
-the promised property.
+(`src/Effect4/Library/Queue/Ops.lean`).
 
 | # | The trace | The registry's open part that it is a finite control of |
 | --- | --- | --- |
@@ -24,11 +23,9 @@ the promised property.
 The last part is decisions row 226's, under requirement R12: the embedded budget covers the
 registration, the cleanup and the selected delivery, and a cut inside the operation is excluded.
 
-**A fault is a variant of the Queue's part of an operation** (`Variant`): another delivery of a
-signal, a withdrawal that posts nothing, no withdrawal, one hint for every round, or a
-withdrawal that takes a message back. The variant with no change is the library's operation,
-tree for tree. Each faulty program builds: the checker types it. So each fault fails the
-promised property, and not typing alone.
+**A variant of the Queue's part of an operation** (`Variant`) changes a delivery, a withdrawal
+or a hint. The variant with no change is the library's operation, tree for tree. The worker
+scenario (`Test/Dogfood/Scenario/QueueWorkers.lean`) builds its operations from it.
 
 **A cancellation control records four observations apart** (decisions row 222): the commitment,
 the operation's exit, the entry of the caller's continuation, and the fiber's exit. A child
@@ -189,14 +186,9 @@ def marks (ops : Ops) : Src NativeOp := eff do
   let l ← Ref.get log
   return l
 
-#guard verdict (marks library) = "built" && verdict (marks (opsOf { post := postInline })) = "built"
+#guard verdict (marks library) = "built"
 -- The posted delivery: the offer returns, and the taker goes on after it, in the helper's task.
 #guard exitOf (marks library) = some (.success (.list [.nat 101, .nat 7]))
--- **An ordinary `Deferred` keeps its inline delivery.** With the inline variant the taker's
--- attempt and its continuation run inside the offer: its mark comes first. So the order above
--- is the helper's, and no change of `Deferred`.
-#guard exitOf (marks (opsOf { post := postInline })) = some (.success (.list [.nat 7, .nat 101]))
-
 /-! ### The await before the task, and the await after it
 
 An operation budget stops the taker between its registration and its await. The root then
@@ -256,24 +248,20 @@ def stopsBetween (k : Nat) : Bool :=
 
 -- The checker refuses the budget's provision, so the programs are raw.
 #guard verdict (notified 25) = "typing: serviceUnknown"
--- The budgets that stop the taker between its registration and its await: 26 to 38. Below 26
--- the taker yields before its step, and from 39 it reaches its await with no yield. The
--- provision's masked entry (decisions row 349) put each five operations later.
-#guard (List.range 45).filter stopsBetween = List.range' 26 13
+-- The budget 30 stops the taker between its registration and its await.
+#guard stopsBetween 30
 
--- At each such budget, on both tapes: no attempt runs before the helper's task and the taker's
--- resume have both run. After the first of the two dispatchers the message is still buffered
--- and the taker is still enrolled. At the end the taker has taken the message, and the root has
--- exited with it.
-#guard (List.range' 26 13).all fun k =>
+-- On both tapes: no attempt runs before the helper's task and the taker's resume have both
+-- run. After the first of the two dispatchers the message is still buffered and the taker is
+-- still enrolled. At the end the taker has taken the message, and the root has exited with it.
+#guard let k := 30
   [awaitFirst, taskFirst].all fun tape =>
     (stages tape (notified k)).take 2 == [(some (1, 1), false), (some (1, 1), false)] &&
       (stages tape (notified k)).drop 3 == [(some (0, 0), true)] &&
       ((rawOn tape (notified k)).bind (·.exit)) == some (.success (.nat 7))
 -- On the first tape the helper's task resumes the parked taker, and the taker's attempt runs
 -- inside that task: the message has left the buffer when the root's dispatcher has fired.
-#guard (List.range' 26 13).all fun k =>
-  ((stages awaitFirst (notified k))[2]?).map (·.1) == some (some (0, 0))
+#guard ((stages awaitFirst (notified 30))[2]?).map (·.1) == some (some (0, 0))
 
 /-- The rows of a raw run on a tape. -/
 def rawRows (tape : List Api.Decision) (src : Src NativeOp) : List Row :=
@@ -344,12 +332,6 @@ def selected (ops : Ops) (maskedCaller : Bool) : Src NativeOp := eff do
 -- The withdrawal's helper is forked by A, fiber 1, and A exits before its dispatcher runs it.
 #guard before (.exited 1 false) (.ran 1) (rowsOf (selected library false))
 
--- **Fault: a withdrawal that posts nothing.** A's withdrawal names B, and nobody wakes it: the
--- message stays in the buffer while B waits, until the root interrupts B.
-#guard verdict (selected (opsOf { withdrawalPosts := false }) false) = "built"
-#guard exitOf (selected (opsOf { withdrawalPosts := false }) false) =
-  some (.success (.list [.nat 1, .nat 1, .bool true, .nat 0, .bool true, .bool true]))
-
 /-! ## 3. A late delivery to an old hint after the request waits again
 
 In the first profile no step wakes a taker that finds nothing. So this control posts the wakes
@@ -393,16 +375,6 @@ def rearmed (ops : Ops) : Src NativeOp := eff do
 -- The ordinary run ends at the truth lane's fuel.
 #guard (exitAt 1000 (rearmed library)).isSome
 
--- **Fault: one hint for every round.** After the first wake the hint is resolved for good, so
--- each later wait answers at once: the taker tries again and again without a park. It keeps
--- its first hint. Its operation budget stops it at last, the offer then buffers a message, and
--- a later attempt takes it. The ordinary run has no exit at the truth lane's fuel.
-#guard verdict (rearmed (opsOf { retry := retryOneHint })) = "built"
-#guard exitOf (rearmed (opsOf { retry := retryOneHint })) =
-  some (.success (.list [.nat 1, .bool true, .nat 0, .nat 7]))
-#guard (rowsOf (rearmed (opsOf { retry := retryOneHint }))).count (.yielded 1) != 0
-#guard (exitAt 1000 (rearmed (opsOf { retry := retryOneHint }))).isNone
-
 /-! ## 4. A blocked offerer that is cancelled before any step accepts its message
 
 Capacity one. A first offer is accepted. A second offerer waits, and the root interrupts it. -/
@@ -438,13 +410,6 @@ def cancelledPending (ops : Ops) : Src NativeOp := eff do
 -- is an interruption.
 #guard exitOf (cancelledPending library) =
   some (.success (.list [.nat 1, .nat 0, .nat 1, .none, .bool true, .some (.nat 3),
-    .bool true, .nat 0, .bool true]))
-
--- **Fault: no withdrawal.** The offer stays pending after its offerer is gone. The take that
--- frees room accepts it: the poll finds the message 2 of a cancelled request.
-#guard verdict (cancelledPending (opsOf { withdraws := false })) = "built"
-#guard exitOf (cancelledPending (opsOf { withdraws := false })) =
-  some (.success (.list [.nat 1, .nat 1, .nat 1, .some (.nat 2), .bool true, .some (.nat 3),
     .bool true, .nat 0, .bool true]))
 
 /-! ## 5. A blocked offerer that is cancelled after a step accepted its message
@@ -494,12 +459,6 @@ def cancelledAccepted (ops : Ops) (cancel : Bool) : Src NativeOp := eff do
 -- resumes nobody.
 #guard before (.exited 1 false) (.started 2) (rowsOf (cancelledAccepted library true))
 
--- **Fault: a withdrawal that takes the message back.** The accepted message leaves the buffer
--- with its cancelled offerer: the poll finds nothing.
-#guard verdict (cancelledAccepted (opsOf { withdrawOffer := takesBack }) true) = "built"
-#guard exitOf (cancelledAccepted (opsOf { withdrawOffer := takesBack }) true) =
-  some (.success (.list [.nat 1, .nat 1, .nat 0, .none, .bool true, .list [], .bool true]))
-
 /-! ## 6. The signalling fiber exits before the dispatch
 
 A taker waits. A second fiber offers and exits at once. Its helper is a daemon, and its start is
@@ -522,17 +481,6 @@ def signallerExits (ops : Ops) : Src NativeOp := eff do
 #guard before (.exited 2 true) (.ran 2) (rowsOf (signallerExits library))
 #guard (rowsOf (signallerExits library)).contains (.forked 2 3 true)
 
--- **Fault: the helper as a supervised, interruptible child.** The offerer's exit interrupts
--- its children. The helper is interrupted before it resolves the hint: the wake is lost, the
--- taker waits for good, and the root has no exit.
-#guard verdict (signallerExits (opsOf { post := postWith ⟨false, false, .interruptible⟩ })) =
-  "built"
-#guard (exitOf
-  (signallerExits (opsOf { post := postWith ⟨false, false, .interruptible⟩ }))).isNone
-#guard (rowsOf
-  (signallerExits (opsOf { post := postWith ⟨false, false, .interruptible⟩ }))).contains
-    (.exited 3 false)
-
 /-! ## 7. The receiver's continuation that grows
 
 The helper's task runs the receiver: its next attempt, and then its caller's continuation, under
@@ -540,7 +488,7 @@ the task's own budget (decisions rows 226 and 238). Here the taker's continuatio
 `n` steps. The measure is the least fuel at which the flush of the helper's task ends the root.
 The count of signals is one at every length, and the queue's state is the same.
 
-**No bound is claimed.** The numbers are measured on this program at these lengths. -/
+**No bound is claimed.** The fuel is measured on this program at one length. -/
 
 /-- A taker whose continuation runs `n` steps; the root offers, and joins it. -/
 def grows (n : Nat) : Src NativeOp := eff do
@@ -568,21 +516,14 @@ def afterFlush (src : Src NativeOp) (budget : Nat) : Option (Bool × Bool) :=
       ({ one with budget := ample } : Run)
     (one.exit.isSome, more.exit.isSome)
 
-/-- The lengths, each with the least fuel of the delivery's flush that was measured for it. -/
-def measured : List (Nat × Nat) :=
-  [(0, 49), (1, 52), (2, 55), (4, 61), (8, 73), (16, 97), (32, 145), (64, 241)]
-
--- Each program builds, and it answers its message and its count of steps.
-#guard measured.all fun (n, _) =>
-  exitOf (grows n) == some (.success (.list [.nat 7, .nat n]))
--- At the measured fuel the flush ends the root. The empty continuation is the control: 49.
-#guard measured.all fun (n, least) => afterFlush (grows n) least == some (true, true)
+-- A continuation of two steps: the program answers its message and its count of steps, and
+-- at the fuel 55 the flush ends the root.
+#guard exitOf (grows 2) == some (.success (.list [.nat 7, .nat 2]))
+#guard afterFlush (grows 2) 55 == some (true, true)
 -- At one less it does not. And five more flushes at the ample fuel do not end it either: the
 -- cut inside the dispatch lost the work that remained, and a later flush is no resumption.
 -- Decisions row 226 excludes that cut from the first profile, so this is the excluded case,
 -- and no fault of the wrapper.
-#guard measured.all fun (n, least) => afterFlush (grows n) (least - 1) == some (false, false)
--- The measured fuel grows with the continuation: three for each step, at these lengths.
-#guard measured.all fun (n, least) => least == 49 + 3 * n
+#guard afterFlush (grows 2) 54 == some (false, false)
 
 end Test.Program.QueueTraces

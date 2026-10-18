@@ -65,20 +65,6 @@ example (pw pd : Effects.Program StoreSig (Option ExitV)) (w : Typed.World) (a e
         ∀ ex, (runP pd w.state).1 = some ex → Typed.ExitOk w' ⟨a, e, Env.Requirement.empty⟩ ex :=
   ⟨fun h => ⟨h.independent, h.reaches⟩, fun h => ⟨h.1, h.2⟩⟩
 
-/-- `soundB`: at every budget, from every world whose store fits, in every environment typed
-there. -/
-example : ∀ (bad : ExitV) (k : Nat) (e : NativeEff) (tys : TyEnv) (env : List Val)
-    (w : Typed.World) (t : EffTy), Looped e = true → effTy nativeSignature tys e = some t →
-    TypedAt tys env w →
-    SoundB (denoteBWith bad k e env) (denoteB k e env) w t.answer t.error :=
-  @soundB
-
-/-- `meaningB_stores`: finished or not, the stores are the state of a world whose store fits. -/
-example : ∀ (k : Nat) (e : NativeEff) (t : EffTy), Looped e = true →
-    effTy nativeSignature [] e = some t →
-    ∃ w : Typed.World, w.state = (meaningB k e [] Stores.empty).2 ∧ StoreFits w :=
-  @meaningB_stores
-
 /-! ## On the certificate a caller holds -/
 
 -- The whole-program checker and `effTy` agree on every fragment program of this battery.

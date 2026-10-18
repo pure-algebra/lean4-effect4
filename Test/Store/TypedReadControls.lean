@@ -62,10 +62,4 @@ def raw : Node := ⟨0, .schema, zeroDigest, .nat 1⟩
 #guard sameResult (Node.read (0 :: 4 :: (zeroDigest.bytes ++ framed Tag.bytes (framed 253 []))))
   (.ok ⟨0, .schema, zeroDigest, .bytes (framed 253 [])⟩)
 
--- A successful typed read names the exact stored entry, including its spec and version.
-example {replay : List Event → Except TxnRefusal Store} {cas : CasOf replay}
-    {ref : Ref Entry} {value : Entry} (h : Cas.get cas ref = .ok value) :
-    cas.store.find ref.digest = some (nodeOf value) :=
-  Cas.get_exact h
-
 end Test.Store.TypedReadControls

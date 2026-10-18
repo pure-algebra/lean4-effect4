@@ -150,12 +150,6 @@ example (lawful : LawfulSpelling nativeSignature (nativeSpell [])) {x : TypeScri
     readTyped [] nativeSignature (nativeSpell []) 0 x = .ok generated :=
   readTyped_printTypedAt lawful (by decide) printed
 
--- Reader: successful typed reading retains ordinary reconstruction at the named erased input.
-example (lawful : LawfulSpelling nativeSignature (nativeSpell [])) {x : TypeScript.Expr}
-    (read : readTyped [] nativeSignature (nativeSpell []) 1 x = .ok modify) :
-    print nativeSignature 1 modify = .ok (eraseJoinArgs [] nativeSignature (nativeSpell []) 1 x) :=
-  readTyped_exact lawful read
-
 /-! The approved typed sites use the public printer and its named reader. -/
 
 /-- A joined option input exercises the branch binder's actual checked environment. -/

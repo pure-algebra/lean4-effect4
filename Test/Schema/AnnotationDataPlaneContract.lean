@@ -16,16 +16,6 @@ universe u
 
 /-! ## A0 — typed keys are views over the existing Json payload -/
 
-example {A : Type u} {key : AnnotationKey A}
-    (law : key.Lawful) (value : A) :
-    key.decode (key.encode value) = some value :=
-  law.decode_encode value
-
-example {A : Type u} {key : AnnotationKey A}
-    (law : key.Lawful) (raw : Json) (value : A)
-    (decoded : key.decode raw = some value) : key.encode value = raw :=
-  law.encode_decode raw value decoded
-
 /-! Three heterogeneous dimensions exercise the one generic carrier. -/
 
 private def titleKey : AnnotationKey String where

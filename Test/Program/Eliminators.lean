@@ -77,9 +77,6 @@ example : fiberTy = extendAll Member.fiber := rfl
 product over the union. -/
 def rawFiber : Ty := .fiberOf (.prod (.union .nat .string) .unit) .never
 
--- Green: at a raw fiber type the rule answers the columns as they are spelled, as the by-shape
--- rule did.
-example (value error : Ty) : fiberTy (.fiberOf value error) = some (value, error) := rfl
 #guard fiberTy rawFiber = some (.prod (.union .nat .string) .unit, .never)
 #guard fiberTy rawFiber = Member.fiber rawFiber
 
@@ -271,13 +268,6 @@ theorem fiberTy_mono {s t : Ty} (smaller : Ty.subN s t = true)
 where the normal form has at most one union member. The normal form of a fiber type is a fiber
 type. The constructors of the next conversions have the same form. A product does not: its
 normal form distributes over a union. -/
-
--- Green: the normal form of each of these constructors is the constructor again.
-example (a e : Ty) : (Ty.fiberOf a e).normalize = .fiberOf a.normalize e.normalize := rfl
-example (a : Ty) : (Ty.list a).normalize = .list a.normalize := rfl
-example (a e : Ty) : (Ty.exitOf a e).normalize = .exitOf a.normalize e.normalize := rfl
-example (a : Ty) : (Ty.option a).normalize = .option a.normalize := rfl
-example (e : Ty) : (Ty.causeOf e).normalize = .causeOf e.normalize := rfl
 
 /-- A member rule that reads a product: the two columns of one product type. -/
 def pairOf : Ty → Option (Ty × Ty)

@@ -10,7 +10,7 @@ Companion packet: `Test/contracts/schema-representation.contract.md`
 Implementation fence: `src/Effect4/Schema/Representation.lean`, declarations
 disjoint from the tag-census packet
 
-Battery: `Test/Schema/SubAlphabetContract.lean`
+Battery: `git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Schema/SubAlphabetContract.lean`
 
 Counterexamples: `Test/Counterexamples/REGISTER.md`, rows
 `E4-SCHEMA-CE-020` through `E4-SCHEMA-CE-022`, with executable witnesses in
@@ -219,7 +219,7 @@ CLASS: specification design. Every ENSURES proposition held; they collectively
 stated less than the packet's claim boundary promised.
 
 FIXED-BY: a new paragraph after the ENSURES list states the per-member scope.
-`Test/Schema/SubAlphabetContract.lean` gains eight pointwise spelling
+`git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Schema/SubAlphabetContract.lean` gains eight pointwise spelling
 examples for `UnionMode` and `CheckTag` and three exact census listings for the
 unspelled alphabets. No implementation declaration changed: every pointwise
 obligation was already true of `src/Effect4/Schema/Representation.lean`.

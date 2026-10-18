@@ -1,6 +1,5 @@
 import Effect4.Laws.Library.Pool.Steps
 import Effect4.Laws.Step.Store
-import Test.Program.PoolAgreement
 import Test.Program.PoolSteps
 
 /-!
@@ -8,19 +7,17 @@ import Test.Program.PoolSteps
 
 The relation is `src/Effect4/Laws/Library/Pool/Relation.lean`: the shared encoding table, the
 resources' values, the cell's value and the replies. The six step goals are in
-`src/Effect4/Laws/Library/Pool/Steps.lean`. This battery evaluates each goal's conclusion, as
-the goal states it: at one table and at the scope of the step's own arguments, on every state
-of the universe of `Test/Program/PoolAgreement.lean`, 19 moves on each.
-
-It also ties the two encodings: the cell's value of the relation is the value of the
-comparison's state term. The red controls drop one premise each: the table's injectivity, and
-the hint that a lease sets. Two more sections apply the statements: joined to the store by the
+`src/Effect4/Laws/Library/Pool/Steps.lean`, and `pool_steps_agree` there joins them on every
+model state. This battery evaluates each goal's conclusion, as the goal states it, at one table
+and at the scope of the step's own arguments: once for each step, on the states of the
+contract's traces. The red controls drop one premise each: the table's injectivity, and the
+hint that a lease sets. Two more sections apply the statements: joined to the store by the
 shared connector `step_updates`, and at the scope of a row of `Ref.modifyWith` under three
 names that `bindWith` minted.
 
-Placement. Each guard is a finite instance of a step goal (concept `translation-simulation`,
-requirement R10, a part of the proposed claim `pool-expansion-agrees`). A state outside the
-universe and another table are not checked.
+Placement. Each green guard is one instance of a proved step goal (concept
+`translation-simulation`, requirement R10, a part of the proposed claim
+`pool-expansion-agrees`), beside the red control that drops its premise.
 -/
 
 set_option autoImplicit false
@@ -32,7 +29,6 @@ namespace Test.Program.PoolRelation
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
 open Effect4.Pool.Model
-open Test.Program.PoolAgreement (profileStates outside moves Move held premise reused half again)
 open Test.Program.PoolSteps (poolName idName hintName currentName stepScope stepScope_id
   stepScope_hint stepScope_cell)
 
@@ -47,11 +43,26 @@ def res0 : Nat → Val := fun r => Val.nat (100 + r)
 /-- The hint that a lease receives. -/
 def fresh : DeferredKey := ⟨9999⟩
 
--- The relation's cell value is the value of the comparison's state term, on every state of
--- the universe and on the states outside the profile: the two encodings are one.
-#guard (profileStates ++ outside).all fun s =>
-  decide (PoolAgreement.evalAt (PoolAgreement.stateTerm PoolAgreement.table0 s) =
-    some (cellVal tb0 res0 s))
+/-- One item of the resource 1. The lease 0 holds it, and the requests 1 and 2 wait: the state
+of PP3 before H's return. -/
+def held : State :=
+  { items := [⟨0, 1, true, 0⟩], waiters := [1, 2], next := 1 }
+
+/-- The same state after the return of the lease 0: the item is idle beside two waiters. -/
+def premise : State :=
+  { items := [⟨0, 1, false, 0⟩], available := [0], waiters := [1, 2], next := 1 }
+
+/-- Two items, both idle, with the item 1 at the front: PP2 after the two returns. -/
+def reused : State :=
+  { items := [⟨0, 1, false, 0⟩, ⟨1, 2, false, 1⟩], available := [1, 0], next := 2 }
+
+/-- PP2 before B's return: A's item is idle, and the lease 1 holds the item 1. -/
+def half : State :=
+  { items := [⟨0, 1, false, 0⟩, ⟨1, 2, true, 1⟩], available := [0], next := 2 }
+
+/-- The item was leased again, at the stamp 1, after the lease 0 returned. -/
+def again : State := { items := [⟨0, 1, true, 1⟩], next := 2 }
+
 -- The initial value at its resources is the cell's value of the model's initial state.
 #guard [[7], [7, 8], [7, 7, 9]].all fun (resources : List Nat) =>
   decide ((Pool.initial .nat (resources.map fun r => nat (100 + r)) {} []).toOption.bind
@@ -99,16 +110,7 @@ def drainHolds (tb : Table) (s : State) (id : Nat) : Bool :=
     (Pool.drainStep (var "id") (var "hint") (var "s"))
     (Val.tuple [Val.bool (drain s id).2, cellVal (tb.renew id fresh) res0 (drain s id).1])
 
-/-- One move's goal, at a table. -/
-def holds (tb : Table) (s : State) : Move → Bool
-  | .lease id => leaseHolds tb s id
-  | .giveBack item stamp => returnHolds tb s item stamp
-  | .select count => selectHolds tb s count
-  | .withdraw id => withdrawHolds tb s id
-  | .close => closeHolds tb s
-  | .drain id => drainHolds tb s id
-
-/-! ## The named controls, and every state of the universe -/
+/-! ## The named controls -/
 
 -- A lease that enrols: the stored value is the model's state through the table that holds the
 -- step's hint at the request. A lease by a request whose entry is present: the entry leaves.
@@ -135,12 +137,6 @@ def holds (tb : Table) (s : State) : Move → Bool
 #guard drainHolds tb0 held 3 && drainHolds tb0 held 1 && drainHolds tb0 premise 3
 #guard cellVal (tb0.renew 3 fresh) res0 (drain held 3).1 ≠ cellVal tb0 res0 (drain held 3).1
 #guard cellVal (tb0.renew 3 fresh) res0 (drain premise 3).1 = cellVal tb0 res0 (drain premise 3).1
-
--- Every state of the universe, 19 moves on each: each goal's conclusion holds. It holds on
--- the states outside the profile too.
-#guard profileStates.all fun s => moves.all fun m => holds tb0 s m
-#guard outside.all fun s => moves.all fun m => holds tb0 s m
-#guard profileStates.length * moves.length = 2470
 
 /-! ## Red controls: one premise dropped -/
 

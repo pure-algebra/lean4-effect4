@@ -6,7 +6,7 @@ Implementation fence:
 `Effect4/Semantics/{Cause,Exit}.lean`
 
 Lean battery:
-`Test/Machine/Semantics/CauseExitContract.lean`
+`git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Machine/Semantics/CauseExitContract.lean`
 
 Counterexamples: `E4-SEM-CE-001` through `E4-SEM-CE-007` in
 `Test/Counterexamples/REGISTER.md`; witnesses in

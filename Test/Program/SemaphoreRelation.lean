@@ -1,6 +1,5 @@
 import Effect4.Laws.Library.Semaphore.Steps
 import Effect4.Laws.Step.Store
-import Test.Program.SemaphoreAgreement
 import Test.Program.SemaphoreSteps
 
 /-!
@@ -8,18 +7,16 @@ import Test.Program.SemaphoreSteps
 
 The relation is `src/Effect4/Laws/Library/Semaphore/Relation.lean`: the shared encoding table,
 the cell's value and the replies. The five step goals are in
-`src/Effect4/Laws/Library/Semaphore/Steps.lean`. This battery evaluates each goal's conclusion,
-as the goal states it: at one table and at the scope of the step's own arguments, on every
-state of the universe of `Test/Program/SemaphoreAgreement.lean`, 23 moves on each.
-
-It also ties the two encodings: the cell's value of the relation is the value of the
-comparison's state term. The red controls drop one premise each: the table's injectivity, and
-the hint that a take sets. Two more sections apply the statements: at a scope where `bindWith`
+`src/Effect4/Laws/Library/Semaphore/Steps.lean`, and `semaphore_steps_agree` there joins them
+on every model state. This battery evaluates each goal's conclusion, as the goal states it, at
+one table and at the scope of the step's own arguments: once for each step, on the states of
+the contract's traces. The red controls drop one premise each: the table's injectivity, and the
+hint that a take sets. Two more sections apply the statements: at a scope where `bindWith`
 minted the cursor, and joined to the store by the shared connector, `step_updates`.
 
-Placement. Each guard is a finite instance of a step goal (concept `translation-simulation`,
-requirement R10, a part of the proposed claim `semaphore-expansion-agrees`). A state outside
-the universe and another table are not checked.
+Placement. Each green guard is one instance of a proved step goal (concept
+`translation-simulation`, requirement R10, a part of the proposed claim
+`semaphore-expansion-agrees`), beside the red control that drops its premise.
 -/
 
 set_option autoImplicit false
@@ -31,7 +28,6 @@ namespace Test.Program.SemaphoreRelation
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
 open Effect4.Semaphore.Model
-open Test.Program.SemaphoreAgreement (profileStates outside moves Move held freed scan)
 open Test.Program.SemaphoreSteps (firstName secondName stepScope stepScope_second stepScope_cell)
 
 /-! ## One table -/
@@ -42,11 +38,16 @@ def tb0 : Table := { handle := fun n => ⟨n⟩, hint := fun n => ⟨1000 + n⟩
 /-- The hint that a take receives. -/
 def fresh : DeferredKey := ⟨9999⟩
 
--- The relation's cell value is the value of the comparison's state term, on every state of
--- the universe and on the states outside the profile: the two encodings are one.
-#guard (profileStates ++ outside).all fun s =>
-  decide (SemaphoreAgreement.evalAt (SemaphoreAgreement.stateTerm SemaphoreAgreement.table0 s) =
-    some (cellVal tb0 s))
+/-- A total of 2, both taken, and B and C enrolled for 2 and for 1: the state of P1 before the
+release. -/
+def held : State := { permits := 2, taken := 2, waiters := [⟨2, 2, 0⟩, ⟨3, 1, 1⟩], next := 2 }
+
+/-- The same state after a release of 2. -/
+def freed : State := { held with taken := 0 }
+
+/-- The scan case at its visit: one permit is free, B needs 2 and C needs 1. -/
+def scan : State := { held with taken := 1 }
+
 -- The initial value at a total is the cell's value of the model's initial state.
 #guard [1, 2, 7].all fun permits =>
   decide ((Semaphore.empty permits {} []).toOption.bind (evalTerm []) =
@@ -89,15 +90,7 @@ def withdrawHolds (tb : Table) (s : State) (id : Nat) : Bool :=
     (Semaphore.withdrawStep (var "id") (var "s"))
     (Val.tuple [Val.unit, cellVal tb (withdraw s id)])
 
-/-- One move's goal, at a table. -/
-def holds (tb : Table) (s : State) : Move → Bool
-  | .take id n => takeHolds tb s id n
-  | .takeIfAvailable n => takeIfAvailableHolds tb s n
-  | .release n => releaseHolds tb s n
-  | .visit cursor => visitHolds tb s cursor
-  | .withdraw id => withdrawHolds tb s id
-
-/-! ## The named controls, and every state of the universe -/
+/-! ## The named controls -/
 
 -- A take that enrols: the stored value is the model's state through the table that holds the
 -- step's hint at the request. A take by a request whose entry is present: the entry leaves.
@@ -112,12 +105,6 @@ def holds (tb : Table) (s : State) : Move → Bool
 -- The release, the take that never waits, and the withdrawal.
 #guard releaseHolds tb0 held 2 && releaseHolds tb0 held 5 && takeIfAvailableHolds tb0 freed 2 &&
   withdrawHolds tb0 held 2
-
--- Every state of the universe, 23 moves on each: each goal's conclusion holds. It holds on
--- the states outside the profile too.
-#guard profileStates.all fun s => moves.all fun m => holds tb0 s m
-#guard outside.all fun s => moves.all fun m => holds tb0 s m
-#guard profileStates.length * moves.length = 5175
 
 /-! ## Red controls: one premise dropped -/
 

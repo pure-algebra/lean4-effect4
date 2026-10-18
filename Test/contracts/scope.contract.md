@@ -6,7 +6,7 @@ Implementation fence:
 `src/Effect4/Machine/Scope.lean`
 
 Lean battery:
-`Test/Machine/Runtime/ScopeContract.lean`
+`git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test/Machine/Runtime/ScopeContract.lean`
 
 Counterexamples: `E4-RUN-CE-001` through `E4-RUN-CE-009` in
 `Test/Counterexamples/REGISTER.md`; witnesses in

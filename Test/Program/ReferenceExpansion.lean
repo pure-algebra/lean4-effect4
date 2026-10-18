@@ -285,11 +285,6 @@ example : ∃ checked, checkTypedProgram sig chain = some checked ∧ checked.ty
   checkTypedProgram_of_hasTy (by decide +kernel)
     (.plain (Conform.Effect4.Typing.effTy_sound sig chain.expandRefs [] chainTy (by decide +kernel)))
 
-/-- The certificate's fact at the chain: the expansion has no reference site. The checker does
-not test it, and the certificate takes it from `expanded_refs_nil_of_wf`. -/
-example (checked : TypedProgram sig chain) : chain.expandRefs.refSites [] = [] :=
-  checked.expanded_refSites
-
 /-! ## One test: every answer as before
 
 The checker tests the references' formation only, and the facade's refusal has no arm for a

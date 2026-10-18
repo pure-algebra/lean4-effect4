@@ -16,7 +16,7 @@ change. The packet states no law of a whole run.
 | `src/Effect4/Library/Semaphore/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
 | the six typing statements of `src/Effect4/Laws/Library/Semaphore/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | the five step statements and `semaphore_steps_agree` in `src/Effect4/Laws/Library/Semaphore/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
-| `Test/Program/SemaphoreSteps.lean`, `SemaphoreAgreement.lean` and `SemaphoreRelation.lean` in the same folder | tested: finite controls, and a falsified copy of each fails each changed check |
+| `Test/Program/SemaphoreSteps.lean`, `git:def8babcc:Test/Program/SemaphoreAgreement.lean` and `Test/Program/SemaphoreRelation.lean` | tested: finite controls, and a falsified copy of each fails each changed check. The comparison's universe retired on 2026-10-18: `semaphore_steps_agree` covers every state |
 | `ocaml/engine/test/semaphore/`, bound by `Test/Program/SemaphoreEngine.lean` | tested: the cases P1, P3 and P9 on the generated engine, on both carriers, one schedule each. P9's tape is one line of the fixture, and the test replays it |
 | `waitRetryAt` and `protectedBy` in `src/Effect4/Library/Waiting.lean` | tested: the module builds in the runtime root. `waitRetry` and the Queue's `take` keep their trees: `waitRetry_unmoved` and `queue_take_unmoved` in `Test/Program/SemaphoreWrapper.lean`, each proved by `rfl` |
 | the laws of the two forms in `src/Effect4/Laws/Step/Waiting.lean`: `waitRetryAt_scoped`, `protectedBy_scoped`, `waitRetryAt_answers`, `waitRetry_answers` and `protectedBy_has` | proved, at `[propext, Quot.sound]` |
