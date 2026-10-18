@@ -22,7 +22,7 @@ The owner pauses work after V1.
 | ST1b | `79acf8fbbd74a8cee46c0dc919a8b16ff77aa959` ; receipt `709f9f10a9401150af66870a8665860e45cc63d3` | [ST1b](ST1b.md) | Required checks pass. |
 | ST2 | `e163b1ac64aa9c4c8ce91f2b7d54bd4d3aa3d061` | [ST2](ST2.md) | Required checks pass; all three recovery claims are proved. |
 | ST3 | `2062a13aafd8afbe8d6017e77be426ee6c64090b` | [ST3](ST3.md) | Required checks pass; `cas-result-envelope` and `cas-result-once` proved, no planned goals. |
-| ST4 | Pending | Pending | Open |
+| ST4 | `6bb098a245591c0e2f69ca1807f8bb4f16387cb6` | [ST4](ST4.md) | Narrow build, audit and check-ocaml pass; four claims proved, no planned goals. |
 | S6 | Pending | Pending | Open |
 
 ## Departures from the plan
@@ -104,6 +104,10 @@ The owner pauses work after V1.
 | ST3 | The native word check gains M2's handle test; the native store indexes results by query. |
 | ST3 | Gate stamps are phony and the shared-result reader alone decides; it reads every short Make option. |
 
+| ST4 | Action entries carry their transcript index, so parent order is checked and the walk needs no fuel. |
+| ST4 | The exchange's decisions sit outside the checked writer (`finish`, `stepped`), so the laws read plain values. |
+| ST4 | No Job or Tape carrier exists to retain; the semantics report was not regenerated. |
+
 ## Proposed decisions rows
 
 | Slice | Proposed text |
@@ -149,5 +153,7 @@ The owner pauses work after V1.
 
 | ST3 | Admit at most one result node per designated query at every entrance; name both results when a second refuses. |
 | ST3 | Key a shared gate result by its input snapshot and its complete command. |
+
+| ST4 | Persist sessions as entry chains under journal roots; load by replay through serve, comparing each stored program. |
 
 The individual receipts retain commands, exit statuses, audit output, red controls, and evidence limits.

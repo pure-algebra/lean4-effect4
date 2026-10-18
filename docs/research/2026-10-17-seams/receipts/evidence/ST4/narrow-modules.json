@@ -1,0 +1,40 @@
+{
+ "changed": [
+  "Effect4",
+  "Effect4.Laws",
+  "Effect4.Laws.Tool.Exchange",
+  "Effect4.Store.Domain.Cas",
+  "Effect4.Tool.Exchange",
+  "Effect4.Tool.Session",
+  "ProofGraph.Registry",
+  "Test.All",
+  "Test.Program.SeamsExchange",
+  "Test.Store.SeamsTransactions"
+ ],
+ "build": [
+  "Effect4.Laws.Author.Explain",
+  "Effect4.Laws.Store.Recovery",
+  "Effect4.Laws.Store.Results",
+  "Effect4.Laws.Tool.Exchange",
+  "Effect4.Store.Domain.Cas",
+  "Effect4.Store.Domain.Traits",
+  "Effect4.Tool.Exchange",
+  "Effect4.Tool.Session",
+  "OCaml5.Store.DiskOracle",
+  "OCaml5.Tools.CasGoldens",
+  "ProofGraph.Registry",
+  "ProofGraph.Why",
+  "Test.Audit.AxiomGate",
+  "Test.Audit.ClosureAudit",
+  "Test.Program.SeamsExchange",
+  "Test.Store.ProgramContent",
+  "Test.Store.SeamsRead",
+  "Test.Store.SeamsRecovery",
+  "Test.Store.SeamsResults",
+  "Test.Store.SeamsTransactions",
+  "Test.Store.WordContract",
+  "Tools.LoadPaths",
+  "Tools.Semantics",
+  "Tools.View.Glyph"
+ ]
+}
