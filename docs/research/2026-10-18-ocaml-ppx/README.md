@@ -1,8 +1,11 @@
 # The OCaml estate and ppx: a survey, and a Lean-generated sexp face (2026-10-18)
 
 Status: research and probes. Nothing here is merged into the integration branch's code. The Lean
-probe is on the local branch `probe/sexp-face` (`d7b02d1a9`). The OCaml probe sources are in
-[probe/](probe/).
+probe is on the local branch `probe/sexp-face`:
+- `d7b02d1a9` holds the face and the lowering rows;
+- `6c1485863` holds the exactness law, proved.
+
+The OCaml probe sources are in [probe/](probe/).
 
 ## The one thing to know first
 
@@ -137,7 +140,7 @@ The sexp face reads bytes as `Nat` codes, and it lowered with no missing primiti
 | S5 a reordered field, a padded natural and a dropped field are refused | all refused |
 | S6 a session served over sexp (`serveSexp`) answers the JSON driver's replies | 10 of 10 lines, one session each |
 | Size: JSON / sexp machine / sexp human / canonical | 11,480 / 8,082 / 11,890 / 10,211 bytes |
-| One 653-byte request read and written, 2,000 runs | JSON (`Kit_json`) 424.6 µs; sexp (Parsexp + lowered Lean) 60.7 µs |
+| One 653-byte request read and written, 2,000 runs, two builds | JSON (`Kit_json`) 424.6 and 434.2 µs; sexp (Parsexp + lowered Lean) 60.7 and 62.1 µs |
 
 **Cost** (fresh build directories, cache off, `-j 4`, two runs each):
 
@@ -152,7 +155,8 @@ The face itself costs well under a second. The generated interface saves about 4
 keeps it. The typed bindings add 6,777 lines for the two envelopes, because they lower the
 carriers' `ofVal`. Bind a carrier typed only where hand code holds it typed.
 
-`#axiom_audit` over the three probe modules: 190 declarations within `[propext, Quot.sound]`.
+`#axiom_audit` over the face, its laws and the lane: 335 declarations within
+`[propext, Quot.sound]`.
 
 ### 3. Our own ppx: `[@@deriving effect4]` (probe running)
 
@@ -221,25 +225,34 @@ function whose name does not end in `_exn`.
 ## Laws, placed
 
 Each law below sits in concept `exact-codecs` (`docs/core/semantics.md` §2.5), beside
-`codec-profile-retains-value`. Each serves R12, the agent face's admission.
+`json-read-exact` and `codec-profile-retains-value`. Each serves R14 (program as data), as
+`json-read-exact` does: it is the text form an agent or a native host writes.
 
 | Law | Statement | Reach | Does not establish |
 | --- | --- | --- | --- |
-| `sexp-face-exact` | `readSexpIn defs n s x = some v → x = sexpIn defs s v` | every budget; the mirror of `readIn_exact` (`Laws/Store/ShapeRead.lean`) | that anything reads |
-| `sexp-face-retains-value` | under one binding per name and distinct case names, `acceptsAt defs v (headShape defs s) → readSexpIn defs (sexpBudget (sexpIn defs s v)) s (sexpIn defs s v) = some v` | every fitting value; no number bound, no option condition | text parsing (Sexplib's) |
+| `sexp-face-exact` | `readSexpIn defs n s x = some v → sexpIn defs s v = x`; so `Canonical.ofSexp x = some a → Canonical.toSexp a = x` | every document, every sexp, every budget. **Proved** on the probe branch (`src/Effect4/Laws/Store/ShapeSexp.lean`, `6c1485863`), the mirror of `readIn_exact` | that anything reads |
+| `sexp-face-retains-value` | under the two hypotheses below, `acceptsIn defs s v → readSexpIn defs (sexpBudget (sexpIn defs s v)) s (sexpIn defs s v) = some v` | every fitting value; no number bound, no option condition. Open: finite evidence only (S3) | text parsing (Sexplib's) |
 | `canonical-order` | `Canonical.compare a b = .eq ↔ a = b`, and the order is a total order | from `Val.encode`'s exactness and `toVal_injective` | any meaning of the order |
 | (tested) Sexplib agreement | `printMach x = Sexp.to_string_mach x` | finite: S1 | a proof: Sexplib is outside |
 
-The round trip needs a hypothesis the JSON face also needs and does not state. The reader takes a
-name's first binding (`headShape`). The acceptance check takes any binding (`candidates`). A
-generated document's repeated bindings are copies, so each carrier can check the hypothesis
-by `decide`.
+The round trip needs two hypotheses, which the JSON face would also need and does not state:
+1. **The bindings of a name agree.** The reader takes a name's first binding (`headShape`), and the
+   acceptance check takes any binding (`candidates`). A generated document repeats a definition
+   only as a copy.
+2. **Each reachable sum names its cases apart.** `caseAt i cases = some (name, fields)` gives
+   `tagOfName name cases = some (i, fields)`. `wellTagged` already gives distinct tags; the names
+   are Lean constructor names, distinct by construction.
+
+The proof is by induction on the value. Each reader step takes one unit of the budget, and each list
+or field cell takes one. So the need is bounded by the printed sexp's node count, which
+`sexpBudget` covers eight times over. Each carrier can check both hypotheses on its document by
+`decide`, as `wellTagged` is checked today.
 
 ## Ranked slices
 
 | Slice | Files | Done when | Deletes |
 | --- | --- | --- | --- |
-| 1. The sexp face | `src/Effect4/Data/Sexp.lean`, `src/Effect4/Store/Domain/ShapeSexp.lean`, laws in `src/Effect4/Laws/Store/ShapeSexp.lean`, the type row and native constructors | the two laws proved, audit clean, S1–S5 in a native test | nothing yet |
+| 1. The sexp face | `src/Effect4/Data/Sexp.lean`, `src/Effect4/Store/Domain/ShapeSexp.lean`, laws in `src/Effect4/Laws/Store/ShapeSexp.lean`, the type row and native constructors | `sexp-face-exact` (done on the probe branch) and `sexp-face-retains-value` proved; registry rows; audit clean; S1–S5 as a native test | nothing yet |
 | 2. Generated bindings | a binding declaration in Lean; `lcnfgen` emits `effect4_bindings.ml` with Jane Street names | hand types in tests derive over carriers; no hand binding module | the hand binding |
 | 3. The native sexp face | `Kit_tool` and `eff serve --sexp` over `serveSexp` | the transcript in sexp equals the JSON one | `Kit_json`'s reading role, once MCP's JSON face reads through a lowered reader too |
 | 4. Tests in one shape | host tests on `ppx_expect`; lanes on Lean-written sexp with dune `diff` | the 46 harnesses gone | the per-lane fixture formats and readers |
@@ -252,7 +265,7 @@ JSON, but MCP's arguments are JSON objects. That is a choice for the owner.
 
 ## What this does not establish
 
-- The laws are stated, not proved. The probe's evidence is finite: 28 fixture carriers.
+- The round trip is not proved. Its evidence is finite: 28 fixture carriers. Exactness is proved.
 - The speed figure is one request shape, 2,000 runs, on a machine running other sessions.
   Its cause is not isolated between `Kit_json`'s normalising pass and its text parser.
 - The probe's `api_gen.ml` has no generated `.mli`. Its build times are compared with a baseline
