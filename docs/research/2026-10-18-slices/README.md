@@ -361,3 +361,80 @@ The coordinator takes Codex's recommendation on four smaller points:
 - the checking ppx is approved separately from publication.
 
 Proposed decisions row (the coordinator records it): the six rulings above.
+
+## 10. The hygiene lane (H), measured 2026-10-18
+
+The owner asked what separates this tree from a production one, by OCaml, Jane Street and Lean
+practice. Each finding below comes from a command run at `f8eb23ea5`. The commands are in §10.5.
+
+### 10.1 The one thing to know
+
+The OCaml has never been formatted. 206 of 220 hand files differ from `ocamlformat
+--profile=janestreet`, by 23,766 lines. Four of the eight installed packages are unwrapped, so
+they put their modules at the top level of every client. These two block a release; the rest is
+small.
+
+The tree already holds several production habits:
+- every Lean warning is an error;
+- the axiom gate audits every declaration;
+- generated files are marked and re-cut by the gates;
+- `typed_lint` reads rule 7 off the typed tree;
+- `.gitattributes` fixes line endings;
+- every OCaml component opens with its behaviours;
+- the opam metadata is generated, and model tests cover the concurrent code.
+
+### 10.2 OCaml
+
+| # | Finding | Fix | Size |
+| --- | --- | --- | --- |
+| H1 | No `.ocamlformat` anywhere. 206 of 220 hand files differ from the Jane Street profile (23,766 lines). | Add `ocaml/.ocamlformat` (`profile = janestreet`, `version = 0.29.0`); run `dune fmt` once; add `dune build @fmt` to `check-ocaml`. Generators print formatted text, or `.ocamlformat-ignore` lists their outputs. | S, one mechanical commit after seat 1 merges |
+| H2 | `effect4_clock`, `effect4_eff`, `effect4_bytes` and `effect4_lcnf` are installed with `(wrapped false)`. A client then sees `Eff_types`, `E4_hex` and `Lcnf_string` as top-level modules. | Wrap the four; generated code reaches them through `-open`. Lands with C5's scoped emission. | M |
+| H3 | `effect4_engine` installs 36 modules, among them the seven `_list` reference twins, `Api_engine_ref` and `Corpora`. Only tests and the reference engine use them. | Move them into a private test-support library. | S |
+| H4 | `eff` parses `Sys.argv` by hand. It has no `--help` and no `--version`: `eff --version` prints the usage and exits 2. | Cmdliner, with the version from `dune-build-info`. It gives help, a man page and completion. | S |
+| H5 | 45 test files define `let failures = ref 0`, and 41 define `let check name ok`. Six variables name a test's temporary folder (`E4_CAS_TMP`, `E4_PACK_TMP`, …). | One test-support library: `check`, the summary line, and `Filename.temp_dir`. Golden-text tests move to `ppx_expect` (installed, v0.16) when touched. | S |
+| H6 | `dune build @doc` reports 39 warnings or errors. The installed packages' documentation is what an outside user reads. | Fix them; add `@doc` to `check-ocaml`. | S |
+| H7 | The kit turns off the unused-variable, unused-value, unused-open and unused-field warnings (`-w -4-9-26-27-32-33-35-37-39-40-41-42-44-45-69-70`). Seven flag strings exist across the stanzas. | Remove the kit's suppressions and delete what they hide. Set one warning policy in an `env` stanza. | S |
+| H8 | 14 hand library modules have no `.mli`, among them the installed kit's `Kit_json` and `Kit_serve`. The `eff/` generator writes no `.mli`, and its files carry the `GENERATED` line twice. | Add the interfaces; the `eff/` group infers its `.mli` as the LCNF group does. | S |
+| H9 | Stale words: `dune-workspace` names `avatar/` and `server/`, which are archived. | Fix with H1. | XS |
+
+### 10.3 Lean
+
+| # | Finding | Fix | Size |
+| --- | --- | --- | --- |
+| H10 | 126 `set_option maxHeartbeats` in `src/`, 7 of them at 8,000,000 (40 times the default), and 52 `maxRecDepth`. Each marks a slow proof or a slow elaboration. | A ratchet: the count never grows. Profile the 32 largest with `scripts/profile-module.py` and remove what a lemma fixes. | M, ongoing |
+| H11 | Panicking access in shipped code: 155 `]!`, 12 `head!` and 2 `get!` in `src/`. Where LCNF lowers one, the OCaml panics there too. | Audit the core (outside `Laws`). Use a total form or an index with its proof (`xs[i]'h`). | S |
+| H12 | 1,473 `#guard` lines in `src/`: `Store` 449, `Program` 206, `Api` 200, `OCaml5` 264. They run in every build of those modules, and Batteries and Mathlib keep tests out of the library. | Measure their build time first. Move the batteries among them to `Test/`; keep a guard that pins rendered bytes beside its renderer. Owner's call. | M |
+| H13 | 43 `src` files exceed 1,500 lines, Mathlib's file-length limit. The largest hand files are `Laws/Codegen/PrintTyped.lean` (8,231 lines) and `Laws/Machine/Handles.lean` (6,785). 45 `src` files have no `/-!` module docstring. | Split a large file when a slice touches it. Add the module docstrings now. | S for the docstrings |
+| H14 | 13 linter switches: 7 `linter.unusedSectionVars false` and 6 `linter.unusedSimpArgs false in`. | Remove each with its cause. | XS |
+| H15 | `warningAsError` reaches Lean through `moreLeanArgs`. Lake may pass only `leanOptions` to the editor's server, so the editor can show fewer errors than the build. | Check this, then move the option to `leanOptions` if so. | XS |
+
+### 10.4 The repository
+
+| # | Finding | Fix | Size |
+| --- | --- | --- | --- |
+| H16 | `docs/research` holds 8,587 tracked files (43 MB): 1,547 logs, 1,230 `.lean`, 761 `.ts` and 304 `.py`. Three evidence packets hold 2,056 of them. | Move the evidence packets to an archive branch, as with the Flow route and the avatar. Keep only the notes an authority cites, which `check-docs` already lists. Owner's call. | M |
+| H17 | 168,572 generated lines are tracked, and `ocaml/gen/api_gen.ml` (3.9 MB) is the largest tracked file. No file is marked generated for review tools. | Mark the generated outputs `linguist-generated=true` in `.gitattributes`. | XS |
+| H18 | 42 Python files outside `docs` and `vendor`. `scripts/` holds 32 of them, 7,270 lines. There is no `pyproject.toml` or linter configuration, and 13 of the 32 have type annotations. | One `ruff` configuration, for lint and format, run by `check-tools`. | S |
+| H19 | No formatter for the TypeScript under `ts/` and `harness/`. | One formatter configuration, run by `check-ts`. tsgo stays the one type checker. | S |
+| H20 | No `CHANGES.md`, `.editorconfig` or `SECURITY.md`. opam's release tools read `CHANGES.md`. | Add `CHANGES.md` and `.editorconfig` before the first release. | XS |
+| H21 | The `Makefile` holds 749 lines and 77 targets; 34 targets carry a `##` help line. | Help on every public target; an `_` prefix on every internal one. | XS |
+
+### 10.5 The order, and the commands
+
+The order:
+1. Now: H9, H14, H17, H20 and the docstrings of H13.
+2. After seat 1 merges: H1, the one formatting commit.
+3. With wave 2's cuts: H3, H5, H7 and H8. H2 lands with C5.
+4. Before the first release: H4, H6, H18 and H19.
+5. Ongoing: H10 and H11.
+6. H12 and H16 wait for the owner's call.
+
+The measurements came from these commands, run from the repository root unless `ocaml/` is named:
+- **formatting:** `ocamlformat --enable-outside-detected-project --profile=janestreet`, compared
+  with each hand file;
+- **odoc:** `dune build @doc`, run in `ocaml/`;
+- **wrapping:** `grep -l "wrapped false"` over the `dune` files;
+- **test helpers:** `grep -h "^let check \|^let failures"` over the test files;
+- **Lean counts:** `grep -c` over `git ls-files 'src/*.lean'`;
+- **research size:** `git ls-files docs/research`, piped to `du -ch`;
+- **generated lines:** `wc -l` over the `ocaml/` and `src/` files that carry `GENERATED`.
