@@ -158,15 +158,45 @@ carriers' `ofVal`. Bind a carrier typed only where hand code holds it typed.
 `#axiom_audit` over the face, its laws and the lane: 335 declarations within
 `[propext, Quot.sound]`.
 
-### 3. Our own ppx: `[@@deriving effect4]` (probe running)
+### 3. Our own ppx: `[@@deriving effect4]` (probed)
 
 A ppxlib deriver turns a hand OCaml type into a carrier. It generates the type's `to_val`,
 `of_val` and shape document. With `~lean:"<carrier>"`, it checks the derived shape against
-Lean's at compile time, so a mismatch is a located compile error. This is the interop face for
-OCaml authors: a native host's own types cross into the machine without a hand adapter
-(`native_todo.ml`'s `REPO` adapter is today's hand version).
+Lean's at compile time. A seat built it in a scratch copy at `cd2cea0de`; nothing landed.
 
-The prototype's results follow when its seat reports.
+**It works.**
+- 3,218 lines in all, of which the deriver is 600 and the shape model and check 396.
+- Three Lean carriers mirrored by hand (14 types) encode to Lean's lowered `to_val` byte for byte.
+  The test is 10,000 values per root.
+- The round trip holds on 23 carriers. Exactness holds against 706,862 one-edit trees.
+- A field whose type differs from Lean's fails `dune build` at that field:
+
+```
+File "tools/ppx_effect4/test/lean_mirror.ml", line 121, characters 35-41:
+121 |   | Row of { index : int; reason : string }
+                                         ^^^^^^
+Error: ppx_effect4: admit_refusal is not Lean's run_kit_admit: case signature > field why > case row > field reason: Lean has (sum RowReason [notExternal 0; notAsync 1; builtinCollision 2; valueRowTrailing 3; ...]), OCaml has string
+```
+
+**Its cost** (median CPU, n = 30):
+- The ppx step adds 11.5 ms (+7 %) to a module of 9 derived types.
+- It adds 30.0 ms (+12 %) to the mirror with three `~lean` checks; reading the shapes file is about
+  19 ms of that.
+- The deriver's own clean build is about 1.7 s of CPU.
+
+**The verdict: do not land it.** The deriver is a second implementation of Lean's encoding rules.
+It contradicts decisions rows 381 and 391. The Lean-first route already serves native types: the
+Modeled lane lowers a native OCaml type together with Lean's own codec. Item 1 above gives such
+types Jane Street's names. The deriver lands only if host authors need OCaml-first types that the
+lowering cannot produce. Then:
+- `~lean` is mandatory;
+- Lean writes the shapes file as a generated family, one shared definition per carrier;
+- the shape type moves from `api_gen` into `eff_types`.
+
+Two findings stand on their own:
+- **Lean's lowered shape documents repeat definitions:** 2,398 for 56 names. The reply envelope's
+  document is 331,223 bytes even after compaction. This is the same blow-up as the MCP schemas.
+- **`ShapeDoc.accepts` is not lowered.** The probe's tests needed a hand port of it.
 
 ### 4. The typed tree as a lint (probed)
 
@@ -257,7 +287,7 @@ or field cell takes one. So the need is bounded by the printed sexp's node count
 | 3. The native sexp face | `Kit_tool` and `eff serve --sexp` over `serveSexp` | the transcript in sexp equals the JSON one | `Kit_json`'s reading role, once MCP's JSON face reads through a lowered reader too |
 | 4. Tests in one shape | host tests on `ppx_expect`; lanes on Lean-written sexp with dune `diff` | the 46 harnesses gone | the per-lane fixture formats and readers |
 | 5. The typed lint as a dune rule | `ocaml/tools/typed_lint`, a rule over each library's `.cmt` | 83 sites fixed or each typed, rule green | rule 7's hand sweep |
-| 6. `ppx_effect4` | a ppx under `ocaml/tools/ppx_effect4`; Lean writes `shapes.sexp` | a native host's types derive their carrier and their check | `native_todo.ml`'s hand adapter |
+| 6. `ppx_effect4` | not ranked: probed and set aside (item 3); land it only if hosts need OCaml-first types | — | — |
 | 7. Small wins | `engine/kit/dune`, error paths | warnings on, `[@cold]` on refusals | the stale flags |
 
 Not ranked: an agent-facing sexp argument for MCP. A program as sexp text is 30% smaller than its

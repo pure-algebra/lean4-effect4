@@ -103,16 +103,16 @@ Evidence:
 
 ## For you
 
-- **The S1 feed's second bug** (`SourceSession.feed`). The first is repaired by Codex's
-  `canSplice`. The second stays: a kept-exact omission at a refused root keeps the old refused root
-  entry, even where the new hole row types the root (`FeedCounterexample.keep_omit_refused`). So
-  `feed_coherent`, and the fifteen document laws that rest on it, stay false at head. The fix is
-  yours:
-  - **A1's second clause** (the proof seat's recommendation): a kept-exact feed splices only when
-    the edit is a fill or the root is typed, and otherwise rechecks. `feed_coherent` then rests on
-    one new goal, `splice_coherent` for a fill at a refused root, which holds on 10 probed instances.
-  - **A2**: kept fills only at typed roots. `feed_coherent` is then fully proved, in a scratch
-    model. `brokenElsewhere` flips, and "a kept fill at an initially refused root" goes away.
+- **The S1 feed is repaired and its laws are proved** (`4111bf9d6`). A kept-exact feed now splices
+  only at a typed root (option A2): it keeps a typed document's exact observations, and at a
+  refused root it refuses, since there is no root type to keep. A refused document is edited under
+  `draft`. This closed the second bug.
+  - **Proved:** `feed_coherent` and `feed_keepExact`, and with them the fifteen document laws that
+    rested on them.
+  - **Evidence:** `#axiom_audit` gives 872 declarations within `[propext, Quot.sound]`, none
+    modulo a planned goal; `make check-ocaml` passes.
+  - **The cost, taken on purpose:** a kept fill beside an unrelated error refuses, and its draft is
+    accepted. `kept_eq_certified` now takes a typed root.
 - **Decision D:** Codex recommends that Rocq own the hard store proofs, after aligning Rocq's
   missing result-uniqueness condition (report, question 6).
 - **`AGENTS.md`:** a one-page draft that leads with the core abstractions is at
