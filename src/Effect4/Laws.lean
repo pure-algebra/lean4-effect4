@@ -430,6 +430,12 @@ import Effect4.Laws.Program.FinalizerSourceHistory
 import Effect4.Laws.Program.CodeClosure.AuthoredBinders
 import Effect4.Laws.Program.ParkedOrigin
 import Effect4.Laws.Schema.DocumentJson
+import Effect4.Laws.Program.SketchAdmission
+import Effect4.Laws.Program.SourceDocument
+import Effect4.Laws.Api.LiveRecord
+import Effect4.Laws.Api.Preview
+import Effect4.Laws.Program.Typing.CheckCache
+import Effect4.Laws.Program.FillSet
 
 /-!
 # Effect4 proof graph

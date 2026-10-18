@@ -61,9 +61,13 @@ program has no type. -/
 def requests (p : NativeEff) : Option (List Tools.Session.Request) := do
   let addrs := effAddresses p
   let rows ← holeRows p addrs
-  let fills ← addrs.mapM fun a =>
+  -- each fill is a checked commit: its target is the opened document (generation 0), the
+  -- revision after the fills before it, and the hole that stands at its address
+  let fills ← addrs.zipIdx.mapM fun (a, i) =>
     (filling p addrs a).map fun q =>
-      ({ op := "fill", path := a, replacement := some (hexOf q) } : Tools.Session.Request)
+      ({ op := "fill", path := a, replacement := some (hexOf q)
+         docName := some "default", docGeneration := some 0, revision := some i
+         expected := some (hexOf (holeOf addrs a)) } : Tools.Session.Request)
   let opening : Tools.Session.Request :=
     { op := "open", program := some (hexOf (holeOf addrs [])), holes := some (hexString (encodeHoles rows)) }
   pure (opening :: fills)
