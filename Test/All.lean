@@ -276,6 +276,9 @@ import Test.Program.CheckCacheControls
 import Test.Program.SeamsS0
 import Test.Program.SeamsS4
 import Test.Program.SeamsS4Origin
+import Test.Program.SeamsS3a
+import Test.Program.SeamsS3aInspection
+import Test.Program.SeamsS3aDifferentEnv
 import Test.Program.FillSetControls
 import Test.Api.TestClockContract
 import Test.Program.ScopedTypingContract

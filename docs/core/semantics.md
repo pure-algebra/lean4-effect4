@@ -1560,6 +1560,11 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
 - **Frontier awaitHost inversion (`frontier-awaithost`)**: Machine awaitingAsync state matches frontier reason.
   characterization of frontier state matching `.awaitingAsync` (`observe_awaitingAsync_iff` (`src/Effect4/Laws/Api/Frontier.lean`)).
 - **External host progress (`host-progress`)**: External driver progress assumed under `docs/core/host-boundary.md`.
+- **Tool transitions (seams S3a)**: `Tool.serve` answers one request from a state kept as its accepted actions.
+  An accepted action appends itself (`tool-serve-appends`); a refused request and every query leave the state unchanged
+  (`tool-serve-refuses`, `tool-serve-query`). Any certified oracle serves the same answers and trace (`tool-serve-transparent`).
+  A state's transcript replays to it (`tool-transcript-replays`). The theorems live in `src/Effect4/Laws/Tool/Serve.lean`.
+  They serve R6 and R13 and establish no native execution, external-effect rollback or host progress.
 - **Typed replay under session (`typed-replay-session`)**: Opening requires full admission at the application extended by the sketch's hole rows.
   `Api.Built.ofSketch_error_iff` states the exact refusal in `src/Effect4/Laws/Api/Built.lean` (`built-admission-exact`, R6 and R13).
   Each hole is a host row that the driver answers; a restore admits at the recorded application exactly (`Api.Built.ofProgram`).

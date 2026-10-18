@@ -249,6 +249,7 @@ def registry : Registry where
       defaultModules := [
         `Effect4.Laws.Api.HostSession,
         `Effect4.Laws.Api.Built,
+        `Effect4.Laws.Tool.Serve,
         `Effect4.Laws.Api.Frontier,
         `Effect4.Laws.Api.Guard,
         `Effect4.Laws.Program.RowProtocol
@@ -961,6 +962,21 @@ def registry : Registry where
     { id := "reply-at-call-instance", concept := "host-session-protocol", role := .preservation
       title := "A reply admitted at its call's checked instance is a handle-free member of the instance's answer column, and the machine prepares it unchanged, at a row whose answer column allocates nothing; a failure admitted there holds no reserved defect; the registration keeps its call's address and the session reads programCallAt there, from a table made once at open (reached_callInstance); in a recorded, funded run that address holds a call of the operation in the program (origin_addresses_call); the expansion of layer references keeping it there is open (decisions rows 183, 323)"
       pointer := .witness `Effect4.Program.instance_prepared_success },
+    { id := "tool-serve-appends", concept := "host-session-protocol", role := .compatibility
+      title := "An accepted tool action appends itself to the transcript; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
+      pointer := .witness `Effect4.Tool.serve_appends },
+    { id := "tool-serve-refuses", concept := "host-session-protocol", role := .preservation
+      title := "A refused tool request leaves the whole state unchanged; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
+      pointer := .witness `Effect4.Tool.serve_refuses },
+    { id := "tool-serve-query", concept := "host-session-protocol", role := .preservation
+      title := "Every tool query, a dry run included, leaves the whole state unchanged; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
+      pointer := .witness `Effect4.Tool.serve_query },
+    { id := "tool-serve-transparent", concept := "host-session-protocol", role := .compatibility
+      title := "Serving through any certified oracle equals serving uncached, the checked trace included; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
+      pointer := .witness `Effect4.Tool.serve_transparent },
+    { id := "tool-transcript-replays", concept := "host-session-protocol", role := .compatibility
+      title := "A tool state's transcript replays from the empty state to its raw state; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
+      pointer := .witness `Effect4.Tool.transcript_replays },
     { id := "built-admission-exact", concept := "host-session-protocol", role := .compatibility
       title := "Built.ofSketch returns exactly the full program-admission refusal at the application extended by the sketch's hole rows, and Built.ofProgram at the recorded application exactly; no native forgery, host execution, or progress claim (seams S4, R6 and R13)"
       pointer := .witness `Effect4.Api.Built.ofSketch_error_iff },
