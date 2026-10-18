@@ -19,7 +19,8 @@ inductive Evidence where
   | exactFit (ty : EffTy)
   /-- The candidate types at the target's signature and environment with a different type (`actual` vs `expected`). -/
   | typeMismatch (expected actual : EffTy)
-  /-- The candidate is refused by the checker at the target's signature, environment and path. -/
+  /-- The candidate is refused by the checker at the target's signature and environment; the
+  refusal is located at the program's own address, as the feed answers it. -/
   | refused (why : TypeRefusal)
   /-- The `keepExact` feed refuses the candidate for a reason other than its part's type. -/
   | feedRefused (why : FeedRefusal)
@@ -61,7 +62,7 @@ def suggestOne (o : Oracle) (d : Doc) (focus : Focus NativeOp)
       | .error (.notKept _ verdict) =>
         let evidence := match verdict with
           | .ok actual => Evidence.typeMismatch focus.ty actual
-          | .error why => .refused ⟨path ++ why.path,why.reason⟩
+          | .error why => .refused why
         return .ok ⟨program,sourcePath,key,evidence⟩
       | .error why => return .ok ⟨program,sourcePath,key,.feedRefused why⟩
 

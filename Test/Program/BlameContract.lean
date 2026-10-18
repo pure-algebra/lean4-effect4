@@ -36,7 +36,7 @@ def refused : Api.Program := .fail (.lit (.bool true))
 
 /-! ## The reason is the node's own rule -/
 
-#guard Api.explain (.succeed (.var 0)) = some ⟨[], .term (.var 0)⟩
+#guard Api.explain (.succeed (.var 0)) = some ⟨[], .unboundVariable [] 0 0⟩
 #guard Api.explain (.select (.lit (.nat 1)) .bool (.succeed (.lit .unit)) (.succeed (.lit .unit)))
   = some ⟨[], .predicateNotBool .nat⟩
 #guard match Api.explain (.perform .refGet (.lit (.nat 1))) with
@@ -50,6 +50,34 @@ def refused : Api.Program := .fail (.lit (.bool true))
 -- A reference with no preceding target is refused at its site, before typing, with its fault.
 #guard Api.explain (.provideLayer (.ref [0]) false (.succeed (.lit .unit)))
   = some ⟨[0], .referenceIllFormed [0] .notBefore⟩
+
+/-! ## A term's refusal names its cause (2026-10-18)
+
+The term rule that refuses names itself, at its address within the refused term: a variable past
+the environment, an atom the catalogue does not name, a named atom at refused argument types. An
+argument is typed before its atom is read, the rule's order. A literal always types, and a cause
+leaf keeps the cause's own refusal. -/
+
+-- a variable past an environment of one variable, in a bind's continuation (the probe's step 7)
+#guard Api.explain (.bind (.succeed (.lit (.nat 1))) (.succeed (.var 1)))
+  = some ⟨[1], .unboundVariable [] 1 1⟩
+-- an argument's address within the term: the second argument of `pair`
+#guard Api.explain (.succeed (.app "pair" (.cons (.lit (.nat 1)) (.cons (.var 4) .nil))))
+  = some ⟨[], .unboundVariable [1] 4 0⟩
+-- an atom the catalogue does not name (the probe's F3)
+#guard Api.explain (.bind (.succeed (.lit (.nat 1))) (.succeed (.app "inc" (.cons (.var 0) .nil))))
+  = some ⟨[1], .unknownAtom [] "inc"⟩
+-- a named atom at a refused argument type
+#guard Api.explain (.succeed (.app "succ" (.cons (.lit (.bool true)) .nil)))
+  = some ⟨[], .refusedArguments [] "succ" [.bool]⟩
+-- control: the arguments first, so an unknown atom over an unbound variable names the variable
+#guard Api.explain (.succeed (.app "inc" (.cons (.var 2) .nil)))
+  = some ⟨[], .unboundVariable [0] 2 0⟩
+-- control: a cause leaf keeps the cause's refusal
+#guard Api.explain (.failCause (.die (.var 0))) = some ⟨[], .cause (.die (.var 0))⟩
+#guard TypeReason.head (.unknownAtom [] "inc") = "unknownAtom"
+#guard Effect4.Codegen.codesOf .pinned (.unboundVariable [] 0 0) = [2304]
+#guard Effect4.Codegen.codesOf .pinned (.refusedArguments [] "succ" [.bool]) = [2345, 2769, 2554]
 
 /-! ## A typed program has no refusal -/
 

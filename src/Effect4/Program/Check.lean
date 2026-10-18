@@ -49,8 +49,10 @@ def run : CheckInput → Verdict
       ⟨o.2, o.1⟩
 
 namespace Internal
+/-- A part's verdict placed at its base address: every refusal and every entry below `base`, by
+the one prefix rule (`Located.under`). -/
 def place (base : List Nat) (v : Verdict) : Verdict :=
-  ⟨v.result.mapError ((fun r => ⟨base ++ r.path, r.reason⟩)), v.table.map ((fun e => ⟨base ++ e.path, e.env, e.result.map (fun r => r.mapError (fun why => ⟨base ++ why.path, why.reason⟩))⟩))⟩
+  ⟨v.result.mapError (Located.under base), v.table.map ((fun e => ⟨base ++ e.path, e.env, e.result.map (fun r => r.mapError (Located.under base))⟩))⟩
 
 inductive DepRole where
   | body (index : Nat) | main | layers
@@ -86,7 +88,7 @@ def layerPath : List Nat → List Nat
   | 0 :: 0 :: rest => 2 :: rest
   | p => p
 
-def layerRefusal (r : TypeRefusal) : TypeRefusal := ⟨layerPath r.path, r.reason⟩
+def layerRefusal (r : TypeRefusal) : TypeRefusal := Located.mapSite layerPath r
 
 def layerTable (v : Verdict) : List Table.Entry :=
   v.table.filterMap fun e =>

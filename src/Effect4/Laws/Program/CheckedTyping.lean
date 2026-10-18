@@ -72,6 +72,18 @@ theorem checkTypedProgram_refusal_iff :
   unfold checkTypedProgram
   split <;> simp_all
 
+/-- **The located route returns a completed certificate unchanged** (`programTyping`): where the
+checker answers, no refusal is read. A step of the admission equation; its consumer is
+`admitProgram_eq_ok`. -/
+theorem programTyping_eq_ok (checked : TypedProgram sig program) :
+    programTyping sig program = .ok checked := by
+  unfold programTyping
+  split
+  · exact congrArg Except.ok (TypedProgram.unique _ _)
+  · rename_i refused
+    rw [checkTypedProgram_eq_some checked] at refused
+    cases refused
+
 /-- A completed whole-program check validates every stored layer reference. The checker
 answers only where the references are well formed, and it makes no other test of them. -/
 theorem TypedProgram.layerRefsWF (checked : TypedProgram sig program) :
@@ -129,7 +141,7 @@ theorem admitProgram_eq_ok {program : NativeEff} {app : SigApp}
       rw [(Formation.checkInput_eq_none_iff program app.rows app.services).mpr
         admitted.formed] at refused
       cases refused
-    · rw [checkTypedProgram_eq_some admitted.toTypedProgram]
+    · rw [programTyping_eq_ok admitted.toTypedProgram]
       dsimp only
       split
       · rename_i pos hpos

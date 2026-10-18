@@ -60,7 +60,7 @@ theorem finishBuild_retains {program : Program} {app : SigApp}
   split at h
   · cases h
     exact ⟨rfl, rfl, rfl⟩
-  · split at h <;> cases h
+  · cases h
   · cases h
 
 /-- A successful build retains its elaboration, the declared table, the row names and the

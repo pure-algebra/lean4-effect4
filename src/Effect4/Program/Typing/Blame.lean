@@ -2,13 +2,15 @@ module
 
 public import Effect4.Program.Typing.TermRefusal
 public import Effect4.Program.Refs
+public import Effect4.Data.Located
 
 /-!
 # Program.Typing.Blame — the vocabulary of the located refusal (DI-86)
 
-`TypeReason` names why a node refuses in its rule's own terms (a term with no type, a request
-outside the row's request, a predicate that is not `bool`, a bare layer reference, a `return`
-that is not last, …), and `TypeRefusal` is a reason at a path — `Node.child` indices, the same
+`TypeReason` names why a node refuses in its rule's own terms (a variable past its environment,
+an atom the signature does not name, a request outside the row's request, a predicate that is not
+`bool`, a bare layer reference, a `return` that is not last, …), and `TypeRefusal` is a reason at
+a path: `Located (List Nat) TypeReason` (`Data/Located.lean`), with `Node.child` indices, the same
 addressing the authoring refusals and the layer references use. The refusal itself is the
 checker's: `Program/Checker.lean`'s `check` answers the type or the refusal in one
 `Except`-valued fold, `explain` is its refusal at the root and `blame` the refusal's path, and
@@ -27,8 +29,10 @@ open Effect4 (ServiceKey)
 
 /-- Why the checker refused at a node, in the node's own rule's terms. -/
 inductive TypeReason
-  /-- A term with no type in this environment: an unbound level, an atom the signature
-  refuses at these argument types, a literal outside the value alphabet. -/
+  /-- A term with no type in this environment for which the term diagnostic names no cause
+  (`TermRefusal.diagnose`): a field read or an update at a member that is no record. A variable,
+  an application, a record, a tuple and a fold name theirs (`unboundVariable`, `unknownAtom`,
+  `refusedArguments`, `recordTerm`, `tupleTerm`, `foldTerm`). -/
   | term (t : Term)
   | cause (c : CauseTerm)
   /-- `fail` at a type the error alphabet does not admit. -/
@@ -119,6 +123,16 @@ inductive TypeReason
   definition with none is invoked by `perform (.call k)`, so an invocation with programs needs
   at least one. -/
   | invokeArity (name : String) (params args : Nat)
+  /-- A variable past the environment, at an address within the refused term: `var index`
+  where the environment there holds `depth` variables. -/
+  | unboundVariable (path : List Nat) (index depth : Nat)
+  /-- An application of an atom the signature does not name (`Signature.knownAtom`), at an
+  address within the refused term. -/
+  | unknownAtom (path : List Nat) (atom : String)
+  /-- An application of an atom the signature names, at argument types it refuses, at an
+  address within the refused term: `args` are the arguments' types under the atom's literal
+  rule. -/
+  | refusedArguments (path : List Nat) (atom : String) (args : List Ty)
 deriving DecidableEq
 
 /-- The constructor's name: the reason as one word, for tables and reports. -/
@@ -165,12 +179,21 @@ def TypeReason.head : TypeReason → String
   | .definitionColumns _ => "definitionColumns"
   | .bodyNotDeclared _ _ => "bodyNotDeclared"
   | .invokeArity _ _ _ => "invokeArity"
+  | .unboundVariable _ _ _ => "unboundVariable"
+  | .unknownAtom _ _ => "unknownAtom"
+  | .refusedArguments _ _ _ => "refusedArguments"
 
-/-- A refusal at a path of the tree. -/
-structure TypeRefusal where
-  path : List Nat
-  reason : TypeReason
-deriving DecidableEq
+/-- **A refusal at a path of the tree**: the checker's reason, located at a program address. -/
+abbrev TypeRefusal := Located (List Nat) TypeReason
+
+/-- A refusal's program address, by its earlier name. -/
+abbrev TypeRefusal.path (r : TypeRefusal) : List Nat := r.site
+
+/-- A refusal's equality, at its own type: an instance search over a carrier that holds refusals
+stays as small as when the refusal was a structure of its own. Through `Located`'s instance a list
+of table rows exceeds the search's size (`Test/Program/TableControls.lean`). -/
+instance instDecidableEqTypeRefusal : DecidableEq TypeRefusal :=
+  inferInstanceAs (DecidableEq (Located (List Nat) TypeReason))
 
 /-- Why a `select` refuses its scrutinee's type: under `.bool` it is the conditional on a
 non-Boolean, which TypeScript accepts (no diagnostic); under the other two decisions the

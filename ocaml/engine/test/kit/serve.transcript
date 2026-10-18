@@ -22,10 +22,10 @@ serve> {"op":"check","program":{"_tag":"succeed","value":{"_tag":"app","atom":"a
 < {"status":"ok","type":{"answer":{"_tag":"nat"},"error":{"_tag":"never"},"requires":[]},"text":"Effect<number, never>"}
 # check refused: request type
 serve> {"op":"check","program":{"_tag":"perform","op":{"_tag":"external","index":0},"request":{"_tag":"lit","value":{"_tag":"str","value":"milk"}}},"rows":[{"name":"echo","spelling":"echo","shape":"call","trailing":[],"kind":"async","request":{"_tag":"nat"},"answer":{"_tag":"unit"},"error":{"_tag":"never"},"requires":[],"cite":"","typeArgs":[],"registration":"external"}]}
-< {"status":"refused","refusal":{"path":[],"reason":{"_tag":"requestNotSubtype","row":"echo","request":{"_tag":"string"},"expected":{"_tag":"nat"}}}}
+< {"status":"refused","refusal":{"site":[],"reason":{"_tag":"requestNotSubtype","row":"echo","request":{"_tag":"string"},"expected":{"_tag":"nat"}}}}
 # check refused: operand type
 serve> {"op":"check","program":{"_tag":"succeed","value":{"_tag":"app","atom":"add","args":[{"_tag":"lit","value":{"_tag":"nat","value":1}},{"_tag":"lit","value":{"_tag":"str","value":"a"}}]}}}
-< {"status":"refused","refusal":{"path":[],"reason":{"_tag":"term","t":{"_tag":"app","atom":"add","args":[{"_tag":"lit","value":{"_tag":"nat","value":1}},{"_tag":"lit","value":{"_tag":"str","value":"a"}}]}}}}
+< {"status":"refused","refusal":{"site":[],"reason":{"_tag":"refusedArguments","path":[],"atom":"add","args":[{"_tag":"nat"},{"_tag":"string"}]}}}
 # check refused: admission
 serve> {"op":"check","program":{"_tag":"iterate","cursorTy":null,"initial":{"_tag":"lit","value":{"_tag":"nat","value":1}},"test":{"_tag":"app","atom":"lt","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":16}}]},"step":{"_tag":"app","atom":"mul","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":2}}]},"result":{"_tag":"var","index":0},"body":{"_tag":"perform","op":{"_tag":"external","index":0},"request":{"_tag":"var","index":0}}},"rows":[{"name":"echo","spelling":"echo","shape":"call","trailing":[],"kind":"async","request":{"_tag":"nat"},"answer":{"_tag":"unit"},"error":{"_tag":"never"},"requires":[],"cite":"","typeArgs":[],"registration":"deferred"}]}
 < {"status":"refused","admission":{"_tag":"signature","why":{"_tag":"row","index":0,"reason":{"_tag":"notExternal"}}}}

@@ -40,7 +40,7 @@ inductive Refusal where
   | genericRow (path : List Nat) (row : Nat)
   /-- The program reaches a host row at `path` whose normalized answer mentions a host handle. -/
   | handleAnswer (path : List Nat) (row : Nat)
-deriving DecidableEq, Repr
+deriving DecidableEq
 
 /-- Whether a row's normalized columns have any type variable. -/
 def rowIsGeneric (r : Program.Row) : Bool :=

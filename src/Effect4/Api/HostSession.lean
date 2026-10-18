@@ -131,7 +131,7 @@ inductive Refusal
   | directAnswer
   | pendingControl
   | stuck
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 inductive Phase
   | bound
@@ -140,7 +140,7 @@ inductive Phase
   | progressed
   | frontier
   | refused (reason : Refusal)
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 structure Result (program : Api.Program) (app : SigApp) where
   phase : Phase

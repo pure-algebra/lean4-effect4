@@ -32,7 +32,8 @@ def d1 : Effect4.Program.Doc := (goodFill.value.toOption.map Prod.fst).getD d0
 #guard ((Place.hole 0).resolve app initial).toOption = some ([1], Sketch.hole app 0)
 -- Row 2 is one refused part check, with no whole recheck and no replacement document.
 #guard match badFill.value with
-  | .error (.feed 0 (.notKept ([.nat], ty) (.error ⟨[], .term _⟩))) => decide (ty = .pure .nat)
+  | .error (.feed 0 (.notKept ([.nat], ty) (.error ⟨[1], .unboundVariable [] 1 1⟩))) =>
+    decide (ty = .pure .nat)
   | _ => false
 #guard badFill.trace.length = 1
 #guard d0.snap.revision = 0

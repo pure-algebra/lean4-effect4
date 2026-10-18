@@ -111,11 +111,7 @@ for a program with no block (`Program.explain`). The expansion has no reference 
 (decisions row 273). `none` exactly when the program is `wellTyped` (`Api.explain_none_iff`,
 below). -/
 def explain (program : Program) (app : SigApp := {}) : Option Effect4.Program.TypeRefusal :=
-  match program.firstRefFault with
-  | some (site, target, why) => some ⟨site, .referenceIllFormed target why⟩
-  | none =>
-    Effect4.Program.Checker.refusal
-      (Effect4.Program.Checker.checkModule app.signature program.expandRefs)
+  Effect4.Program.programRefusal app.signature program
 
 /-- The path of the refusal alone: the deepest node whose own rule refuses. -/
 def blame (program : Program) (app : SigApp := {}) : Option (List Nat) :=
@@ -128,25 +124,8 @@ the one module check of the expansion, its refusal and its success. Where it fai
 refuses at the reference and the program is not `wellTyped`. The proof uses no law of the proof
 graph. -/
 theorem explain_none_iff (program : Program) (app : SigApp) :
-    explain program app = none ↔ wellTyped program app = true := by
-  unfold explain wellTyped typeOf Program.typeOfProgram
-  cases h : program.firstRefFault with
-  | none =>
-    rw [if_pos ((Program.Eff.firstRefFault_eq_none program).mp h)]
-    show Program.Checker.refusal _ = none ↔ Option.isSome (Except.toOption _) = true
-    cases Program.Checker.checkModule app.signature program.expandRefs with
-    | ok _ => exact ⟨fun _ => rfl, fun _ => rfl⟩
-    | error _ => exact ⟨nofun, nofun⟩
-  | some f =>
-    obtain ⟨site, target, why⟩ := f
-    have hwf : program.layerRefsWF = false := by
-      cases hw : program.layerRefsWF with
-      | false => rfl
-      | true =>
-        rw [(Program.Eff.firstRefFault_eq_none program).mpr hw] at h
-        cases h
-    rw [hwf]
-    exact ⟨nofun, nofun⟩
+    explain program app = none ↔ wellTyped program app = true :=
+  Effect4.Program.programRefusal_none_iff app.signature program
 
 theorem blame_none_iff (program : Program) (app : SigApp) :
     blame program app = none ↔ wellTyped program app = true := by

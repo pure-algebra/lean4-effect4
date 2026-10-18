@@ -1798,7 +1798,7 @@ def commands : List Command :=
   [.bind call 0, .apply ⟨⟨0⟩, 0⟩] ++ replies.map .submit ++ decisions.map .control
 
 def refusals : List HostSession.Refusal :=
-  [.version, .session, .profile, .table, .program .illTyped,
+  [.version, .session, .profile, .table, .program (.illTyped ⟨[1], .unboundVariable [] 3 1⟩),
    .program (.signature (.duplicateRow ("Db", [.name "get"]))), .program (.signature (.row 2 .notAsync)),
    .program (.emptyColumn ["program", "answer"]),
    .program (.signature (.row 1 (.internalHandle "answer"))), .duplicateCall, .protocol,

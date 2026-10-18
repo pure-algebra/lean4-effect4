@@ -13,7 +13,10 @@ def base : Sketch := ⟨.bind (Sketch.hole {} 0)
 def doc : Doc := (Doc.open_ ⟨⟨"fills",0⟩,{},base⟩).value
 def start : FillSet := FillSet.open_ doc
 def added := start.add Oracle.uncached [([0],n1),([1,0],str),([1,1],n7)]
-#guard added.value.2 = [.applied [0],.refused [1,0] .notCertified,.applied [1,1]]
+-- A refused fill carries the kept-exact feed's own refusal: the string's type is not the hole's.
+#guard added.value.2 = [.applied [0],
+  .refused [1,0] (.notCertified (.notKept ([.nat], .pure .nat) (.ok (.pure .string)))),
+  .applied [1,1]]
 def pending := added.value.1
 #guard pending.pending = [([0],n1),([1,1],n7)]
 #guard pending.anchor.revision = 0
@@ -63,7 +66,7 @@ def brokenDoc : Doc := (Doc.open_ ⟨⟨"broken",0⟩,{},broken⟩).value
 -- beside the unrelated error the fill set refuses it, while the retired certification, which reads
 -- only the focus, accepts it. This is `kept_eq_certified`'s typed-root premise.
 #guard match ((FillSet.open_ brokenDoc).add Oracle.uncached [([0],n7)]).value.2 with
-  | [.refused [0] _] => true
+  | [.refused [0] (.notCertified (.rootRefused _))] => true
   | _ => false
 #guard match FillReference.materialize {} broken [([0],n7)] with
   | .error (.refused _) => true | _ => false
@@ -129,3 +132,44 @@ def badDoc : Doc := (Doc.open_ ⟨⟨"missing-focus-key",0⟩,{},⟨badProgram,[
 end SuggestionKeyControls
 
 end Test.Program.SeamsS2
+
+/-! ## One located refusal on every route (Codex R1.1's red control)
+
+The probe's step 7: fill hole 0 at `[1]` with `succeed (var 1)`, where the environment there holds
+one variable. The edit route (`Doc.step`), the pending-fill route (`FillSet.add`) and the suggestion
+route (`Suggest.page`) report one refusal: the unbound variable, at the program's own address `[1]`.
+The feed places a part's refusal once (`Located.under`); placed twice it would read `[1, 1]`. -/
+namespace Test.Program.SeamsS2.LocatedRoutes
+open Effect4 Effect4.Program Effect4.Program.Check
+open Test.Program.SeamsS1.DocControls (d0)
+
+def wrong : NativeEff := .succeed (.var 1)
+def located : TypeRefusal := ⟨[1], .unboundVariable [] 1 1⟩
+def viaEdit := d0.step Oracle.uncached d0.snap (.commit [(.hole 0, .fill wrong)] .keepExact)
+def viaFill := (FillSet.open_ d0).add Oracle.uncached [([1], wrong)]
+def viaSuggest := Suggest.page Oracle.uncached d0 [1] [wrong] 0 1
+
+#guard match viaEdit.value with
+  | .error (.feed 0 (.notKept ([.nat], _) (.error r))) => r == located
+  | _ => false
+#guard match viaFill.value.2 with
+  | [.refused [1] (.notCertified (.notKept ([.nat], _) (.error r)))] => r == located
+  | _ => false
+#guard match viaSuggest.value with
+  | .ok ([s], _) => s.evidence == .refused located
+  | _ => false
+-- red: the refusal placed a second time is another address, which no route answers
+#guard (Located.under [1] located).site = [1, 1]
+#guard Located.under [1] located != located
+
+/-- An application whose one row is synchronous: its signature is not lawful. -/
+def syncApp : SigApp := { rows := [{ Row.hole "ask" .nat with kind := .sync }] }
+-- Signature admission refuses first where the program does not type either.
+#guard match admitProgram wrong syncApp with
+  | .error (.signature _) => true
+  | _ => false
+-- At a lawful signature the same program is refused with its located typing refusal.
+#guard match admitProgram wrong with
+  | .error (.illTyped ⟨[], .unboundVariable [] 1 0⟩) => true
+  | _ => false
+end Test.Program.SeamsS2.LocatedRoutes

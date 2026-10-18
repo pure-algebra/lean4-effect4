@@ -48,7 +48,8 @@ val fail : Eff_types.Val.t -> exit
 
 (** {1 Checking} *)
 
-val check : app -> program -> (Eff_types.EffTy.t, Effect4_gen.Api_gen.type_refusal) result
+val check : app -> program ->
+  (Eff_types.EffTy.t, (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located) result
 (** The checker's answer: the program's type at the application ([Effect<A, E, R>]), or the
     address of the refusing node and why ([Api.check]). *)
 
@@ -180,7 +181,7 @@ module Json : sig
   val value_json : Eff_types.Val.t -> t
   val ty_json : Eff_types.Ty.t -> t
   val eff_ty_json : Eff_types.EffTy.t -> t
-  val refusal_json : Effect4_gen.Api_gen.type_refusal -> t
+  val refusal_json : (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located -> t
   val admit_json : Effect4_gen.Api_gen.admit_refusal -> t
 
   val check_json : app -> program -> t

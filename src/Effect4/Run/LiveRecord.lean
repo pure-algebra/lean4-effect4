@@ -52,7 +52,7 @@ inductive Refusal
   | unsupportedVersion (version : Nat)
   /-- Program admission refused the record's program and application. -/
   | admission (why : AdmitRefusal)
-deriving DecidableEq, Repr
+deriving DecidableEq
 
 /-- **Save a live session** as a `LiveRecord` at `currentVersion`. -/
 def save (l : Live) : LiveRecord :=

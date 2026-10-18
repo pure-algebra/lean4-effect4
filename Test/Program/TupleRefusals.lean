@@ -30,7 +30,7 @@ def outOfRange : Term := .tupleAt (.app "tuple" (.cons (.lit (.nat 1)) .nil)) 3
 #guard run (.recordSet (.record [] [] .nil) "x" outOfRange) = error 3 (.outOfBounds 1) [1]
 
 def genericFirst : Term := .app "tuple" (.cons (.var 5) (.cons outOfRange .nil))
-#guard run genericFirst = .error ⟨[2, 1], .term genericFirst⟩
+#guard run genericFirst = .error ⟨[2, 1], .unboundVariable [0] 5 0⟩
 def recordMissing : Term := .record [("name", false, .string)] [] .nil
 #guard run (.tupleAt recordMissing 0) =
   .error ⟨[2, 1], .recordTerm ⟨[0], .missingRequired "name"⟩⟩

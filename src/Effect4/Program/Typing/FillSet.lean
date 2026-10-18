@@ -69,13 +69,14 @@ inductive AddRefusal where
   | root
   /-- The address does not name a program node in the base sketch. -/
   | unknownAddress
-  /-- The anchor's `keepExact` feed refuses the filling. -/
-  | notCertified
+  /-- The anchor's `keepExact` feed refuses the filling, with the feed's refusal: located at the
+  program's own addresses, as the edit route reports it (`SourceSession.feed`). -/
+  | notCertified (why : FeedRefusal)
   /-- Another filling is already recorded at this address. -/
   | conflict
   /-- The address is an ancestor or descendant of an address `existing` already in the set. -/
   | overlap (existing : List Nat)
-deriving DecidableEq, Repr
+deriving DecidableEq
 
 /-- The outcome for one submitted fill in `FillSet.add`. -/
 inductive AddOutcome where
@@ -85,7 +86,7 @@ inductive AddOutcome where
   | collapsed (path : List Nat)
   /-- the submission is refused at its address -/
   | refused (path : List Nat) (why : AddRefusal)
-deriving DecidableEq, Repr
+deriving DecidableEq
 
 
 namespace FillSetInternal
@@ -104,7 +105,7 @@ def addEntry (o : Oracle) (anchor : SourceSession) (entries : List (List Nat × 
     | some (other, _) => return (entries, .refused p (.overlap other))
     | none =>
       match ← anchor.feed o .keepExact (.fill p q) with
-      | .error _ => return (entries, .refused p .notCertified)
+      | .error why => return (entries, .refused p (.notCertified why))
       | .ok _ => return ((p,q) :: entries, .applied p)
 
 /-- **The uncached submission fold**: the entries a list of submissions leaves, from none. It is

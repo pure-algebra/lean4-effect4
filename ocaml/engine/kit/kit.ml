@@ -177,7 +177,7 @@ let replays (a : app) p (t : trace) =
 
 (* The carriers' format version: moved with the pins of engine/test/kit/test_shapes.ml, in one
    commit, whenever a shape of Effect4.Run.Kit changes (the rule is kit.mli's). *)
-let format_version = 1
+let format_version = 2
 
 module Json = struct
   module J = Eff_json_text

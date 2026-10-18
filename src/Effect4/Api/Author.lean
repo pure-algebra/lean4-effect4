@@ -14,9 +14,10 @@ Everything the build can refuse already has a located refusal, and `BuildRefusal
 sum: the scope reader's (a name with no binder, a row or a layer nobody declared, a name only
 the surface may write), the checker's (DI-86, the deepest node whose own rule refuses), and
 admission's (the table's signature, formation, the reserved integer type). The type refusal is
-the located one: `admitProgram` answers `illTyped` without a site, so a build that fails to type
-asks `Api.explain` where. The build admits at the application of the module's rows and named
-types (`Built.app`); a module's services join the signature in the Σ_app slice's step 3.
+the located one: `admitProgram` answers `illTyped` with the program's located refusal
+(`programRefusal`, which is `Api.explain`'s), and the build reports it as the checker's. The
+build admits at the application of the module's rows and named types (`Built.app`); a module's
+services join the signature in the Σ_app slice's step 3.
 
 The table is the module's own. That is the point of declaring rows: an external position is
 a position in whichever table is supplied beside the program (DI-22), and a module that
@@ -51,10 +52,7 @@ def finishBuild (program : Program) (app : SigApp)
   match admitProgram program app with
   | .ok admitted =>
     .ok { app, program, admitted, rowNames }
-  | .error .illTyped =>
-    match Api.explain program app with
-    | some refusal => .error (.typing refusal)
-    | none => .error (.admission .illTyped)
+  | .error (.illTyped refusal) => .error (.typing refusal)
   | .error why => .error (.admission why)
 
 end Author.Internal

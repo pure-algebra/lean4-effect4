@@ -97,13 +97,16 @@ structure SigExtends {Op : Type} (s s' : Signature Op) : Prop where
   /-- The same declaration table: an extension adds rows, services and definitions, and the term
   typer reads the table (`Signature.types`). -/
   types : s'.types = s.types
+  /-- The same atom catalogue: an extension adds rows, services and definitions, and the term
+  diagnostic reads which atoms the signature names (`Signature.knownAtom`). -/
+  knownAtom : s'.knownAtom = s.knownAtom
 
 namespace SigExtends
 
 variable {Op : Type} {s s' s'' : Signature Op}
 
 theorem refl (s : Signature Op) : SigExtends s s :=
-  ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, fun _ _ h => h, rfl, rfl, fun _ _ h => h, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, fun _ _ h => h, rfl, rfl, fun _ _ h => h, rfl, rfl, rfl⟩
 
 theorem trans (h₁ : SigExtends s s') (h₂ : SigExtends s' s'') : SigExtends s s'' :=
   ⟨h₂.atomOf.trans h₁.atomOf, h₂.constAtom.trans h₁.constAtom, h₂.scopeKey.trans h₁.scopeKey,
@@ -111,7 +114,7 @@ theorem trans (h₁ : SigExtends s s') (h₂ : SigExtends s' s'') : SigExtends s
       ⟨(h₂.row op (h₁.row op hd).1).1, (h₂.row op (h₁.row op hd).1).2.trans (h₁.row op hd).2⟩,
     fun key ty hk => h₂.service key ty (h₁.service key ty hk), h₂.termOf.trans h₁.termOf,
     h₂.callOf.trans h₁.callOf, fun k d hk => h₂.defOf k d (h₁.defOf k d hk),
-    h₂.paramOf.trans h₁.paramOf, h₂.types.trans h₁.types⟩
+    h₂.paramOf.trans h₁.paramOf, h₂.types.trans h₁.types, h₂.knownAtom.trans h₁.knownAtom⟩
 
 theorem termTy (h : SigExtends s s') (env : TyEnv) (t : Term) :
     Effect4.Program.termTy s' env t = Effect4.Program.termTy s env t :=
@@ -136,7 +139,7 @@ end SigExtends
 
 theorem rows_append (t t' : RowTable) :
     SigExtends (nativeSignature t) (nativeSignature (t ++ t')) := by
-  refine ⟨rfl, rfl, rfl, ?_, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl, rfl⟩
+  refine ⟨rfl, rfl, rfl, ?_, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl, rfl, rfl⟩
   intro op hd
   cases op with
   | external i =>
@@ -157,7 +160,7 @@ namespace SigApp
 theorem rows_append (app : SigApp) (t' : RowTable) :
     SigExtends app.signature (SigApp.mk (app.rows ++ t') app.services app.types).signature := by
   have h := Effect4.Program.rows_append app.rows t'
-  exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl, rfl⟩
+  exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl, rfl, rfl⟩
 
 
 end SigApp
@@ -615,7 +618,7 @@ theorem termDiagnostic_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s
   have hargs : argsTy s' = argsTy s :=
     funext fun env => funext fun flag => funext fun terms =>
       argsTy_congr h.atomOf h.constAtom h.types env flag terms
-  simp only [TermRefusal.diagnose, harg, hargs, h.constAtom, h.types]
+  simp only [TermRefusal.diagnose, harg, hargs, h.constAtom, h.types, h.atomOf, h.knownAtom]
 
 /-- The record-only compatibility projection follows the same diagnostic agreement. -/
 theorem termRefusal_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
@@ -665,7 +668,7 @@ theorem Signature.withDefs_rowOf_call (sig : Signature Op) (decls : List DefDecl
 theorem SigExtends.withDefs {s s' : Signature Op} (h : SigExtends s s') (decls : List DefDecl) :
     SigExtends (s.withDefs decls) (s'.withDefs decls) := by
   refine ⟨h.atomOf, h.constAtom, h.scopeKey, fun op hd => ?_, h.service, h.termOf, h.callOf,
-    fun k d hk => ?_, h.paramOf, h.types⟩
+    fun k d hk => ?_, h.paramOf, h.types, h.knownAtom⟩
   rotate_left
   · -- the block's declaration first, then the signature's, which the extension keeps
     show decls[k]?.or (s'.defOf k) = some d
@@ -703,7 +706,7 @@ theorem SigExtends.withParams {s s' : Signature Op} (h : SigExtends s s') :
   | [] => h
   | q :: qs => by
     refine ⟨h.atomOf, h.constAtom, h.scopeKey, fun op hd => ?_, h.service, h.termOf, h.callOf,
-      h.defOf, h.paramOf, h.types⟩
+      h.defOf, h.paramOf, h.types, h.knownAtom⟩
     have hp : s'.paramOf op = s.paramOf op := by rw [h.paramOf]
     cases hc : s.paramOf op with
     | none =>

@@ -322,7 +322,7 @@ theorem Signature.extends_withDefs {Op : Type} (sig : Signature Op)
     (hdef : ∀ k, sig.defOf k = none) (decls : List DefDecl) :
     SigExtends sig (sig.withDefs decls) := by
   refine ⟨rfl, rfl, rfl, fun op hd => ?_, fun _ _ hs => hs, rfl, rfl,
-    fun k d hk => (by rw [hdef k] at hk; cases hk), rfl, rfl⟩
+    fun k d hk => (by rw [hdef k] at hk; cases hk), rfl, rfl, rfl⟩
   cases hc : sig.callOf op with
   | none =>
     exact ⟨by rw [sig.withDefs_dom_of_none decls hc]; exact hd,

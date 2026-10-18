@@ -121,12 +121,12 @@ def Signature.emptyDom (sig : Signature Op) : Signature Op :=
 
 theorem Signature.emptyDom_extends (sig : Signature Op) : SigExtends sig.emptyDom sig :=
   ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl, rfl,
-    fun _ _ h => (by cases h), rfl, rfl⟩
+    fun _ _ h => (by cases h), rfl, rfl, rfl⟩
 
 theorem Signature.emptyDom_extends_withDefs (sig : Signature Op) (decls : List DefDecl) :
     SigExtends sig.emptyDom (sig.withDefs decls) :=
   ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl, rfl,
-    fun _ _ h => (by cases h), rfl, rfl⟩
+    fun _ _ h => (by cases h), rfl, rfl, rfl⟩
 
 /-! ## G1: conservative -/
 
@@ -462,7 +462,8 @@ theorem Signature.extends_withParams (sig : Signature Op)
     ∀ ps : List ParamDecl, SigExtends sig (sig.withParams ps)
   | [] => SigExtends.refl sig
   | q :: qs => by
-    refine ⟨rfl, rfl, rfl, fun op hd => ?_, fun _ _ hs => hs, rfl, rfl, fun _ _ hk => hk, rfl, rfl⟩
+    refine ⟨rfl, rfl, rfl, fun op hd => ?_, fun _ _ hs => hs, rfl, rfl, fun _ _ hk => hk, rfl, rfl,
+      rfl⟩
     cases hc : sig.paramOf op with
     | none =>
       simp only [Signature.withParams, hc]

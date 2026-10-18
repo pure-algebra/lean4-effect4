@@ -149,5 +149,12 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   -- names these reasons.
   | .definitionBlock | .definitionsMismatch _ _ | .definitionColumns _ | .bodyNotDeclared _ _
   | .invokeArity _ _ _ => []
+  -- The causes of a term's refusal, split from `.term` (2026-10-18): a variable past the
+  -- environment is a name TypeScript cannot find (2304), and an atom at refused argument types is
+  -- the application's mismatch, as `.term (.var _)` and `.term (.app _ _)` were. No observation
+  -- names an atom the catalogue does not name: the corpus draws its atoms from the catalogue.
+  | .unboundVariable _ _ _ => [2304]
+  | .unknownAtom _ _ => []
+  | .refusedArguments _ _ _ => [2345, 2769, 2554]
 
 end Effect4.Codegen
