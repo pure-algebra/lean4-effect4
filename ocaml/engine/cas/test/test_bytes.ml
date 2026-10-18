@@ -533,6 +533,9 @@ let test_node_refusals () =
     (E4_be.framed 5 (v_unit ^ v_unit ^ v_unit)) E4_node.Trailing;
   refuses "a some of no frame" (E4_be.framed 7 "") E4_node.Bad_frame;
   refuses "a some of two frames" (E4_be.framed 7 (v_unit ^ v_unit)) E4_node.Trailing;
+  check "ND-frame a list of two frames back to back is accepted (the control)"
+    (E4_node.payload_ok (E4_be.framed 4 (v_unit ^ v_unit)) = Ok ());
+  refuses "a list with a byte left over" (E4_be.framed 4 (v_unit ^ "\000")) E4_node.Bad_frame;
   refuses "a ctor with no index frame" (E4_be.framed 10 "") E4_node.Bad_frame;
   refuses "a ctor whose index frame is not a nat"
     (E4_be.framed 10 (v_str "x")) E4_node.Bad_frame;
