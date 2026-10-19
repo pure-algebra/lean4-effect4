@@ -689,7 +689,7 @@ module Tool :
   sig
     module Native :
       sig
-        module Session : sig type t = Api_gen.session end
+        module Workspace : sig type t = Api_gen.workspace end
         val describe : Api_gen.describe
         val envelope_shape : Api_gen.shape_doc
         val methods : Api_gen.effect4_tool_methods_entry list
@@ -704,24 +704,24 @@ module Tool :
           Api_gen.effect4_tool_wire_refusal
         val reply_envelope_shape : Api_gen.shape_doc
         val serve :
-          Api_gen.session ->
+          Api_gen.workspace ->
           Eff_types.Val.t ->
-          (Eff_types.Val.t * Api_gen.session,
+          (Eff_types.Val.t * Api_gen.workspace,
            Api_gen.effect4_tool_wire_refusal)
           result
         val serve_tree :
-          Api_gen.session ->
+          Api_gen.workspace ->
           Api_gen.nat_json ->
-          (Api_gen.nat_json * Api_gen.session,
+          (Api_gen.nat_json * Api_gen.workspace,
            Api_gen.effect4_tool_wire_refusal)
           result
         val serve_uncached :
-          Api_gen.session ->
+          Api_gen.workspace ->
           Eff_types.Val.t ->
-          (Eff_types.Val.t * Api_gen.session,
+          (Eff_types.Val.t * Api_gen.workspace,
            Api_gen.effect4_tool_wire_refusal)
           result
-        val start : Api_gen.session
+        val start : Api_gen.workspace
       end
     module State : sig type t = Api_gen.state end
   end

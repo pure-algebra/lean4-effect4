@@ -170,7 +170,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
   and its table, with the face `open`, `feed` and `view`. Its edits fill an address and omit
   one into a hole. A fill that keeps its focus's type checks only the new subtree, and an
   omission at the focus's type adds one entry (`omit-splices-table`). The tool
-  (`Effect4.Tool.serve`, `src/Effect4/Tool/`; driver `tools/Drivers/Session.lean`) holds a
+  (`Effect4.Tool.serve`, `src/Effect4/Tool/`; driver `tools/Drivers/Workspace.lean`) holds a
   document, pending fills and runs as its accepted actions, over JSON lines in the generated wire
   (`Tool.Wire`, seams S3a and S3b). A program travels as its JSON print, the schema form an agent
   writes (`json-read-exact`). After any run of edits the view is the checker's answer on the
@@ -286,7 +286,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
    decide its claims' premises on one recorded run, so a real run is checked run by run. In order:
    - the agent's small fixes in the tools. Answers carry no hex unless asked, and the session's
      JSON is named. A fill at a missing address is refused, and the catalogue's gaps are filled.
-     A refusal names its definition and parameter, and the session tool adds `"run"`;
+     A refusal names its definition and parameter, and the authoring tool adds `"run"`;
    - done: V1, the to-do on the keyed lane and lane S (`4017fac26`, `2daa3ac55`). On each script
      rc.112 and the generated OCaml engine agree with Lean;
    - done: V2, the application as one Effect service with its layer. Its host rows are services
@@ -356,7 +356,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
      ([the plan](research/2026-10-09-program-parameters.md), row 340).
 
    Row 376's four more seats landed on 2026-10-13. FLOW is above, and COUNTDOWN closed M7.
-   APPCHECK checks a sketch through its layer references (`SourceSession`), and the session tool
+   APPCHECK checks a sketch through its layer references (`SourceSession`), and the authoring tool
    opens at an application. ADDRESS proved `references_move` and stores a program's content at
    kind `program`. Their receipts list the duplicates they found, for one consolidation pass.
 
@@ -416,10 +416,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
    session on it. When an author asks whether a result depends on the schedule, the checked
    fragment of row 361 (D1 to D3) answers. Random descent is in the law graph (`random-descent`).
    The line's parts:
-   - the session tool at an application: `open` takes the row table and the services as canonical
+   - the authoring tool at an application: `open` takes the row table and the services as canonical
      bytes (row 373 (10));
    - a sketch typed through its layer references (row 373 (7));
-   - the session tool as an MCP server;
+   - the authoring tool as an MCP server;
    - marking at a gap (row 336, point 3);
    - each table entry's rule as data.
 6. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`

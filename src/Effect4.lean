@@ -272,7 +272,7 @@ import Effect4.Program.Typing.SourceDocument
 import Effect4.Run.LiveRecord
 import Effect4.Tool.Origin
 import Effect4.Tool.Serve
-import Effect4.Tool.Session
+import Effect4.Tool.Workspace
 import Effect4.Tool.Exchange
 import Effect4.Tool.Methods
 import Effect4.Tool.Native

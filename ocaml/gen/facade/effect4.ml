@@ -299,8 +299,8 @@ end
 
 module Tool = struct
   module Native = struct
-    module Session = struct
-      type t = Api_gen.session
+    module Workspace = struct
+      type t = Api_gen.workspace
     end
     let describe =
       Api_gen.tool_native_describe

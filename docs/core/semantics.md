@@ -1581,14 +1581,14 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
 - **Tool replies pair with requests (seams S3b)**: every reply that `Tool.serve` gives pairs with its request
   (`tool-serve-answers`, `Tool.serve_answers` in `src/Effect4/Laws/Tool/Wire.lean`, by cases on each action and query branch).
   It serves R6 and establishes no JSON decoding exactness, native driver behaviour or host progress.
-- **Sessions over the store (seams ST4)**: a session persists as a chain of `SessionEntry` nodes under a journal root
-  `session/<name>`, never as derived state. Loading replays the chain through `serve` and compares each stored program.
-  - `session-load-own` (`Exchange.load_own`): after an exchange commits an accepted action, loading the head it reports
+- **Workspaces over the store (seams ST4)**: a workspace persists as a chain of `WorkspaceEntry` nodes under a journal root
+  `workspace/<name>`, never as derived state. Loading replays the chain through `serve` and compares each stored program.
+  - `workspace-load-own` (`Exchange.load_own`): after an exchange commits an accepted action, loading the head it reports
     gives the state `serve` reached from the resolved base.
-  - `session-commits-once` (`Exchange.apply_commits_once`): an accepted action commits one transaction; its last node is the
+  - `workspace-commits-once` (`Exchange.apply_commits_once`): an accepted action commits one transaction; its last node is the
     entry, and its one move publishes it.
-  - `session-refuses` (`Exchange.apply_refuses`): a query or a refused request returns the store it was given.
-  - `session-entry-exact` (`SessionEntry.ofVal_exact`): an entry's reader answers only its own tree.
+  - `workspace-refuses` (`Exchange.apply_refuses`): a query or a refused request returns the store it was given.
+  - `workspace-entry-exact` (`WorkspaceEntry.ofVal_exact`): an entry's reader answers only its own tree.
   The laws are in `src/Effect4/Laws/Tool/Exchange.lean`. They serve R6 and R13, repeat no host effect, and claim no host progress.
 - **Typed replay under session (`typed-replay-session`)**: Opening requires full admission at the application extended by the sketch's hole rows.
   `Api.Built.ofSketch_error_iff` states the exact refusal in `src/Effect4/Laws/Api/Built.lean` (`built-admission-exact`, R6 and R13).

@@ -237,7 +237,7 @@ and run =
   Closure_gen.run = {
   built : built;
   budget : budget;
-  session : effect4_api_host_session_session;
+  session : session;
   journal : command list;
   phases : phase list;
 }
@@ -266,7 +266,7 @@ and prepared =
      frame_event)
     fiber_evaluator;
 }
-and session = Closure_gen.session = { state : state; memo : memo; }
+and workspace = Closure_gen.workspace = { state : state; memo : memo; }
 and effect4_tool_codec_profile_refusal =
   Closure_gen.effect4_tool_codec_profile_refusal =
     Effect4_tool_codec_profile_refusal_unsupportedProfile
@@ -1018,8 +1018,8 @@ and header =
   binding : string;
   table : Eff_types.Row.t list;
 }
-and effect4_api_host_session_session =
-  Closure_gen.effect4_api_host_session_session = {
+and session =
+  Closure_gen.session = {
   admitted : admitted_program;
   header : header;
   machine :
@@ -2072,7 +2072,7 @@ and runner =
   program : Eff_types.NativeOp.t Eff_types.Eff.t;
   app : sig_app;
   fuel : int;
-  session : effect4_api_host_session_session;
+  session : session;
 }
 and snap = Closure_gen.snap = { doc : doc_id; revision : int; }
 and doc_action =
@@ -2213,11 +2213,7 @@ and phase =
   | Phase_progressed
   | Phase_frontier
   | Phase_refused of effect4_api_host_session_refusal
-and result_ =
-  Closure_gen.result_ = {
-  phase : phase;
-  session : effect4_api_host_session_session;
-}
+and result_ = Closure_gen.result_ = { phase : phase; session : session; }
 and edit =
   Closure_gen.edit =
     Edit_fill of int list * Eff_types.NativeOp.t Eff_types.Eff.t

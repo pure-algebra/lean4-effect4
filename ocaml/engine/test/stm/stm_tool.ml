@@ -1,27 +1,27 @@
-(* stm_tool -- the native tool session (Kit_tool over the generated Tool.Native.serve) against Lean's
+(* stm_tool -- the native tool workspace (Kit_tool over the generated Tool.Native.serve) against Lean's
    uncached oracle under qcheck-stm (plan E2).
 
-   What it is: a session is the function of the requests it served. The model holds, per session,
+   What it is: a workspace is the function of the requests it served. The model holds, per workspace,
    the requests served so far, and answers each line with Lean's uncached oracle
    (`Api_gen.tool_native_serve_uncached`, lowered from src/Effect4/Tool/Native.lean) from the
-   session those requests reach; a line that does not parse, does not read, or is refused at the
+   workspace those requests reach; a line that does not parse, does not read, or is refused at the
    wire answers "refused" and changes nothing. The system is Kit_tool: the shell's mutable cell
    over the cached `serve`. So each run checks Kit_tool's T1-T3 (a refused line changes nothing,
-   a served line moves the session) and T4 (the checker memo changes cost, never a reply) on
+   a served line moves the workspace) and T4 (the checker memo changes cost, never a reply) on
    random request lists, beyond the pinned fixture of test_tool.
      A0 the alphabet's control: the request lines still read under today's envelope (below). A
         respelled wire would make served lines refused on both sides, and the tests after it
         would hold while checking little; A0 fails instead.
-     S1 sequential: two sessions, interleaved, agree with the model.
-     S2 red control: a shell that serves every line on a fresh session disagrees: it forgets.
-     P1 parallel (STM_domain): two sessions, each served by its own domain, as a native host
-        serves many sessions: no state is shared between them, not even the generated start
-        session they both begin from.
-     P2 red control: one session served by two domains at once, against the one-owner rule
+     S1 sequential: two workspaces, interleaved, agree with the model.
+     S2 red control: a shell that serves every line on a fresh workspace disagrees: it forgets.
+     P1 parallel (STM_domain): two workspaces, each served by its own domain, as a native host
+        serves many workspaces: no state is shared between them, not even the generated start
+        workspace they both begin from.
+     P2 red control: one workspace served by two domains at once, against the one-owner rule
         (ocaml/STANDARDS.md rule 8): QCheck must find an outcome no interleaving explains.
    The requests are a finite alphabet over one document, "default": two programs to open, the
    document, its address [0], the history, drafts at [0] at a generation and revision, a revert,
-   text that is not JSON, and an unknown tag. A draft is mostly drawn at the session's current
+   text that is not JSON, and an unknown tag. A draft is mostly drawn at the workspace's current
    generation and revision, so most drafts land.
    Depends on: Effect4_kit (Kit, Kit.Json, Kit_tool), Effect4_gen.Api_gen,
    qcheck-stm, Stm_support.
@@ -33,7 +33,7 @@ module G = Effect4_gen.Api_gen
 module J = Kit.Json
 
 type req =
-  | Open of int (** 0: the session fixture's program; 1: succeed 1 *)
+  | Open of int (** 0: the tool fixture's program; 1: succeed 1 *)
   | Doc
   | Doc0 (** the document at address [0] *)
   | History
@@ -107,7 +107,7 @@ let field k = function
   | _ -> None
 ;;
 
-(* The session's document after a served reply: its generation and revision (`now`). *)
+(* The workspace's document after a served reply: its generation and revision (`now`). *)
 let now_of reply =
   match Kit.Json.parse reply with
   | Error _ -> None
@@ -157,8 +157,8 @@ let summary reply =
 
 let reply_ty : string STM.ty_show = STM.String, summary
 
-(* The oracle, memoised. A session state is named by its served requests, and the memo maps the
-   name to Lean's session, so `next_state` and `postcond` stay pure functions of the model state
+(* The oracle, memoised. A workspace state is named by its served requests, and the memo maps the
+   name to Lean's workspace, so `next_state` and `postcond` stay pure functions of the model state
    while qcheck-stm's interleaving search asks them many times. Only the main domain asks: STM
    checks observations after the run's domains are joined. *)
 type served =
@@ -166,17 +166,17 @@ type served =
   ; now : (int * int) option
   }
 
-let sessions : (string, G.session) Hashtbl.t = Hashtbl.create 1024
+let workspaces : (string, G.workspace) Hashtbl.t = Hashtbl.create 1024
 let answers : (string, string * served option) Hashtbl.t = Hashtbl.create 4096
 let start = { name = ""; now = None }
-let () = Hashtbl.replace sessions start.name G.tool_native_start
+let () = Hashtbl.replace workspaces start.name G.tool_native_start
 
 let oracle (s : served) (r : req) =
   let key = s.name ^ "|" ^ show_req r in
   match Hashtbl.find_opt answers key with
   | Some a -> a
   | None ->
-    let session = Hashtbl.find sessions s.name in
+    let workspace = Hashtbl.find workspaces s.name in
     let a =
       match Kit.Json.parse (line r) with
       | Error _ -> "refused", None
@@ -184,20 +184,20 @@ let oracle (s : served) (r : req) =
         (match Kit.Json.read G.tool_native_envelope_shape json with
          | Error _ -> "refused", None
          | Ok v ->
-           (match G.tool_native_serve_uncached session v with
+           (match G.tool_native_serve_uncached workspace v with
             | Error _ -> "refused", None
             | Ok (reply, next) ->
               let text = J.render (J.print G.tool_native_reply_envelope_shape reply) in
               let name = s.name ^ ";" ^ show_req r in
-              Hashtbl.replace sessions name next;
+              Hashtbl.replace workspaces name next;
               text, Some { name; now = now_of text }))
     in
     Hashtbl.replace answers key a;
     a
 ;;
 
-(* [shared]: both command tags address one session, as two domains sharing a Kit_tool.t would.
-   [forgetful]: the shell serves each line on a fresh session. *)
+(* [shared]: both command tags address one workspace, as two domains sharing a Kit_tool.t would.
+   [forgetful]: the shell serves each line on a fresh workspace. *)
 module Spec (P : sig
     val shared : bool
     val forgetful : bool
@@ -252,8 +252,8 @@ struct
   let precond _ _ = true
 
   let serve sut c =
-    let session = if P.forgetful then Kit_tool.create () else sut.(slot c.at) in
-    observe (Kit_tool.serve_line session (line c.req))
+    let workspace = if P.forgetful then Kit_tool.create () else sut.(slot c.at) in
+    observe (Kit_tool.serve_line workspace (line c.req))
   ;;
 
   let run c sut = STM.Res (STM.result reply_ty STM.exn, STM.protect (serve sut) c)
@@ -288,7 +288,7 @@ module Seq_forgetful = STM_sequential.Make (Forgetful)
 module Par_two = STM_domain.Make (Two)
 module Par_shared = STM_domain.Make (Shared)
 
-(* A0: from the start session, Open 0 is served; after it, a draft at generation 0 and revision
+(* A0: from the start workspace, Open 0 is served; after it, a draft at generation 0 and revision
    0 moves the document to revision 1, and Open 1, Doc, Doc0, History and a revert are served;
    Garbage and Unreadable are refused. *)
 let () =
@@ -298,7 +298,7 @@ let () =
     exit 1
   in
   match served start (Open 0) with
-  | None -> fail "Open 0 is refused from the start session"
+  | None -> fail "Open 0 is refused from the start workspace"
   | Some opened ->
     (match served opened (Draft (0, 0, 0)) with
      | Some { now = Some (0, 1); _ } -> ()
@@ -321,17 +321,17 @@ let () =
 let () =
   let open Stm_support in
   let own_domains = Par_two.arb_triple 10 8 Two.arb_cmd (Two.arb_at 0) (Two.arb_at 1) in
-  let one_session =
+  let one_workspace =
     Par_shared.arb_triple 6 4 Shared.arb_cmd (Shared.arb_at 0) (Shared.arb_at 1)
   in
   run
-    [ Seq_two.agree_test ~count:300 ~name:"S1 Kit_tool, two sessions, sequential"
+    [ Seq_two.agree_test ~count:300 ~name:"S1 Kit_tool, two workspaces, sequential"
     ; Seq_forgetful.neg_agree_test
         ~count:300
-        ~name:"S2 red: a shell that serves each line on a fresh session"
+        ~name:"S2 red: a shell that serves each line on a fresh workspace"
     ; par_test
         ~neg:false
-        ~name:"P1 Kit_tool, two sessions, each served by its own domain"
+        ~name:"P1 Kit_tool, two workspaces, each served by its own domain"
         ~count:60
         ~repeats:10
         ~ok:Par_two.all_interleavings_ok
@@ -340,11 +340,11 @@ let () =
     ; par_test
         ~retries:2
         ~neg:true
-        ~name:"P2 red: one session served by two domains at once"
+        ~name:"P2 red: one workspace served by two domains at once"
         ~count:100
         ~repeats:10
         ~ok:Par_shared.all_interleavings_ok
-        one_session
+        one_workspace
         Par_shared.agree_prop_par
     ]
 ;;

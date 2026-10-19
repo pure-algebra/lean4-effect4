@@ -1,4 +1,4 @@
-; Red control of the public facade: the tool Session stays abstract through its facade alias: no record update.
+; Red control of the public facade: the tool Workspace stays abstract through its facade alias: no record update.
 ; ../../check_install.sh expects this build to fail with the line of red.expected.
 (executable
  (name red)

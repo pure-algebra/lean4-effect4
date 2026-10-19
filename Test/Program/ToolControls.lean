@@ -4,9 +4,9 @@ import Effect4.Api.Codegen
 import Effect4.Program.Authoring
 
 /-!
-# The session tool: the controls
+# The authoring tool: the controls
 
-`Effect4.Tool.serve` answers one request against the tool's state; `tools/Drivers/Session.lean`
+`Effect4.Tool.serve` answers one request against the tool's state; `tools/Drivers/Workspace.lean`
 reads one request envelope a line (`Tools.WireText`) and prints its reply.
 
 * **Red (tested): a request the tool refuses, with the state unchanged.** An edit before an open;
@@ -21,7 +21,7 @@ reads one request envelope a line (`Tools.WireText`) and prints its reply.
 
 set_option autoImplicit false
 
-namespace Test.Program.SessionToolControls
+namespace Test.Program.ToolControls
 
 open Effect4 Effect4.Program Effect4.Program.Check Effect4.Tool
 
@@ -105,4 +105,4 @@ def opened (program : NativeEff) (app : SigApp := {}) : State × Reply :=
       (.callbackRequirement [0, 1, 0]) ==
       some (some "TodoApp_list", some ("listCacheGet", "load"))
 
-end Test.Program.SessionToolControls
+end Test.Program.ToolControls

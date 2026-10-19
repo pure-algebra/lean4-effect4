@@ -8,7 +8,7 @@ import Effect4.Tool.Methods
 The native shell (`ocaml/engine/kit/kit_tool.ml`) serves the generated wire core, not a copy of
 it. This module is what it is generated from (`ocaml/gen/roots.json`, the `api_gen` artefact).
 
-- A `Session` holds the tool state and the checker memo. The generated interface keeps it abstract
+- A `Workspace` holds the tool state and the checker memo. The generated interface keeps it abstract
   (`roots.json`, `abstract`), so only `start` and `serve` build one: a native caller cannot forge
   a state or a memo.
 - Envelopes cross as canonical value trees, or as the profile's JSON tree (`serveTree`). The
@@ -27,16 +27,16 @@ namespace Effect4.Tool.Native
 
 open Effect4 Effect4.Store Effect4.Program.Check
 
-/-- **A native session**: the tool state and the checker memo, abstract in OCaml. -/
-structure Session where
+/-- **A native workspace**: the tool state and the checker memo, abstract in OCaml. -/
+structure Workspace where
   state : State
   memo : Memo
 
 /-- The memo's hit rule: an exact key, or a part key whose row table extends the stored one. -/
 def rule : HitRule := HitRule.exact.or extension
 
-/-- Where a native session starts: no action accepted, an empty memo. -/
-def start : Session := ⟨empty, Memo.empty⟩
+/-- Where a native workspace starts: no action accepted, an empty memo. -/
+def start : Workspace := ⟨empty, Memo.empty⟩
 
 /-- **One envelope's value tree through the wire core**, at an oracle: read it through the exact
 codec within the JSON profile's naturals (`CodecProfile.carries`), serve it at the version-1
@@ -59,15 +59,15 @@ def answer (o : Oracle) (state : State) (v : Val) : Checked (Except Wire.Refusal
       else pure (.error (.codec .unprintable))
 
 /-- **Serve one envelope** through the memo, and learn the reply's trace. A refusal leaves the
-session as it was. -/
-def serve (session : Session) (v : Val) : Except Wire.Refusal (Val × Session) :=
-  let served := answer (session.memo.oracle rule) session.state v
-  served.value.map fun (reply, next) => (reply, ⟨next, session.memo.learn served⟩)
+workspace as it was. -/
+def serve (workspace : Workspace) (v : Val) : Except Wire.Refusal (Val × Workspace) :=
+  let served := answer (workspace.memo.oracle rule) workspace.state v
+  served.value.map fun (reply, next) => (reply, ⟨next, workspace.memo.learn served⟩)
 
 /-- **Serve one envelope uncached**: the control the cached transcript is compared with. -/
-def serveUncached (session : Session) (v : Val) : Except Wire.Refusal (Val × Session) :=
-  (answer Oracle.uncached session.state v).value.map fun (reply, next) =>
-    (reply, {session with state := next})
+def serveUncached (workspace : Workspace) (v : Val) : Except Wire.Refusal (Val × Workspace) :=
+  (answer Oracle.uncached workspace.state v).value.map fun (reply, next) =>
+    (reply, {workspace with state := next})
 
 /-- The shape document of a request envelope, for the shell's JSON reader. -/
 def envelopeShape : ShapeDoc := shape (Wire.Envelope Request)
@@ -81,14 +81,14 @@ def refusalShape : ShapeDoc := shape Wire.Refusal
 /-- A wire refusal's value tree. -/
 def refusalToVal (why : Wire.Refusal) : Val := Canonical.toVal why
 
-/-- **One request's JSON tree through the session**: read under the request envelope's shape by
+/-- **One request's JSON tree through the workspace**: read under the request envelope's shape by
 the profile's located reader, served (`serve`), and the reply envelope printed as the tools print
 it (`ShapeDoc.printTree`). A tree that does not read is the codec's refusal at its place, and the
-session stays as it was. -/
-def serveTree (session : Session) (t : NatJson) : Except Wire.Refusal (NatJson × Session) :=
+workspace stays as it was. -/
+def serveTree (workspace : Workspace) (t : NatJson) : Except Wire.Refusal (NatJson × Workspace) :=
   match envelopeShape.readLocated t with
   | .error why => .error (.codec (.unreadable why))
-  | .ok v => (serve session v).map fun (reply, next) => (replyEnvelopeShape.printTree reply, next)
+  | .ok v => (serve workspace v).map fun (reply, next) => (replyEnvelopeShape.printTree reply, next)
 
 /-- A wire refusal as the profile's JSON tree, as the tools print it. -/
 def refusalTree (why : Wire.Refusal) : NatJson := refusalShape.printTree (refusalToVal why)

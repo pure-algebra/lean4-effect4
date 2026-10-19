@@ -27,7 +27,7 @@ in the tree (reading, `git grep`): they wait for the module toolkit's G3 and G2 
 | `Supervision` | `src/Effect4/Api/Supervision.lean` | `supervision : Eff Op → List ForkSite`, `ForkSite.parent`, `fiberStatuses`, `daemonsQuiet`, `Supervised`, `Inspection.{fibers,forked,daemonsQuiet}` | `supervision_static`, `supervision_child_flag`, `status_persists`, `spawn_status_fresh`, `daemonsQuiet_iff` |
 | `Api` (the older face) | `src/Effect4/Api.lean`, `Api/*.lean` | `check`, `explain`, `blame`, `author`, `Typed.*`, `TypedLayer`/`checkLayer`, `Inspection`, `replay`/`run`/`runSync` (no list of host answers: a host answer is a decision of the tape or the session, DI-23), `print`/`read` (the codegen face, `src/Effect4/Api/Codegen.lean`), `bytesOf`/`ofBytes`, `schemaOf`, `HostSession`, `Runner`, `RunnerBytes` | the DI-85/86 laws, `replay_unique`, the codec laws |
 
-**The JSON an agent sends and reads.** The session tool's JSON profile (`Tool.CodecProfile`)
+**The JSON an agent sends and reads.** The authoring tool's JSON profile (`Tool.CodecProfile`)
 prints a program with each list as an array (`Canonical.printArrays`), the encoding
 `ts/eff/eff.gen.ts` types. It reads an agent's JSON in any order, with lists as arrays or as
 their cases (`Canonical.ofJsonAnyOrder`).

@@ -316,7 +316,7 @@ import Test.Program.TableControls
 import Test.Program.PartsControls
 import Test.Program.SpliceControls
 import Test.Program.EditControls
-import Test.Program.SessionToolControls
+import Test.Program.ToolControls
 import Test.Program.JsonFormControls
 import Test.Dogfood.EditSession
 import Test.Program.CallInstance

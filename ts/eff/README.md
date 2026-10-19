@@ -12,7 +12,7 @@ import { toJson } from "./json.gen.ts"          // (eff: Eff) => string
 ```
 
 **Which JSON goes where.** The tool reads the node that `readTypeScript` returns as a sketch's
-`program`, inside an `open` request (`Effect4.Tool.Action.open_`, read by `tools/Drivers/Session.lean`). That is `JSON.stringify(eff)`: each object a case
+`program`, inside an `open` request (`Effect4.Tool.Action.open_`, read by `tools/Drivers/Workspace.lean`). That is `JSON.stringify(eff)`: each object a case
 with its `_tag`, each list an array, as `eff.gen.ts` types it. `toJson` writes a second form,
 the golden exchange with OCaml (`git:85f83463f644e47e7519f3092ea4f27db8697f96:ocaml/eff/eff_json.ml`), whose lists are positional
 `["cons", head, tail]`; the session refuses it. Hand an agent's program to the session as the

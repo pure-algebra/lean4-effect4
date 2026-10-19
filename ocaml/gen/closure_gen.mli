@@ -199,7 +199,7 @@ and built = {
 and run = {
   built : built;
   budget : budget;
-  session : effect4_api_host_session_session;
+  session : session;
   journal : command list;
   phases : phase list;
 }
@@ -227,7 +227,7 @@ and prepared = {
      frame_event)
     fiber_evaluator;
 }
-and session = { state : state; memo : memo; }
+and workspace = { state : state; memo : memo; }
 and effect4_tool_codec_profile_refusal =
     Effect4_tool_codec_profile_refusal_unsupportedProfile
   | Effect4_tool_codec_profile_refusal_unreadable of
@@ -905,7 +905,7 @@ and header = {
   binding : string;
   table : Eff_types.Row.t list;
 }
-and effect4_api_host_session_session = {
+and session = {
   admitted : admitted_program;
   header : header;
   machine :
@@ -1774,7 +1774,7 @@ and runner = {
   program : Eff_types.NativeOp.t Eff_types.Eff.t;
   app : sig_app;
   fuel : int;
-  session : effect4_api_host_session_session;
+  session : session;
 }
 and snap = { doc : doc_id; revision : int; }
 and doc_action =
@@ -1897,7 +1897,7 @@ and phase =
   | Phase_progressed
   | Phase_frontier
   | Phase_refused of effect4_api_host_session_refusal
-and result_ = { phase : phase; session : effect4_api_host_session_session; }
+and result_ = { phase : phase; session : session; }
 and edit =
     Edit_fill of int list * Eff_types.NativeOp.t Eff_types.Eff.t
   | Edit_omitAt of int list * Eff_types.Row.t
@@ -2592,20 +2592,20 @@ val program_prepared_admit :
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
    int, unit)
   run_decision -> refusal option
-val tool_native_start : session
+val tool_native_start : workspace
 val run_inspect : run -> inspection
 val api_inspection_exit_ :
   inspection ->
   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
   Eff_types.Exit.t option
 val tool_native_serve :
-  session ->
+  workspace ->
   Eff_types.Val.t ->
-  (Eff_types.Val.t * session, effect4_tool_wire_refusal) result
+  (Eff_types.Val.t * workspace, effect4_tool_wire_refusal) result
 val tool_native_serve_uncached :
-  session ->
+  workspace ->
   Eff_types.Val.t ->
-  (Eff_types.Val.t * session, effect4_tool_wire_refusal) result
+  (Eff_types.Val.t * workspace, effect4_tool_wire_refusal) result
 val tool_native_envelope_shape : shape_doc
 val tool_native_reply_envelope_shape : shape_doc
 val tool_native_refusal_shape : shape_doc
@@ -2617,8 +2617,8 @@ val store_shape_doc_read_located :
   nat_json -> (Eff_types.Val.t, (json_site, json_reason) located) result
 val store_shape_doc_print_tree : shape_doc -> Eff_types.Val.t -> nat_json
 val tool_native_serve_tree :
-  session ->
-  nat_json -> (nat_json * session, effect4_tool_wire_refusal) result
+  workspace ->
+  nat_json -> (nat_json * workspace, effect4_tool_wire_refusal) result
 val tool_native_refusal_tree : effect4_tool_wire_refusal -> nat_json
 val tool_native_relative_refusal :
   json_step list -> effect4_tool_wire_refusal -> effect4_tool_wire_refusal

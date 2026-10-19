@@ -6,7 +6,7 @@
    and leave it to `describe`, which answers each definition's schema from Lean's table, and the
    schema of every method's result under `Result`;
    Tool.serve owns actions, queries and refusals. Lean's text grammar reads each line
-   (Kit.Json.parse, the one both session drivers read with); its tree becomes the transport's
+   (Kit.Json.parse, the one both tool drivers read with); its tree becomes the transport's
    Yojson.Raw value with each number's text kept, so request IDs outside OCaml int stay exact.
    A tool's arguments become the profile's tree (Kit.Json.of_raw) inside the request this server
    writes around them, and Lean reads them.
@@ -75,7 +75,7 @@ let rec raw (t : K.t) : J.t =
   | K.NatJson_obj es -> `Assoc (List.map (fun (k, v) -> k, raw v) es)
 ;;
 
-(* A line of the transport, read by Lean's text grammar, the one the session drivers read with
+(* A line of the transport, read by Lean's text grammar, the one the tool drivers read with
    (Kit.Json.parse). *)
 let parse line = Result.map raw (K.parse line)
 let supported_version = "2025-06-18"
@@ -86,7 +86,7 @@ type phase =
   | Ready
 
 type t =
-  { session : Kit_tool.t
+  { workspace : Kit_tool.t
   ; tools : J.t list
   ; mutable phase : phase
   }
@@ -118,7 +118,7 @@ let tool_of (l : G.listing) : J.t =
 let describe : G.describe = G.tool_native_describe
 
 let create () =
-  { session = Kit_tool.create ()
+  { workspace = Kit_tool.create ()
   ; tools =
       List.map
         (fun (entry : G.effect4_tool_methods_entry) -> tool_of entry.listing)
@@ -201,7 +201,7 @@ let call server id name args =
          (-32602)
          "Arguments do not match the tool schema"
      | Ok (K.NatJson_obj args) ->
-       (match Kit_tool.serve_tree server.session (envelope entry args) with
+       (match Kit_tool.serve_tree server.workspace (envelope entry args) with
         | Ok answer ->
           let line = K.render answer in
           (match parse line with

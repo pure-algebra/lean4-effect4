@@ -3,15 +3,15 @@ import Effect4.Laws.Tool.Exchange
 import Test.Program.RunAdmissionControls
 
 /-!
-# Sessions over the store: the controls (seams ST4)
+# Workspaces over the store: the controls (seams ST4)
 
 Finite evaluations of `Exchange.apply` and `Exchange.load` over the actual store.
 
 * **Tested: loop 5.** Open, edit and start under `Base.head "demo"`; each accepted action commits
-  one entry and moves `session/demo`. A later load at the head gives the same run.
+  one entry and moves `workspace/demo`. A later load at the head gives the same run.
 * **Tested: loop 6.** Two writers read one head. The second writer's act refuses `staleBase`; at
   the new head, its edit at the old snapshot is the tool's own `stale`, inside the reply. A fork
-  starts `session/demo-b` from an entry.
+  starts `workspace/demo-b` from an entry.
 * **Red (tested): stored chains.** A refused stored action, a false `after`, an unsupported
   version, an index out of parent order, a first action without an origin, and a missing parent
   each refuse loading at their place.
@@ -76,7 +76,7 @@ def resumed : Option State := step3.bind fun (_, h, c) =>
 
 /-! ## Loop 6: two writers -/
 
--- A starts at head 2; B, still at head 2, edits: the session head moved.
+-- A starts at head 2; B, still at head 2, edits: the workspace head moved.
 #guard match step2, step3 with
   | some (r, h2, _), some (_, h3, c3) =>
     match r.now with
@@ -98,7 +98,7 @@ def resumed : Option State := step3.bind fun (_, h, c) =>
     | none => false
   | _, _ => false
 
--- B forks from the first entry instead: a new session continues from it.
+-- B forks from the first entry instead: a new workspace continues from it.
 #guard match step1, step3 with
   | some (r1, h1, _), some (_, _, c3) =>
     match r1.now with
@@ -136,23 +136,23 @@ def resumed : Option State := step3.bind fun (_, h, c) =>
 
 /-! ## Stored chains that do not load -/
 
-def origin (protocol : Nat := protocolVersion) (engine : Digest := engine) : SessionEntry :=
+def origin (protocol : Nat := protocolVersion) (engine : Digest := engine) : WorkspaceEntry :=
   .origin protocol codecVersion engine
 
 def programRef : Ref NativeEff := address sketch.program
 
 /-- Commit entries directly, with the schemas and the program they reference. -/
-def forged (entries : List SessionEntry) : Option Cas :=
-  match Cas.empty.commit ⟨[genesisNode, nodeOf (shape SessionEntry).document,
+def forged (entries : List WorkspaceEntry) : Option Cas :=
+  match Cas.empty.commit ⟨[genesisNode, nodeOf (shape WorkspaceEntry).document,
       nodeOf (shape NativeEff).document, nodeOf sketch.program] ++ entries.map nodeOf, []⟩ with
   | .ok (_, cas) => some cas
   | .error _ => none
 
-def loadAt (entries : List SessionEntry) (head : SessionEntry) : Option (Except LoadRefusal State) :=
+def loadAt (entries : List WorkspaceEntry) (head : WorkspaceEntry) : Option (Except LoadRefusal State) :=
   (forged entries).map fun cas => (load Oracle.uncached cas (address head)).value
 
-def opening (parent : SessionEntry) (after : Option (Ref NativeEff) := some programRef) :
-    SessionEntry :=
+def opening (parent : WorkspaceEntry) (after : Option (Ref NativeEff) := some programRef) :
+    WorkspaceEntry :=
   .action (address parent) 0 (.open_ "demo" app sketch) after
 
 -- Control: the honest one-action chain loads, under another engine too.
@@ -181,7 +181,7 @@ def opening (parent : SessionEntry) (after : Option (Ref NativeEff) := some prog
 #guard match loadAt [origin, opening origin, .action (address (opening origin)) 0 .reset none,
     .action (address (.action (address (opening origin)) 0 .reset none)) 5 .reset none]
     (.action (address (.action (address (opening origin)) 0 .reset none)) 5 .reset none) with
-  | some (.error (.outOfOrder d 4 0)) => d == (address (.action (address (opening origin)) 0 .reset none : SessionEntry)).digest
+  | some (.error (.outOfOrder d 4 0)) => d == (address (.action (address (opening origin)) 0 .reset none : WorkspaceEntry)).digest
   | _ => false
 -- A first action whose parent is another action names no origin.
 #guard match loadAt [origin, opening origin, .action (address (opening origin)) 0 .reset none]

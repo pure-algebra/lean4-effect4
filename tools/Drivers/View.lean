@@ -25,7 +25,7 @@ The flags: `--motion N`, the pictures of motion between two frames (default 20; 
 one in `tools/view/looks/` (default: the dark look, the base of every other).
 
 `NAME` is a program of the wire corpus (`Effect4.Program.Wire.Corpus.all`). `FILE` holds one
-request envelope a line, as `tools/Drivers/Session.lean` reads them. For each frame the driver
+request envelope a line, as `tools/Drivers/Workspace.lean` reads them. For each frame the driver
 writes three outputs of one list of calls (`docs/research/2026-10-09-visual-pipeline.md`):
 
 - `NNN.draw`, the device calls at the ratio 2 in the look, which `tools/view/draw` replays to

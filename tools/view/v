@@ -6,7 +6,7 @@
 #   v -r NAME        run a corpus program step by step: the program and its graph of fibers
 #   v -g             the graph specimen: a graph built one edge at a time, cycles included
 #   v -F             the program graph's specimen: fork and join, cross edges, regions, loops
-#   v -f FILE        the frames of a session request file (tools/Drivers/Session.lean's input)
+#   v -f FILE        the frames of a session request file (tools/Drivers/Workspace.lean's input)
 #   v -t NAME        the frames in this console, as characters
 #   v -p NAME        write a PNG of every frame and every picture of motion
 #   v -k NAME        the frames inline in this terminal (Ghostty, kitty), drawn by draw --kitty

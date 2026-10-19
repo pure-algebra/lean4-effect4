@@ -5,7 +5,7 @@
     "module": "Effect4",
     "out": "ocaml/gen/facade/effect4.ml",
     "manifest": "ocaml/gen/public-names.tsv",
-    "version": 0
+    "version": 1
   },
   "artifacts": [
     {
@@ -274,7 +274,7 @@
         "Effect4.Program.Check.HitRule",
         "Effect4.Live",
         "Effect4.Api.Built",
-        "Effect4.Tool.Native.Session",
+        "Effect4.Tool.Native.Workspace",
         "Effect4.Tool.State",
         "Effect4.Program.Prepared"
       ],

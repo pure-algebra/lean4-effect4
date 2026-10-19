@@ -1,7 +1,7 @@
 import Effect4.Tool.Native
 
 /-!
-# The session driver
+# The workspace driver
 
 It reads one JSON envelope for each line of standard input, serves it, and prints one JSON reply
 for each. A request is an `Envelope Request`: the method's name, its version (1), and the request,
@@ -9,7 +9,7 @@ in the Tool group's generated JSON (`Tool/ToolDerived.lean`). A blank line is sk
 
 It is the native shell's loop (`ocaml/engine/kit/kit_tool.ml`) in Lean, over the same code:
 - the profile's text grammar reads the line (`NatJson.parse`, `Store/Domain/JsonText.lean`);
-- the session reads the tree under the request envelope's shape, serves it through the checker
+- the workspace reads the tree under the request envelope's shape, serves it through the checker
   memo, and prints the reply envelope (`Tool.Native.serveTree`);
 - the reply is the tree's compact text (`NatJson.render`), written as its bytes.
 
@@ -17,9 +17,9 @@ So both drivers read one text by one grammar and answer it by one function. The 
 cost, never an answer (`Tool.serve_transparent`). A line that does not read prints
 `{"refused":"JSON text at byte N: expected …"}` (`NatJson.refusalText`), and a wire refusal
 prints `{"refused": …}` with the refusal's tree (`Tool.Native.refusalTree`). Neither changes the
-session.
+workspace.
 
-    lake env lean --run tools/Drivers/Session.lean < requests.jsonl
+    lake env lean --run tools/Drivers/Workspace.lean < requests.jsonl
 -/
 
 open Effect4 Effect4.Tool
@@ -33,11 +33,11 @@ def printTree (out : IO.FS.Stream) (t : NatJson) : IO Unit := do
 /-- A refusal line's tree: `{"refused": why}`. -/
 def refusedTree (why : NatJson) : NatJson := .obj [("refused", why)]
 
-/-- Answer each line of standard input, holding the session between lines. -/
+/-- Answer each line of standard input, holding the workspace between lines. -/
 def main : IO Unit := do
   let stdin ← IO.getStdin
   let stdout ← IO.getStdout
-  let mut session : Native.Session := Native.start
+  let mut workspace : Native.Workspace := Native.start
   repeat do
     let line ← stdin.getLine
     if line.isEmpty then
@@ -48,8 +48,8 @@ def main : IO Unit := do
     match NatJson.parse (NatJson.codes text) with
     | .error why => printTree stdout (refusedTree (.str (NatJson.refusalText why)))
     | .ok request =>
-      match Native.serveTree session request with
+      match Native.serveTree workspace request with
       | .ok (reply, next) =>
-        session := next
+        workspace := next
         printTree stdout reply
       | .error why => printTree stdout (refusedTree (Native.refusalTree why))

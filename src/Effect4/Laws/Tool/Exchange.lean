@@ -3,17 +3,17 @@ import Effect4.Laws.Tool.Serve
 import Effect4.Laws.Auto.Semantics
 
 /-!
-# Sessions over the store: the exchange's laws (seams ST4)
+# Workspaces over the store: the exchange's laws (seams ST4)
 
 Placement: `host-session-protocol`, the tool's transitions persisted, R6; and `exact-codecs`,
 stored carriers, R13.
 
 | Claim | Pointer | Role | Reach | Not established |
 | --- | --- | --- | --- | --- |
-| `session-load-own` | `load_own` | compatibility | after an exchange commits an accepted action, loading the head it reports gives the state `serve` reached from the resolved base | repeating host effects, host progress, hash injectivity |
-| `session-commits-once` | `apply_commits_once` | compatibility | an accepted action commits one transaction whose last node is its entry and whose one move publishes it | a host acknowledgement, exactly-once host effects |
-| `session-refuses` | `apply_refuses` | preservation | a query or a refused request returns the store it was given | IO rollback after arbitrary external writes |
-| `session-entry-exact` | `SessionEntry.ofVal_exact` (`Tool/Session.lean`) | compatibility | an entry's reader answers only its own tree | action acceptance, execution truth |
+| `workspace-load-own` | `load_own` | compatibility | after an exchange commits an accepted action, loading the head it reports gives the state `serve` reached from the resolved base | repeating host effects, host progress, hash injectivity |
+| `workspace-commits-once` | `apply_commits_once` | compatibility | an accepted action commits one transaction whose last node is its entry and whose one move publishes it | a host acknowledgement, exactly-once host effects |
+| `workspace-refuses` | `apply_refuses` | preservation | a query or a refused request returns the store it was given | IO rollback after arbitrary external writes |
+| `workspace-entry-exact` | `WorkspaceEntry.ofVal_exact` (`Tool/Workspace.lean`) | compatibility | an entry's reader answers only its own tree | action acceptance, execution truth |
 
 Consumers: the lost acknowledgement check (`Exchange.applied`). The native exchange over the disk
 store (S6b) is not built, so no native shell serves this exchange yet. The proofs read the store through
@@ -90,7 +90,7 @@ theorem apply_ok {o : Oracle} {engine : Digest} {cas cas' : Cas} {env : Envelope
 
 /-! ## The exchange claims that need no replay -/
 
-/-- **A query or a refused request publishes nothing** (`session-refuses`): the exchange returns
+/-- **A query or a refused request publishes nothing** (`workspace-refuses`): the exchange returns
 the store it was given. -/
 @[semantics "host-session-protocol" (requirement := R6)]
 theorem apply_refuses {o : Oracle} {engine : Digest} {cas cas' : Cas} {env : Envelope}
@@ -114,14 +114,14 @@ def moveName : Move → String
 def moveTarget : Move → AnyRef
   | .create _ _ target | .advance _ _ target => target
 
-/-- **An accepted action commits once** (`session-commits-once`): one transaction, whose last
+/-- **An accepted action commits once** (`workspace-commits-once`): one transaction, whose last
 node is the action's entry and whose one move publishes that entry. -/
 @[semantics "host-session-protocol" (requirement := R6)]
 theorem apply_commits_once {o : Oracle} {engine : Digest} {cas cas' : Cas} {env : Envelope}
     {reply : Reply} {head : Option (Head Digest)} {a : Action} {answer : Answer}
     (h : (apply o engine cas env).value = .ok (reply, head, cas'))
     (act : env.request = .act a) (accepted : reply.result = .ok answer) :
-    ∃ (txn : Txn) (receipt : Receipt) (entry : SessionEntry) (move : Move), cas.commit txn = .ok (receipt, cas') ∧
+    ∃ (txn : Txn) (receipt : Receipt) (entry : WorkspaceEntry) (move : Move), cas.commit txn = .ok (receipt, cas') ∧
       txn.nodes.getLast? = some (nodeOf entry) ∧ txn.moves = [move] ∧
       moveTarget move = ⟨.entry, (address entry).digest⟩ ∧
       ∃ parent index after, entry = .action parent index a after := by
@@ -150,13 +150,13 @@ theorem apply_commits_once {o : Oracle} {engine : Digest} {cas cas' : Cas} {env 
 
 /-! ## Reads that survive a commit -/
 
-/-- Every entry read in `cas` reads the same in `cas'`. Helper of `session-load-own`. -/
+/-- Every entry read in `cas` reads the same in `cas'`. Helper of `workspace-load-own`. -/
 def Keeps (cas cas' : Cas) : Prop :=
   ∀ d e, entryAt cas d = .ok e → entryAt cas' d = .ok e
 
 theorem keeps_refl (cas : Cas) : Keeps cas cas := fun _ _ h => h
 
-/-- An accepted commit keeps every entry read. Helper of `session-load-own`. -/
+/-- An accepted commit keeps every entry read. Helper of `workspace-load-own`. -/
 theorem keeps_commit {cas cas' : Cas} {txn : Txn} {receipt : Receipt}
     (accepted : cas.commit txn = .ok (receipt, cas')) : Keeps cas cas' := by
   intro d e h
@@ -168,14 +168,14 @@ theorem keeps_commit {cas cas' : Cas} {txn : Txn} {receipt : Receipt}
     subst same
     rw [Cas.get_nodeOf got (bytes_never_change (Cas.commit_store accepted) (Cas.get_exact read))]
 
-/-- A committed entry reads back at its address. Helper of `session-load-own`. -/
-theorem entryAt_committed {cas cas' : Cas} {txn : Txn} {receipt : Receipt} {e : SessionEntry}
+/-- A committed entry reads back at its address. Helper of `workspace-load-own`. -/
+theorem entryAt_committed {cas cas' : Cas} {txn : Txn} {receipt : Receipt} {e : WorkspaceEntry}
     (accepted : cas.commit txn = .ok (receipt, cas')) (member : nodeOf e ∈ txn.nodes) :
     entryAt cas' (address e).digest = .ok e := by
   have found : cas'.store.find (address e).digest = some (nodeOf e) :=
     commit_reads (Cas.commit_store accepted) (nodeOf e) member
   simp only [entryAt, Port.entry]
-  rw [Cas.get_nodeOf (ref := (⟨(address e).digest⟩ : Ref SessionEntry)) e found]
+  rw [Cas.get_nodeOf (ref := (⟨(address e).digest⟩ : Ref WorkspaceEntry)) e found]
 
 theorem originAt_keeps {cas cas' : Cas} (keeps : Keeps cas cas') {d : Digest} {steps : Steps}
     {ch : Chain} (h : originAt cas d steps = .ok ch) : originAt cas' d steps = .ok ch := by
@@ -341,7 +341,7 @@ theorem walk_length (cas : Cas) :
 
 /-! ## Replay composes -/
 
-/-- One replay step, by its value. Helper of `session-load-own`. -/
+/-- One replay step, by its value. Helper of `workspace-load-own`. -/
 theorem replay_cons (o : Oracle) (index : Nat) (s : State) (a : Action)
     (after : Option (Ref Program.NativeEff)) (rest : Steps) :
     (replay o index s ((a, after) :: rest)).value =
@@ -417,13 +417,13 @@ theorem replay_transcript (o : Oracle) :
 /-! ## Loading an extended chain -/
 
 /-- A chain extended in a store that keeps its reads, by an entry at the next index, reads back
-extended. Helper of `session-load-own`. -/
-theorem chainAt_extend {cas cas' : Cas} (keeps : Keeps cas cas') {parent : Ref SessionEntry}
+extended. Helper of `workspace-load-own`. -/
+theorem chainAt_extend {cas cas' : Cas} (keeps : Keeps cas cas') {parent : Ref WorkspaceEntry}
     {ch : Chain} (base : chainAt cas parent.digest = .ok ch) {a : Action}
     {after : Option (Ref Program.NativeEff)}
-    (resident : entryAt cas' (address (SessionEntry.action parent ch.steps.length a after)).digest =
-      .ok (SessionEntry.action parent ch.steps.length a after)) :
-    chainAt cas' (address (SessionEntry.action parent ch.steps.length a after)).digest =
+    (resident : entryAt cas' (address (WorkspaceEntry.action parent ch.steps.length a after)).digest =
+      .ok (WorkspaceEntry.action parent ch.steps.length a after)) :
+    chainAt cas' (address (WorkspaceEntry.action parent ch.steps.length a after)).digest =
       .ok {ch with steps := ch.steps ++ [(a, after)]} := by
   unfold chainAt
   rw [resident]
@@ -455,8 +455,8 @@ theorem chainAt_extend {cas cas' : Cas} (keeps : Keeps cas cas') {parent : Ref S
       rfl
 
 /-- A chain that loads to `s`, extended by the entry `serve` accepts next, loads to the next
-state. Helper of `session-load-own`. -/
-theorem load_extend {o : Oracle} {cas cas' : Cas} (keeps : Keeps cas cas') {parent : Ref SessionEntry}
+state. Helper of `workspace-load-own`. -/
+theorem load_extend {o : Oracle} {cas cas' : Cas} (keeps : Keeps cas cas') {parent : Ref WorkspaceEntry}
     {s next : State} {a : Action} {reply : Reply} {answer : Answer}
     (base : (load o cas parent).value = .ok s)
     (served : (serve o s (.act a)).value = (next, reply)) (accepted : reply.result = .ok answer)
@@ -504,7 +504,7 @@ theorem root?_name {store : Store} {name : String} {root : Root} (h : store.root
   have holds := List.find?_some h
   exact of_decide_eq_true holds
 
-/-- An accepted move leaves its root naming its target. Helper of `session-load-own`. -/
+/-- An accepted move leaves its root naming its target. Helper of `workspace-load-own`. -/
 theorem move_root {store next : Store} {move : Move} {outcome : MoveOutcome}
     (h : store.move move = .ok (outcome, next)) :
     ∃ root, next.root? (moveName move) = some root ∧ root.head.digest = (moveTarget move).digest := by
@@ -554,7 +554,7 @@ theorem move_root {store next : Store} {move : Move} {outcome : MoveOutcome}
                   rfl
 
 /-- An accepted one-move commit leaves the move's root naming its target. Helper of
-`session-load-own`. -/
+`workspace-load-own`. -/
 theorem commit_move_root {store next : Store} {nodes : List Node} {move : Move} {receipt : Receipt}
     (h : store.commit ⟨nodes, [move]⟩ = .ok (receipt, next)) :
     ∃ root, next.root? (moveName move) = some root ∧ root.head.digest = (moveTarget move).digest := by
@@ -576,7 +576,7 @@ theorem commit_move_root {store next : Store} {nodes : List Node} {move : Move} 
 
 /-! ## Resolving a base -/
 
-theorem loaded_ok {o : Oracle} {cas : Cas} {entry : Ref SessionEntry} {publish : Publish}
+theorem loaded_ok {o : Oracle} {cas : Cas} {entry : Ref WorkspaceEntry} {publish : Publish}
     {resolved : Resolved} (h : (loaded o cas entry publish).value = .ok resolved) :
     resolved.publish = publish ∧ (load o cas entry).value = .ok resolved.state := by
   have unfolded : (loaded o cas entry publish).value =
@@ -598,7 +598,7 @@ theorem loaded_ok {o : Oracle} {cas : Cas} {entry : Ref SessionEntry} {publish :
     subst h
     exact ⟨rfl, rfl⟩
 
-/-- What a resolved base holds. Helper of `session-load-own`. -/
+/-- What a resolved base holds. Helper of `workspace-load-own`. -/
 theorem resolve_publish {o : Oracle} {cas : Cas} {base : Base} {resolved : Resolved}
     (h : (resolve o cas base).value = .ok resolved) :
     (∃ name, resolved.publish = .create name ∧ resolved.state = empty) ∨
@@ -634,7 +634,7 @@ theorem resolve_publish {o : Oracle} {cas : Cas} {base : Base} {resolved : Resol
     · obtain ⟨hp, hl⟩ := loaded_ok h
       exact Or.inr (Or.inr (Or.inl ⟨name, parent, hp, hl⟩))
 
-/-- A new session's origin loads to the empty state. Helper of `session-load-own`. -/
+/-- A new workspace's origin loads to the empty state. Helper of `workspace-load-own`. -/
 theorem load_origin {o : Oracle} {cas : Cas} {engine : Digest} {d : Digest}
     (h : entryAt cas d = .ok (.origin protocolVersion codecVersion engine)) :
     (load o cas ⟨d⟩).value = .ok empty := by
@@ -643,9 +643,9 @@ theorem load_origin {o : Oracle} {cas : Cas} {engine : Digest} {d : Digest}
   simp only [and_self, if_true]
   rfl
 
-/-! ## Loading a session's own chain -/
+/-! ## Loading a workspace's own chain -/
 
-/-- **Loading a session's own chain gives back its state** (`session-load-own`). After an exchange
+/-- **Loading a workspace's own chain gives back its state** (`workspace-load-own`). After an exchange
 commits an accepted action, loading the head it reports gives the state `serve` reached from the
 resolved base: replay re-establishes the history, with no host effect repeated. -/
 @[semantics "host-session-protocol" (requirement := R6)]

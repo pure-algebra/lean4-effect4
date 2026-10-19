@@ -11,7 +11,7 @@ let of_program =
   else Effect4_gen.Api_gen.run_tree_of_program
 let _tree = of_program [] 100 program
 let (_ : Effect4.Store.Val.t) = Effect4.Store.Val.Nat 7
-let (_ : Effect4.Tool.Native.Session.t) = Effect4.Tool.Native.start
+let (_ : Effect4.Tool.Native.Workspace.t) = Effect4.Tool.Native.start
 let (_ : Effect4.Program.Check.Memo.t) = Effect4.Program.Check.Memo.empty
 let (_ : Effect4_gen.Api_gen.memo) = Effect4.Program.Check.Memo.empty
 let _loop_with = Effect4.Program.Authoring.loop_with

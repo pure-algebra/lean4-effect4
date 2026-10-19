@@ -1,11 +1,11 @@
-import Effect4.Tool.Session
+import Effect4.Tool.Workspace
 import Effect4.Tool.Serve
 
 /-!
-# Tool.Exchange — sessions over the store (seams ST4)
+# Tool.Exchange — workspaces over the store (seams ST4)
 
-A session is a journal root `session/<name>` over a chain of `SessionEntry` nodes
-(`Tool/Session.lean`). `Exchange.load` reads a chain back into a tool state, and
+A workspace is a journal root `workspace/<name>` over a chain of `WorkspaceEntry` nodes
+(`Tool/Workspace.lean`). `Exchange.load` reads a chain back into a tool state, and
 `Exchange.apply` serves one request at a base and publishes an accepted action.
 
 **Loading**, in six steps, each with its refusal:
@@ -27,7 +27,7 @@ replays and every `after` matches, as `Core.Validated` reruns validation when tr
 serve; publish nothing for a query or a refused request; commit an accepted action's entry, the
 schemas and program it needs, and the head move in one `Cas.commit`. The commit's own head
 comparison catches a race after resolution, A→B→A included (`staleBase`). `staleBase` names a
-moved session head; a moved document revision stays the tool's own `stale` refusal, inside the
+moved workspace head; a moved document revision stays the tool's own `stale` refusal, inside the
 reply. An exact-entry base serves queries only (`readOnly`).
 
 `Port` owns the four store operations: typed entries, roots, schema membership and commit.
@@ -76,14 +76,14 @@ namespace Exchange
 The native disk adapter must represent host faults separately from model refusals.
 `contains` serves schema publication, which needs no node payload. -/
 class Port (σ : Type) where
-  entry : σ → Digest → Except LoadRefusal SessionEntry
+  entry : σ → Digest → Except LoadRefusal WorkspaceEntry
   root : σ → String → Option Root
   contains : σ → Digest → Bool
   commit : σ → Txn → Except TxnRefusal (Receipt × σ)
 
 /-- The existing reached store supplies the exchange's model instance. -/
 instance casPort : Port Cas where
-  entry cas d := match Cas.get (α := SessionEntry) cas ⟨d⟩ with
+  entry cas d := match Cas.get (α := WorkspaceEntry) cas ⟨d⟩ with
     | .error why => .error (.unreadable d why)
     | .ok entry => .ok entry
   root cas name := cas.store.root? name
@@ -93,7 +93,7 @@ instance casPort : Port Cas where
 variable {σ : Type} [Port σ]
 
 /-- The entry at an address, through the port's typed read. -/
-def entryAt (cas : σ) (d : Digest) : Except LoadRefusal SessionEntry :=
+def entryAt (cas : σ) (d : Digest) : Except LoadRefusal WorkspaceEntry :=
   Port.entry cas d
 
 /-- The origin a first action names. -/
@@ -144,7 +144,7 @@ def replay (o : Oracle) : Nat → State → Steps → Checked (Except LoadRefusa
     | .ok next => replay o (index + 1) next rest
 
 /-- **Load a chain** into a tool state: the six steps above. -/
-def load (o : Oracle) (cas : σ) (head : Ref SessionEntry) : Checked (Except LoadRefusal State) :=
+def load (o : Oracle) (cas : σ) (head : Ref WorkspaceEntry) : Checked (Except LoadRefusal State) :=
   match chainAt cas head.digest with
   | .error why => pure (.error why)
   | .ok chain =>
@@ -152,13 +152,13 @@ def load (o : Oracle) (cas : σ) (head : Ref SessionEntry) : Checked (Except Loa
       replay o 0 empty chain.steps
     else pure (.error (.version chain.protocol chain.codec))
 
-/-- Where a request starts: an exact entry (queries only), a named session's head, or a new
-session continuing from an entry. -/
+/-- Where a request starts: an exact entry (queries only), a named workspace's head, or a new
+workspace continuing from an entry. -/
 inductive Base where
-  | at_ (entry : Ref SessionEntry)
-  /-- `none` creates the session -/
+  | at_ (entry : Ref WorkspaceEntry)
+  /-- `none` creates the workspace -/
   | head (name : String) (expected : Option (Head Digest))
-  | fork (from_ : Ref SessionEntry) (name : String)
+  | fork (from_ : Ref WorkspaceEntry) (name : String)
 
 /-- One request at a base. -/
 structure Envelope where
@@ -170,25 +170,25 @@ inductive Refusal where
   | load (why : LoadRefusal)
   /-- an action at an exact-entry base -/
   | readOnly
-  /-- the session head is not the expected one, before serving or at the commit -/
+  /-- the workspace head is not the expected one, before serving or at the commit -/
   | staleBase (name : String) (expected actual : Option (Head Digest))
   /-- the store refused the publication for another reason -/
   | store (why : TxnRefusal)
 
-/-- A named session's root. -/
-def rootName (name : String) : String := "session/" ++ name
+/-- A named workspace's root. -/
+def rootName (name : String) : String := "workspace/" ++ name
 
 /-- Where an accepted action publishes. -/
 inductive Publish where
   | readOnly
-  /-- a new session: an origin, then the action -/
+  /-- a new workspace: an origin, then the action -/
   | create (name : String)
-  /-- the session's next entry, after the expected head -/
+  /-- the workspace's next entry, after the expected head -/
   | advance (name : String) (head : Head Digest)
-  /-- a new session continuing from an entry -/
-  | fork (name : String) (parent : Ref SessionEntry)
+  /-- a new workspace continuing from an entry -/
+  | fork (name : String) (parent : Ref WorkspaceEntry)
 
-/-- The session a publication names. -/
+/-- The workspace a publication names. -/
 def Publish.name? : Publish → Option String
   | .readOnly => none
   | .create name | .advance name _ | .fork name _ => some name
@@ -199,7 +199,7 @@ structure Resolved where
   publish : Publish
 
 /-- Load a base's state, or refuse. -/
-def loaded (o : Oracle) (cas : σ) (entry : Ref SessionEntry) (publish : Publish) :
+def loaded (o : Oracle) (cas : σ) (entry : Ref WorkspaceEntry) (publish : Publish) :
     Checked (Except Refusal Resolved) := do
   match ← load o cas entry with
   | .error why => pure (.error (.load why))
@@ -227,12 +227,12 @@ def resolve (o : Oracle) (cas : σ) : Base → Checked (Except Refusal Resolved)
 specification and, with a program, the program's. -/
 def schemas (cas : σ) (program : Bool) : List Node :=
   (if Port.contains cas genesisAddress then [] else [genesisNode]) ++
-  (if Port.contains cas (specOf SessionEntry) then [] else [nodeOf (shape SessionEntry).document]) ++
+  (if Port.contains cas (specOf WorkspaceEntry) then [] else [nodeOf (shape WorkspaceEntry).document]) ++
   (if program ∧ !Port.contains cas (specOf Program.NativeEff)
     then [nodeOf (shape Program.NativeEff).document] else [])
 
 /-- The entry an accepted action appends after `parent`, from the state it was served at. -/
-def entryAfter (parent : Ref SessionEntry) (s : State) (a : Action) (next : State) : SessionEntry :=
+def entryAfter (parent : Ref WorkspaceEntry) (s : State) (a : Action) (next : State) : WorkspaceEntry :=
   .action parent s.transcript.length a (afterOf next.raw)
 
 /-- The nodes before an action's entry: the missing schemas and the program after it. -/
@@ -245,7 +245,7 @@ def publication (engine : Digest) (cas : σ) (s : State) (a : Action) (next : St
     Publish → Option Txn
   | .readOnly => none
   | .create name =>
-    let origin : SessionEntry := .origin protocolVersion codecVersion engine
+    let origin : WorkspaceEntry := .origin protocolVersion codecVersion engine
     let entry := entryAfter (address origin) s a next
     some ⟨support cas next ++ [nodeOf origin, nodeOf entry],
       [.create (rootName name) .journal ⟨.entry, (address entry).digest⟩]⟩
@@ -258,7 +258,7 @@ def publication (engine : Digest) (cas : σ) (s : State) (a : Action) (next : St
     some ⟨support cas next ++ [nodeOf entry],
       [.create (rootName name) .journal ⟨.entry, (address entry).digest⟩]⟩
 
-/-- The session head after an exchange, where the base names a session. -/
+/-- The workspace head after an exchange, where the base names a workspace. -/
 def headOf (cas : σ) (publish : Publish) : Option (Head Digest) :=
   publish.name?.bind fun name => (Port.root cas (rootName name)).map Root.head
 
@@ -277,7 +277,7 @@ def finish (engine : Digest) (cas : σ) (resolved : Resolved) (request : Request
       | .error why => .error (.store why)
   | _, _ => .ok (reply, headOf cas resolved.publish, cas)
 
-/-- **Serve one request at a base**: the reply, the session head, and the store. A query and a
+/-- **Serve one request at a base**: the reply, the workspace head, and the store. A query and a
 refused request publish nothing; an accepted action commits once. -/
 def apply (o : Oracle) (engine : Digest) (cas : σ) (env : Envelope) :
     Checked (Except Refusal (Reply × Option (Head Digest) × σ)) := do

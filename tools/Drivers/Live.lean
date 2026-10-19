@@ -10,7 +10,7 @@ import Effect4.Store.Domain.ProgramWire
     lake env lean --run tools/Drivers/Live.lean [FLAGS] build NAME
 
 It holds one tool state and its retained picture (`Tools.View.Live`). It reads one request
-envelope a line, as `tools/Drivers/Session.lean` reads them (`Tools.WireText`), from its standard input or from the
+envelope a line, as `tools/Drivers/Workspace.lean` reads them (`Tools.WireText`), from its standard input or from the
 build of a corpus program (`Build.requests`, with `build NAME`). For each request it writes the
 answer, one JSON object, to its standard error, and the patch rows to its standard output, ending
 with `E`. A blank line is skipped, and a line that does not read is answered with its refusal.
