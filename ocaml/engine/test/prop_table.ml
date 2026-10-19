@@ -1,14 +1,16 @@
 (* prop_table.ml — the property tests of E4_table (lane C, docs/research/
-   2026-09-08-engine-a1-state.md §4.1 T1-T8 and §7 R6).
+   2026-09-08-engine-a1-state.md §4.1 T1-T8 and §7 R6; T9, of_list, since the mutant campaign
+   of 2026-10-18).
 
    Every law of e4_table.mli is one named PASS/FAIL line.  The differential runs a fixed LCG
-   over the operation alphabet against e4_table_list.ml — the list twin that reproduces
-   Lean's carrier operation for operation — and compares BOTH the answer of each operation
-   and the full `bindings` after it.  Exit code 0 iff every line passed.
+   over the operation alphabet against `Lean` below — Lean's carrier written out, an
+   association list in allocation order under the List operations the machine applies — and
+   compares BOTH the answer of each operation and the full `bindings` after it.  Exit code 0
+   iff every line passed.
 
-   The first thing this file does is a COMPILE-TIME check that both carriers satisfy the
+   The first thing this file does is a COMPILE-TIME check that the carrier satisfies the
    TABLE module type as lane G will emit it into the generated functor (A1 §1.5, verbatim).
-   If a carrier drifts from the contract, this file stops compiling. *)
+   If the carrier drifts from the contract, this file stops compiling. *)
 
 open Effect4_engine
 
@@ -35,20 +37,64 @@ module type TABLE = sig
 end
 
 module _ : TABLE = E4_table
-module _ : TABLE = E4_table_list
 
 [@@@warning "+32"]
 
 module T = E4_table
-module L = E4_table_list
 
-let failures = ref 0
+(* Lean's carrier, the model: the association list in ALLOCATION order, each operation the List
+   function the machine applies (e4_table.mli names the Lean line of each).  `bindings` sorts by
+   key, so the model answers the questions E4_table answers; on a monotone allocation the two
+   orders coincide (TL2). *)
+module L = struct
+  type 'a t = (int * 'a) list
 
-let check name ok =
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
+  let empty : 'a t = []
+  let mem (k : int) (t : 'a t) : bool = List.exists (fun (k', _) -> k' = k) t
 
+  (* `List.find?`: the first binding *)
+  let find_opt (k : int) (t : 'a t) : 'a option =
+    List.find_map (fun (k', v) -> if k' = k then Some v else None) t
+  ;;
+
+  (* replace-by-key `List.map`, a no-op on an absent key *)
+  let set (k : int) (v : 'a) (t : 'a t) : 'a t =
+    if mem k t then List.map (fun (k', v') -> if k' = k then k', v else k', v') t else t
+  ;;
+
+  (* `xs ++ [(k, v)]` when the key is fresh *)
+  let add (k : int) (v : 'a) (t : 'a t) : 'a t =
+    if mem k t then set k v t else t @ [ k, v ]
+  ;;
+
+  let remove (k : int) (t : 'a t) : 'a t = List.filter (fun (k', _) -> k' <> k) t
+  let cardinal (t : 'a t) : int = List.length t
+  let map (f : 'a -> 'a) (t : 'a t) : 'a t = List.map (fun (k, v) -> k, f v) t
+
+  let bindings (t : 'a t) : (int * 'a) list =
+    List.stable_sort (fun (a, _) (b, _) -> Int.compare a b) t
+  ;;
+
+  let to_list (t : 'a t) : 'a list = List.map snd (bindings t)
+
+  let filter_map (f : int -> 'a -> 'b option) (t : 'a t) : 'b list =
+    List.filter_map (fun (k, v) -> f k v) (bindings t)
+  ;;
+
+  let for_all (f : int -> 'a -> bool) (t : 'a t) : bool =
+    List.for_all (fun (k, v) -> f k v) t
+  ;;
+
+  let fold (f : int -> 'a -> 'b -> 'b) (t : 'a t) (init : 'b) : 'b =
+    List.fold_left (fun acc (k, v) -> f k v acc) init (bindings t)
+  ;;
+
+  let of_list (l : (int * 'a) list) : 'a t =
+    List.fold_left (fun t (k, v) -> add k v t) empty l
+  ;;
+end
+
+let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [by construction: %s]\n" name why
 
 (* ------------------------------------------------------------------ the LCG.
@@ -79,7 +125,7 @@ let show_bindings b =
 
 let show_ints l = String.concat "," (List.map string_of_int l)
 
-(* A random table and the same table in the twin, built by the same op sequence. *)
+(* A random table and the same table in the model, built by the same op sequence. *)
 let build n key_space =
   let a = ref T.empty
   and b = ref L.empty in
@@ -293,7 +339,7 @@ let t6 nops =
        ba
        bl);
   check
-    (Printf.sprintf "T6 agreement with the list twin over %d random ops" nops)
+    (Printf.sprintf "T6 agreement with Lean's list over %d random ops" nops)
     (match !bad with
      | None -> true
      | Some _ -> false)
@@ -371,9 +417,26 @@ let r6 () =
     !ok_b
 ;;
 
-(* ------------------------------------------------------------------ the twin's own law *)
+(* ------------------------------------------------------------------ T9 *)
+(* No check read `of_list` until the mutant campaign's T12, which builds it with `set` and so
+   answers the empty table, passed every test (docs/research/2026-10-18-slices/
+   w2-engine-mutants/).  The lists repeat keys, so a later pair replaces an earlier one. *)
+let t9 () =
+  reset ();
+  let ok = ref true in
+  for _ = 1 to 200 do
+    let l = List.init (rand 40) (fun _ -> rand 30, rand 1000) in
+    let a = T.of_list l
+    and b = L.of_list l in
+    if show_bindings (T.bindings a) <> show_bindings (L.bindings b) then ok := false;
+    if T.cardinal a <> L.cardinal b then ok := false
+  done;
+  check "T9 of_list is the fold of add: the bindings and the cardinal of Lean's list" !ok
+;;
+
+(* ------------------------------------------------------------------ the model's own law *)
 let tl2 () =
-  (* TL2: for a monotone (machine-reachable) allocation sequence the twin's INSERTION order
+  (* TL2: for a monotone (machine-reachable) allocation sequence Lean's INSERTION order
      and its ascending `bindings` coincide — the licence A1 §4.2 states for the fiber table
      and `refStep` and `DeferredStore.make` (src/Effect4/Machine/Stores.lean) state for the dense heaps. *)
   let ok = ref true in
@@ -383,10 +446,10 @@ let tl2 () =
        for i = 0 to n - 1 do
          b := L.add i (i * 7) !b
        done;
-       if L.insertion_order !b <> L.to_list !b then ok := false;
-       if L.raw !b <> L.bindings !b then ok := false)
+       if List.map snd !b <> L.to_list !b then ok := false;
+       if !b <> L.bindings !b then ok := false)
     [ 0; 1; 8; 9; 100; 1000 ];
-  check "TL2 the twin's insertion order = ascending bindings on monotone allocation" !ok
+  check "TL2 Lean's insertion order = ascending bindings on monotone allocation" !ok
 ;;
 
 let () =
@@ -401,10 +464,7 @@ let () =
     "T8 snapshot = the value"
     "'a t is a record of an int and an immutable list or Map; no mutable field anywhere";
   r6 ();
+  t9 ();
   tl2 ();
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

@@ -14,8 +14,9 @@
    spelling.
 
    This module satisfies the generated functor's `LAYERS` signature (A1 §1.5) verbatim;
-   `e4_memo_list.ml` is its list twin and satisfies the same signature.  Both ascriptions are
-   checked at compile time in test/prop_memo.ml.
+   test/reference/e4_memo_list.ml, in the test library e4_reference, is its list twin and
+   satisfies the same signature.  Both ascriptions are checked at compile time in
+   test/prop_memo.ml.
 
    Depends on: the OCaml standard library only (Map.Make over `key`, with an EXPLICIT
    lexicographic comparison — a concrete type and a written comparison, so

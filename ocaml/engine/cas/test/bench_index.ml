@@ -7,7 +7,7 @@
 
      bench_index [dir] [rebuild_nodes] [node_bytes]
 
-   Defaults: a directory under $E4_INDEX_TMP (or the system temp dir), 100 000 nodes of 256
+   Defaults: a directory under the system's temporary directory (TMPDIR), 100 000 nodes of 256
    bytes.  Run it on the LINUX filesystem, never under /mnt/c (A2 §6.2 measures a 72x read
    penalty on 9p).
 
@@ -214,12 +214,10 @@ let () =
   let dir =
     if Array.length argv > 1
     then argv.(1)
-    else (
-      let base =
-        try Sys.getenv "E4_INDEX_TMP" with
-        | Not_found -> Filename.get_temp_dir_name ()
-      in
-      Filename.concat base (Printf.sprintf "e4bench-index-%d" (Unix.getpid ())))
+    else
+      Filename.concat
+        (Filename.get_temp_dir_name ())
+        (Printf.sprintf "e4bench-index-%d" (Unix.getpid ()))
   in
   let n = if Array.length argv > 2 then int_of_string argv.(2) else 100_000 in
   let node_bytes = if Array.length argv > 3 then int_of_string argv.(3) else 256 in

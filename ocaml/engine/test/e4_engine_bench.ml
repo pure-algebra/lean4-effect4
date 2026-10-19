@@ -1,4 +1,4 @@
-(* e4_engine_bench.ml -- lane B: the bench matrix, one binary, three engines.
+(* e4_engine_bench.ml -- lane B: the bench matrix, one binary, two engines.
 
    What it is: the W1-W4 matrix of docs/research/2026-09-07-probe-stores-performance.md
    §6.2 and docs/research/2026-09-08-engine-a1-state.md §6.4, plus the domain sweep of
@@ -17,16 +17,14 @@
      row/s  one TRACE ROW produced.  W2 and W4 need it, because their decision count is a
             constant 2 while their work grows with n.
 
-   THE THREE ENGINES.
+   THE TWO ENGINES.
      Gen   `E4_engine.Make (Api_gen)` -- `ocaml/gen/api_gen.ml` as generated, Lean's List
            carriers, no externs and no lane-G2 point fix.  The untouched oracle.
-     Ref   `Api_engine.Make (E4_table_list) (E4_trace_list) (E4_memo_list) (E4_buckets_list)`
-           -- the seam's generated file (so the G2 point carriers ARE in it) over list twins
-           of the four substituted carriers.
-     Fast  the same generated file over the substituted carriers.
-   `Api_gen_inst` (api_gen_inst.ml, in the test-support library beside this file) is the third
+     Fast  the seam's generated file over the substituted carriers.
+   `Api_gen_inst` (api_gen_inst.ml, in the test-support library beside this file) is the oracle
    engine, the same one lane X's differential uses; the ascription `E4_engine.Make` is itself the
-   check that the transcription is right.
+   check that the transcription is right.  A third engine, `Ref` (the seam's file over list
+   twins of the carriers), was deleted on 2026-10-18 with its carriers.
 
    METHOD.  Wall clock (`Unix.gettimeofday`), best of 5 with the median beside it,
    `Gc.compact ()` between reps, `Sys.opaque_identity` on every result, iterations
@@ -43,10 +41,10 @@
 open Effect4_engine
 module Ty = Eff_types
 
-(* ==================================================================== the third engine *)
+(* ==================================================================== the oracle *)
 
-(* The third engine is `Api_gen_inst` (api_gen_inst.ml, beside this file), the one the
-   differential uses. *)
+(* The oracle is `Api_gen_inst` (api_gen_inst.ml, beside this file), the one the differential
+   uses. *)
 
 module Gen_engine = E4_engine.Make (Api_gen_inst)
 
@@ -201,10 +199,9 @@ module Mk (En : E4_engine.ENGINE) = struct
 end
 
 module M_gen = Mk (Gen_engine)
-module M_ref = Mk (E4_engine.Ref)
 module M_fast = Mk (E4_engine.Fast)
 
-let engines = [ M_gen.eng; M_ref.eng; M_fast.eng ]
+let engines = [ M_gen.eng; M_fast.eng ]
 
 (* ==================================================================== the programs *)
 
@@ -319,7 +316,7 @@ let getf k = List.assoc_opt k !acc_f
 
 let w1 () =
   print_endline "";
-  print_endline "## W1 — the nine truth programs and the 37 byte goldens, three engines";
+  print_endline "## W1 — the nine truth programs and the 37 byte goldens, two engines";
   print_endline "";
   Printf.printf
     "Step unit: **dec/s** = host decisions applied (one `drive` = 2: `evaluate 0` then \
@@ -332,10 +329,9 @@ let w1 () =
   let one_table (title : string) (tag : string) (ps : Corpora.program list) (fuel : int) =
     Printf.printf "### %s (fuel %d)\n\n" title fuel;
     Printf.printf
-      "| program | outcome | rows | fibers | Gen drive dec/s | Ref drive dec/s | Fast \
-       drive dec/s | Fast/Gen | Fast api dec/s | Fast row/s |\n";
-    Printf.printf
-      "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n";
+      "| program | outcome | rows | fibers | Gen drive dec/s | Fast drive dec/s | \
+       Fast/Gen | Fast api dec/s | Fast row/s |\n";
+    Printf.printf "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n";
     List.iter
       (fun (p : Corpora.program) ->
          match
@@ -344,7 +340,7 @@ let w1 () =
          with
          | None ->
            Printf.printf
-             "| %s | (raised) | — | — | — | — | — | — | — | — |\n%!"
+             "| %s | (raised) | — | — | — | — | — | — | — |\n%!"
              p.Corpora.name
          | Some (rows, fibers, outcome) ->
            let cells =
@@ -366,7 +362,6 @@ let w1 () =
              | _ -> nan
            in
            let g = d "Gen"
-           and r = d "Ref"
            and f = d "Fast" in
            let api =
              try measure (M_fast.eng.e_api p.Corpora.eff ~fuel) with
@@ -375,13 +370,12 @@ let w1 () =
            recordf (tag ^ ".drive.fast." ^ p.Corpora.name) f;
            recordf (tag ^ ".drive.gen." ^ p.Corpora.name) g;
            Printf.printf
-             "| %s | %s | %d | %d | %s | %s | %s | %.2f× | %s | %s |\n%!"
+             "| %s | %s | %d | %d | %s | %s | %.2f× | %s | %s |\n%!"
              p.Corpora.name
              outcome
              rows
              fibers
              (fnum g)
-             (fnum r)
              (fnum f)
              (f /. g)
              (fnum (rate 2 api.c_best))
@@ -398,7 +392,7 @@ let w1 () =
 
 let w2 () =
   print_endline "";
-  print_endline "## W2 — chain of `refMake`, n = 100/300/1000/2000/8000, three engines";
+  print_endline "## W2 — chain of `refMake`, n = 100/300/1000/2000/8000, two engines";
   print_endline "";
   Printf.printf
     "Step unit: **row/s** = trace rows produced (chain n leaves `2n + 3`). fuel = `8n + \
@@ -450,7 +444,7 @@ let w2 () =
 
 let w3 () =
   print_endline "";
-  print_endline "## W3 — the Lean corpus (`make corpus`), three engines";
+  print_endline "## W3 — the Lean corpus (`make corpus`), two engines";
   print_endline "";
   Printf.printf
     "Corpus: `%s` — %d programs indexed, %d decoded, %d well typed by Lean.  fuel 1000.  \
@@ -541,7 +535,7 @@ let w4_body_probe () =
 
 let w4 () =
   print_endline "";
-  print_endline "## W4 — fan-out N ∈ {1, 8, 64, 512} × M ∈ {1, 16, 256}, three engines";
+  print_endline "## W4 — fan-out N ∈ {1, 8, 64, 512} × M ∈ {1, 16, 256}, two engines";
   print_endline "";
   Printf.printf
     "`forkN N M` = N children, each running the body M times then `succeed 0`. fuel = \

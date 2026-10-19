@@ -1,6 +1,4 @@
-(* Properties: checked images freeze bytes, roots, and durable boundary; preflight refuses
-   without writing; reopened stores retain complete heads; damage is a fault value.
-   These are finite controls of the actual disk writer, not a universal IO theorem. *)
+(* Disk_test_support -- see disk_test_support.mli. *)
 open Effect4_engine_cas
 
 let require condition message = if not condition then failwith message
@@ -12,24 +10,10 @@ let get = function
 
 let opts = { E4_cas.default_opts with seg_max = 512; index_slots = 16 }
 
-let temp () =
-  let path = Filename.temp_file ?temp_dir:(Sys.getenv_opt "E4_DISK_TMP") "e4-st2-" "" in
-  Sys.remove path;
-  Unix.mkdir path 0o700;
-  path
-;;
-
-let rec remove path =
-  if Sys.is_directory path
-  then (
-    Unix.chmod path 0o700;
-    Array.iter (fun name -> remove (Filename.concat path name)) (Sys.readdir path);
-    Unix.rmdir path)
-  else (
-    Unix.chmod path 0o600;
-    Sys.remove path)
-;;
-
+(* A fresh scratch directory under the system's temporary directory, and its removal with every
+   sealed entry under it: the harness's (E4_check). *)
+let temp () = E4_check.temp_dir "e4-st2-"
+let remove = E4_check.remove_tree
 let framed = E4_be.framed
 let vstr value = framed Eff_frame.tag_string value
 

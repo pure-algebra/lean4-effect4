@@ -1,0 +1,13 @@
+P01 e4_ppath.ml: snoc descends from the root instead of the current node
+
+--- a/ocaml/engine/e4_ppath.ml
++++ b/ocaml/engine/e4_ppath.ml
+@@ -14,7 +14,7 @@
+   ; node =
+       (match p.node with
+        | None -> None
+-       | Some n -> child n i)
++       | Some _ -> child p.base i)
+   ; base = p.base
+   }
+ ;;

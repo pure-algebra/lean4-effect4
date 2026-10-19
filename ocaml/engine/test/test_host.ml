@@ -24,12 +24,7 @@
 
 open Effect4_engine
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s %s\n%!" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
+let check = E4_check.check
 
 let raises_invalid f =
   match f () with
@@ -572,10 +567,4 @@ let () =
      && !checksum = n * (n - 1) / 2)
 ;;
 
-let () =
-  Printf.printf
-    "== %s: %d failure(s) ==\n%!"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
-;;
+let () = E4_check.finish ()

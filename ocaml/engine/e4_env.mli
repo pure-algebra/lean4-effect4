@@ -15,8 +15,8 @@
    the other end.
 
    This module satisfies the generated functor's `PENV` signature (src/OCaml5/Lcnf/
-   Externs.lean `carrierSignatures`) verbatim; `e4_env_list.ml` is its list twin and
-   satisfies the same signature.  Both ascriptions are checked in test/prop_point.ml.
+   Externs.lean `carrierSignatures`) verbatim; the ascription is checked in
+   test/prop_point.ml, whose model is Lean's list.
 
    Depends on: the OCaml standard library only (List).
 
@@ -32,7 +32,7 @@
    PE5 to_list (take e k) = List.take k (to_list e), including k >= length e (Lean's
        `List.take` clamps), and the result SHARES the tail of the spine       tested
    PE6 persistence: `e` is unchanged by any snoc/take on it                   tested
-   PE7 agreement with the list twin on random operation sequences             tested
+   PE7 agreement with Lean's list on random operation sequences               tested
    Bound: the environment is unbounded in Lean; on this host it is bounded by the heap. *)
 
 type 'a t

@@ -25,7 +25,7 @@
 
    Properties:
    P1  Each program crosses as its canonical bytes: `of_bytes` reads exactly one program, on
-       BOTH instances (Fast and Ref).                                    tested (twelve runs)
+       BOTH instances (Fast and Gen).                                    tested (twelve runs)
    P2  On each instance the run finishes, and the root's exit is the exit Lean wrote.
                                                                          tested (twelve runs)
    P3  The two instances give one report: outcome, exits, fiber rows, trace rows, store row.
@@ -42,14 +42,7 @@
 
 open Effect4_engine
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
+let check = E4_check.check
 
 (* ================================================================ the fixture's text *)
 
@@ -140,7 +133,9 @@ module Rep (En : E4_engine.ENGINE) = struct
 end
 
 module RF = Rep (E4_engine.Fast)
-module RR = Rep (E4_engine.Ref)
+
+(* The generated machine, ocaml/gen/api_gen.ml over Lean's lists: the second instance. *)
+module RG = Rep (E4_engine.Make (Api_gen_inst))
 
 let find_fixture () : string =
   let candidates =
@@ -201,13 +196,13 @@ let () =
            r.name
            (String.length r.program)
            r.fuel;
-         match RF.report r.program ~fuel:r.fuel, RR.report r.program ~fuel:r.fuel with
+         match RF.report r.program ~fuel:r.fuel, RG.report r.program ~fuel:r.fuel with
          | Some fast, Some slow ->
            check (r.name ^ ": P1 the program's bytes decode on both instances") true;
            check (r.name ^ ": P2 Fast finishes") (fast.outcome = "finished");
-           check (r.name ^ ": P2 Ref finishes") (slow.outcome = "finished");
+           check (r.name ^ ": P2 Gen finishes") (slow.outcome = "finished");
            Printf.printf
-             "  Lean's exit: %s\n  Fast's exit: %s\n  Ref's exit:  %s\n"
+             "  Lean's exit: %s\n  Fast's exit: %s\n  Gen's exit:  %s\n"
              r.exit_text
              (Option.value fast.root ~default:"-")
              (Option.value slow.root ~default:"-");
@@ -215,19 +210,19 @@ let () =
              (r.name ^ ": P2 Fast's root exit is the exit Lean wrote")
              (fast.root = Some r.exit_text);
            check
-             (r.name ^ ": P2 Ref's root exit is the exit Lean wrote")
+             (r.name ^ ": P2 Gen's root exit is the exit Lean wrote")
              (slow.root = Some r.exit_text);
            check
-             (r.name ^ ": P3 Fast = Ref: outcome, exits, fibers, trace, store")
+             (r.name ^ ": P3 Fast = Gen: outcome, exits, fibers, trace, store")
              (fast = slow);
            (* P4: a program cut by one byte is refused *)
            let cut = String.sub r.program 0 (String.length r.program - 1) in
            check
              (r.name ^ ": P4 a program cut by one byte is refused on both instances")
-             (RF.report cut ~fuel:r.fuel = None && RR.report cut ~fuel:r.fuel = None);
+             (RF.report cut ~fuel:r.fuel = None && RG.report cut ~fuel:r.fuel = None);
            (* P4: at a small fuel the run does not finish *)
            (match
-              RF.report r.program ~fuel:small_fuel, RR.report r.program ~fuel:small_fuel
+              RF.report r.program ~fuel:small_fuel, RG.report r.program ~fuel:small_fuel
             with
             | Some f, Some s ->
               check
@@ -264,6 +259,5 @@ let () =
           && slow <> Some next.exit_text))
     (List.combine runs roots)
     (turned runs);
-  Printf.printf "test_pool: %d checks, %d failures\n" !checks !failures;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;

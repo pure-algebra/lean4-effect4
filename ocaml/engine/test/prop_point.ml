@@ -2,11 +2,11 @@
    2026-09-08-engine-prof-chain.md §5.1; the laws are e4_ppath.mli's PP1-PP7 and
    e4_env.mli's PE1-PE7).
 
-   Every law is one named PASS/FAIL line.  The twins are e4_ppath_list.ml and e4_env_list.ml,
-   which carry the Lean list and reproduce `Point.child`'s `path ++ [i]`, `resolve`'s
-   `Node.at_ (Node.eff root) p.path`, `Point.childWith`'s `env ++ [v]`, `env[i]?`,
-   `List.length` and `List.take` operation for operation — so an agreement failure here is a
-   carrier law, exactly as it is for lane C's five.  Exit code 0 iff every line passed.
+   Every law is one named PASS/FAIL line.  The model is the Lean list written out here:
+   `Point.child`'s `path ++ [i]`, `resolve`'s `Node.at_ (Node.eff root) p.path` (`at_`
+   below), `Point.childWith`'s `env ++ [v]`, `env[i]?` (`List.nth_opt`), `List.length` and
+   `List.take` (`lean_take` below) — so an agreement failure here is a carrier law, exactly as
+   it is for lane C's five.  Exit code 0 iff every line passed.
 
    The PPATH and PENV module types below are the generated functor's own text
    (src/OCaml5/Lcnf/Externs.lean `carrierSignatures`, emitted at ocaml/engine/api_engine.ml):
@@ -49,24 +49,14 @@ module type PENV = sig
 end
 
 module _ : PPATH = E4_ppath
-module _ : PPATH = E4_ppath_list
 module _ : PENV = E4_env
-module _ : PENV = E4_env_list
 
 [@@@warning "+32"]
 
 module P = E4_ppath
-module PL = E4_ppath_list
 module V = E4_env
-module VL = E4_env_list
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [by construction: %s]\n" name why
 
 (* Java's 48-bit LCG, as in lane C's property tests: the constants fit a 63-bit OCaml int
@@ -160,17 +150,14 @@ let pp2 () =
   let deep = !deep in
   let w_shallow = words (fun () -> P.snoc child shallow 1) in
   let w_deep = words (fun () -> P.snoc child deep 1) in
-  let l_shallow =
-    words (fun () -> PL.snoc child (PL.snoc child (PL.make root_tree) 0) 1)
-  in
-  let dl = ref (PL.make root_tree) in
-  for _ = 1 to 2000 do
-    dl := PL.snoc child !dl 0
-  done;
-  let l_deep = words (fun () -> PL.snoc child !dl 1) in
+  (* the control: Lean's `path ++ [i]`, measured by the same instrument *)
+  let shallow_l = [ 0 ] in
+  let deep_l = List.init 2000 (fun _ -> 0) in
+  let l_shallow = words (fun () -> shallow_l @ [ 1 ]) in
+  let l_deep = words (fun () -> deep_l @ [ 1 ]) in
   Printf.printf
-    "  snoc words: E4_ppath depth 1 = %d, depth 2000 = %d;  twin depth 1 = %d, depth \
-     2000 = %d\n"
+    "  snoc words: E4_ppath depth 1 = %d, depth 2000 = %d;  Lean's path ++ [i] depth 1 = \
+     %d, depth 2000 = %d\n"
     w_shallow
     w_deep
     l_shallow
@@ -178,24 +165,40 @@ let pp2 () =
   check
     "PP2 snoc is O(1) words at every depth (the spine is shared)"
     (w_deep <= w_shallow + 2);
-  check "PP2' the twin copies: its snoc grows with the depth" (l_deep > 10 * l_shallow)
+  check
+    "PP2' the control: Lean's path ++ [i] copies, and the same measure sees it grow with \
+     the depth"
+    (l_deep > 10 * l_shallow)
 ;;
 
 let pp3 () =
   let ok = ref true in
-  let p = ref (P.make root_tree)
-  and l = ref [] in
-  (* on the tree, then off it: `rand 5` reaches indices 3 and 4, which no node has *)
-  for _ = 1 to 60 do
-    let k = rand 5 in
-    p := P.snoc child !p k;
-    l := !l @ [ k ];
-    let a = P.node child !p
-    and b = at_ root_tree !l in
-    if a <> b then ok := false;
-    if P.node child !p <> P.walk child (P.root !p) (P.to_list !p) then ok := false
+  let on_tree = ref 0
+  and off_tree = ref 0 in
+  (* 300 paths of 0 to 7 steps.  An index below 3 stays on the tree, down to its depth 6;
+     3 and 4 leave it, since no node has them.  One path of 60 steps, which this check once
+     took, left the tree at its first step under this seed and never came back, so the
+     mutant campaign's P01 and P07 passed it (docs/research/2026-10-18-slices/
+     w2-engine-mutants/).  The counts make the check fail if either side goes unvisited. *)
+  for _ = 1 to 300 do
+    let p = ref (P.make root_tree)
+    and l = ref [] in
+    for _ = 1 to rand 8 do
+      let k = if rand 4 = 0 then 3 + rand 2 else rand 3 in
+      p := P.snoc child !p k;
+      l := !l @ [ k ];
+      let a = P.node child !p
+      and b = at_ root_tree !l in
+      (match a with
+       | Some _ -> incr on_tree
+       | None -> incr off_tree);
+      if a <> b then ok := false;
+      if P.node child !p <> P.walk child (P.root !p) (P.to_list !p) then ok := false
+    done
   done;
-  check "PP3 node c p = walk c (root p) (to_list p) = Node.at_, on and off the tree" !ok
+  check
+    "PP3 node c p = walk c (root p) (to_list p) = Node.at_, on and off the tree"
+    (!ok && !on_tree > 0 && !off_tree > 0)
 ;;
 
 let pp5 () =
@@ -227,25 +230,33 @@ let pp6 () =
 let pp7 () =
   reset ();
   let a = ref (P.make root_tree)
-  and b = ref (PL.make root_tree) in
+  and b = ref [] in
   let ok = ref true in
-  for _ = 1 to 400 do
+  let on_tree = ref 0 in
+  for i = 1 to 400 do
+    (* A path past the tree's depth 6 has no node, so the walk starts again every eight
+       operations: the node is compared on the tree as well as off it (PP3's note). *)
+    if i mod 8 = 1
+    then (
+      a := P.make root_tree;
+      b := []);
     (match rand 4 with
      | 0 ->
        let l = List.init (rand 3) (fun _ -> rand 4) in
        a := P.append child !a l;
-       b := PL.append child !b l
+       b := !b @ l
      | _ ->
        let k = rand 4 in
        a := P.snoc child !a k;
-       b := PL.snoc child !b k);
-    if P.to_list !a <> PL.to_list !b then ok := false;
-    if P.node child !a <> PL.node child !b then ok := false;
-    if P.length !a <> PL.length !b then ok := false
+       b := !b @ [ k ]);
+    if Option.is_some (P.node child !a) then incr on_tree;
+    if P.to_list !a <> !b then ok := false;
+    if P.node child !a <> at_ root_tree !b then ok := false;
+    if P.length !a <> List.length !b then ok := false
   done;
   check
-    "PP7 agreement with the list twin on 400 random spine operations (to_list and node)"
-    !ok
+    "PP7 agreement with Lean's list on 400 random spine operations (to_list and node)"
+    (!ok && !on_tree > 0)
 ;;
 
 (* --------------------------------------------------------------------------------- E4_env *)
@@ -271,15 +282,14 @@ let pe2 () =
   let deep = !deep in
   let w_shallow = words (fun () -> V.snoc shallow 1) in
   let w_deep = words (fun () -> V.snoc deep 1) in
-  let dl = ref VL.empty in
-  for i = 1 to 2000 do
-    dl := VL.snoc !dl i
-  done;
-  let l_shallow = words (fun () -> VL.snoc (VL.snoc VL.empty 0) 1) in
-  let l_deep = words (fun () -> VL.snoc !dl 1) in
+  (* the control: Lean's `env ++ [v]`, measured by the same instrument *)
+  let shallow_l = [ 0 ] in
+  let deep_l = List.init 2000 (fun i -> i + 1) in
+  let l_shallow = words (fun () -> shallow_l @ [ 1 ]) in
+  let l_deep = words (fun () -> deep_l @ [ 1 ]) in
   Printf.printf
-    "  snoc words: E4_env depth 1 = %d, depth 2000 = %d;  twin depth 1 = %d, depth 2000 \
-     = %d\n"
+    "  snoc words: E4_env depth 1 = %d, depth 2000 = %d;  Lean's env ++ [v] depth 1 = \
+     %d, depth 2000 = %d\n"
     w_shallow
     w_deep
     l_shallow
@@ -287,7 +297,10 @@ let pe2 () =
   check
     "PE2 snoc is O(1) words at every depth (the spine is shared)"
     (w_deep <= w_shallow + 2);
-  check "PE2' the twin copies: its snoc grows with the depth" (l_deep > 10 * l_shallow)
+  check
+    "PE2' the control: Lean's env ++ [v] copies, and the same measure sees it grow with \
+     the depth"
+    (l_deep > 10 * l_shallow)
 ;;
 
 let pe3_pe4 () =
@@ -331,37 +344,40 @@ let pe6 () =
 let pe7 () =
   reset ();
   let a = ref V.empty
-  and b = ref VL.empty in
+  and b = ref [] in
+  let lean_get l j = if j < 0 then None else List.nth_opt l j in
   let ok = ref true in
   for i = 1 to 600 do
     (match rand 8 with
      | 0 ->
        let k = rand 40 in
        a := V.take !a k;
-       b := VL.take !b k
+       b := lean_take k !b
      | 1 ->
        let l = List.init (rand 3) (fun j -> (i * 100) + j) in
        a := V.append !a l;
-       b := VL.append !b l
+       b := !b @ l
      | _ ->
        a := V.snoc !a i;
-       b := VL.snoc !b i);
-    if V.to_list !a <> VL.to_list !b then ok := false;
-    if V.length !a <> VL.length !b then ok := false;
-    if V.get !a (rand (1 + V.length !a)) <> VL.get !b (rand 1) then ()
+       b := !b @ [ i ]);
+    if V.to_list !a <> !b then ok := false;
+    if V.length !a <> List.length !b then ok := false;
+    (* the positional read at one index drawn after every operation *)
+    let j = rand (1 + V.length !a) in
+    if V.get !a j <> lean_get !b j then ok := false
   done;
   (* the positional read compared at every index, once at the end *)
   let n = V.length !a in
   for j = -1 to n do
-    if V.get !a j <> VL.get !b j then ok := false
+    if V.get !a j <> lean_get !b j then ok := false
   done;
   check
-    "PE7 agreement with the list twin on 600 random operations (to_list, length, get)"
+    "PE7 agreement with Lean's list on 600 random operations (to_list, length, get)"
     !ok
 ;;
 
 let () =
-  print_endline "== prop_point: E4_ppath / E4_env against their list twins ==";
+  print_endline "== prop_point: E4_ppath / E4_env against Lean's lists ==";
   pp1 ();
   pp2 ();
   pp3 ();
@@ -378,9 +394,5 @@ let () =
   pe5 ();
   pe6 ();
   pe7 ();
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;

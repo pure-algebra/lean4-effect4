@@ -3,8 +3,8 @@
    What it is: the host boundary's controls (the OCaml estate refactor's slice 0.1). Codex's
    round-2 reply control, its positive control, the assessment's programs (a step that leaves
    the host numeric profile, a load that does), a machine short of fuel, a machine waiting on a
-   timer, a stuck answer, and a reply admission refuses. Every check runs over E4_engine.Fast
-   and E4_engine.Ref, and each sits beside the control that shows its premise stands.
+   timer, a stuck answer, and a reply admission refuses. Every check runs over E4_engine.Fast,
+   and each sits beside the control that shows its premise stands.
    Depends on: E4_host, E4_engine, E4_clock, Eff_types.
 
    Properties (E4_host's H2, H8, H9 and H10 name these):
@@ -47,18 +47,7 @@
 open Eff_types
 module E4_engine = Effect4_engine.E4_engine
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  if ok
-  then Printf.printf "PASS %s\n" name
-  else (
-    incr failures;
-    Printf.printf "FAIL %s\n" name)
-;;
-
+let check = E4_check.check
 let nat n = Term.Lit (Lit.Nat n)
 let add a b = Term.App ("add", Terms.Cons (a, Terms.Cons (b, Terms.Nil)))
 
@@ -341,7 +330,7 @@ module Checks (E : E4_engine.ENGINE) = struct
   ;;
 end
 
-(* S5: the stuck answer, read through the stand-in on both instances. *)
+(* S5: the stuck answer, read through the stand-in. *)
 module Stuck_checks (E : E4_engine.ENGINE) = struct
   module S = Stuck_engine (E)
   module H = Effect4_engine.E4_host.Make (S)
@@ -379,15 +368,10 @@ module Stuck_checks (E : E4_engine.ENGINE) = struct
 end
 
 module Fast = Checks (E4_engine.Fast)
-module Ref = Checks (E4_engine.Ref)
 module Stuck_fast = Stuck_checks (E4_engine.Fast)
-module Stuck_ref = Stuck_checks (E4_engine.Ref)
 
 let () =
   Fast.run ();
-  Ref.run ();
   Stuck_fast.run ();
-  Stuck_ref.run ();
-  Printf.printf "%d checks, %d failures\n" !checks !failures;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;

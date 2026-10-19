@@ -1,0 +1,29 @@
+; e4_check -- the harness of the engine's and the disk store's tests (the hygiene lane's H5,
+; docs/research/2026-10-18-slices/README.md §10.2): each check's PASS or FAIL line, the counts,
+; the summary line and the exit code, and the scratch directories, made under the system's
+; temporary directory (TMPDIR). e4_check.mli holds its behaviours C1-C4.
+;   test_check  E4_check against C1-C4; its red control runs the executable itself as a child
+;               with one failing check.
+
+(library
+ (name e4_check)
+ (modules e4_check)
+ (libraries unix))
+
+; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+
+(rule
+ (alias runtest)
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .e4_check.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:../../../tools/typed_lint/main.exe} %{cmt}))))
+
+(test
+ (name test_check)
+ (modules test_check)
+ (libraries e4_check unix))

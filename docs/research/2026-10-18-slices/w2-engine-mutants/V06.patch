@@ -1,0 +1,10 @@
+V06 e4_env.ml: of_list keeps the list unreversed
+
+--- a/ocaml/engine/e4_env.ml
++++ b/ocaml/engine/e4_env.ml
+@@ -39,4 +39,4 @@
+ ;;
+ 
+ let to_list (e : 'a t) : 'a list = List.rev e.rev
+-let of_list (l : 'a list) : 'a t = { rev = List.rev l; len = List.length l }
++let of_list (l : 'a list) : 'a t = { rev = l; len = List.length l }

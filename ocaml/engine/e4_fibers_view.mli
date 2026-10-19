@@ -41,8 +41,8 @@
        answered exactly.  It is Θ(N), which is what the map itself costs.  tested
    FV5 the view is INVISIBLE to every other operation: `find_opt`, `bindings`, `to_list`,
        `cardinal` and `for_all` are `E4_table`'s, value for value.         tested
-   FV6 agreement with the LIST twin (`e4_fibers_view_list.ml`: Lean's list, and `completed`
-       is Lean's `filterMap` WALK at read time) on random sequences of
+   FV6 agreement with Lean's list, written out in the test (`completedExits` is Lean's
+       `filterMap` WALK at read time), on random sequences of
        {find, set, add, map, completed, finished, bindings}.  tested (>= 12 000 ops, LCG)
    FV7 persistent: every operation answers a new value and no earlier value changes; no
        mutable structure is reachable from a table (brief §2.3, A2-OQ6).   tested

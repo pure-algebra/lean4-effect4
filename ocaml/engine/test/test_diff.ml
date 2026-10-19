@@ -1,24 +1,25 @@
-(* test_diff.ml -- lane X: the differential over every corpus, three engines.
+(* test_diff.ml -- lane X: the differential over every corpus, two engines.
 
    The claim of the whole engine effort is that substituting the carriers under the
    generated Lean machine changes nothing that can be observed.  A claim is not a result;
-   a differential is (brief §2.1).  This binary runs THREE engines over THREE corpora and
+   a differential is (brief §2.1).  This binary runs TWO engines over THREE corpora and
    many tapes and compares thirteen projections at every position of every replay.
 
-   The three engines, and what each pair isolates (A1 §5.2's table):
+   The two engines:
 
      Gen   `E4_engine.Make (Api_gen)` -- the UNTOUCHED generated file `ocaml/gen/api_gen.ml`
            with Lean's own List carriers and NO externs at all.  The oracle.
-     Ref   `Api_engine.Make (E4_table_list) (E4_trace_list) (E4_memo_list) (E4_buckets_list)`
-           -- the seam's generated file over list twins of the four carriers.
-     Fast  the same generated file over the substituted carriers.
+     Fast  `Api_engine.Make` over the substituted carriers: the seam's generated file, whose
+           extern rows (`ocaml/engine/externs.txt`) replace generated bodies with hand ones.
 
-     Gen vs Ref   catches a wrong EXTERN ROW: the two files differ only in that 35 rows of
-                  `ocaml/engine/externs.txt` replaced generated bodies with hand ones.
-                  This is lane G's owed N1 and lane D's N2.
-     Ref vs Fast  catches a wrong CARRIER LAW: the two are one generated file applied to
-                  two carrier sets.  This is lane D's check 2, widened to every corpus and
-                  every tape.
+     Gen vs Fast  catches a wrong extern row and a wrong carrier law alike.  A third engine,
+                  `Ref` (the seam's file over list twins of the carriers), once told the two
+                  apart.  The mutant campaign of 2026-10-18 found every carrier mutant that a
+                  Ref check caught caught by a test without Ref, this pair or another (a
+                  whole-report comparison with Gen, a property test), and Ref was deleted
+                  (docs/research/2026-10-18-slices/receipt-w2-engine.md).  A divergence names
+                  its field and position; the carriers' property tests (prop_*, test_buckets)
+                  then say whether a carrier law broke.
 
    The corpora (`Corpora`): the 37 byte goldens, the truth corpus (the Lean-cut wire
    goldens of harness/truth/corpus.json plus its two members that only have a `.bin`), and
@@ -31,7 +32,7 @@
 
    Properties (tested by the classification controls below): profile refusals and
    unexpected exceptions prevent successful differential validation, including when
-   all three engines refuse; neither is counted as a semantic divergence. Every
+   both engines refuse; neither is counted as a semantic divergence. Every
    refusal/exception report retains the named engine and its diagnostic.
 
    Run: make check-ocaml (which writes the Lean corpus first), or by hand
@@ -39,25 +40,16 @@
 
 open Effect4_engine
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check
 let note s = Printf.printf "  NOTE %s\n" s
 
 (* ==================================================================== the third engine *)
 
-(* The third engine is `Api_gen_inst` (api_gen_inst.ml, beside this file): the generated machine
-   as an `E4_engine.INSTANCE`. *)
+(* The oracle is `Api_gen_inst` (api_gen_inst.ml, beside this file): the generated machine as an
+   `E4_engine.INSTANCE`. *)
 
 module Gen_engine = E4_engine.Make (Api_gen_inst)
 module S_gen = E4_diff.Of (Gen_engine)
-module S_ref = E4_diff.Of (E4_engine.Ref)
 module S_fast = E4_diff.Of (E4_engine.Fast)
 
 (* ==================================================================== the comparison *)
@@ -88,15 +80,15 @@ let fresh () =
 (* Refusing a target profile is not an observed machine result. A mixed refusal
    and unexpected exception records both reasons that this tape was not compared. *)
 type 'a run_classification =
-  | Comparable of 'a * 'a * 'a
+  | Comparable of 'a * 'a
   | Incomplete of
       { profile_refused : bool
       ; raised : bool
       }
 
-let classify_runs (t : tally) (g, r, f) =
-  match g, r, f with
-  | Ok g, Ok r, Ok f -> Comparable (g, r, f)
+let classify_runs (t : tally) (g, f) =
+  match g, f with
+  | Ok g, Ok f -> Comparable (g, f)
   | _ ->
     let profile_refused, raised =
       List.fold_left
@@ -105,7 +97,7 @@ let classify_runs (t : tally) (g, r, f) =
            | Error (E4_clock.Profile_refusal _) -> true, raised
            | Error _ -> profile, true)
         (false, false)
-        [ g; r; f ]
+        [ g; f ]
     in
     if profile_refused then t.t_profile_refusals <- t.t_profile_refusals + 1;
     if raised then t.t_errors <- t.t_errors + 1;
@@ -142,45 +134,40 @@ let classification_controls () =
        && t.t_positions = 0)
   in
   incomplete
-    "all three profile refusals are not agreement"
-    (refused, refused, refused)
+    "both profile refusals are not agreement"
+    (refused, refused)
     ~profile:true
     ~error:false;
   incomplete
-    "Gen profile refusal with two answers is not agreement"
-    (refused, Ok (), Ok ())
+    "Gen profile refusal with an answer is not agreement"
+    (refused, Ok ())
     ~profile:true
     ~error:false;
   incomplete
-    "Ref profile refusal with two answers is not agreement"
-    (Ok (), refused, Ok ())
-    ~profile:true
-    ~error:false;
-  incomplete
-    "Fast profile refusal with two answers is not agreement"
-    (Ok (), Ok (), refused)
+    "Fast profile refusal with an answer is not agreement"
+    (Ok (), refused)
     ~profile:true
     ~error:false;
   incomplete
     "profile refusal and unexpected exception remain distinct"
-    (refused, raised, Ok ())
+    (refused, raised)
     ~profile:true
     ~error:true;
   incomplete
-    "three unexpected exceptions are not agreement"
-    (raised, raised, raised)
+    "two unexpected exceptions are not agreement"
+    (raised, raised)
     ~profile:false
     ~error:true;
   incomplete
-    "unexpected exception with two answers is not agreement"
-    (Ok (), raised, Ok ())
+    "unexpected exception with an answer is not agreement"
+    (Ok (), raised)
     ~profile:false
     ~error:true;
   let t = fresh () in
   check
-    "DF-classification: three answers remain comparable"
-    (match classify_runs t (Ok 1, Ok 2, Ok 3) with
-     | Comparable (1, 2, 3) -> differential_valid t
+    "DF-classification: two answers remain comparable"
+    (match classify_runs t (Ok 1, Ok 2) with
+     | Comparable (1, 2) -> differential_valid t
      | _ -> false);
   t.t_div <- 1;
   check
@@ -199,8 +186,7 @@ let report_divergence corpus pname pair tape pos (ds : E4_diff.divergence list) 
     List.iter (fun d -> Printf.printf "    %s\n" (E4_diff.show_divergence d)) ds)
 ;;
 
-(* One (program, tape): the three engines' projections at every position, compared
-   pairwise in the order that isolates the extern rows first and the carriers second. *)
+(* One (program, tape): the two engines' projections at every position, compared. *)
 let one_pair
       (t : tally)
       (corpus : string)
@@ -214,13 +200,11 @@ let one_pair
   let runs =
     ( (try Ok (S_gen.positions p.Corpora.eff ~fuel tape) with
        | e -> Error e)
-    , (try Ok (S_ref.positions p.Corpora.eff ~fuel tape) with
-       | e -> Error e)
     , try Ok (S_fast.positions p.Corpora.eff ~fuel tape) with
       | e -> Error e )
   in
   match classify_runs t runs with
-  | Comparable (g, r, f) ->
+  | Comparable (g, f) ->
     let n = List.length g in
     if n <> List.length tape + 1
     then (
@@ -231,36 +215,29 @@ let one_pair
         p.Corpora.name
         n
         (List.length tape));
-    if List.length r <> n || List.length f <> n
+    if List.length f <> n
     then (
       t.t_div <- t.t_div + 1;
       Printf.printf
-        "  DIVERGENCE %s/%s: position counts %d/%d/%d\n"
+        "  DIVERGENCE %s/%s: position counts %d/%d\n"
         corpus
         p.Corpora.name
         n
-        (List.length r)
         (List.length f))
     else (
       t.t_positions <- t.t_positions + n;
       List.iteri
         (fun i gi ->
-           let ri = List.nth r i
-           and fi = List.nth f i in
-           t.t_pairs <- t.t_pairs + 2;
-           let d1 = E4_diff.compare gi ri in
-           if d1 <> []
+           let fi = List.nth f i in
+           t.t_pairs <- t.t_pairs + 1;
+           let d = E4_diff.compare gi fi in
+           if d <> []
            then (
              t.t_div <- t.t_div + 1;
-             report_divergence corpus p.Corpora.name "Gen-vs-Ref" tape i d1);
-           let d2 = E4_diff.compare ri fi in
-           if d2 <> []
-           then (
-             t.t_div <- t.t_div + 1;
-             report_divergence corpus p.Corpora.name "Ref-vs-Fast" tape i d2))
+             report_divergence corpus p.Corpora.name "Gen-vs-Fast" tape i d))
         g)
   | Incomplete { profile_refused; raised } ->
-    let g, r, f = runs in
+    let g, f = runs in
     let sh = function
       | Ok _ -> "ok"
       | Error e -> Printexc.to_string e
@@ -276,12 +253,11 @@ let one_pair
     then (
       incr shown;
       Printf.printf
-        "  %s %s/%s  Gen=%s Ref=%s Fast=%s\n    tape = %s\n"
+        "  %s %s/%s  Gen=%s Fast=%s\n    tape = %s\n"
         label
         corpus
         p.Corpora.name
         (sh g)
-        (sh r)
         (sh f)
         (E4_diff.show_tape tape))
 ;;
@@ -305,8 +281,8 @@ let run_corpus
 let verdict (corpus : string) ((t, secs) : tally * float) =
   Printf.printf
     "  %s: %d programs x %d tapes (longest %d decisions), %d positions, %d projection \
-     comparisons (2 pairs each position), %d profile-refused tapes, %d raised tapes, \
-     %.2f s\n"
+     comparisons (Gen against Fast at each position), %d profile-refused tapes, %d \
+     raised tapes, %.2f s\n"
     corpus
     t.t_programs
     t.t_tapes
@@ -336,7 +312,7 @@ let show_report (r : Corpora.load_report) =
 
 (* Every corpus gets the `Api.run` tape; the Lean corpus also gets random admissible
    tapes drawn from the machine as it runs (A1 §6.3's T5, made admissible by construction).
-   The tape is drawn on ONE engine and applied to all three: if the engines disagree about
+   The tape is drawn on ONE engine, the oracle, and applied to both: if the engines disagree about
    what is admissible, the projections diverge and the differential says so. *)
 (* THE FUEL SWEEP is what exercises `Delay` (E4_engine EN-Delay, A1 §5.1): at fuel 10 the
    drive loop returns with a NON-EMPTY command residue, `settled = false`, and the answer
@@ -350,10 +326,10 @@ let tapes_for_lean (p : Corpora.program) : (int * E4_diff.decision list) list =
   let s = !gen_tape_seed in
   [ 1000, E4_diff.drive_tape
   ; 20, E4_diff.drive_tape
-  ; 1000, S_ref.gen_tape p.Corpora.eff ~fuel:1000 ~seed:(20260908 + s) ~max_len:64
-  ; 1000, S_ref.gen_tape p.Corpora.eff ~fuel:1000 ~seed:(51000 + (s * 3)) ~max_len:32
-  ; 100, S_ref.gen_tape p.Corpora.eff ~fuel:100 ~seed:(77000 + (s * 7)) ~max_len:16
-  ; 10, S_ref.gen_tape p.Corpora.eff ~fuel:10 ~seed:(99000 + (s * 11)) ~max_len:8
+  ; 1000, S_gen.gen_tape p.Corpora.eff ~fuel:1000 ~seed:(20260908 + s) ~max_len:64
+  ; 1000, S_gen.gen_tape p.Corpora.eff ~fuel:1000 ~seed:(51000 + (s * 3)) ~max_len:32
+  ; 100, S_gen.gen_tape p.Corpora.eff ~fuel:100 ~seed:(77000 + (s * 7)) ~max_len:16
+  ; 10, S_gen.gen_tape p.Corpora.eff ~fuel:10 ~seed:(99000 + (s * 11)) ~max_len:8
   ]
 ;;
 
@@ -367,11 +343,11 @@ let tapes_for_bytes_random (p : Corpora.program) : (int * E4_diff.decision list)
   [ 1000, E4_diff.drive_tape
   ; 100, E4_diff.drive_tape
   ; 10, E4_diff.drive_tape
-  ; 1000, S_ref.gen_tape p.Corpora.eff ~fuel:1000 ~seed:(31337 + s) ~max_len:64
-  ; 1000, S_ref.gen_tape p.Corpora.eff ~fuel:1000 ~seed:(90210 + (s * 13)) ~max_len:48
-  ; 1000, S_ref.gen_tape p.Corpora.eff ~fuel:1000 ~seed:(60613 + (s * 17)) ~max_len:32
-  ; 100, S_ref.gen_tape p.Corpora.eff ~fuel:100 ~seed:(11235 + (s * 5)) ~max_len:24
-  ; 10, S_ref.gen_tape p.Corpora.eff ~fuel:10 ~seed:(4242 + (s * 3)) ~max_len:16
+  ; 1000, S_gen.gen_tape p.Corpora.eff ~fuel:1000 ~seed:(31337 + s) ~max_len:64
+  ; 1000, S_gen.gen_tape p.Corpora.eff ~fuel:1000 ~seed:(90210 + (s * 13)) ~max_len:48
+  ; 1000, S_gen.gen_tape p.Corpora.eff ~fuel:1000 ~seed:(60613 + (s * 17)) ~max_len:32
+  ; 100, S_gen.gen_tape p.Corpora.eff ~fuel:100 ~seed:(11235 + (s * 5)) ~max_len:24
+  ; 10, S_gen.gen_tape p.Corpora.eff ~fuel:10 ~seed:(4242 + (s * 3)) ~max_len:16
   ]
 ;;
 
@@ -453,9 +429,8 @@ let cross_face (progs : Corpora.program list) =
 (* ==================================================================== main *)
 
 let () =
-  print_endline "== lane X: the differential over every corpus, three engines ==";
+  print_endline "== lane X: the differential over every corpus, two engines ==";
   Printf.printf "  Gen  = %s\n" Gen_engine.carriers;
-  Printf.printf "  Ref  = %s\n" E4_engine.Ref.carriers;
   Printf.printf "  Fast = %s\n" E4_engine.Fast.carriers;
   print_endline "";
   classification_controls ();
@@ -564,7 +539,7 @@ let () =
     "DF-3 (query agreement, `E4_query.at s i` = `api_replay` of the first i) waits on \
      lane Q3 and is out of this lane's scope. The half of it that exists -- \
      `replay_steps` at position i equals a replay of the first i decisions -- is what \
-     every position of every tape above compares, on three engines.";
+     every position of every tape above compares, on two engines.";
   (* -------------------------------------------------------------- 5. the mutations *)
   print_endline "";
   print_endline "== 5. the comparison has teeth: one mutation per field ==";
@@ -670,8 +645,5 @@ let () =
     (tot (fun t -> t.t_profile_refusals))
     (tot (fun t -> t.t_errors))
     (snd tg +. snd tt +. snd tl);
-  if !failures = 0
-  then Printf.printf "== ALL PASS: 0 failure(s) == (%d checks)\n" !checks
-  else Printf.printf "== FAILED: %d failure(s) in %d checks ==\n" !failures !checks;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;

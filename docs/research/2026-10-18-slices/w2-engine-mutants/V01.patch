@@ -1,0 +1,13 @@
+V01 e4_env.ml: get reads one binding too deep (off by one)
+
+--- a/ocaml/engine/e4_env.ml
++++ b/ocaml/engine/e4_env.ml
+@@ -16,7 +16,7 @@
+ ;;
+ 
+ let get (e : 'a t) (i : int) : 'a option =
+-  if i < 0 || i >= e.len then None else nth e.rev (e.len - 1 - i)
++  if i < 0 || i >= e.len then None else nth e.rev (e.len - i)
+ ;;
+ 
+ let length (e : 'a t) : int = e.len

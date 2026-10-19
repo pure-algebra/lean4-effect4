@@ -1,0 +1,2 @@
+programs: 89 goldens, 11 truth, 408 lean; tapes compared: 2132 same, 0 differ; 67360 decisions
+exit=0

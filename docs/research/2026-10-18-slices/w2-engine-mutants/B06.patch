@@ -1,0 +1,13 @@
+B06 e4_buckets.ml: to_list does not reverse the back list
+
+--- a/ocaml/engine/e4_buckets.ml
++++ b/ocaml/engine/e4_buckets.ml
+@@ -104,7 +104,7 @@
+   ;;
+ 
+   let priorities t = List.map (fun b -> b.priority) t.buckets
+-  let to_list t = List.map (fun b -> b.priority, b.front @ List.rev b.back) t.buckets
++  let to_list t = List.map (fun b -> b.priority, b.front @ b.back) t.buckets
+ 
+   let of_list ~armed l =
+     List.iter (fun (p, _) -> check_priority p) l;

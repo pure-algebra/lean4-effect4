@@ -21,7 +21,7 @@
    S1  The row table is read from its wire bytes (`Eff_wire.decode_row_exact`). The row type
        is `Eff_types`', which the generated engine opens, so no conversion stands between the
        bytes and the engine. A row with trailing arguments is refused.   by construction
-   S2  At every position of every run, on BOTH instances (Fast and Ref), the view of
+   S2  At every position of every run, on the engine's instance (Fast), the view of
        `api_replay` on the tape's prefix is the view Lean wrote for its session machine.
                                                                  tested (finite runs)
    S3  A value crosses as its canonical bytes: `Eff_val.decode` reads Lean's `Val.encode`, and
@@ -53,14 +53,7 @@
 open Effect4_engine
 open Eff_types
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
+let check = E4_check.check
 
 (* ================================================================ the fixture's text *)
 
@@ -465,21 +458,6 @@ module Fast =
       ;;
     end)
 
-module Ref =
-  Adapter
-    (Api_engine_ref)
-    (struct
-      type machine = Api_engine_ref.machine
-
-      let timers (m : machine) : (int * E4_clock.t) list =
-        List.map
-          (fun (w : E4_clock.t Api_engine_ref.waiter) ->
-             w.Api_engine_ref.fiber, w.Api_engine_ref.payload)
-          (Api_engine_ref.stores_of m).Api_engine_ref.timers.Api_engine_ref.wake
-            .Api_engine_ref.waiters
-      ;;
-    end)
-
 (* ================================================================ main *)
 
 let () =
@@ -500,11 +478,9 @@ let () =
        List.iter
          (fun r ->
             positions := !positions + List.length r.steps + 1;
-            Fast.run_one r;
-            Ref.run_one r)
+            Fast.run_one r)
          runs)
     files;
-  Printf.printf "%d positions compared on each of the two instances\n" !positions;
-  Printf.printf "%d checks, %d failures\n" !checks !failures;
-  if !failures > 0 then exit 1
+  Printf.printf "%d positions compared on the engine's instance\n" !positions;
+  E4_check.finish ()
 ;;

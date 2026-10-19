@@ -24,13 +24,8 @@
 
 open Effect4_engine_cas
 
-let failures = ref 0
 let skips = ref 0
-
-let check name ok =
-  Printf.printf "%s  %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
+let check = E4_check.check ~gap:Two
 
 let skip name why =
   Printf.printf "SKIP  %s (%s)\n" name why;
@@ -1355,9 +1350,5 @@ let () =
   test_mutation_local ();
   check_goldens ();
   if !skips > 0 then Printf.printf "== %d skipped ==\n" !skips;
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

@@ -1,12 +1,14 @@
-(* test_engine.ml -- lane D: the drive loop, the differential between the two instances of
-   the generated engine, and the first W1/W2 numbers.
+(* test_engine.ml -- lane D: the drive loop over the generated engine, its whole report against
+   the generated machine's, and the first W1/W2 numbers.
 
    What it checks (docs/research/2026-09-08-engine-brief.md §2.1; the lane's acceptance):
 
-     1  G0 reproduced on BOTH instances.  `p42` / `pFork` / `pAwait` -- the byte-pinned
+     1  G0 reproduced on `Fast`.  `p42` / `pFork` / `pAwait` -- the byte-pinned
         corpus of p42 (src/Effect4/Store/Domain/ProgramWire.lean), written in `Eff_types`, the one
-        program type of the wire and both instances -- give `finished ... success 42`, `finished fibers=2 success
-        ctor 0 [7]` and `frontier fibers=1`; and `Fast` answers what `Ref` answers.
+        program type of the wire and both engines -- give `finished ... success 42`, `finished fibers=2 success
+        ctor 0 [7]` and `frontier fibers=1`; and `Fast` answers the whole report the generated
+        machine answers (`Gen`, `E4_engine.Make (Api_gen_inst)`: ocaml/gen/api_gen.ml, Lean's
+        lists and no extern row).
         With them, the term rows' environment (the state plan's T3b): a read-modify-write
         row's term reads an outer binder and the cell's value at the node's level
         (`pCapture`, `pLevel@2`), and a `Ref.modify` answers a value of another type than
@@ -18,9 +20,8 @@
         operation's term (`pFoldInOp`), with two controls, the empty list and a body that
         refuses (`pFoldEmpty`, `pFoldRefuses`); the values are Lean's
         (Test/Program/FoldContract.lean).
-     2  The goldens' Fast = Ref differential is `test_diff`'s (every corpus, every position,
-        three engines), and `replay_steps` is `test_replay_steps`' (both instances): this file
-        repeats neither since 2026-10-15.
+     2  The goldens' Gen = Fast differential is `test_diff`'s (every corpus, every position),
+        and `replay_steps` is `test_replay_steps`': this file repeats neither since 2026-10-15.
      3  The numeric profile at load: a natural literal outside it is refused, from a value
         and from the wire (EN8). The ordinal pin went with the conversion on 2026-10-15:
         both instances open `Eff_types`, so `ocamlopt` holds the one alphabet. A host's
@@ -33,30 +34,21 @@
         binder; both generated-engine carriers must fail with that string.
 
    And it measures W1 (`Api.run pFork` at fuel 100) and W2 (the chain of `refMake` at
-   n = 100 / 300 / 1000) on both instances -- the first numbers of the substitution.  A
-   measurement is not a gate: the bench prints a table and fails nothing.
+   n = 100 / 300 / 1000) on Fast and on Gen, Lean's lists -- the first numbers of the
+   substitution.  A measurement is not a gate: the bench prints a table and fails nothing.
 
    Run: cd ocaml && dune build @engine/test/runtest --force *)
 
 open Effect4_engine
 module E = Eff_types
 module En_fast = E4_engine.Fast
-module En_ref = E4_engine.Ref
 
-let failures = ref 0
-let checks = ref 0
+(* The generated machine, the oracle: the whole report Fast must answer, and the bench's
+   baseline over Lean's own lists. *)
+module En_gen = E4_engine.Make (Api_gen_inst)
 
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
-let fail_note name why =
-  incr checks;
-  Printf.printf "FAIL %s -- %s\n" name why;
-  incr failures
-;;
+let check = E4_check.check
+let fail_note name why = check (name ^ " -- " ^ why) false
 
 (* The two run-time holes of the seam (lane G receipt N2). *)
 let extern_holes = ref 0
@@ -308,7 +300,7 @@ module Rep (En : E4_engine.ENGINE) = struct
 end
 
 module RF = Rep (En_fast)
-module RR = Rep (En_ref)
+module RG = Rep (En_gen)
 
 let differ (a : report) (b : report) : string list =
   let d = ref [] in
@@ -341,11 +333,11 @@ let differ (a : report) (b : report) : string list =
 (* ================================================================ 1. G0 *)
 
 let g0 () =
-  print_endline "== 1. G0 on both instances (fuel 1000) ==";
+  print_endline "== 1. G0 on Fast, and its whole report against Gen (fuel 1000) ==";
   let one name (p : E.NativeOp.t E.Eff.t) expect_outcome expect_fibers expect_root =
-    match guard (fun () -> RF.report p ~fuel:1000, RR.report p ~fuel:1000) with
+    match guard (fun () -> RF.report p ~fuel:1000, RG.report p ~fuel:1000) with
     | Error e -> fail_note ("G0 " ^ name) e
-    | Ok (f, r) ->
+    | Ok (f, g) ->
       Printf.printf
         "  %-7s Fast: outcome=%s fibers=%d exit=%s trace=%d\n"
         name
@@ -367,18 +359,10 @@ let g0 () =
         (f.r_outcome = expect_outcome
          && f.r_fibers = expect_fibers
          && f.r_root = expect_root);
-      check
-        (Printf.sprintf "G0 %s on Ref" name)
-        (r.r_outcome = expect_outcome
-         && r.r_fibers = expect_fibers
-         && r.r_root = expect_root);
-      check (Printf.sprintf "G0 %s: Fast = Ref, whole report" name) (differ f r = []);
+      check (Printf.sprintf "G0 %s: Fast = Gen, whole report" name) (differ f g = []);
       check
         (Printf.sprintf "G0 %s: the drive loop = the generated Api.run (Fast)" name)
-        (RF.api_outcome p ~fuel:1000 = f.r_outcome);
-      check
-        (Printf.sprintf "G0 %s: the drive loop = the generated Api.run (Ref)" name)
-        (RR.api_outcome p ~fuel:1000 = r.r_outcome)
+        (RF.api_outcome p ~fuel:1000 = f.r_outcome)
   in
   one "p42" p42 "finished" 1 (Some "success 42");
   (* `awaitFiber ... awaitValue` answers the child's REIFIED exit, `ctor 0 [7]`
@@ -411,7 +395,7 @@ let g0 () =
 ;;
 
 (* Handwritten carrier substitutions must retain creation provenance. These checks call
-   the prelude functions actually spliced into each generated engine instance. *)
+   the prelude function actually spliced into the generated engine's instance. *)
 let origin_prelude_check () =
   let () =
     let module I = Api_engine_inst in
@@ -441,42 +425,6 @@ let origin_prelude_check () =
     let _child = List.assoc child_id (I.fibers spawned) in
     check
       "Fast creation origin: spawn retains parent, daemon and exact site"
-      (match spawned.forks with
-       | [ (record : I.fork_record) ] ->
-         record.child = child_id
-         && record.parent = 0
-         && record.daemon
-         && record.site = [ 3; 1 ]
-       | _ -> false)
-  in
-  let () =
-    let module I = Api_engine_ref in
-    let program = p42 in
-    let machine = I.load program ~fuel:100 in
-    let parent = List.assoc 0 (I.fibers machine) in
-    check
-      "Ref creation origin: the root has no fork record"
-      (match machine.forks with
-       | [] -> true
-       | _ -> false);
-    let options =
-      { Eff_types.ForkOptions.start_immediately = true
-      ; daemon = true
-      ; mask_mode = Eff_types.MaskMode.Inherit
-      }
-    in
-    let spawned, (_, child_id) =
-      I.sh_spawn
-        (I.interp_of [] program)
-        machine
-        parent
-        parent.frame.current
-        options
-        [ 3; 1 ]
-    in
-    let _child = List.assoc child_id (I.fibers spawned) in
-    check
-      "Ref creation origin: spawn retains parent, daemon and exact site"
       (match spawned.forks with
        | [ (record : I.fork_record) ] ->
          record.child = child_id
@@ -562,26 +510,6 @@ let clock_profile_check () =
          | Some (Eff_types.Exit.Success (Eff_types.Val.Nat 42)) -> true
          | _ -> false)
   in
-  let () =
-    let module I = Api_engine_ref in
-    let p = sleep_then_42 in
-    let prepared = I.prepare [] p in
-    let step m d = I.step prepared ~fuel:100 m d in
-    check_generated
-      I.name
-      (fun () -> I.load p ~fuel:100)
-      (fun millis m -> step m (I.RunDecision_advance millis))
-      (fun m -> step m (I.RunDecision_evaluate 0))
-      (fun m -> (I.stores_of m).timers.now)
-      (fun m ->
-         List.map
-           (fun (w : E4_clock.t I.waiter) -> w.payload)
-           (I.stores_of m).timers.wake.waiters)
-      (fun m ->
-         match List.assoc_opt 0 (I.completed_exits m) with
-         | Some (Eff_types.Exit.Success (Eff_types.Val.Nat 42)) -> true
-         | _ -> false)
-  in
   let check_instance (module En : E4_engine.ENGINE) =
     let module Projection = E4_diff.Of (En) in
     let p =
@@ -621,8 +549,7 @@ let clock_profile_check () =
       (prefix ^ "halted refusal holds the input machine")
       (En.step refused En.flush == refused)
   in
-  check_instance (module En_fast);
-  check_instance (module En_ref)
+  check_instance (module En_fast)
 ;;
 
 (* The generated multiplication row observes exact products only inside the profile.
@@ -673,8 +600,7 @@ let multiplication_profile_check () =
         , Int64.to_int 9007199254740991L )
       ]
   in
-  check_instance (module En_fast);
-  check_instance (module En_ref)
+  check_instance (module En_fast)
 ;;
 
 (* Public engine inputs refuse before narrowing or constructing a decision. *)
@@ -720,8 +646,7 @@ let numeric_ingress_check () =
            (reply (fun () -> En.answer_async_float 0 0 value)))
       [ 2.0; -0.0; -1.0; infinity; nan ]
   in
-  check_instance (module En_fast);
-  check_instance (module En_ref)
+  check_instance (module En_fast)
 ;;
 
 (* EN9: a host's answer is host ingress. A reactor, as a driver holds one, answers; the driver
@@ -827,14 +752,14 @@ let bench () =
   in
   let w1_pair prog (p : E.NativeOp.t E.Eff.t) =
     let pf = En_fast.compile p
-    and pr = En_ref.compile p in
+    and pg = En_gen.compile p in
     w1 prog "Fast" (fun () ->
       for _ = 1 to iters do
         ignore (En_fast.api_run pf ~fuel:100)
       done);
-    w1 prog "Ref" (fun () ->
+    w1 prog "Gen" (fun () ->
       for _ = 1 to iters do
-        ignore (En_ref.api_run pr ~fuel:100)
+        ignore (En_gen.api_run pg ~fuel:100)
       done)
   in
   w1_pair "p42" p42;
@@ -889,13 +814,13 @@ let bench () =
          En_fast.trace_length
          En_fast.refs;
        w2
-         "Ref"
-         En_ref.compile
-         (fun p ~fuel -> En_ref.api_run p ~fuel)
-         (fun p ~fuel -> En_ref.load_program p ~fuel)
-         (fun p ~fuel -> En_ref.run_program p ~fuel)
-         En_ref.trace_length
-         En_ref.refs)
+         "Gen"
+         En_gen.compile
+         (fun p ~fuel -> En_gen.api_run p ~fuel)
+         (fun p ~fuel -> En_gen.load_program p ~fuel)
+         (fun p ~fuel -> En_gen.run_program p ~fuel)
+         En_gen.trace_length
+         En_gen.refs)
     [ 50; 100; 300; 500; 1000 ]
 ;;
 
@@ -917,20 +842,20 @@ let layer_environment_check () =
   in
   let expected = Some "failure [fail(text x)]" in
   let fast = En_fast.root_exit (En_fast.run program ~fuel:200) in
-  let reference = En_ref.root_exit (En_ref.run program ~fuel:200) in
+  let generated = En_gen.root_exit (En_gen.run program ~fuel:200) in
   Printf.printf "layer environment Fast: %s\n" (Option.value fast ~default:"frontier");
-  Printf.printf "layer environment Ref: %s\n" (Option.value reference ~default:"frontier");
+  Printf.printf "layer environment Gen: %s\n" (Option.value generated ~default:"frontier");
   check "layer environment Fast uses the body binding" (fast = expected);
-  check "layer environment Ref uses the body binding" (reference = expected)
+  check "layer environment Gen uses the body binding" (generated = expected)
 ;;
 
 (* ================================================================ main *)
 
 let () =
   print_endline
-    "== lane D: the drive loop, the conversion, the two instances of the generated \
-     engine ==";
-  Printf.printf "  Fast = %s\n  Ref  = %s\n" En_fast.carriers En_ref.carriers;
+    "== lane D: the drive loop, the conversion, the generated engine against the \
+     generated machine ==";
+  Printf.printf "  Fast = %s\n  Gen  = %s\n" En_fast.carriers En_gen.carriers;
   print_endline "";
   g0 ();
   clock_profile_check ();
@@ -949,10 +874,5 @@ let () =
     (!extern_holes = 0);
   bench ();
   print_endline "";
-  Printf.printf
-    "== %s: %d failure(s) in %d checks ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures
-    !checks;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

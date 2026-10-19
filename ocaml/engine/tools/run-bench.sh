@@ -21,7 +21,8 @@
 #
 # Environment it sets for the children:
 #   E4_BENCH_REPS / E4_BENCH_CAP / E4_BENCH_TARGET  — e4_engine_bench's method knobs
-#   E4_PACK_TMP / E4_CAS_TMP / E4_INDEX_TMP / E4_CACHE_TMP / E4_CHECKPOINT_TMP — the disk dir
+#   TMPDIR — the disk dir: the CAS benches make their directories under the system's
+#            temporary directory, which TMPDIR names
 #
 # WSL2 CAVEAT, stated once and repeated in the receipt: this host is WSL2.  $HOME is ext4 on
 # a virtual disk (`/dev/sdd`); /mnt/c is a 9p mount of the Windows filesystem.  `fsync`
@@ -68,8 +69,7 @@ esac
 mkdir -p "$benchdir"
 
 export E4_BENCH_REPS="$reps" E4_BENCH_CAP="$cap" E4_BENCH_TARGET="$target"
-export E4_PACK_TMP="$benchdir" E4_CAS_TMP="$benchdir" E4_INDEX_TMP="$benchdir"
-export E4_CACHE_TMP="$benchdir" E4_CHECKPOINT_TMP="$benchdir"
+export TMPDIR="$benchdir"
 
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT

@@ -36,12 +36,7 @@
 
 open Effect4_engine
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s %s\n%!" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
+let check = E4_check.check
 
 let raises_invalid f =
   match f () with
@@ -772,9 +767,4 @@ let () =
   check "bench-q4b-reported" true
 ;;
 
-let () =
-  if !failures = 0
-  then Printf.printf "== ALL PASS: 0 failure(s) ==\n%!"
-  else Printf.printf "== %d failure(s) ==\n%!" !failures;
-  exit !failures
-;;
+let () = E4_check.finish ()

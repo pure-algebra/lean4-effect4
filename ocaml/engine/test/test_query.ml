@@ -44,20 +44,8 @@ module E = Eff_types
 module F = E4_engine.Fast
 module S = E4_diff.Of (E4_engine.Fast)
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
-let fail_note name why =
-  incr checks;
-  Printf.printf "FAIL %s -- %s\n" name why;
-  incr failures
-;;
+let check = E4_check.check
+let fail_note name why = check (name ^ " -- " ^ why) false
 
 (* ================================================================ locating the corpus *)
 
@@ -692,10 +680,5 @@ let () =
         laws p "pFork" tape));
   df3 ();
   print_endline "";
-  Printf.printf
-    "== %s: %d failure(s) in %d checks ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures
-    !checks;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

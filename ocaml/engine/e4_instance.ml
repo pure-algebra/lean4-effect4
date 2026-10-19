@@ -9,18 +9,21 @@
    once, as a functor over what varies between the instances: the seven carriers the generated
    functor takes.  A projection that reads a carrier reads it through the carrier's module type
    (`F.bindings`, `T.to_list`, `M.to_list`, `L.bindings`, `D.to_list`), so no line here names a
-   carrier module, and each instance file is one application, its name and its carriers string:
+   carrier module, and the instance file is one application, its name and its carriers string:
 
      api_engine_inst.ml  Fast  E4_table, E4_trace, E4_memo, E4_buckets, E4_ppath, E4_env,
                                E4_fibers_view
-     api_engine_ref.ml   Ref   the seven list twins, Lean's own carriers
+
+   A second application over list twins of the seven, `Ref`, was deleted on 2026-10-18: the
+   mutant campaign found every carrier mutant that a `Ref` check caught caught by a test without
+   `Ref` (docs/research/2026-10-18-slices/receipt-w2-engine.md).
 
    Everything else -- the drive loop, the answer alphabet, every renderer -- is written ONCE in
    `E4_engine.Make`, which ascribes `E4_engine.INSTANCE` to each instance.  The result exposes the generated roots and the adapter projections through e4_instance.mli.
    Tests also read retained prelude declarations through an instance (`sh_spawn`, `fork_record`,
    the timer store).
 
-   The third instance, `test/api_gen_inst.ml`, is not an application of this functor.  Its
+   The other instance, `test/api_gen_inst.ml`, is not an application of this functor.  Its
    oracle `Effect4_gen.Api_gen` is a second generated file, not `Api_engine.Make` over carriers,
    and its records hold Lean's lists directly (`fibers : run_fiber list`, `trace : run_event
    list`, `refs : val_ list`).  A functor over both would need those record types written out by
@@ -33,12 +36,12 @@
        mutation (INV-TAPE-1, brief §2.4; E4_engine EN7).            by construction
    I2  `fibers`, `completed_exits` and `refs` are ASCENDING by key: api_engine.ml's TABLE and
        FIBERS signatures ask `bindings` and `completed` ascending, and every carrier given here
-       answers so -- E4_table T4 (its `to_list` is the values of `bindings`), E4_fibers_view
-       FV5 and FV1 (the maintained completed view is the same ascending filterMap), and the
-       twins' TL2 and TFV2 -- so the differential between two instances compares like with
-       like.                                                        by construction
-   I3  `trace` is in emission order: `T.to_list` is, for both trace carriers (E4_trace TR1;
-       E4_trace_list TLT1 and TLT2).                                by construction
+       answers so -- E4_table T4 (its `to_list` is the values of `bindings`) and
+       E4_fibers_view FV5 and FV1 (the maintained completed view is the same ascending
+       filterMap) -- so the differential against the generated machine, whose lists are in
+       allocation order and ascending on the machine's monotone allocation (prop_table TL2),
+       compares like with like.                                     by construction
+   I3  `trace` is in emission order: `T.to_list` is (E4_trace TR1). by construction
    I4  `step` is the generated `stepDecisionState`, and its second component is the
        generated `settled` -- the discriminator the answer alphabet needs (owner default
        A1-Q7).                                                      by construction *)

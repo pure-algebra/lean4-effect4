@@ -1,0 +1,13 @@
+F06 e4_fibers_view.ml: set on an absent id inserts it (on the path with no exit anywhere)
+
+--- a/ocaml/engine/e4_fibers_view.ml
++++ b/ocaml/engine/e4_fibers_view.ml
+@@ -91,7 +91,7 @@
+       IMap.update
+         k
+         (function
+-          | None -> None
++          | None -> Some v
+           | Some _ -> Some v)
+         t.m
+     in

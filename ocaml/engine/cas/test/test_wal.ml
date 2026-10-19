@@ -22,23 +22,13 @@
 
 open Effect4_engine_cas
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s  %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check ~gap:Two
 let note fmt = Printf.printf ("NOTE  " ^^ fmt ^^ "\n")
 
 (* ---------------------------------------------------------------- scaffolding *)
 
-let root =
-  Filename.concat
-    (Filename.get_temp_dir_name ())
-    (Printf.sprintf "e4_wal_test_%d" (Unix.getpid ()))
-;;
-
+(* The test's scratch root, under the system's temporary directory (E4_check.temp_dir). *)
+let root = E4_check.temp_dir "e4_wal_test_"
 let counter = ref 0
 
 let fresh_store () =
@@ -60,17 +50,7 @@ let write_file path s =
   Fun.protect ~finally:(fun () -> close_out_noerr oc) (fun () -> output_string oc s)
 ;;
 
-let rec rm_rf path =
-  match Sys.is_directory path with
-  | exception Sys_error _ -> ()
-  | true ->
-    Array.iter (fun e -> rm_rf (Filename.concat path e)) (Sys.readdir path);
-    (try Unix.rmdir path with
-     | Unix.Unix_error _ -> ())
-  | false ->
-    (try Sys.remove path with
-     | Sys_error _ -> ())
-;;
+let rm_rf = E4_check.remove_tree
 
 (* The test's OWN walk of the grammar of e4_wal.mli, so a row's byte offset is not taken
    from the module under test: (offset, length) of every framed row after the head. *)
@@ -604,9 +584,5 @@ let () =
        test_crash_gap ();
        test_crash_header ();
        test_log_rel ());
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

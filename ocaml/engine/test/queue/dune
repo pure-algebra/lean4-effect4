@@ -2,7 +2,7 @@
 ; (decisions row 255; Test/Program/QueueScenarios.lean and Test/Program/QueueMask.lean).
 ;   test_queue  the fixture beside this file (queue.txt, written by Lean from the programs
 ;               that `Api.Author.build` admits: write.lean) run on BOTH instances (Fast and
-;               Ref).  Each program crosses as its canonical bytes.  On each instance the
+;               Gen).  Each program crosses as its canonical bytes.  On each instance the
 ;               root's exit must be the exit Lean wrote, and the two reports must be one.
 ;               Red controls: the next run's exit, a program cut by one byte, a small fuel.
 ;               It is its own directory so that no other lane's dune file changes.
@@ -12,4 +12,4 @@
  (modules test_queue)
  (deps
   (glob_files *.txt))
- (libraries effect4_engine effect4_eff))
+ (libraries e4_check effect4_engine effect4_eff effect4_gen e4_gen_instance))

@@ -51,11 +51,9 @@ module Check (I : E4_engine.INSTANCE) = struct
 end
 
 module Fast = Check (Api_engine_inst)
-module Ref = Check (Api_engine_ref)
 module Gen = Check (Api_gen_inst)
 
 let () =
   Fast.run ();
-  Ref.run ();
   Gen.run ()
 ;;

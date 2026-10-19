@@ -1,0 +1,13 @@
+V04 e4_env.ml: append binds its values in reverse order
+
+--- a/ocaml/engine/e4_env.ml
++++ b/ocaml/engine/e4_env.ml
+@@ -7,7 +7,7 @@
+ 
+ let empty : 'a t = { rev = []; len = 0 }
+ let snoc (e : 'a t) (v : 'a) : 'a t = { rev = v :: e.rev; len = e.len + 1 }
+-let append (e : 'a t) (l : 'a list) : 'a t = List.fold_left snoc e l
++let append (e : 'a t) (l : 'a list) : 'a t = List.fold_left snoc e (List.rev l)
+ 
+ let rec nth (l : 'a list) (k : int) : 'a option =
+   match l with

@@ -22,9 +22,8 @@
    over it.
 
    This module satisfies the generated functor's `PPATH` signature (src/OCaml5/Lcnf/
-   Externs.lean `carrierSignatures`) verbatim; `e4_ppath_list.ml` is its list twin — it
-   carries the list and walks on every `node`, which is exactly Lean's meaning — and
-   satisfies the same signature.  Both ascriptions are checked in test/prop_point.ml.
+   Externs.lean `carrierSignatures`) verbatim; the ascription is checked in
+   test/prop_point.ml, whose model is Lean's meaning: the list, walked on every `node`.
 
    Depends on: the OCaml standard library only (List).
 
@@ -44,7 +43,7 @@
    PP5 append c p l = List.fold_left (snoc c) p l, and to_list (append c p l)
        = to_list p @ l                                                    tested
    PP6 persistence: `p` is unchanged by any snoc/append on it              tested
-   PP7 agreement with the list twin on random spine sequences, on both to_list and node
+   PP7 agreement with Lean's list on random spine sequences, on both to_list and node
                                                                           tested
    Bound: the path is unbounded in Lean; on this host its length is bounded by the heap. *)
 
@@ -66,7 +65,8 @@ val snoc : ('n -> int -> 'n option) -> 'n t -> int -> 'n t
 val append : ('n -> int -> 'n option) -> 'n t -> int list -> 'n t
 
 (** The node this path addresses: [walk child (root p) (to_list p)], answered in O(1) from
-    the carried node (PP3).  [child] is taken so that the list twin can walk. *)
+    the carried node (PP3).  [child] is taken so that a carrier that holds only the list
+    can walk. *)
 val node : ('n -> int -> 'n option) -> 'n t -> 'n option
 
 (** Lean's `Node.at_`: [child] applied along the list, [None] as soon as one step fails. *)

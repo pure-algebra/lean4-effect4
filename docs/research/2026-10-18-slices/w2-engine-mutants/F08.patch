@@ -1,0 +1,13 @@
+F08 e4_fibers_view.ml: to_list answers descending
+
+--- a/ocaml/engine/e4_fibers_view.ml
++++ b/ocaml/engine/e4_fibers_view.ml
+@@ -25,7 +25,7 @@
+ let is_empty (t : ('a, 'x) t) : bool = t.n = 0
+ let cardinal (t : ('a, 'x) t) : int = t.n
+ let bindings (t : ('a, 'x) t) : (int * 'a) list = IMap.bindings t.m
+-let to_list (t : ('a, 'x) t) : 'a list = List.map snd (IMap.bindings t.m)
++let to_list (t : ('a, 'x) t) : 'a list = List.rev_map snd (IMap.bindings t.m)
+ let for_all (f : int -> 'a -> bool) (t : ('a, 'x) t) : bool = IMap.for_all f t.m
+ let completed (t : ('a, 'x) t) : (int * 'x) list = t.view
+ 

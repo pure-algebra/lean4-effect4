@@ -1,0 +1,13 @@
+T08 e4_table.ml: map leaves a big table unchanged
+
+--- a/ocaml/engine/e4_table.ml
++++ b/ocaml/engine/e4_table.ml
+@@ -171,7 +171,7 @@
+ let map (f : 'a -> 'a) (t : 'a t) : 'a t =
+   match t.rep with
+   | Small l -> { t with rep = Small (List.map (fun (k, v) -> k, f v) l) }
+-  | Big m -> { t with rep = Big (IMap.map f m) }
++  | Big _ -> t
+ ;;
+ 
+ (* ------------------------------------------------------------- enumeration *)

@@ -3,22 +3,21 @@
 
    What is under test: the fiber table that MAINTAINS the completed view, so that
    `RunMachine.completedExits` (completedExits (src/Effect4/Machine/Fibers.lean)) is a field read instead
-   of a Θ(N) scan on every step.  The twin is the LEAN LIST ITSELF (`e4_fibers_view_list.ml`:
-   allocation order, and `completed` is Lean's `filterMap` walked at read time), and the
-   right-hand side of the law that matters — FV1 — is written out here from Fibers.lean and
-   also read off `E4_table.filter_map` over the carrier's own table.
+   of a Θ(N) scan on every step.  The model is the LEAN LIST ITSELF, written out here from
+   Fibers.lean (`lean_completed`, `lean_update`, `lean_spawn`, `lean_drop`: allocation order,
+   and `completedExits` is Lean's `filterMap` walked at read time), and the right-hand side of
+   the law that matters — FV1 — is also read off the carrier's own table (`scan`).
 
-   The FIBERS module type the generated functor takes is declared VERBATIM below and BOTH
-   carriers are ascribed to it, so a carrier that drifts from the seam stops compiling here.
+   The FIBERS module type the generated functor takes is declared VERBATIM below and the
+   carrier is ascribed to it, so a carrier that drifts from the seam stops compiling here.
 
    Exit code 0 iff every line passed. *)
 
 open Effect4_engine
 module V = E4_fibers_view
-module W = E4_fibers_view_list
 
 (* The seam's own text (src/OCaml5/Lcnf/Externs.lean, `carrierSignatures`), so this file fails
-   to compile if either carrier stops satisfying it. *)
+   to compile if the carrier stops satisfying it. *)
 [@@@warning "-32"]
 (* A module type used only for an ascription has, by definition, no used values. *)
 
@@ -39,17 +38,10 @@ module type FIBERS = sig
 end
 
 module _ : FIBERS = E4_fibers_view
-module _ : FIBERS = E4_fibers_view_list
 
 [@@@warning "+32"]
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [%s]\n" name why
 
 (* Java's 48-bit LCG, as every other property suite in this directory. *)
@@ -123,15 +115,13 @@ let mk_fiber i =
 
 let build n =
   let t = ref V.empty
-  and u = ref W.empty
   and l = ref [] in
   for i = 0 to n - 1 do
     let f = mk_fiber i in
     t := V.add ~exit_of i f !t;
-    u := W.add ~exit_of i f !u;
     l := lean_spawn !l f
   done;
-  !t, !u, !l
+  !t, !l
 ;;
 
 let sizes = [ 0; 1; 2; 8; 9; 64; 300 ]
@@ -142,23 +132,20 @@ let fv1 () =
   let ok = ref true in
   List.iter
     (fun n ->
-       let t, u, l = build n in
+       let t, l = build n in
        if V.completed t <> lean_completed l then ok := false;
        if V.completed t <> scan t then ok := false;
-       if W.completed u <> lean_completed l then ok := false;
        (* … and after every kind of write, at every id *)
        for id = -1 to n do
          List.iter
            (fun x ->
               let f = { id; exit_ = x; observers = [ 1 ] } in
-              let t' = V.set ~exit_of id f t
-              and u' = W.set ~exit_of id f u in
+              let t' = V.set ~exit_of id f t in
               let l' = lean_update l f in
               if V.completed t' <> lean_completed l' then ok := false;
               if V.completed t' <> scan t' then ok := false;
-              if W.completed u' <> lean_completed l' then ok := false;
               (* `add` at an id the table already has is Lean's replace; at a fresh one it is
-                 spawn's append, which the list twin only matches when the id is fresh THERE
+                 spawn's append, which the Lean list only matches when the id is fresh THERE
                  too, so the Lean side of this check is the in-range case. *)
               let t2 = V.add ~exit_of id f t' in
               if id >= 0 && id < n && V.completed t2 <> lean_completed (lean_update l' f)
@@ -168,11 +155,9 @@ let fv1 () =
        done;
        (* … and once every fiber has exited, and once none has *)
        let all = V.map ~exit_of (fun f -> { f with exit_ = Some f.id }) t in
-       let alw = W.map ~exit_of (fun f -> { f with exit_ = Some f.id }) u in
        let all_l = List.map (fun f -> { f with exit_ = Some f.id }) l in
        if V.completed all <> lean_completed all_l then ok := false;
        if V.completed all <> scan all then ok := false;
-       if W.completed alw <> lean_completed all_l then ok := false;
        let non = V.map ~exit_of (fun f -> { f with exit_ = None }) t in
        if V.completed non <> [] then ok := false;
        if scan non <> [] then ok := false)
@@ -189,16 +174,15 @@ let fv2 () =
   let ok = ref true in
   List.iter
     (fun n ->
-       let t, u, l = build n in
+       let t, l = build n in
        List.iter
          (fun id ->
             let f = { id; exit_ = Some 1; observers = [] } in
-            let t' = V.set ~exit_of id f t
-            and u' = W.set ~exit_of id f u in
+            let t' = V.set ~exit_of id f t in
             if V.bindings t' <> V.bindings t then ok := false;
             if V.completed t' <> V.completed t then ok := false;
             if not (V.completed t' == V.completed t) then ok := false;
-            if W.completed u' <> lean_completed l then ok := false;
+            if V.completed t' <> lean_completed (lean_update l f) then ok := false;
             if V.cardinal t' <> n then ok := false)
          [ -1; n; n + 5; 100000 ])
     sizes;
@@ -236,16 +220,14 @@ let fv4 () =
   let ok = ref true in
   List.iter
     (fun n ->
-       let t, u, l = build n in
+       let t, l = build n in
        for token = 0 to 7 do
-         let t' = V.map ~exit_of (drop_step token) t
-         and u' = W.map ~exit_of (drop_step token) u in
+         let t' = V.map ~exit_of (drop_step token) t in
          let l' = lean_drop l token in
          if V.to_list t' <> l' then ok := false;
          if List.map fst (V.bindings t') <> List.map fst (V.bindings t) then ok := false;
          if V.completed t' <> lean_completed l' then ok := false;
-         if V.completed t' <> scan t' then ok := false;
-         if W.completed u' <> lean_completed l' then ok := false
+         if V.completed t' <> scan t' then ok := false
        done;
        (* a mapping function that CHANGES exits: the view is re-derived, not remapped *)
        let flip f =
@@ -271,17 +253,15 @@ let fv5 () =
   let ok = ref true in
   List.iter
     (fun n ->
-       let t, u, l = build n in
+       let t, l = build n in
        for id = -2 to n + 2 do
-         if V.find_opt id t <> List.find_opt (fun f -> f.id = id) l then ok := false;
-         if W.find_opt id u <> List.find_opt (fun f -> f.id = id) l then ok := false
+         if V.find_opt id t <> List.find_opt (fun f -> f.id = id) l then ok := false
        done;
        if V.bindings t <> List.map (fun f -> f.id, f) l then ok := false;
        if V.to_list t <> l then ok := false;
        if V.cardinal t <> List.length l then ok := false;
        let fin = List.for_all (fun f -> Option.is_some f.exit_) l in
        if V.for_all (fun _ f -> Option.is_some f.exit_) t <> fin then ok := false;
-       if W.for_all (fun _ f -> Option.is_some f.exit_) u <> fin then ok := false;
        if
          V.completed (V.of_list ~exit_of (List.map (fun f -> f.id, f) l))
          <> lean_completed l
@@ -313,7 +293,6 @@ let show_ex l = String.concat ";" (List.map (fun (a, b) -> Printf.sprintf "%d=%d
 let fv6 nops =
   reset ();
   let t = ref V.empty
-  and u = ref W.empty
   and l = ref [] in
   let bad = ref None in
   let i = ref 0 in
@@ -326,7 +305,6 @@ let fv6 nops =
          | 0 ->
            let f = mk_fiber n in
            t := V.add ~exit_of n f !t;
-           u := W.add ~exit_of n f !u;
            l := lean_spawn !l f;
            "", ""
          | 1 ->
@@ -338,7 +316,6 @@ let fv6 nops =
              }
            in
            t := V.set ~exit_of id f !t;
-           u := W.set ~exit_of id f !u;
            l := lean_update !l f;
            "", ""
          | 2 ->
@@ -349,13 +326,11 @@ let fv6 nops =
             | Some g ->
               let f = { g with observers = List.init (rand 3) (fun j -> j + 1) } in
               t := V.set ~exit_of id f !t;
-              u := W.set ~exit_of id f !u;
               l := lean_update !l f);
            "", ""
          | 3 ->
            let token = rand 7 in
            t := V.map ~exit_of (drop_step token) !t;
-           u := W.map ~exit_of (drop_step token) !u;
            l := lean_drop !l token;
            "", ""
          | 4 ->
@@ -363,52 +338,47 @@ let fv6 nops =
            ( (match V.find_opt id !t with
               | None -> "-"
               | Some f -> show [ f ])
-           , (match W.find_opt id !u with
+           , (match List.find_opt (fun f -> f.id = id) !l with
               | None -> "-"
               | Some f -> show [ f ]) )
          | 5 ->
            ( string_of_bool (V.for_all (fun _ f -> Option.is_some f.exit_) !t)
-           , string_of_bool (W.for_all (fun _ f -> Option.is_some f.exit_) !u) )
-         | _ -> show_ex (V.completed !t), show_ex (W.completed !u)
+           , string_of_bool (List.for_all (fun f -> Option.is_some f.exit_) !l) )
+         | _ -> show_ex (V.completed !t), show_ex (lean_completed !l)
        in
-       (* every operation, every time: the maintained view against the walked one AND
+       (* every operation, every time: the maintained view against Lean's walked one AND
           against the scan of the carrier's own table. Compared as values; rendered only for
           the report of a failure. *)
        let ca = V.completed !t
-       and cb = W.completed !u
        and cc = lean_completed !l
        and cd = scan !t in
-       let sa = V.to_list !t
-       and sb = W.to_list !u in
-       if a <> b || sa <> sb || ca <> cb || ca <> cc || ca <> cd
+       let sa = V.to_list !t in
+       if a <> b || sa <> !l || ca <> cc || ca <> cd
        then (
-         bad
-         := Some
-              (!i, a, b, show_ex ca, show_ex cb, show_ex cc, show_ex cd, show sa, show sb);
+         bad := Some (!i, a, b, show_ex ca, show_ex cc, show_ex cd, show sa, show !l);
          raise Exit)
      done
    with
    | Exit -> ());
   (match !bad with
    | None -> ()
-   | Some (n, a, b, ca, cb, cc, cd, sa, sb) ->
+   | Some (n, a, b, ca, cc, cd, sa, sl) ->
      Printf.printf
-       "  #%d answer view=%S twin=%S\n\
-       \  completed view=%s twin=%s lean=%s scan=%s\n\
+       "  #%d answer view=%S lean=%S\n\
+       \  completed view=%s lean=%s scan=%s\n\
        \  view=%s\n\
-       \  twin=%s\n"
+       \  lean=%s\n"
        n
        a
        b
        ca
-       cb
        cc
        cd
        sa
-       sb);
+       sl);
   check
     (Printf.sprintf
-       "FV6 agreement with the Lean list twin over %d random fiber-table ops"
+       "FV6 agreement with the Lean list over %d random fiber-table ops"
        nops)
     (match !bad with
      | None -> true
@@ -419,7 +389,7 @@ let fv6 nops =
 let fv7 () =
   reset ();
   let ok = ref true in
-  let t0, _, l0 = build 64 in
+  let t0, l0 = build 64 in
   let c0 = V.completed t0
   and b0 = V.bindings t0 in
   let t1 = V.set ~exit_of 3 { id = 3; exit_ = Some 999; observers = [] } t0 in
@@ -440,7 +410,7 @@ let fv8 () =
   and total = ref 0 in
   List.iter
     (fun n ->
-       let t, _, _ = build n in
+       let t, _ = build n in
        (* the machine's own shape: `{ f with … }` with the exit untouched, every id *)
        List.iter
          (fun (id, f) ->
@@ -474,9 +444,5 @@ let () =
   argue
     "FV9 completed is O(1), set O(log n) (+O(C) when an exit changes), map O(N)"
     "by construction; the engine numbers are in the lane G3 receipt";
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

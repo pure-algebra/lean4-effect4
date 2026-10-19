@@ -1,0 +1,13 @@
+T12 e4_table.ml: of_list writes with set, which never inserts (an empty table)
+
+--- a/ocaml/engine/e4_table.ml
++++ b/ocaml/engine/e4_table.ml
+@@ -208,7 +208,7 @@
+ let to_list (t : 'a t) : 'a list = List.map snd (bindings t)
+ 
+ let of_list (l : (int * 'a) list) : 'a t =
+-  List.fold_left (fun t (k, v) -> add k v t) empty l
++  List.fold_left (fun t (k, v) -> set k v t) empty l
+ ;;
+ 
+ let singleton (k : int) (v : 'a) : 'a t = add k v empty

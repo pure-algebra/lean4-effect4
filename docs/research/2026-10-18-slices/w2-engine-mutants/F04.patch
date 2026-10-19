@@ -1,0 +1,13 @@
+F04 e4_fibers_view.ml: map derives the view from the old table (a stale input)
+
+--- a/ocaml/engine/e4_fibers_view.ml
++++ b/ocaml/engine/e4_fibers_view.ml
+@@ -157,7 +157,7 @@
+    and FV1 must hold for every `f`.  Θ(N), which the map itself already is. *)
+ let map ~(exit_of : 'a -> 'x option) (f : 'a -> 'a) (t : ('a, 'x) t) : ('a, 'x) t =
+   let m = IMap.map f t.m in
+-  { n = t.n; m; view = derive ~exit_of m }
++  { n = t.n; m; view = derive ~exit_of t.m }
+ ;;
+ 
+ let of_list ~(exit_of : 'a -> 'x option) (l : (int * 'a) list) : ('a, 'x) t =

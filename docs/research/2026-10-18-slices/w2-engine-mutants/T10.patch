@@ -1,0 +1,13 @@
+T10 e4_table.ml: set keeps the old table when a key is present (the physical test inverted: a stale write)
+
+--- a/ocaml/engine/e4_table.ml
++++ b/ocaml/engine/e4_table.ml
+@@ -109,7 +109,7 @@
+           | Some _ -> Some v)
+         m
+     in
+-    if m' == m then t else { t with rep = Big m' }
++    if m' != m then t else { t with rep = Big m' }
+ ;;
+ 
+ (* Insert-or-replace, ascending list; the flag says whether the key was fresh. *)

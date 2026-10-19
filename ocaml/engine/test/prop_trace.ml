@@ -1,12 +1,13 @@
 (* prop_trace.ml — the property tests of E4_trace (lane C, docs/research/
-   2026-09-08-engine-a1-state.md §4.3 TR1-TR6, plus TR7 nth_opt and TR8 the twin
-   differential; TR9 was added by lane W when `E4_trace` became `Lcnf_array`).
+   2026-09-08-engine-a1-state.md §4.3 TR1-TR6, plus TR7 nth_opt; TR9 was added by lane W
+   when `E4_trace` became `Lcnf_array`).
 
-   Every law of e4_trace.mli is one named PASS/FAIL line.  The twin is e4_trace_list.ml,
-   which reproduces `Effect4.Machine.RunMachine.emit` (RunMachine.emit (src/Effect4/Machine/Fibers.lean))
-   verbatim, empty guard included.  Exit code 0 iff every line passed.
+   Every law of e4_trace.mli is one named PASS/FAIL line.  The model is Lean's trace, the
+   list `Effect4.Machine.RunMachine.emit` (RunMachine.emit (src/Effect4/Machine/Fibers.lean))
+   appends to: `expected := expected @ evs` below.  TR1 is the agreement with it after every
+   emit.  Exit code 0 iff every line passed.
 
-   The TRACE module type below is lane G's text (A1 §1.5), verbatim: if either carrier drifts
+   The TRACE module type below is lane G's text (A1 §1.5), verbatim: if the carrier drifts
    from the contract, this file stops compiling. *)
 
 open Effect4_engine
@@ -24,20 +25,12 @@ module type TRACE = sig
 end
 
 module _ : TRACE = E4_trace
-module _ : TRACE = E4_trace_list
 
 [@@@warning "+32"]
 
 module R = E4_trace
-module L = E4_trace_list
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [by construction: %s]\n" name why
 
 (* Java's 48-bit LCG (multiplier 25214903917, increment 11): its constants fit a 63-bit
@@ -66,24 +59,19 @@ let schedule n =
     | _ -> List.init (1 + rand 4) (fun j -> (i * 100) + j))
 ;;
 
-let tr1_tr8 n =
+let tr1 n =
   let sch = schedule n in
   let expected = ref []
-  and fast = ref R.empty
-  and slow = ref L.empty in
-  let ok1 = ref true
-  and ok8 = ref true in
+  and fast = ref R.empty in
+  let ok1 = ref true in
   List.iter
     (fun evs ->
        expected := !expected @ evs;
        fast := R.emit evs !fast;
-       slow := L.emit evs !slow;
-       if R.to_list !fast <> !expected then ok1 := false;
-       if L.to_list !slow <> R.to_list !fast then ok8 := false)
+       if R.to_list !fast <> !expected then ok1 := false)
     sch;
   check (Printf.sprintf "TR1 to_list (emit evs t) = to_list t @ evs (%d emits)" n) !ok1;
-  check (Printf.sprintf "TR8 agreement with the list twin (%d emits)" n) !ok8;
-  !fast, !slow, !expected
+  !fast, !expected
 ;;
 
 let tr2 () =
@@ -95,16 +83,10 @@ let tr2 () =
     if not (t' == !t) then ok := false;
     t := R.emit [ i ] !t
   done;
-  (* and the twin, which carries the same Lean guard *)
-  let u = ref L.empty in
-  for i = 1 to 100 do
-    if not (L.emit [] !u == !u) then ok := false;
-    u := L.emit [ i ] !u
-  done;
-  check "TR2 emit [] t == t (physically equal, both carriers)" !ok
+  check "TR2 emit [] t == t (physically equal)" !ok
 ;;
 
-let tr4 (fast, _, expected) =
+let tr4 (fast, expected) =
   check
     "TR4 length t = List.length (to_list t), maintained incrementally"
     (R.length fast = List.length expected && R.length fast = List.length (R.to_list fast))
@@ -157,15 +139,14 @@ let tr6 () =
     (R.to_list whole = evs && R.to_list one_by_one = evs && R.to_list chunks = evs)
 ;;
 
-let tr7 (fast, slow, expected) =
+let tr7 (fast, expected) =
   let n = List.length expected in
   let ok = ref true in
   List.iter
     (fun i -> if R.nth_opt i fast <> None then ok := false)
     [ -5; -1; n; n + 1; n + 100 ];
   for i = 0 to n - 1 do
-    if R.nth_opt i fast <> List.nth_opt expected i then ok := false;
-    if L.nth_opt i slow <> R.nth_opt i fast then ok := false
+    if R.nth_opt i fast <> List.nth_opt expected i then ok := false
   done;
   check "TR7 nth_opt i t = List.nth_opt (to_list t) i, None outside the range" !ok
 ;;
@@ -173,7 +154,7 @@ let tr7 (fast, slow, expected) =
 (* TR9 — lane W, proposal N2: the carrier is `Lcnf_array`, so `nth_opt` is a lookup and not a
    walk.  The law is TR7's, taken over a trace LONGER THAN THE CHUNK (6 003 rows against a
    chunk of 256, so 23 frozen chunks and an open tail of 131): every index, in an order that
-   is not the walk's, against the list twin AND against the list the trace itself renders.
+   is not the walk's, against Lean's list AND against the list the trace itself renders.
    The old carrier passes this too — it is a law, not a benchmark — but the time it takes is
    the whole point, and bench_carriers.ml has the number. *)
 let tr9 () =
@@ -183,15 +164,14 @@ let tr9 () =
     List.init n (fun i -> i)
   in
   let fast = List.fold_left (fun t e -> R.emit [ e ] t) R.empty sch in
-  let slow = List.fold_left (fun t e -> L.emit [ e ] t) L.empty sch in
   let rendered = R.to_list fast in
-  let ok = ref (rendered = sch && R.length fast = n && L.to_list slow = sch) in
+  let ok = ref (rendered = sch && R.length fast = n) in
   (* forward, backward and a strided order: a carrier that answered only its own walk's
      direction, or only the tail, would be caught by one of the three *)
   let visit i =
     if R.nth_opt i fast <> Some i then ok := false;
     if R.nth_opt i fast <> List.nth_opt rendered i then ok := false;
-    if L.nth_opt i slow <> R.nth_opt i fast then ok := false
+    if R.nth_opt i fast <> List.nth_opt sch i then ok := false
   in
   for i = 0 to n - 1 do
     visit i
@@ -221,7 +201,7 @@ let tr9 () =
 ;;
 
 let () =
-  let st = tr1_tr8 4000 in
+  let st = tr1 4000 in
   tr2 ();
   tr4 st;
   tr5 ();
@@ -235,9 +215,5 @@ let () =
      to_list delegates to Lcnf_array.to_list, which uses a bounded temporary array or \
      its fold/reverse fallback; allocation observations are in \
      ocaml/lcnf/test_array_conversion.ml";
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

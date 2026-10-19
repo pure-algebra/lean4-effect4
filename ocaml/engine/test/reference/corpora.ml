@@ -1,46 +1,4 @@
-(* Corpora -- the programs the differential runs, from three sources, as data.
-
-   What it is: build lane X of the engine team (docs/research/2026-09-08-engine-brief.md
-   §2.1 "a differential is the evidence"; the corpus table of
-   2026-09-08-engine-a1-state.md §6.3).  Every source is reduced to ONE shape --
-   {!program}, an `Eff_wire.program` with a name and the corpus it came from -- so the three
-   engines can be driven through `E4_engine.ENGINE.compile` with no per-corpus code.
-
-   The three sources, and what each is worth:
-
-     goldens   ocaml/eff/goldens/*.bin -- 37 programs in the EXACT wire, decoded by
-               `Eff_wire.decode_program_exact`.  27 well-typed and 10 `pIll*`; the
-               ill-typed ones are part of the corpus because the machine's answer to
-               them is also semantics.
-     truth     ocaml/goldens/eff/*.hex -- 8 programs whose bytes were cut by LEAN's own
-               `Program.Wire` (eff/README.md), i.e. the cross-face oracle, plus the two
-               members of harness/truth/corpus.json that have a `.bin` under
-               ocaml/eff/goldens and no `.hex` (pTwo, pAcquire).  The recorded
-               `run`/`runSync` of harness/truth/corpus.json is read beside them
-               ({!truth_expectations}) so the engines can be compared with the LEAN side
-               and not only with each other.
-     lean      {!lean_corpus} -- the printed corpus `make corpus` writes under
-               `.lake/corpus` (tools/Tools/Corpus.lean): 400 programs of Lean's seeded
-               generator `Test.Program.Gen` plus the wire corpus, each as the canonical
-               bytes `Wire.encodeProgram` cut, with Lean's own `Api.wellTyped` verdict
-               beside it in `index.tsv`.  Since 2026-09-13 this replaces the OCaml
-               generator that was built on the hand-written checker: the programs come
-               from Lean as bytes, and the verdicts ride along as data.
-
-   Depends on: effect4_eff (Eff_types, Eff_wire), stdlib.  Nothing in this
-   module touches an engine: it is programs, not runs.
-
-   Behaviours:
-   X1  Nothing here derives a typing verdict: {!program.typed} is Lean's, read from
-       `index.tsv`, or `None` where the source records none.              by construction
-   X2  The Lean corpus is deterministic: `Test.Program.Gen.program i depth` is a pure
-       function of `i`, so `make corpus` writes one program list.          by construction
-   X3  Loading is total and lossless: a `.bin`/`.hex`/`.eff` that
-       `Eff_wire.decode_program_exact` refuses is REPORTED, never skipped silently
-       ({!load_report}).                                                   by construction
-   X4  No program is invented for a name: {!truth} contains exactly the corpus.json
-       members whose canonical bytes exist in the tree, and {!truth_missing} names the
-       rest; {!lean_corpus} contains exactly the rows of `index.tsv`.      by construction *)
+(* Corpora -- see corpora.mli. *)
 
 open Eff_types
 

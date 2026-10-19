@@ -1,0 +1,13 @@
+B01 e4_buckets.ml: a new lower priority bucket goes after the higher one (ascending order broken)
+
+--- a/ocaml/engine/e4_buckets.ml
++++ b/ocaml/engine/e4_buckets.ml
+@@ -80,7 +80,7 @@
+       if b.priority = p
+       then { b with back = x :: b.back } :: rest
+       else if p < b.priority
+-      then { priority = p; front = [ x ]; back = [] } :: b :: rest
++      then b :: { priority = p; front = [ x ]; back = [] } :: rest
+       else b :: insert p x rest
+   ;;
+ 

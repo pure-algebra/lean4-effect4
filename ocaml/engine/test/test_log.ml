@@ -27,14 +27,7 @@
 
 open Effect4_engine
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
+let check = E4_check.check
 
 (* the same 48-bit LCG the other lanes use, so a corpus is reproducible *)
 let seed0 = 20260908
@@ -469,10 +462,5 @@ let () =
   codec ();
   index_laws ();
   print_endline "";
-  Printf.printf
-    "== %s: %d failure(s) in %d checks ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures
-    !checks;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

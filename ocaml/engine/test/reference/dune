@@ -1,0 +1,28 @@
+; e4_reference -- the engine's test machinery, out of the installed effect4_engine (the hygiene
+; lane's H3, docs/research/2026-10-18-slices/README.md §10.2). A client runs none of it:
+;   Corpora       the programs the differential runs: the byte goldens, the truth corpus and the
+;                 Lean corpus `make corpus` prints, as data.
+;   E4_diff       the comparison as data: one projection per engine per position, and the
+;                 divergences between two.
+;   E4_memo_list  Lean's memo entry list, duplicates included: prop_memo's model of E4_memo,
+;                 and the generated machine's memo projection in ../api_gen_inst.ml.
+; Unwrapped, so the tests keep naming `Corpora`, `E4_diff` and `E4_memo_list`.
+
+(library
+ (name e4_reference)
+ (wrapped false)
+ (modules corpora e4_diff e4_memo_list)
+ (libraries effect4_engine effect4_eff effect4_clock))
+
+; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
+
+(rule
+ (alias runtest)
+ (deps
+  (sandbox none)
+  (:cmt
+   (glob_files .e4_reference.objs/byte/*.cmt)))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{exe:../../../tools/typed_lint/main.exe} %{cmt}))))
