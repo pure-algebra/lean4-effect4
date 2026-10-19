@@ -34,12 +34,7 @@ let path_to_string (p : path) : string =
 
 (* ============================================================ 2. the frame walk *)
 
-let tag_bytes = 8
-let tag_list = 4
-let tag_pair = 5
-let tag_some = 7
-let tag_ctor = 10
-let tag_ref = 11
+(* The frame tags are Eff_frame's, the owner of the frame grammar. *)
 let cid_length = 32
 
 (* The positions of a frame's children, in order.  Only tags 4, 5, 7 and 10 have children
@@ -48,7 +43,7 @@ let child_positions (s : string) (pos : int) (limit : int) : int list =
   match E4_be.read_frame s pos limit with
   | None -> []
   | Some (tag, p, e, _) ->
-    if tag = tag_list
+    if tag = Eff_frame.tag_list
     then (
       let acc = ref [] in
       let cur = ref p in
@@ -61,7 +56,7 @@ let child_positions (s : string) (pos : int) (limit : int) : int list =
           if next <= !cur then bad := true else cur := next
       done;
       if !bad || !cur <> e then [] else List.rev !acc)
-    else if tag = tag_pair
+    else if tag = Eff_frame.tag_pair
     then (
       match E4_be.read_frame s p e with
       | None -> []
@@ -69,18 +64,18 @@ let child_positions (s : string) (pos : int) (limit : int) : int list =
         (match E4_be.read_frame s next e with
          | Some (_, _, _, n2) when n2 = e -> [ p; next ]
          | _ -> []))
-    else if tag = tag_some
+    else if tag = Eff_frame.tag_some
     then (
       match E4_be.read_frame s p e with
       | Some (_, _, _, next) when next = e -> [ p ]
       | _ -> [])
-    else if tag = tag_ctor
+    else if tag = Eff_frame.tag_ctor
     then (
       (* the leading nat frame is the index; the children are the arguments after it *)
       match E4_be.read_frame s p e with
       | None -> []
       | Some (t0, _, _, after_index) ->
-        if t0 <> 2
+        if t0 <> Eff_frame.tag_nat
         then []
         else (
           let acc = ref [] in
@@ -583,12 +578,12 @@ let bytes32 ~payload k p (acc : (string list, mismatch) result) =
        let rec go got = function
          | [] -> Ok got
          | (tag, ps, pe) :: rest ->
-           if tag <> tag_bytes
+           if tag <> Eff_frame.tag_bytes
            then
              Error
                { m_kind = k
                ; m_at = p
-               ; m_reason = Printf.sprintf "tag %d, want %d" tag tag_bytes
+               ; m_reason = Printf.sprintf "tag %d, want %d" tag Eff_frame.tag_bytes
                }
            else if pe - ps <> cid_length
            then
@@ -618,12 +613,12 @@ let ref_at
        let rec go got = function
          | [] -> Ok got
          | (tag, ps, pe) :: rest ->
-           if tag <> tag_ref
+           if tag <> Eff_frame.tag_ref
            then
              Error
                { m_kind = k
                ; m_at = p
-               ; m_reason = Printf.sprintf "tag %d, want %d" tag tag_ref
+               ; m_reason = Printf.sprintf "tag %d, want %d" tag Eff_frame.tag_ref
                }
            else if pe - ps <> 1 + cid_length
            then
@@ -727,7 +722,7 @@ let cids_of t k ~payload =
       | Cid_field p ->
         List.filter_map
           (fun (tag, ps, pe) ->
-             if tag = tag_bytes && pe - ps = cid_length
+             if tag = Eff_frame.tag_bytes && pe - ps = cid_length
              then Some (E4_addr.Addr.of_digest (String.sub payload ps cid_length))
              else None)
           (hits ~payload p)
@@ -742,7 +737,7 @@ let stamps_of t k ~payload =
       | Stamp p ->
         List.filter_map
           (fun (tag, ps, pe) ->
-             if tag = tag_bytes && pe - ps = cid_length
+             if tag = Eff_frame.tag_bytes && pe - ps = cid_length
              then Some (String.sub payload ps cid_length)
              else None)
           (hits ~payload p)
@@ -757,7 +752,7 @@ let refs_of t k ~payload =
       | Ref_field (p, want) ->
         List.filter_map
           (fun (tag, ps, pe) ->
-             if tag <> tag_ref || pe - ps <> 1 + cid_length
+             if tag <> Eff_frame.tag_ref || pe - ps <> 1 + cid_length
              then None
              else (
                match E4_kind.of_byte (Char.code payload.[ps]) with

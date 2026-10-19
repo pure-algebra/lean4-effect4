@@ -31,8 +31,9 @@
      Nothing is lost for `refs`: a `Ref` is a tag-11 frame and `E4_node.refs` finds it exactly,
      without any table (SH1).
 
-   Depends on: E4_kind, E4_addr, E4_be (ocaml/engine, lane M).  It reads payload bytes through
-   `E4_be.read_frame` and never builds a value tree.
+   Depends on: E4_kind, E4_addr, E4_be (ocaml/engine, lane M), and Eff_frame for the frame
+   tags, which it never restates.  It reads payload bytes through `E4_be.read_frame` and never
+   builds a value tree.
 
    Behaviours:
    SH1 A Ref field is a tag-11 frame and is found by `E4_node.refs` with no table at all; a Cid
