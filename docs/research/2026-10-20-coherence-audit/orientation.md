@@ -4,7 +4,7 @@ Written 2026-10-19 by the coordinator, before the coherence audit, from:
 - the authorities: `docs/core/system-map.md`, `docs/core/semantics.md`, `ocaml/STANDARDS.md` and `AGENTS.md`;
 - the dated record of the organizing principle, `docs/research/history/coherence-principle.md`;
 - the coordinator's memory of the owner's steers;
-- 184 of the owner's own messages from 2026-08-31 to 2026-10-19, read from the session transcripts.
+- 184 of the owner's own messages from 2026-08-31 to 2026-10-19, read from the session transcripts. `probes/orientation/owner_words.py` extracts them.
 
 Every reviewer reads this first. The audit judges the code against this, not against taste.
 
