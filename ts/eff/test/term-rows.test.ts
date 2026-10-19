@@ -59,8 +59,11 @@ describe("an operation's binder term, read from its function", () => {
     expect(read("Effect.flatMap(Ref.make(0), (a0) => Ref.get(a0, (a1) => a1))")).toEqual({ _tag: "arity", head: "Ref.get" })
   })
   test("the parameter is the binder due at the node's level", () => {
-    // a wrong binder and two parameters are argument lists the row does not print
-    expect(read("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, (a0) => a0))")).toEqual({ _tag: "arity", head: "Ref.update" })
+    // a parameter named like the outer binder shadows it: the renaming reads it as the binder
+    // due at this level (Lean `Rename.expr`), so the function is the same one
+    expect(read("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, (a0) => a0))"))
+      .toEqual(read("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, (a1) => a1))"))
+    // two parameters are an argument list the row does not print
     expect(read("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, (a1, a2) => a1))")).toEqual({ _tag: "arity", head: "Ref.update" })
     // an annotated parameter and a declared result never reach the fragment: § 2 of read.ts
     // refuses both (Lean names them `annotation "Ref.update parameter"` and `… return`)

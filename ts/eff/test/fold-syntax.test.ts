@@ -47,10 +47,15 @@ describe("the list fold's source syntax", () => {
     expect(Result.isFailure(readTypeScript(
       "Effect.succeed(fold<ReadonlyArray<readonly [number, number]>>(nil(), nil(), (a0, a1) => a0))"))).toBe(true)
   })
-  test("binders of another level, annotated binders and other argument lists are no fold", () => {
+  test("binders named at another level are renamed: an author names binders as they like", () => {
+    // the renaming of binders to the printer's names (`Rename.expr`) reads them as `a0`, `a1`
+    expect(readTypeScript("Effect.succeed(fold(nil(), 0, (a1, a2) => a1))"))
+      .toEqual(readTypeScript("Effect.succeed(fold(nil(), 0, (a0, a1) => a0))"))
+    expect(readTypeScript("Effect.succeed(fold(nil(), 0, (acc, x) => add(acc, x)))"))
+      .toEqual(readTypeScript("Effect.succeed(fold(nil(), 0, (a0, a1) => add(a0, a1)))"))
+  })
+  test("annotated binders and other argument lists are no fold", () => {
     const refused = [
-      // the names of the wrong level
-      "Effect.succeed(fold(nil(), 0, (a1, a2) => a1))",
       // one binder, three binders
       "Effect.succeed(fold(nil(), 0, (a0) => a0))",
       "Effect.succeed(fold(nil(), 0, (a0, a1, a2) => a0))",

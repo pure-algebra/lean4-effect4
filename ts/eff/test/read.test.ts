@@ -258,15 +258,73 @@ describe("the synchronous runIn adapter", () => {
   })
 })
 
-describe("binders are depths", () => {
+// An author names binders as they like. The reader reads the printer's text as it stands and any
+// other text after the renaming of its binders to the printer's names, each use resolved to its
+// nearest binder (Lean `Rename.expr`; `read_renamed`). The same inputs are pinned for Lean's
+// reader in Test/Codegen/ReadContract.lean ("Binders by lexical scope"), with the same answers.
+describe("binders by lexical scope", () => {
+  const printed = (body: string) => json(`Effect.flatMap(Effect.succeed(1), (a0) => ${body})`)
   test("the continuation of flatMap binds a<n>", () => {
     expect(json("Effect.flatMap(Effect.succeed(1), (a0) => Effect.succeed(a0))")).toBe(
       '{"_tag":"bind","first":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":1}}},' +
         '"rest":{"_tag":"succeed","value":{"_tag":"var","index":0}}}',
     )
   })
-  test("a wrong binder name matches no row: the head's argument list is refused", () => {
-    expect(refusal("Effect.flatMap(Effect.succeed(1), (b) => Effect.succeed(b))")).toEqual({ _tag: "arity", head: "Effect.flatMap" })
+  test("an author's binder reads as the printer's: the same program as the printed text", () => {
+    expect(json("Effect.flatMap(Effect.succeed(1), (b) => Effect.succeed(b))")).toBe(printed("Effect.succeed(a0)"))
+    expect(json("Effect.flatMap(Effect.succeed(1), (a5) => Effect.succeed(a5))")).toBe(printed("Effect.succeed(a0)"))
+  })
+  test("nearest binder first: an inner binder shadows an outer one of the same name", () => {
+    expect(json("Effect.flatMap(Effect.succeed(1), (x) => Effect.flatMap(Effect.succeed(2), (x) => Effect.succeed(x)))"))
+      .toBe(printed("Effect.flatMap(Effect.succeed(2), (a1) => Effect.succeed(a1))"))
+    expect(json("Effect.flatMap(Effect.succeed(1), (x) => Effect.flatMap(Effect.succeed(2), (y) => Effect.succeed(x)))"))
+      .toBe(printed("Effect.flatMap(Effect.succeed(2), (a1) => Effect.succeed(a0))"))
+  })
+  test("a statement's binder scopes from its statement on", () => {
+    expect(json("Effect.gen(function* () { const x = yield* Effect.succeed(1); const y = yield* Effect.succeed(2); return x })"))
+      .toBe(json("Effect.gen(function* () { const a0 = yield* Effect.succeed(1); const a1 = yield* Effect.succeed(2); return a0 })"))
+  })
+  test("a block's binder is in scope over the whole block: a use before its declaration is refused", () => {
+    const early = "Effect.gen(function* () { yield* Effect.succeed(x); const x = yield* Effect.succeed(2); return x })"
+    const r = refusal(early)
+    expect(r).toEqual({ _tag: "unknownIdent", name: "x" })
+    expect(locate(r).path).toEqual([["call", 1], ["generator", 0], ["yieldDiscard", 0], ["call", 1]])
+    expect(refusal(`Effect.flatMap(Effect.succeed(1), (x) => ${early})`)).toEqual({ _tag: "unknownIdent", name: "x" })
+    // a binder that the statement itself holds is nearer than the block's later declaration
+    expect(json("Effect.gen(function* () { yield* Effect.flatMap(Effect.succeed(1), (x) => Effect.succeed(x)); const x = yield* Effect.succeed(2); return x })"))
+      .toBe(json("Effect.gen(function* () { yield* Effect.flatMap(Effect.succeed(1), (a0) => Effect.succeed(a0)); const a0 = yield* Effect.succeed(2); return a0 })"))
+  })
+  test("an unbound name is refused where it stands, on the program's path", () => {
+    const r = refusal("Effect.flatMap(Effect.succeed(1), (x) => Effect.succeed(y))")
+    expect(r).toEqual({ _tag: "unknownIdent", name: "y" })
+    expect(locate(r).path).toEqual([["bind", 1], ["succeed", 0]])
+  })
+  test("a name the renamed binder would capture is refused, on the target syntax's path", () => {
+    const r = refusal("Effect.flatMap(Effect.succeed(1), (x) => Effect.succeed(a0))")
+    expect(r).toEqual({ _tag: "unknownIdent", name: "a0" })
+    expect(locate(r).path).toEqual([["call", 2], ["lambda", 0], ["call", 1]])
+  })
+  test("a call's head is a name: a binder there is refused", () => {
+    const r = refusal("Effect.flatMap(Effect.succeed(1), (f) => Effect.succeed(f(1)))")
+    expect(r).toEqual({ _tag: "binder", expected: "f" })
+    expect(locate(r).path).toEqual([["call", 2], ["lambda", 0], ["call", 1], ["call", 0]])
+  })
+  test("a parameter list or a block that declares one name twice is refused", () => {
+    expect(refusal("Effect.acquireRelease(Effect.succeed(1), (r, r) => Effect.succeed(r))")).toEqual({ _tag: "binder", expected: "r" })
+    const r = refusal("Effect.gen(function* () { const x = yield* Effect.succeed(1); const x = yield* Effect.succeed(2); return x })")
+    expect(r).toEqual({ _tag: "binder", expected: "x" })
+    expect(locate(r).path).toEqual([["call", 1], ["generator", 1]])
+  })
+  test("a layer clause closes the lexical scope: a layer is printed at the empty environment", () => {
+    const layered = (outer: string, inner: string, use: string) =>
+      `Effect.flatMap(Effect.succeed(1), (${outer}) => Effect.provide(Effect.succeed(${outer}), ` +
+      `Layer.effectDiscard(Effect.flatMap(Effect.succeed(2), (${inner}) => Effect.succeed(${use})))))`
+    const program = json(layered("a0", "a0", "a0"))
+    expect(json(layered("x", "y", "y"))).toBe(program)
+    expect(json(layered("x", "x", "x"))).toBe(program)
+    const r = refusal(layered("x", "y", "x"))
+    expect(r).toEqual({ _tag: "unknownIdent", name: "x" })
+    expect(locate(r).path).toEqual([["bind", 1], ["provideLayer", 0], ["effectDiscard", 0], ["bind", 1], ["succeed", 0]])
   })
   test("a variable out of scope is an unknown identifier", () => {
     expect(refusal("Effect.succeed(a0)")).toEqual({ _tag: "unknownIdent", name: "a0" })
@@ -625,6 +683,11 @@ describe("supplied tables and method rows", () => {
     expect(method('a0.write(3, "x")')).toBe(toJson(after9(external(2, pair(v(0), pair(natLit(3), { _tag: "lit", value: { _tag: "str", value: "x" } }))))))
     expect(method("a0.lookup<number>(3)")).toBe(toJson(after9(external(3, pair(v(0), natLit(3))))))
   })
+  test("a method off an author's binder is a method off that binder, as off a printer's", () => {
+    // the adapter reads `r.read` as a receiver because an enclosing binder declares `r`
+    expect(readWith("Effect.flatMap(Effect.succeed(9), (r) => r.read(3))", methodTable))
+      .toBe(toJson(after9(external(1, pair(v(0), natLit(3))))))
+  })
   test("the type arguments must be exactly the row's", () => {
     expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => a0.lookup(3))", methodTable)).toEqual({ _tag: "arity", head: "lookup" })
     expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => a0.read<number>(3))", methodTable)).toEqual({ _tag: "arity", head: "read" })
@@ -676,8 +739,9 @@ describe("conditional handlers", () => {
   test("predicate and handler both see only their own binder", () => {
     const source = "Effect.catchIf(Effect.fail(7), (a0) => eq(a0, 7), (a0) => Effect.succeed(a0), undefined)"
     expect(JSON.parse(json(source))._tag).toBe("catchIf")
-    expect(refusal(source.replace("(a0) => eq", "(a1) => eq"))._tag).toBe("arity")
-    expect(refusal(source.replace("(a0) => Effect.succeed", "(a1) => Effect.succeed"))._tag).toBe("arity")
+    // the other function's binder is no name here: renaming `a1` to `a0` would capture it
+    expect(refusal(source.replace("(a0) => eq", "(a1) => eq"))).toEqual({ _tag: "unknownIdent", name: "a0" })
+    expect(refusal(source.replace("(a0) => Effect.succeed", "(a1) => Effect.succeed"))).toEqual({ _tag: "unknownIdent", name: "a0" })
   })
   test("the exact reader requires an absent fallback", () => {
     expect(refusal("Effect.catchIf(Effect.fail(7), (a0) => false, (a0) => Effect.succeed(a0))")._tag).toBe("arity")
@@ -753,8 +817,8 @@ describe("the images only the table reader reads", () => {
 // Lean's `readEffAt` in Test/Codegen/ReadContract.lean, with the same answers. The location is
 // kept beside the refusal (`locate`), so every refusal pinned above is unchanged.
 describe("a refusal says where", () => {
-  test("a wrong binder: the row with that head says what it has where the tree parts", () => {
-    const r = refusal("Effect.flatMap(Effect.succeed(1), (b0) => b0)")
+  test("a function of two binders where the row binds one: the row with that head says what it has where the tree parts", () => {
+    const r = refusal("Effect.flatMap(Effect.succeed(1), (a0, a1) => a0)")
     expect(r).toEqual({ _tag: "arity", head: "Effect.flatMap" })
     expect(locate(r)).toEqual({ path: [], expected: { at: ["argument 1", "parameters"], what: "a0" } })
     expect(showFailure(r)).toBe("arity Effect.flatMap; expected a0 at argument 1 > parameters")

@@ -5,6 +5,7 @@
 //     │ programModuleOf     the declarations and the one program a file holds § 2
 //     │ exprOf              ESTree → the fragment the Lean printer emits      § 2
 //     │ readEff(0, ·)       fragment → Eff: one matcher over the table Lean prints from     § 3
+//     │                     (the printer's text as it stands, any other after the renaming)
 //     │ readModule          the hoisted layers put back at their paths        § 4
 //     │ readRowServices,    a file's rows' services, exactly; a definition   § 5
 //     │   readBlock         block, its headers under the module's classes
@@ -462,6 +463,15 @@ const yieldStar = (n: Node): Node | undefined =>
  * never a dotted head. */
 const isBinderName = (s: string): boolean => /^a(0|[1-9][0-9]*)$/.test(s)
 
+/** The names the enclosing binders of a fragment declare. An author names binders as they like,
+ * so a member chain rooted at one of these names is a receiver too (lexical scope). Only the
+ * adapter's choice between a receiver and a dotted head reads it: which binder a name means is
+ * the renaming's (§ 3, `rename`). */
+type Bound = ReadonlySet<string>
+const noBinders: Bound = new Set()
+const binding = (bound: Bound, names: ReadonlyArray<string>): Bound =>
+  names.length === 0 ? bound : new Set([...bound, ...names])
+
 /** The root identifier of a member chain; `undefined` when the chain bottoms out elsewhere. */
 const rootName = (n: Node): string | undefined => {
   if (n.type === "Identifier") return typeof n.name === "string" ? n.name : undefined
@@ -474,19 +484,20 @@ const rootName = (n: Node): string | undefined => {
 
 /** `receiver.name`: a plain member whose object is a receiver term (a chain rooted at a binder,
  * or an expression that is no identifier chain at all), as opposed to a dotted head such as
- * `Effect.succeed` or `Host.acquire`, which `dotted` reads as one identifier. */
-const receiverMember = (n: Node): { readonly object: Node; readonly name: string } | undefined => {
+ * `Effect.succeed` or `Host.acquire`, which `dotted` reads as one identifier. A binder is a
+ * printer's name or a name an enclosing binder declares (`bound`). */
+const receiverMember = (n: Node, bound: Bound): { readonly object: Node; readonly name: string } | undefined => {
   if (n.type !== "MemberExpression" || n.computed === true || n.optional === true) return undefined
   const object = nodeAt(n, "object")
   const property = nodeAt(n, "property")
   if (!object || !property || property.type !== "Identifier" || typeof property.name !== "string") return undefined
   const inner = unwrap(object)
   const root = rootName(inner)
-  if (root !== undefined && !isBinderName(root)) return undefined
+  if (root !== undefined && !isBinderName(root) && !bound.has(root)) return undefined
   return { object: inner, name: property.name }
 }
 
-export const exprOf = (raw: Node): Read<Expr> => {
+export const exprOf = (raw: Node, bound: Bound = noBinders): Read<Expr> => {
   const n = unwrap(raw)
   switch (n.type) {
     case "Identifier":
@@ -497,14 +508,14 @@ export const exprOf = (raw: Node): Read<Expr> => {
         const object = nodeAt(n, "object")
         const property = nodeAt(n, "property")
         if (!object || !property) return unsupported(n, "element access")
-        const base = exprOf(object)
+        const base = exprOf(object, bound)
         if (failed(base)) return again(base)
-        const key = exprOf(property)
+        const key = exprOf(property, bound)
         if (failed(key)) return again(key)
         return ok({ _tag: "index", base: base.success, key: key.success })
       }
-      const receiver = receiverMember(n)
-      if (receiver) return Result.map(exprOf(receiver.object), (base): Expr => ({ _tag: "member", base, name: receiver.name }))
+      const receiver = receiverMember(n, bound)
+      if (receiver) return Result.map(exprOf(receiver.object, bound), (base): Expr => ({ _tag: "member", base, name: receiver.name }))
       const name = dotted(n)
       return name === undefined ? unsupported(n, "member") : ok({ _tag: "ident", name })
     }
@@ -530,21 +541,21 @@ export const exprOf = (raw: Node): Read<Expr> => {
         const object = nodeAt(callee, "object")
         if (property?.type === "Identifier" && property.name === "pipe" && object) {
           if (n.typeArguments) return unsupported(n, "method typeArguments")
-          const base = exprOf(object)
+          const base = exprOf(object, bound)
           if (failed(base)) return again(base)
-          const args = exprsOf(listAt(n, "arguments") ?? [], "argument")
+          const args = exprsOf(listAt(n, "arguments") ?? [], "argument", bound)
           if (failed(args)) return again(args)
           return ok({ _tag: "method", base: base.success, name: "pipe", args: args.success })
         }
       }
       // `receiver.spelling(args)` is a method call on a receiver term (`printMethod`); with
       // type arguments the callee is `generic` over a `member`, as the printer spells it.
-      const receiver = receiverMember(callee)
+      const receiver = receiverMember(callee, bound)
       const fn: Read<Expr> = receiver
-        ? Result.map(exprOf(receiver.object), (base): Expr => ({ _tag: "member", base, name: receiver.name }))
-        : exprOf(callee)
+        ? Result.map(exprOf(receiver.object, bound), (base): Expr => ({ _tag: "member", base, name: receiver.name }))
+        : exprOf(callee, bound)
       if (failed(fn)) return again(fn)
-      const args = exprsOf(listAt(n, "arguments") ?? [], "argument")
+      const args = exprsOf(listAt(n, "arguments") ?? [], "argument", bound)
       if (failed(args)) return again(args)
       // `head<T1, …>(args)`: the type arguments become the callee's `generic` spellings.
       const targs = nodeAt(n, "typeArguments")
@@ -567,13 +578,14 @@ export const exprOf = (raw: Node): Read<Expr> => {
       if (!params) return unsupported(n, "arrow params")
       const body = nodeAt(n, "body")
       if (!body) return unsupported(n, "arrow body")
+      const inner = binding(bound, params)
       if (n.expression === true) {
-        const b = exprOf(body)
+        const b = exprOf(body, inner)
         if (failed(b)) return again(b)
         return params.length === 0 ? ok({ _tag: "arrow", body: b.success }) : ok({ _tag: "lambda", params, body: b.success })
       }
       if (body.type !== "BlockStatement") return unsupported(body, "arrow block")
-      const block = stmtsOf(listAt(body, "body") ?? [])
+      const block = stmtsOf(listAt(body, "body") ?? [], inner)
       if (failed(block)) return again(block)
       return ok({ _tag: "arrowBlock", params, body: block.success })
     }
@@ -583,16 +595,16 @@ export const exprOf = (raw: Node): Read<Expr> => {
       if (!params || params.length !== 0) return unsupported(n, "generator params")
       const body = nodeAt(n, "body")
       if (!body || body.type !== "BlockStatement") return unsupported(n, "generator body")
-      const block = stmtsOf(listAt(body, "body") ?? [])
+      const block = stmtsOf(listAt(body, "body") ?? [], bound)
       if (failed(block)) return again(block)
       return ok({ _tag: "generator", body: block.success })
     }
     case "NewExpression": {
       const callee = nodeAt(n, "callee")
       if (!callee || n.optional === true) return unsupported(n, "constructor")
-      const target = exprOf(callee)
+      const target = exprOf(callee, bound)
       if (failed(target)) return again(target)
-      const args = exprsOf(listAt(n, "arguments") ?? [], "constructor argument")
+      const args = exprsOf(listAt(n, "arguments") ?? [], "constructor argument", bound)
       if (failed(args)) return again(args)
       const typeArgs = nodeAt(n, "typeArguments")
       if (!typeArgs) return ok({ _tag: "new", callee: target.success, args: args.success })
@@ -609,7 +621,7 @@ export const exprOf = (raw: Node): Read<Expr> => {
         if (p.type === "SpreadElement") {
           const argument = nodeAt(p, "argument")
           if (!argument) return unsupported(p, "spread value")
-          const value = exprOf(argument)
+          const value = exprOf(argument, bound)
           if (failed(value)) return again(value)
           entries.push({ _tag: "spread", value: value.success })
           spread = true
@@ -629,7 +641,7 @@ export const exprOf = (raw: Node): Read<Expr> => {
         if (typeof name !== "string") return unsupported(key ?? p, "property key")
         const value = nodeAt(p, "value")
         if (!value) return unsupported(p, "property value")
-        const v = exprOf(value)
+        const v = exprOf(value, bound)
         if (failed(v)) return again(v)
         entries.push({ _tag: "property", name, value: v.success })
       }
@@ -641,7 +653,7 @@ export const exprOf = (raw: Node): Read<Expr> => {
       return ok({ _tag: "objectWith", keys: keys ?? "plain", entries })
     }
     case "ArrayExpression": {
-      const items = exprsOf(listAt(n, "elements") ?? [], "array item")
+      const items = exprsOf(listAt(n, "elements") ?? [], "array item", bound)
       if (failed(items)) return again(items)
       return ok({ _tag: "arr", items: items.success })
     }
@@ -650,11 +662,11 @@ export const exprOf = (raw: Node): Read<Expr> => {
       const consequent = nodeAt(n, "consequent")
       const alternate = nodeAt(n, "alternate")
       if (!test || !consequent || !alternate) return unsupported(n, "conditional")
-      const t = exprOf(test)
+      const t = exprOf(test, bound)
       if (failed(t)) return again(t)
-      const a = exprOf(consequent)
+      const a = exprOf(consequent, bound)
       if (failed(a)) return again(a)
-      const b = exprOf(alternate)
+      const b = exprOf(alternate, bound)
       if (failed(b)) return again(b)
       return ok({ _tag: "cond", test: t.success, thenBranch: a.success, elseBranch: b.success })
     }
@@ -663,20 +675,19 @@ export const exprOf = (raw: Node): Read<Expr> => {
   }
 }
 
-const exprsOf = (items: ReadonlyArray<unknown>, where: string,
-  read: (node: Node, index: number) => Read<Expr> = exprOf): Read<ReadonlyArray<Expr>> => {
+const exprsOf = (items: ReadonlyArray<unknown>, where: string, bound: Bound): Read<ReadonlyArray<Expr>> => {
   const out: Expr[] = []
-  for (const [i, item] of items.entries()) {
+  for (const item of items) {
     if (!isNode(item)) return refuse({ _tag: "node", type: item === null ? "hole" : typeof item, where })
     if (item.type === "SpreadElement") return unsupported(item, where)
-    const e = read(item, i)
+    const e = exprOf(item, bound)
     if (failed(e)) return again(e)
     out.push(e.success)
   }
   return ok(out)
 }
 
-const stmtOf = (n: Node): Read<TsStmt> => {
+const stmtOf = (n: Node, bound: Bound): Read<TsStmt> => {
   switch (n.type) {
     case "VariableDeclaration": {
       const decls = listAt(n, "declarations")
@@ -691,12 +702,12 @@ const stmtOf = (n: Node): Read<TsStmt> => {
         if (id.typeAnnotation) return unsupported(n, "declarator")
         const argument = yieldStar(unwrap(init))
         if (!argument) return unsupported(init, "const without yield*")
-        const v = exprOf(argument)
+        const v = exprOf(argument, bound)
         if (failed(v)) return again(v)
         return ok({ _tag: "constYield", name: id.name, value: v.success })
       }
       if (n.kind === "let") {
-        const v = exprOf(init)
+        const v = exprOf(init, bound)
         if (failed(v)) return again(v)
         if (!id.typeAnnotation) return ok({ _tag: "letInit", name: id.name, value: v.success })
         // A stated type on a `let` is a loop's cursor type (`iterate`'s annotated image). It is
@@ -715,7 +726,7 @@ const stmtOf = (n: Node): Read<TsStmt> => {
       const inner = unwrap(e)
       const argument = yieldStar(inner)
       if (argument) {
-        const v = exprOf(argument)
+        const v = exprOf(argument, bound)
         if (failed(v)) return again(v)
         return ok({ _tag: "yieldDiscard", value: v.success })
       }
@@ -723,16 +734,16 @@ const stmtOf = (n: Node): Read<TsStmt> => {
         const left = nodeAt(inner, "left")
         const right = nodeAt(inner, "right")
         if (!left || left.type !== "Identifier" || typeof left.name !== "string" || !right) return unsupported(inner, "assignment")
-        const v = exprOf(right)
+        const v = exprOf(right, bound)
         if (failed(v)) return again(v)
         return ok({ _tag: "assign", name: left.name, value: v.success })
       }
-      return Result.map(exprOf(inner), (value): TsStmt => ({ _tag: "exprStmt", value }))
+      return Result.map(exprOf(inner, bound), (value): TsStmt => ({ _tag: "exprStmt", value }))
     }
     case "ReturnStatement": {
       const argument = nodeAt(n, "argument")
       if (!argument) return unsupported(n, "bare return")
-      const v = exprOf(argument)
+      const v = exprOf(argument, bound)
       if (failed(v)) return again(v)
       return ok({ _tag: "ret", value: v.success })
     }
@@ -741,7 +752,7 @@ const stmtOf = (n: Node): Read<TsStmt> => {
       const body = nodeAt(n, "body")
       if (!test || unwrap(test).type !== "Literal" || unwrap(test).value !== true) return unsupported(test ?? n, "while test")
       if (!body || body.type !== "BlockStatement") return unsupported(body ?? n, "while body")
-      const block = stmtsOf(listAt(body, "body") ?? [])
+      const block = stmtsOf(listAt(body, "body") ?? [], bound)
       if (failed(block)) return again(block)
       return ok({ _tag: "whileTrue", body: block.success })
     }
@@ -751,11 +762,11 @@ const stmtOf = (n: Node): Read<TsStmt> => {
       const alternate = nodeAt(n, "alternate")
       if (!test || !consequent || consequent.type !== "BlockStatement") return unsupported(n, "if")
       if (alternate && alternate.type !== "BlockStatement") return unsupported(alternate, "else")
-      const t = exprOf(test)
+      const t = exprOf(test, bound)
       if (failed(t)) return again(t)
-      const a = stmtsOf(listAt(consequent, "body") ?? [])
+      const a = stmtsOf(listAt(consequent, "body") ?? [], bound)
       if (failed(a)) return again(a)
-      const b = alternate ? stmtsOf(listAt(alternate, "body") ?? []) : ok<ReadonlyArray<TsStmt>>([])
+      const b = alternate ? stmtsOf(listAt(alternate, "body") ?? [], bound) : ok<ReadonlyArray<TsStmt>>([])
       if (failed(b)) return again(b)
       return ok({ _tag: "ifElse", condition: t.success, thenBranch: a.success, elseBranch: b.success })
     }
@@ -766,13 +777,16 @@ const stmtOf = (n: Node): Read<TsStmt> => {
   }
 }
 
-const stmtsOf = (items: ReadonlyArray<unknown>): Read<ReadonlyArray<TsStmt>> => {
+/** A block's statements, each under the names the statements before it declare. */
+const stmtsOf = (items: ReadonlyArray<unknown>, bound: Bound): Read<ReadonlyArray<TsStmt>> => {
   const out: TsStmt[] = []
+  let names = bound
   for (const item of items) {
     if (!isNode(item)) return refuse({ _tag: "node", type: typeof item, where: "statement" })
-    const s = stmtOf(item)
+    const s = stmtOf(item, names)
     if (failed(s)) return again(s)
     out.push(s.success)
+    if (s.success._tag === "constYield" || s.success._tag === "letInit") names = binding(names, [s.success.name])
   }
   return ok(out)
 }
@@ -1029,7 +1043,8 @@ const programModuleOf = (program: Node): Read<Module> => {
 // one place, Lean's `Codegen/Templates.lean`. A bare value (a literal, `undefined`, a binder) or
 // an atom application in effect position is refused: the printer never emits one there.
 // Binders are depths: the k-th nested lambda binds `a<k>`, and `varRead` recovers a variable by
-// comparing names from the newest binder down, never by decoding digits.
+// comparing names from the newest binder down, never by decoding digits. That is the printer's
+// naming; `readEff` reads an author's text after the renaming of its binders (`rename`, below).
 
 /** The binder minted for environment position `index`: `a0`, `a1`, … (`Var.name`). */
 const varName = (index: number): string => `a${index}`
@@ -2189,26 +2204,301 @@ const readStmts = (n: number, stmts: ReadonlyArray<TsStmt>): Read<ReadonlyArray<
   return ok(out)
 }
 
-/** A program from a tree, at environment length `n`. The node is checked against the schema by
- * `decodeEff` at the boundary (§ 0), so the generic build is typed there, once. */
-export const readEff = (n: number, x: Expr): Read<Eff> =>
-  (readT("eff", n, x) ?? unread("eff")) as Read<Eff>
+/* ------------------------------------------------------------ the renaming  (Rename.lean) */
 
-/** A layer from a tree. A layer is closed: its bodies are read at environment length `0`. */
-export const readLayer = (x: Expr): Read<LayerTerm> =>
-  (readT("layer", 0, x) ?? unread("layer")) as Read<LayerTerm>
+// The printer names the binder at environment position `i` `a<i>`; an author names binders as
+// they like. `rename(b, x)` renames every binder of `x` to the printer's name for its level,
+// and every use to the name of the binder it resolves to, nearest binder first: the authoring
+// scope reader's rule (Lean `Authoring.Names.resolve`), here `names.lastIndexOf`, as the ingest
+// engines resolve. `readEff` reads the printer's text as it stands and any other text after this
+// renaming. It is Lean's `Rename.expr`, clause for clause on the forms the adapter (§ 2) builds.
+// The lexical scope is TypeScript's with two differences: under the head of a layer clause
+// (`closedHeads`) the scope starts again from no binder, as a layer is printed and read at
+// environment length 0; and a call's head, a constructed class and a callee with type arguments
+// are names, never uses. A block's binder is in scope over the whole block, so a use before its
+// declaration (its temporal dead zone) is refused. A name no binder declares stays as written,
+// except a name of the printer's form whose position a binder holds, which the renamed binder
+// would capture.
 
+/** The printer's names at environment length `n`: `a0` … `a<n-1>` (`Rename.mint`). */
+const mint = (n: number): ReadonlyArray<string> => Array.from({ length: n }, (_, i) => varName(i))
 
+/** The heads of the calls a skeleton holds, outermost first (`Tpl.callHeads`). */
+const callHeads = (t: Tpl): ReadonlyArray<string> => {
+  switch (t._tag) {
+    case "call":
+      return [...(t.head._tag === "ident" ? [t.head.name] : callHeads(t.head)), ...t.args.flatMap(callHeads)]
+    case "callSpread": return t.head._tag === "ident" ? [t.head.name] : callHeads(t.head)
+    case "generic": return callHeads(t.head)
+    case "arr": return t.items.flatMap(callHeads)
+    case "object": return t.fields.flatMap(([, v]) => callHeads(v))
+    case "arrow": case "lambda": return callHeads(t.body)
+    case "cond": return [...callHeads(t.test), ...callHeads(t.yes), ...callHeads(t.no)]
+    case "method": return [...callHeads(t.target), ...t.args.flatMap(callHeads)]
+    case "arrowBlock": case "generator": return stmtsCallHeads(t.body)
+    default: return []
+  }
+}
+const stmtsCallHeads = (ts: StmtTpls): ReadonlyArray<string> => ("_tag" in ts ? [] : ts.flatMap(stmtCallHeads))
+const stmtCallHeads = (t: StmtTpl): ReadonlyArray<string> => {
+  switch (t._tag) {
+    case "ifElse": return [...callHeads(t.test), ...stmtsCallHeads(t.thenB), ...stmtsCallHeads(t.elseB)]
+    case "whileTrue": return stmtsCallHeads(t.body)
+    case "breakTo": return []
+    default: return callHeads(t.value)
+  }
+}
 
-/** The race entrants, each at the same environment length. */
-const readEffs = (n: number, items: ReadonlyArray<Expr>): Read<ReadonlyArray<Eff>> => {
-  const out: Eff[] = []
-  for (const x of items) {
-    const e = readEff(n, x)
-    if (failed(e)) return again(e)
-    out.push(e.success)
+/** The heads of the layer family's clauses: under them the renaming closes the scope
+ * (`Rename.closedHeads`). */
+const closedHeads: ReadonlyArray<string> =
+  tableRows.flatMap((row) => (row.fam === "layer" && row.out._tag === "tpl" ? callHeads(row.out.tpl) : []))
+
+/** Whether a callee's own name closes the scope of the call's arguments (`Rename.closes`). */
+const closes = (fn: Expr): boolean => fn._tag === "ident" && closedHeads.includes(fn.name)
+
+/** The position a printer's name stands for (`Var.index?`). */
+const indexOfName = (s: string): number | undefined => (isBinderName(s) ? Number(s.slice(1)) : undefined)
+
+/** What the renaming knows at a point of the text (Lean `Rename.Binders`): the binders in lexical
+ * scope, in level order, and the names an enclosing block declares at or after the statement
+ * that holds the point, each with the number of binders in scope at that statement. */
+interface Binders {
+  readonly names: ReadonlyArray<string>
+  readonly later: ReadonlyArray<readonly [string, number]>
+}
+const noLater: ReadonlyArray<readonly [string, number]> = []
+
+/** Whether a use of `s` here means a binder that its block declares later, in its temporal dead
+ * zone: no binder of `s` that the statement itself holds is nearer (`Binders.early`). */
+const early = (b: Binders, s: string): boolean => {
+  let at: number | undefined
+  for (const [t, n] of b.later) if (t === s) at = n
+  return at !== undefined && b.names.lastIndexOf(s) < at
+}
+
+/** A name where it is used: the printer's name of its nearest binder; an unbound name as written.
+ * A use before its block's declaration of it is refused, and so is an unbound name of the
+ * printer's form that the renamed binder at its position would capture (`Rename.use`). */
+const renameUse = (b: Binders, s: string): Read<string> => {
+  if (early(b, s)) return refuse({ _tag: "unknownIdent", name: s })
+  const i = b.names.lastIndexOf(s)
+  if (i >= 0) return ok(varName(i))
+  const k = indexOfName(s)
+  return k !== undefined && k < b.names.length ? refuse({ _tag: "unknownIdent", name: s }) : ok(s)
+}
+
+/** A name in a name's place: as written; a binder there is refused, unless it is the printer's
+ * own name for its level (`Rename.head`). */
+const renameHead = (b: Binders, s: string): Read<string> => {
+  if (early(b, s)) return refuse({ _tag: "binder", expected: s })
+  const i = b.names.lastIndexOf(s)
+  return i < 0 || varName(i) === s ? ok(s) : refuse({ _tag: "binder", expected: s })
+}
+
+/** A parameter list binds its names in order; one that names a binder twice is refused
+ * (`Rename.bindParams`). */
+const bindParams = (ps: ReadonlyArray<string>): Read<ReadonlyArray<string>> => {
+  const repeat = ps.find((p, j) => ps.indexOf(p, j + 1) >= 0)
+  return repeat === undefined ? ok(ps) : refuse({ _tag: "binder", expected: repeat })
+}
+
+/** A declaration in a block whose declarations start at level `start`: a name the block already
+ * declares is refused (`Rename.declare`). */
+const declare = (names: ReadonlyArray<string>, start: number, s: string): Read<undefined> =>
+  names.slice(start).includes(s) ? refuse({ _tag: "binder", expected: s }) : ok(undefined)
+
+/** The items of a list, located at their positions from `j` under `step`. */
+const renameItems = (step: string, b: Binders, j: number, xs: ReadonlyArray<Expr>): Read<ReadonlyArray<Expr>> => {
+  const out: Expr[] = []
+  for (const [i, x] of xs.entries()) {
+    const y = under(rename(b, x), step, j + i)
+    if (failed(y)) return again(y)
+    out.push(y.success)
   }
   return ok(out)
+}
+
+/** A callee: a bare identifier is a name; any other callee is renamed (`Rename.callee`). */
+const renameCallee = (step: string, b: Binders, fn: Expr): Read<Expr> =>
+  fn._tag === "ident"
+    ? under(Result.map(renameHead(b, fn.name), (name): Expr => ({ _tag: "ident", name })), step, 0)
+    : under(rename(b, fn), step, 0)
+
+/** **The renaming of binders to the printer's names** (`Rename.expr`, its algebra `Rename.alg`). */
+const rename = (b: Binders, x: Expr): Read<Expr> => {
+  switch (x._tag) {
+    case "ident": return Result.map(renameUse(b, x.name), (name): Expr => ({ _tag: "ident", name }))
+    case "str": case "int": case "bool": case "jsNull": return ok(x)
+    case "call": {
+      const fn = renameCallee("call", b, x.fn)
+      if (failed(fn)) return again(fn)
+      const args = renameItems("call", closes(x.fn) ? { names: [], later: noLater } : b, 1, x.args)
+      if (failed(args)) return again(args)
+      return ok({ _tag: "call", fn: fn.success, args: args.success })
+    }
+    case "object": {
+      const fields: Array<readonly [string, Expr]> = []
+      for (const [j, [key, value]] of x.fields.entries()) {
+        const v = under(rename(b, value), "object", j)
+        if (failed(v)) return again(v)
+        fields.push([key, v.success])
+      }
+      return ok({ _tag: "object", fields })
+    }
+    case "arr": return Result.map(renameItems("arr", b, 0, x.items), (items): Expr => ({ _tag: "arr", items }))
+    case "arrow": return Result.map(under(rename(b, x.body), "arrow", 0), (body): Expr => ({ _tag: "arrow", body }))
+    case "generic":
+      return Result.map(renameCallee("generic", b, x.fn), (fn): Expr => ({ _tag: "generic", fn, typeArgs: x.typeArgs }))
+    case "lambda": {
+      const bound = bindParams(x.params)
+      if (failed(bound)) return again(bound)
+      const body = under(rename({ names: [...b.names, ...bound.success], later: b.later }, x.body), "lambda", 0)
+      if (failed(body)) return again(body)
+      return ok({ _tag: "lambda", params: x.params.map((_, i) => varName(b.names.length + i)), body: body.success })
+    }
+    case "method": {
+      const base = under(rename(b, x.base), "method", 0)
+      if (failed(base)) return again(base)
+      const args = renameItems("method", b, 1, x.args)
+      if (failed(args)) return again(args)
+      return ok({ _tag: "method", base: base.success, name: x.name, args: args.success })
+    }
+    case "member":
+      return Result.map(under(rename(b, x.base), "member", 0), (base): Expr => ({ _tag: "member", base, name: x.name }))
+    case "generator":
+      return Result.map(renameNested("generator", b, x.body), (body): Expr => ({ _tag: "generator", body }))
+    case "cond": {
+      const test = under(rename(b, x.test), "cond", 0)
+      if (failed(test)) return again(test)
+      const yes = under(rename(b, x.thenBranch), "cond", 1)
+      if (failed(yes)) return again(yes)
+      const no = under(rename(b, x.elseBranch), "cond", 2)
+      if (failed(no)) return again(no)
+      return ok({ _tag: "cond", test: test.success, thenBranch: yes.success, elseBranch: no.success })
+    }
+    case "arrowBlock": {
+      const bound = bindParams(x.params)
+      if (failed(bound)) return again(bound)
+      const body = renameBlock("arrowBlock", b.names.length, b.later, [...b.names, ...bound.success], x.body)
+      if (failed(body)) return again(body)
+      return ok({ _tag: "arrowBlock", params: x.params.map((_, i) => varName(b.names.length + i)), body: body.success })
+    }
+    case "index": {
+      const base = under(rename(b, x.base), "index", 0)
+      if (failed(base)) return again(base)
+      const key = under(rename(b, x.key), "index", 1)
+      if (failed(key)) return again(key)
+      return ok({ _tag: "index", base: base.success, key: key.success })
+    }
+    case "new": {
+      const callee = renameCallee("new", b, x.callee)
+      if (failed(callee)) return again(callee)
+      const args = renameItems("new", b, 1, x.args)
+      if (failed(args)) return again(args)
+      return ok({ _tag: "new", callee: callee.success, args: args.success })
+    }
+    case "objectWith": {
+      const entries: ObjectEntry[] = []
+      for (const [j, entry] of x.entries.entries()) {
+        const v = under(under(rename(b, entry.value), entry._tag, 0), "objectWith", j)
+        if (failed(v)) return again(v)
+        entries.push(entry._tag === "property" ? { _tag: "property", name: entry.name, value: v.success } : { _tag: "spread", value: v.success })
+      }
+      return ok({ _tag: "objectWith", keys: x.keys, entries })
+    }
+  }
+}
+
+/** The name a statement declares (the first component of Lean's `Rename.Carrier .stmt`). */
+const declared = (s: TsStmt): string | undefined => (s._tag === "constYield" || s._tag === "letInit" ? s.name : undefined)
+
+/** A block's statements, each among the binders the statements before it leave, the block's
+ * declarations starting at level `start`. A statement sees the names that it and the statements
+ * after it declare as later, beside those of the blocks around (`outer`; `Rename.block`). */
+const renameBlock = (step: string, start: number, outer: ReadonlyArray<readonly [string, number]>,
+  names0: ReadonlyArray<string>, ss: ReadonlyArray<TsStmt>): Read<ReadonlyArray<TsStmt>> => {
+  const out: TsStmt[] = []
+  let names = names0
+  for (const [j, s] of ss.entries()) {
+    const later = [...outer, ...ss.slice(j).flatMap((t) => {
+      const d = declared(t)
+      return d === undefined ? [] : [[d, names.length] as const]
+    })]
+    const r = under(renameStmt({ names, later }, start, s), step, j)
+    if (failed(r)) return again(r)
+    out.push(r.success[0])
+    names = r.success[1]
+  }
+  return ok(out)
+}
+
+/** A nested block: its declarations start at the binders in scope (`Rename.nested`). */
+const renameNested = (step: string, b: Binders, ss: ReadonlyArray<TsStmt>): Read<ReadonlyArray<TsStmt>> =>
+  renameBlock(step, b.names.length, b.later, b.names, ss)
+
+/** One statement, with the binders in scope after it (`Rename.alg`, the statement fields). */
+const renameStmt = (b: Binders, start: number, s: TsStmt): Read<readonly [TsStmt, ReadonlyArray<string>]> => {
+  const value = (v: Expr, step: string): Read<Expr> => under(rename(b, v), step, 0)
+  switch (s._tag) {
+    case "constYield": case "letInit": {
+      const fresh = declare(b.names, start, s.name)
+      if (failed(fresh)) return again(fresh)
+      const v = value(s.value, s._tag)
+      if (failed(v)) return again(v)
+      return ok([{ ...s, name: varName(b.names.length), value: v.success }, [...b.names, s.name]])
+    }
+    case "assign": {
+      const target = renameUse(b, s.name)
+      if (failed(target)) return again(target)
+      const v = value(s.value, "assign")
+      if (failed(v)) return again(v)
+      return ok([{ _tag: "assign", name: target.success, value: v.success }, b.names])
+    }
+    case "ret": case "exprStmt": case "yieldDiscard":
+      return Result.map(value(s.value, s._tag), (v): readonly [TsStmt, ReadonlyArray<string>] => [{ _tag: s._tag, value: v }, b.names])
+    case "whileTrue":
+      return Result.map(renameNested("whileTrue", b, s.body), (body): readonly [TsStmt, ReadonlyArray<string>] => [{ _tag: "whileTrue", body }, b.names])
+    case "ifElse": {
+      const test = value(s.condition, "ifElse")
+      if (failed(test)) return again(test)
+      const yes = renameNested("then", b, s.thenBranch)
+      if (failed(yes)) return again(yes)
+      const no = renameNested("else", b, s.elseBranch)
+      if (failed(no)) return again(no)
+      return ok([{ _tag: "ifElse", condition: test.success, thenBranch: yes.success, elseBranch: no.success }, b.names])
+    }
+    case "breakTo": return ok([s, b.names])
+  }
+}
+
+/** A program from a tree whose binders carry the printer's names, at environment length `n`
+ * (Lean `readMintedAt`). The node is checked against the schema by `decodeEff` at the boundary
+ * (§ 0), so the generic build is typed there, once. */
+const readMinted = (n: number, x: Expr): Read<Eff> =>
+  (readT("eff", n, x) ?? unread("eff")) as Read<Eff>
+
+/** A program from a tree, at environment length `n` (Lean `readEffAt`): the printer's text as it
+ * stands, any other text after the renaming of its binders to the printer's names. */
+export const readEff = (n: number, x: Expr): Read<Eff> => {
+  const minted = readMinted(n, x)
+  if (!failed(minted)) return minted
+  const renamed = rename({ names: mint(n), later: noLater }, x)
+  return failed(renamed) ? again(renamed) : readMinted(n, renamed.success)
+}
+
+/** A layer from a tree whose binders carry the printer's names. A layer is closed: its bodies
+ * are read at environment length `0` (Lean `readLayerMintedAt`). */
+const readLayerMinted = (x: Expr): Read<LayerTerm> =>
+  (readT("layer", 0, x) ?? unread("layer")) as Read<LayerTerm>
+
+/** A layer from a tree: the printer's text as it stands, any other text after the renaming of its
+ * binders from no binder (Lean `readLayerAt`). */
+export const readLayer = (x: Expr): Read<LayerTerm> => {
+  const minted = readLayerMinted(x)
+  if (!failed(minted)) return minted
+  const renamed = rename({ names: [], later: noLater }, x)
+  return failed(renamed) ? again(renamed) : readLayerMinted(renamed.success)
 }
 
 /* ============================================================ § 4  the declaration block  (Refs.lean) */
