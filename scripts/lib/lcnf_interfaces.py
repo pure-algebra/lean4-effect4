@@ -25,7 +25,7 @@ import tempfile
 
 def generate(root, recipe_path, out, checking, run, install):
     recipe = json.loads((root / recipe_path).read_text())
-    artifacts = recipe['artefacts']
+    artifacts = recipe['artifacts']
     destinations = [Path(entry['out']) for entry in artifacts]
     consumers = [[Path(consumer['out']) for consumer in entry.get('consumers', [])]
                  for entry in artifacts]

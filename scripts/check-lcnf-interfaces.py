@@ -24,7 +24,7 @@ def main():
         build.parent.mkdir(parents=True)
         build.symlink_to(repository / 'ocaml/_build', target_is_directory=True)
         outputs = ['ocaml/gen/first.ml', 'ocaml/gen/second.ml']
-        recipe = {'artefacts': [{'out': path, 'import': []} for path in outputs]}
+        recipe = {'artifacts': [{'out': path, 'import': []} for path in outputs]}
         (root / 'recipe.json').write_text(json.dumps(recipe))
         fixture = ['type memo = int list\nlet empty : memo = []\n',
                    'let root = 7\n']

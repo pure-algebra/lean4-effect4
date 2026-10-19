@@ -236,9 +236,9 @@ def argvOf (plan : Export.CheckedPlan) (face : List String) (typesOf : String �
     | .error _ => pure []
     | .ok spec => do
       let m ← spec.getObjValAs? String "module"
-      let from_ ← spec.getObjValAs? String "artefact"
+      let from_ ← spec.getObjValAs? String "artifact"
       let some ts := typesOf from_
-        | throw s!"{out} opens the module of {from_}, which is no artefact of the recipe"
+        | throw s!"{out} opens the module of {from_}, which is no artifact of the recipe"
       pure ["--open", m, "--open-types", ",".intercalate ts]
   let modules := (entry.getObjValAs? Bool "modules").toOption.getD false
   return ["--out", out] ++ flag "closure" ++ flag "tests"
@@ -276,7 +276,7 @@ def recipeArgvs (recipe : Json) : Except String (Array (List String)) := do
         throw s!"the facade {out} is no module {plan.plan.facadeModule}"
       pure ["--facade", out, "--public-manifest", manifest, "--public-version", toString version]
     | _, _, _ => pure []
-  let entries ← recipe.getObjValAs? (Array Json) "artefacts"
+  let entries ← recipe.getObjValAs? (Array Json) "artifacts"
   let typesOf (out : String) : Option (List String) :=
     entries.findSome? fun e =>
       if (e.getObjValAs? String "out").toOption == some out then
@@ -287,7 +287,7 @@ def recipeArgvs (recipe : Json) : Except String (Array (List String)) := do
 /-- The `--out` paths of the recipe's artifacts, whose closure manifests are data in
 `GENERATED_PATHS` at `ocaml/gen/closure-<stem>.tsv` (decisions row 70). -/
 def recipeOutsOf (recipe : Json) : List String :=
-  match recipe.getObjVal? "artefacts" with
+  match recipe.getObjVal? "artifacts" with
   | .ok (.arr rows) => rows.toList.filterMap fun r => (r.getObjValAs? String "out").toOption
   | _ => []
 
@@ -913,7 +913,7 @@ def run (argv : List String) (recipeOuts : List String)
 private def recipeWith (publicRoots : String) : Json :=
   (Json.parse ("{\"format\": \"effect4-lcnf-roots-v3\", \"facade\": {\"module\": \"Effect4\", \
     \"out\": \"ocaml/gen/facade/effect4.ml\", \"manifest\": \"ocaml/gen/public-names.tsv\", \
-    \"version\": 0}, \"artefacts\": [{\"out\": \"ocaml/gen/api_gen.ml\", \"import\": [\"Effect4.Api\"], \
+    \"version\": 0}, \"artifacts\": [{\"out\": \"ocaml/gen/api_gen.ml\", \"import\": [\"Effect4.Api\"], \
     \"cap\": 10, \"public\": [" ++ publicRoots ++ "], \"coverage\": [\"Effect4.Machine.drive\"]}]}")).toOption.getD Json.null
 
 -- green: the artifact that holds the public roots carries the public face in its command
@@ -932,7 +932,7 @@ private def recipeWith (publicRoots : String) : Json :=
 
 private def lanesRecipe : Json :=
   (Json.parse ("{\"format\": \"effect4-lcnf-roots-v3\", \"facade\": {\"module\": \"Effect4\"}, \
-    \"artefacts\": [{\"out\": \"t/lanes_gen.ml\", \"import\": [\"Test.A\"], \"cap\": 10, \
+    \"artifacts\": [{\"out\": \"t/lanes_gen.ml\", \"import\": [\"Test.A\"], \"cap\": 10, \
     \"consumers\": [{\"out\": \"t/todo/todo_gen.ml\", \"linkage\": [\"T.serve\", \"S.image\"]}, \
     {\"out\": \"t/modeled/modeled_gen.ml\", \"linkage\": [\"M.encode\", \"S.image\"]}]}]}")).toOption.getD Json.null
 
@@ -956,7 +956,7 @@ private def lanesRecipe : Json :=
 
 private def scopedRecipe : Json :=
   (Json.parse ("{\"format\": \"effect4-lcnf-roots-v3\", \"facade\": {\"module\": \"Effect4\"}, \
-    \"artefacts\": [{\"out\": \"g/api_gen.ml\", \"closure\": \"g/closure_gen.ml\", \
+    \"artifacts\": [{\"out\": \"g/api_gen.ml\", \"closure\": \"g/closure_gen.ml\", \
     \"tests\": \"t/lanes_gen.ml\", \"import\": [\"Test.A\"], \"cap\": 10, \"linkage\": [\"A.load\"], \
     \"consumers\": [{\"out\": \"t/todo/todo_gen.ml\", \"linkage\": [\"T.serve\", \"A.load\"]}]}]}")).toOption.getD Json.null
 

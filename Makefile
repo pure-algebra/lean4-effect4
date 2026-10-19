@@ -175,8 +175,8 @@ $(GEN)/derived: $(CHK)/gen-derived.key
 # `$(CHK)/ocaml`, which depends on it, so the OCaml gate builds the current machine (LC-3).
 # Its sources are the generator's: the driver, the route (`OCaml5.Lcnf`, `OCaml5.Ml`) and the
 # Conform modules it reads (the mono index, the source evaluator's primitives), and the modules
-# each artefact imports, read from the recipe itself (`--lean-recipe ocaml/gen/roots.json`), so a
-# new artefact import joins the key with no second list.
+# each artifact imports, read from the recipe itself (`--lean-recipe ocaml/gen/roots.json`), so a
+# new artifact import joins the key with no second list.
 LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean src/OCaml5/Ml/*.lean) \
   $(wildcard tools/Conform/Lcnf/*.lean tools/Conform/Core/*.lean tools/Conform/Source/*.lean) \
   ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml \

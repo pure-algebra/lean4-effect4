@@ -21,8 +21,8 @@ def recipe_imports(recipe):
     """The modules a generator recipe imports (`ocaml/gen/roots.json`): the recipe owns the list."""
     if recipe is None:
         return []
-    artefacts = json.loads((ROOT / recipe).read_text(encoding='utf-8'))['artefacts']
-    return sorted({module for artefact in artefacts for module in artefact.get('import', [])})
+    artifacts = json.loads((ROOT / recipe).read_text(encoding='utf-8'))['artifacts']
+    return sorted({module for artifact in artifacts for module in artifact.get('import', [])})
 
 
 def main():
@@ -34,7 +34,7 @@ def main():
     key.add_argument('--environment', nargs='*', default=[])
     key.add_argument('--inputs', nargs='+', required=True)
     key.add_argument('--lean', nargs='*', default=[], help='Lean entry files or workspace modules')
-    key.add_argument('--lean-recipe', help="a generator recipe; each artefact's `import` joins --lean")
+    key.add_argument('--lean-recipe', help="a generator recipe; each artifact's `import` joins --lean")
     key.add_argument('--outputs', nargs='*', default=[], help='producer outputs; absence changes the key')
     execute = commands.add_parser('run')
     execute.add_argument('--force', action='store_true')

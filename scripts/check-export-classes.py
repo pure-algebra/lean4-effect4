@@ -2,8 +2,8 @@
 """Compile clients against the generated units to check the recipe's export classes.
 
 The recipe (ocaml/gen/roots.json, read by OCaml5.Lcnf.Export) gives each root one class.
-An artefact's interface exports its public and linkage roots and hides its internal and
-coverage roots. The api artefact compiles its closure once, in Closure_gen (D1): the
+An artifact's interface exports its public and linkage roots and hides its internal and
+coverage roots. The api artifact compiles its closure once, in Closure_gen (D1): the
 closure's interface adds the values the test lanes call, and Api_gen, the facade over it,
 exports the public and linkage roots alone. Each case below compiles one client with ocamlc.
 A positive case must compile. A red case must fail with OCaml's own error, and the error must
