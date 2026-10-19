@@ -23,9 +23,11 @@ Writes nine library files and one test fixture, all `GENERATED`, none ever edite
   for an inductive, `Schema.Struct` for a structure, `Schema.Literals` for an all-nullary
   inductive, a hand-shaped `type` beside each recursive one; constructor and field names
   verbatim, constructors in declaration order.
-* `json.gen.ts` — one JSON writer per family: the bytes `OCaml5.Eff.Goldens.V.json` writes and
-  `ocaml/eff/eff_json.ml` prints (`["ctor", field, …]`, structures as objects, options as the
-  value or `null`, the cons-list families as `["cons", head, tail]`).
+* `json.gen.ts` — one JSON writer per family: the tagged print, the program's one public JSON
+  (decisions row 418, D2). Its bytes are `NatJson.render` of `ShapeDoc.printTree`
+  (`src/Effect4/Store/Domain/ShapeJson.lean`): a case as `{"_tag": …, field: …}` with its
+  fields in declaration order, a structure as an object, an all-nullary family as its case's
+  name, an option as the value or `null`, a list and a list family as an array.
 * `profile.gen.ts` — the image profile of `Effect4.Api.print` as one JSON payload decoded at
   import through the schemas of `eff.gen.ts`: the address (`hostPin.libraries` plus the
   `typescript` revision read out of `lakefile.toml`), the reserved heads
@@ -235,12 +237,15 @@ def emitSchemas (fs : List Family) : String :=
   "export const decodeEff: (input: unknown) => Eff = Schema.decodeUnknownSync(Eff)\n" ++
   "export const isEff: (input: unknown) => input is Eff = Schema.is(Eff)\n"
 
-/-! ## JSON writers -/
+/-! ## JSON writers: the tagged print -/
 
+/-- The tagged print of a carrier `x` (decisions row 418, D2): `ShapeDoc.printTree`'s rule
+(`src/Effect4/Store/Domain/ShapeJson.lean`) spelled in TypeScript. A list, and a list family's
+value, is an array; a pair an array of two; an option the value or `null`; `Unit` is `null`. -/
 partial def jsonOf (fs : List Family) : OTy → String → String
   | .requirements, x => s!"{x}.map(serviceKeyJson)"
   | .int, x | .bool, x | .string, x => x
-  | .unit, _ => "[]"
+  | .unit, _ => "null"
   | .option a, x => s!"({x} === null ? null : {jsonOf fs a x})"
   | .list a, x => s!"{x}.map((y) => {jsonOf fs a "y"})"
   | .prod a b, x => s!"[{jsonOf fs a (x ++ "[0]")}, {jsonOf fs b (x ++ "[1]")}]"
@@ -249,36 +254,38 @@ partial def jsonOf (fs : List Family) : OTy → String → String
     | some f => s!"{jsonFn f}({x})"
     | none => "null"
 
+/-- One family's writer. A case is an object, `_tag` first and then its fields in declaration
+order; a structure is an object of its fields; an all-nullary family is its case's name; a list
+family is the array of its elements. So `JSON.stringify` writes the bytes `NatJson.render` writes
+for `ShapeDoc.printTree`. -/
 def emitFamilyJson (fs : List Family) (f : Family) : String :=
   let name := tsName f
   let fn := jsonFn f
   match kindOf f with
-  | .enum => s!"export const {fn} = (v: {name}): Json => [v]\n"
+  | .enum => s!"export const {fn} = (v: {name}): Json => v\n"
   | .struct =>
     let c := f.ctors.head!
     let fields := c.args.map fun (nm, t) => s!"  {nm}: {jsonOf fs t ("v." ++ nm)},"
     s!"export const {fn} = (v: {name}): Json => (\{\n" ++ "\n".intercalate fields ++ "\n})\n"
   | .consList elem =>
-    s!"export const {fn} = (v: ReadonlyArray<{tsTy fs elem}>): Json => consList(v, (y) => {jsonOf fs elem "y"})\n"
+    s!"export const {fn} = (v: ReadonlyArray<{tsTy fs elem}>): Json => v.map((y) => {jsonOf fs elem "y"})\n"
   | .tagged =>
     let arms := f.ctors.map fun c =>
-      let items := lit c.short :: c.args.map fun (nm, t) => jsonOf fs t ("v." ++ nm)
-      s!"    case {lit c.short}: return [{", ".intercalate items}]"
+      let fields := c.args.map fun (nm, t) => s!", {nm}: {jsonOf fs t ("v." ++ nm)}"
+      s!"    case {lit c.short}: return \{ _tag: {lit c.short}{String.join fields}" ++ " }"
     s!"export const {fn} = (v: {name}): Json => \{\n  switch (v._tag) \{\n" ++
       "\n".intercalate arms ++ "\n  }\n}\n"
 
 def emitJson (fs : List Family) (root : Family) : String :=
-  header ("One JSON writer per family: the bytes OCaml5.Eff.Goldens.V.json writes and ocaml/eff/eff_json.ml " ++
-    "prints. A constructor is [\"name\", field, …], a structure {field: value}, an option the value or null,\n" ++
-    "// a cons-list [\"cons\", head, tail] down to [\"nil\"]. Same bytes from three languages.") ++
+  header ("One JSON writer per family: the tagged print, the JSON Lean writes (ShapeDoc.printTree) and the tool reads.\n" ++
+    "// A case is {_tag, ...fields} with its fields in declaration order, a structure {field: value}, an\n" ++
+    "// all-nullary family its case's name, an option the value or null, a list an array.") ++
   "\n" ++
   "import type { " ++ ", ".intercalate (fs.filterMap fun f => match kindOf f with | .consList _ => none | _ => some (tsName f)) ++
     " } from \"./eff.gen.ts\"\n\n" ++
   "export type Json = string | number | boolean | null | ReadonlyArray<Json> | { readonly [key: string]: Json }\n\n" ++
-  "const consList = <A>(items: ReadonlyArray<A>, each: (a: A) => Json): Json =>\n" ++
-  "  items.reduceRight<Json>((tail, item) => [\"cons\", each(item), tail], [\"nil\"])\n\n" ++
   "\n".intercalate (fs.map (emitFamilyJson fs)) ++ "\n" ++
-  s!"/** The program as the exact bytes Lean writes (no whitespace, no trailing newline). */\n" ++
+  s!"/** The program's public JSON: the exact bytes Lean writes for its tagged print (no whitespace, no trailing newline). */\n" ++
   s!"export const toJson = (e: {tsName root}): string => JSON.stringify({jsonFn root}(e))\n"
 
 def wireRuntime : String :=

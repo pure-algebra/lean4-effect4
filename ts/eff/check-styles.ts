@@ -49,7 +49,9 @@ if (args[0] === "--tsgo") {
     const base = file.slice(0, -3)
     const json: unknown = JSON.parse(fs.readFileSync(base + ".json", "utf8"))
     const wire = fs.readFileSync(base + ".eff")
-    if (!Array.isArray(json) || typeof json[0] !== "string" || wire.length < 18 || wire[0] !== 10) throw new Error(`missing or malformed oracle: ${file}`)
+    // the JSON oracle is the program's tagged print: one case object with its `_tag` (decisions row 418, D2)
+    const tagged = typeof json === "object" && json !== null && !Array.isArray(json) && typeof Reflect.get(json, "_tag") === "string"
+    if (!tagged || wire.length < 18 || wire[0] !== 10) throw new Error(`missing or malformed oracle: ${file}`)
   }
 } else {
   const dir = args[0]

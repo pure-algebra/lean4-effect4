@@ -11,8 +11,11 @@ const oxc = fileURLToPath(new URL("../oxc.ts", import.meta.url))
 
 // Exercise the actual command in an isolated process. Only the recognizers' returned
 // verdicts are varied: no copy of the gate or its comparison rule serves as the oracle.
+// An oracle is the program's tagged print, its keys in declaration order: the gate compares the
+// two programs' texts, as `tools/Drivers/Corpus.lean` writes the oracle.
+const nat = (value: number) => ({ _tag: "lit", value: { _tag: "nat", value } })
 const run = (mutation = "none", expression = "Effect.succeed(42)",
-  oracle: unknown = ["succeed", ["lit", ["nat", 42]]], mode = "inclusion-batch") => {
+  oracle: unknown = { _tag: "succeed", value: nat(42) }, mode = "inclusion-batch") => {
   const directory = mkdtempSync(join(tmpdir(), "effect4-inclusion-test-"))
   try {
     writeFileSync(join(directory, "sample.ts"), expression + "\n")
@@ -87,7 +90,7 @@ for (const [mutation, diagnostic] of [
 }
 
 test("the actual inclusion parent reports its admitted scalar fixture", () => {
-  const result = run("none", "Effect.succeed(42)", ["succeed", ["lit", ["nat", 42]]], "inclusion")
+  const result = run("none", "Effect.succeed(42)", { _tag: "succeed", value: nat(42) }, "inclusion")
   expect(result.error).toBeUndefined()
   expect(result.status).toBe(0)
   expect(result.stderr).toBe("")
@@ -96,7 +99,7 @@ test("the actual inclusion parent reports its admitted scalar fixture", () => {
 
 test("agreed foreign refusals remain reportable without entering the measured positive count", () => {
   const result = run("none", "Effect.fail(succ(1))",
-    ["fail", ["app", "succ", ["cons", ["lit", ["nat", 1]], ["nil"]]]], "inclusion")
+    { _tag: "fail", error: { _tag: "app", atom: "succ", args: [nat(1)] } }, "inclusion")
   expect(result.error).toBeUndefined()
   expect(result.status).toBe(0)
   expect(result.stderr).toBe("")
@@ -106,7 +109,7 @@ test("agreed foreign refusals remain reportable without entering the measured po
 
 test("the inclusion command compares service keys up to their documented renumbering", () => {
   const result = run("none", 'Effect.service(Context.Service<"k10_4", number>("k10_4"))',
-    ["service", { name: { value: 10 }, service: { value: 4 } }])
+    { _tag: "service", key: { name: { value: 10 }, service: { value: 4 } } })
   expect(result.error).toBeUndefined()
   expect(result.status).toBe(0)
   expect(result.stderr).toBe("")
@@ -114,7 +117,7 @@ test("the inclusion command compares service keys up to their documented renumbe
 })
 
 test("an incorrect lifted meaning makes the inclusion parent fail", () => {
-  const result = run("none", "Effect.succeed(42)", ["succeed", ["lit", ["nat", 41]]], "inclusion")
+  const result = run("none", "Effect.succeed(42)", { _tag: "succeed", value: nat(41) }, "inclusion")
   expect(result.error).toBeUndefined()
   expect(result.status).not.toBe(0)
   expect(result.stdout).not.toContain("PASS inclusion")

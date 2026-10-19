@@ -15,27 +15,34 @@ const selections = {
   EffTy: [Types.EffTy, Wire.effTyWire, Json.effTyJson],
 } as const
 
-test("all six selected metadata families agree with canonical Lean bytes and hand JSON", () => {
+// A row of `metadata.tsv` (`OCaml5.Eff.Metadata`): the name, the family, Lean's canonical bytes, the
+// OCaml goldens' own `V` spelling (an internal fixture format, read by no writer here), and the
+// value's JSON node as Lean's `Tools.ProfileJson` writes it.
+test("all six selected metadata families agree with canonical Lean bytes and write back their node", () => {
   const seen = new Set<string>()
   // Keep each schema/writer pair together at its actual carrier. No unchecked writer call.
   function compare<A>(schema: Schema.Codec<A>, wire: (a: A) => Uint8Array,
-    json: (a: A) => unknown, node: unknown, hex: string, expected: string) {
+    json: (a: A) => unknown, node: unknown, hex: string, vValue: unknown) {
     const value = Schema.decodeUnknownSync(schema)(node)
     expect(Buffer.from(wire(value)).toString("hex")).toBe(hex)
-    expect(JSON.stringify(json(value))).toBe(expected)
+    // the tagged print writes the node the schema read, up to the order of an object's keys
+    expect(json(value)).toEqual(node)
+    // the control: the goldens' `V` spelling of the same value is another JSON value
+    expect(json(value)).not.toEqual(vValue)
   }
   for (const row of rows) {
-    const [name, family, hex, expected, node] = row
-    if (row.length !== 5 || !name || !family || !hex || !expected || !node) throw Error("metadata arity")
+    const [name, family, hex, vSpelling, node] = row
+    if (row.length !== 5 || !name || !family || !hex || !vSpelling || !node) throw Error("metadata arity")
     seen.add(family)
     const input: unknown = JSON.parse(node)
+    const vInput: unknown = JSON.parse(vSpelling)
     switch (family) {
-      case "Ty": compare(...selections.Ty, input, hex, expected); break
-      case "RowKind": compare(...selections.RowKind, input, hex, expected); break
-      case "RowShape": compare(...selections.RowShape, input, hex, expected); break
-      case "Registration": compare(...selections.Registration, input, hex, expected); break
-      case "Row": compare(...selections.Row, input, hex, expected); break
-      case "EffTy": compare(...selections.EffTy, input, hex, expected); break
+      case "Ty": compare(...selections.Ty, input, hex, vInput); break
+      case "RowKind": compare(...selections.RowKind, input, hex, vInput); break
+      case "RowShape": compare(...selections.RowShape, input, hex, vInput); break
+      case "Registration": compare(...selections.Registration, input, hex, vInput); break
+      case "Row": compare(...selections.Row, input, hex, vInput); break
+      case "EffTy": compare(...selections.EffTy, input, hex, vInput); break
       default: throw Error(`unsupported metadata family ${family}`)
     }
   }

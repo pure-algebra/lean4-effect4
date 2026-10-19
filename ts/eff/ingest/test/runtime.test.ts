@@ -18,6 +18,6 @@ test("Bun and Node emit byte-identical JSONL through their actual workers", () =
     expect(node.stderr).toBe("")
     expect(node.status).toBe(0)
     expect(bun.stdout).toBe(node.stdout)
-    expect(bun.stdout).toContain('"eff":["provideService"')
+    expect(bun.stdout).toContain('"eff":{"_tag":"provideService"')
   } finally { rmSync(dir, { recursive: true }) }
 })

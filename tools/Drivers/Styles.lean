@@ -1,6 +1,6 @@
 import Drivers.StyleSyntax
 import Effect4.Store.Domain.ProgramWire
-import OCaml5.Eff.Goldens
+import Effect4.Store.Domain.ShapeJson
 import TypeScript.Render
 
 /-! Rendering and corpus construction for the foreign styles' syntax (`Drivers.StyleSyntax`).
@@ -159,12 +159,20 @@ def probes : List (String × Eff NativeOp) :=
       .bind (.perform .refMake (.lit (.nat 2)))
         (.perform (.refUpdateWith (Effect4.Machine.FnName.image .update 1 f)) (.var 0))))
 
+/-- **A program's public JSON**, as a file's bytes: its tagged print, each list an array
+(`ShapeDoc.printTree`, `src/Effect4/Store/Domain/ShapeJson.lean`), in the profile's compact text
+(`NatJson.render`), then a newline. It is what the tool reads and what `ts/eff`'s `toJson` writes
+(decisions row 418, D2), so the corpus oracles of both drivers are written by it. -/
+def programJson (p : Eff NativeOp) : ByteArray :=
+  let text := NatJson.render ((Store.Canonical.shape (Eff NativeOp)).printTree (Store.Canonical.toVal p))
+  ⟨((text ++ [10]).map Nat.toUInt8).toArray⟩
+
 def write (dir : System.FilePath) (name : String) (c : Case) (expr : Expr)
     (oracle : Eff NativeOp) (key : Bool := false)
     (declarations : List (String × Expr) := []) : IO String := do
   let text := source c expr key declarations
   IO.FS.writeFile (dir / (name ++ ".ts")) text
-  IO.FS.writeFile (dir / (name ++ ".json")) ((OCaml5.Eff.effV oracle).json ++ "\n")
+  IO.FS.writeBinFile (dir / (name ++ ".json")) (programJson oracle)
   IO.FS.writeBinFile (dir / (name ++ ".eff")) ⟨(Wire.encodeProgram oracle).toArray⟩
   return s!"{name}\t{c.name}\t{text.utf8ByteSize}\n"
 

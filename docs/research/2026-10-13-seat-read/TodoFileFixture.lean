@@ -2,7 +2,8 @@ import Test.Dogfood.Scenario.Todo
 import Effect4.Program.Authoring.ApplicationService
 import Tools.Code.Module
 import Tools.ProfileJson
-import OCaml5.Eff.Goldens
+import Effect4.Store.Domain.ProgramWire
+import Effect4.Store.Domain.ShapeJson
 
 /-!
 # The to-do's file and its reading: the TypeScript reader's fixture (seat READ)
@@ -17,7 +18,8 @@ Writes three files under `OUT`, from Lean's printer and reader:
   import and no row's service;
 * `todo-file.table.json`: its row table (`Tools.ProfileJson.rowJson`);
 * `todo-file.json`: the program that Lean's file reader reads the text's declarations back to
-  (`Api.readFile`), in the JSON the estate shares (`OCaml5.Eff.effV`).
+  (`Api.readFile`), in the program's one public JSON: the tagged print with each list an array
+  (`ShapeDoc.printTree`, rendered by `NatJson.render`; decisions row 418, D2).
 
 The producer refuses unless the reading is the built program. `ts/eff/test/read.test.ts` reads the
 text with `readTypeScriptFile` under the table and compares its JSON with the third file.
@@ -53,6 +55,7 @@ def main (args : List String) : IO UInt32 := do
     (Tools.Code.moduleText Tools.Code.Ts.width { emission.module with header })
   IO.FS.writeFile (out / "todo-file.table.json")
     ((toJson (built.table.map Tools.ProfileJson.rowJson)).pretty ++ "\n")
-  IO.FS.writeFile (out / "todo-file.json") ((OCaml5.Eff.effV program).json ++ "\n")
+  let tagged := NatJson.render ((Store.Canonical.shape (Eff NativeOp)).printTree (Store.Canonical.toVal program))
+  IO.FS.writeBinFile (out / "todo-file.json") ⟨((tagged ++ [10]).map Nat.toUInt8).toArray⟩
   IO.println s!"TodoFileFixture: wrote the to-do's file, its table and its reading under {out}"
   return 0

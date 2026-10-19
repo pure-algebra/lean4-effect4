@@ -92,7 +92,7 @@ if (mode === "inclusion-batch") {
   // An independent positive prevents two broken readers that refuse everything from
   // satisfying a conditional comparison. It is not part of the measured corpus counts.
   if (check("Effect.succeed(42)", "inclusion-positive-control.ts",
-    ["succeed", ["lit", ["nat", 42]]]) !== "included") {
+    { _tag: "succeed", value: { _tag: "lit", value: { _tag: "nat", value: 42 } } }) !== "included") {
     throw new Error("inclusion positive control was refused by both readers")
   }
   const report: Array<{ file: string; verdict: string }> = []

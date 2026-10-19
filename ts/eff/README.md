@@ -11,12 +11,14 @@ import { readTypeScript } from "./read.ts"      // (source: string) => Result<Ef
 import { toJson } from "./json.gen.ts"          // (eff: Eff) => string
 ```
 
-**Which JSON goes where.** The tool reads the node that `readTypeScript` returns as a sketch's
-`program`, inside an `open` request (`Effect4.Tool.Action.open_`, read by `tools/Drivers/Workspace.lean`). That is `JSON.stringify(eff)`: each object a case
-with its `_tag`, each list an array, as `eff.gen.ts` types it. `toJson` writes a second form,
-the golden exchange with OCaml (`git:85f83463f644e47e7519f3092ea4f27db8697f96:ocaml/eff/eff_json.ml`), whose lists are positional
-`["cons", head, tail]`; the session refuses it. Hand an agent's program to the session as the
-node's JSON.
+**Which JSON goes where.** A program has one public JSON, the tagged print (decisions row 418,
+D2). Each object is a case with its `_tag` and its fields in declaration order, and each list is
+an array, as `eff.gen.ts` types the node. `toJson` writes it with the bytes Lean writes
+(`ShapeDoc.printTree`, `src/Effect4/Store/Domain/ShapeJson.lean`, rendered by `NatJson.render`).
+The tool reads it as a sketch's `program`, inside an `open` request (`Effect4.Tool.Action.open_`,
+read by `tools/Drivers/Workspace.lean`). Its reader takes an object's entries in any order, so
+`JSON.stringify(eff)` of a node reads too. Hand an agent's program to the session as `toJson`
+writes it.
 
 `readTypeScript` is the whole path, in order:
 
@@ -43,7 +45,7 @@ numbers, so its domain is wider than this host representation.
 | --- | --- | --- |
 | `read.ts` | hand | the printed-image reader above |
 | `eff.gen.ts` | `tools/Drivers/TsGen.lean` | one Schema per family of the Eff IR and its typing (24 families: `Eff`, `Term`, `NativeOp`, `Ty`, `Row`, …), read off the Lean environment: names verbatim, constructors in declaration order; `decodeEff`, `isEff` |
-| `json.gen.ts` | `tools/Drivers/TsGen.lean` | one JSON writer per family, the bytes `OCaml5.Eff.Goldens` writes and `git:85f83463f644e47e7519f3092ea4f27db8697f96:ocaml/eff/eff_json.ml` prints; `toJson` |
+| `json.gen.ts` | `tools/Drivers/TsGen.lean` | one JSON writer per family, the tagged print: the bytes `NatJson.render` writes for `ShapeDoc.printTree`; `toJson` |
 | `profile.gen.ts` | `tools/Drivers/TsGen.lean` | the image profile as one JSON payload decoded at import through the schemas above: the address, the 50 reserved heads, and one entry per native operation, `{ op: NativeOp, row: Row }`; a stamp over the payload bytes is recomputed at import |
 | `taxonomy.gen.ts` | `tools/Drivers/TsGen.lean` | 23 refusal codes, their spectra, detail templates and active/reserved status; stamped at import |
 | `names.gen.ts` | `tools/Drivers/TsGen.lean` | the names a module file's reader refuses: the 26 members of an rc.112 service key, which an accessor would shadow (`serviceKeyMembers`), and the ambient values a binding name may not take (`Codegen.Names.reservedExtra`); stamped at import |
@@ -52,6 +54,7 @@ numbers, so its domain is wider than this host representation.
 | `check.ts` | hand | the corpus differential against Lean's JSON and wire (below) |
 | `check-styles.ts` | hand | construction checks over all indexed foreign sources with tsgo 7's API (one node child: the oracle's grammar, decisions row 168) and oxc (bun children recycled after 128 files) |
 | `test/read.test.ts` | hand | the pinned cases |
+| `test/check.test.ts` | hand | the corpus check's two answers: a tagged oracle matches, and its red control, an oracle in the retired positional spelling, fails the run |
 | `test/payload-classes.typecheck.ts` | hand | the payload class face's printed forms (decisions row 120, part E2), green under the package's type check |
 | `test/red/payload-classes.red.ts` | hand | their red twin, outside the package's check; `test/payload-classes.test.ts` runs tsgo on `test/red/tsconfig.json` and pins each error code |
 
@@ -67,22 +70,23 @@ The receipt is a differential against Lean's own reader: `make check-ts` (in the
 per-change tier; needs bun). `make corpus` runs `tools/Drivers/Corpus.lean`, which writes 400
 generated programs and the wire corpus under `.lake/corpus` as `.ts` (the printer's bytes)
 with a `.json` and `.eff` beside each — the program Lean's reader gets back after the printer
-(`Api.roundTrip`) — then the check runs `check.ts`, which reads every `.ts` there and must
-produce the same JSON and wire bytes, then the package's type check and `bun test`.
+(`Api.roundTrip`), the `.json` in the tagged print — then the check runs `check.ts`, which reads
+every `.ts` there and must produce the same JSON and wire bytes, then the package's type check
+and `bun test`.
 A pass means: on every program of that corpus, this reader and Lean's reader agree. It does
 not say anything about TypeScript the printer never wrote; such a file is refused by name.
 
 By hand, the same thing:
 
 ```
-lake build Tools
-lake env lean -M4096 --run tools/Tools/Corpus.lean <dir> 400 4
+lake build Drivers.Corpus
+lake env lean -M4096 --run tools/Drivers/Corpus.lean <dir> 400 4
 cd ts/eff && bun install && bun run check.ts <dir> ../../harness/truth/generated --oracle <dir>
 ```
 
 ## Foreign spelling corpus
 
-`Tools.Corpus --styles <dir> 400 4` constructs foreign target syntax beside the
+`tools/Drivers/Corpus.lean --styles <dir> 400 4` constructs foreign target syntax beside the
 original Lean JSON and wire oracles. Each isolated axis runs the full printed corpus,
 seven targeted probes and all 19 form examples at four surrounding depths. The full
 Cartesian product of nine axes runs a composite probe: five pipe modes, eight duration
@@ -91,8 +95,8 @@ replacement, omitted fork options, one-parameter release, omitted empty else, fi
 `Tools.Styles` owns rendering; `Effect4.Codegen.Styles` owns the structured syntax.
 
 ```sh
-lake build Tools.Corpus
-lake env lean -M4096 --run tools/Tools/Corpus.lean --styles .lake/ingest-styles 400 4
+lake build Drivers.Corpus
+lake env lean -M4096 --run tools/Drivers/Corpus.lean --styles .lake/ingest-styles 400 4
 cd ts/eff && bun run check-styles.ts ../../.lake/ingest-styles
 ```
 

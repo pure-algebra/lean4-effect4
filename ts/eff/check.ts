@@ -4,9 +4,10 @@
 //
 //   bun run check.ts <dir> [<dir>…] [--oracle <dir>]
 //
-// The oracle files are written by `tools/Tools/Corpus.lean`: the program Lean's own
-// reader gets back after the printer (`Api.roundTrip`). A match is this reader agreeing with
-// Lean's reader on that program. Every file is read with the typed reading (`erase`), as Lean's
+// The oracle files are written by `tools/Drivers/Corpus.lean`: the program Lean's own
+// reader gets back after the printer (`Api.roundTrip`), in the tagged print, the program's one
+// public JSON (decisions row 418, D2), which `toJson` writes. A match is this reader agreeing
+// with Lean's reader on that program. Every file is read with the typed reading (`erase`), as Lean's
 // module reader reads a module that ships (`Api.readModule`). Exit status 1 on any mismatch or
 // any refusal of a program that has an oracle.
 

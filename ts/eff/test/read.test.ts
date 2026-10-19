@@ -45,7 +45,7 @@ describe("the profile", () => {
 
 describe("exits and literals", () => {
   test("Effect.succeed(42) is the wire golden p42", () => {
-    expect(json("Effect.succeed(42)")).toBe('["succeed",["lit",["nat",42]]]')
+    expect(json("Effect.succeed(42)")).toBe('{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":42}}}')
   })
   test("a bare value is no effect: the printer never emits one (DI-72)", () => {
     // `yieldError e` prints as `Effect.fail(e)` and reads back as `fail e`; a bare value in
@@ -54,10 +54,10 @@ describe("exits and literals", () => {
     expect(refusal('"hi"')).toEqual({ _tag: "shape", what: "bare value" })
     expect(refusal("undefined")).toEqual({ _tag: "shape", what: "bare value" })
     expect(refusal("Effect.flatMap(Effect.succeed(1), (a0) => a0)")).toEqual({ _tag: "shape", what: "bare binder" })
-    expect(json("Effect.fail(2)")).toBe('["fail",["lit",["nat",2]]]')
+    expect(json("Effect.fail(2)")).toBe('{"_tag":"fail","error":{"_tag":"lit","value":{"_tag":"nat","value":2}}}')
   })
   test("Effect.fiberId is the getId action", () => {
-    expect(json("Effect.fiberId")).toBe('["withFiber",["getId"]]')
+    expect(json("Effect.fiberId")).toBe('{"_tag":"withFiber","action":{"_tag":"getId"}}')
   })
   test("a negative number never arrives as a literal", () => {
     expect(refusal("Effect.succeed(-1)")._tag).toBe("node")
@@ -66,11 +66,14 @@ describe("exits and literals", () => {
 
 describe("rows: the shape the grammar could not decide", () => {
   test('Scope.make("parallel") is the unit-request row with a trailing string literal', () => {
-    expect(json('Scope.make("parallel")')).toBe('["perform",["scopeMake",["parallel"]],["lit",["unit"]]]')
-    expect(json("Scope.make()")).toBe('["perform",["scopeMake",["sequential"]],["lit",["unit"]]]')
+    expect(json('Scope.make("parallel")')).toBe(
+      '{"_tag":"perform","op":{"_tag":"scopeMake","strategy":"parallel"},"request":{"_tag":"lit","value":{"_tag":"unit"}}}')
+    expect(json("Scope.make()")).toBe(
+      '{"_tag":"perform","op":{"_tag":"scopeMake","strategy":"sequential"},"request":{"_tag":"lit","value":{"_tag":"unit"}}}')
   })
   test('Ref.get("hi") is a row with a string request', () => {
-    expect(json('Ref.get("hi")')).toBe('["perform",["refGet"],["lit",["str","hi"]]]')
+    expect(json('Ref.get("hi")')).toBe(
+      '{"_tag":"perform","op":{"_tag":"refGet"},"request":{"_tag":"lit","value":{"_tag":"str","value":"hi"}}}')
   })
   test('Scope.make("hi") is refused, not read into the wrong row', () => {
     expect(refusal('Scope.make("hi")')).toEqual({ _tag: "arity", head: "Scope.make" })
@@ -80,13 +83,20 @@ describe("rows: the shape the grammar could not decide", () => {
     // level (decisions row 43; the state plan's T5): `a1` under one binder, `a0` at the root,
     // `a2` under two. `ts/eff/test/term-rows.test.ts` holds the other forms.
     expect(json("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, (a1) => succ(a1)))")).toBe(
-      '["bind",["perform",["refMake"],["lit",["nat",0]]],["perform",["refUpdateWith",["app","succ",["cons",["var",1],["nil"]]]],["var",0]]]',
+      '{"_tag":"bind","first":{"_tag":"perform","op":{"_tag":"refMake"},"request":{"_tag":"lit","value":{"_tag":"nat","value":0}}},' +
+        '"rest":{"_tag":"perform","op":{"_tag":"refUpdateWith","f":{"_tag":"app","atom":"succ","args":[{"_tag":"var","index":1}]}},' +
+        '"request":{"_tag":"var","index":0}}}',
     )
     expect(json("Ref.update(0, (a0) => succ(a0))")).toBe(
-      '["perform",["refUpdateWith",["app","succ",["cons",["var",0],["nil"]]]],["lit",["nat",0]]]',
+      '{"_tag":"perform","op":{"_tag":"refUpdateWith","f":{"_tag":"app","atom":"succ","args":[{"_tag":"var","index":0}]}},' +
+        '"request":{"_tag":"lit","value":{"_tag":"nat","value":0}}}',
     )
     expect(json("Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.succeed(7), (a1) => Ref.modify(a0, (a2) => pair(a2, add(a2, 1)))))")).toBe(
-      '["bind",["perform",["refMake"],["lit",["nat",0]]],["bind",["succeed",["lit",["nat",7]]],["perform",["refModifyWith",["app","pair",["cons",["var",2],["cons",["app","add",["cons",["var",2],["cons",["lit",["nat",1]],["nil"]]]],["nil"]]]]],["var",0]]]]',
+      '{"_tag":"bind","first":{"_tag":"perform","op":{"_tag":"refMake"},"request":{"_tag":"lit","value":{"_tag":"nat","value":0}}},' +
+        '"rest":{"_tag":"bind","first":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":7}}},' +
+        '"rest":{"_tag":"perform","op":{"_tag":"refModifyWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":2},' +
+        '{"_tag":"app","atom":"add","args":[{"_tag":"var","index":2},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}]}},' +
+        '"request":{"_tag":"var","index":0}}}}',
     )
   })
   test("the five names are no row's trailing names", () => {
@@ -97,7 +107,9 @@ describe("rows: the shape the grammar could not decide", () => {
   })
   test("an async row reads back as perform", () => {
     expect(json("Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))")).toBe(
-      '["bind",["perform",["deferredMakeOf",["nat"],["nat"]],["lit",["unit"]]],["perform",["deferredAwait"],["var",0]]]',
+      '{"_tag":"bind","first":{"_tag":"perform","op":{"_tag":"deferredMakeOf","value":{"_tag":"nat"},"error":{"_tag":"nat"}},' +
+        '"request":{"_tag":"lit","value":{"_tag":"unit"}}},"rest":{"_tag":"perform","op":{"_tag":"deferredAwait"},' +
+        '"request":{"_tag":"var","index":0}}}',
     )
   })
   // E4-CHECK-CE-013, and the state plan's T5, part B: `Deferred.make<A, E>()` carries its two
@@ -107,7 +119,8 @@ describe("rows: the shape the grammar could not decide", () => {
   // Lean reader refuses them. `test/term-rows.test.ts` holds the instances.
   test("Deferred.make<number, number>() is the operation at the two types on its head", () => {
     expect(json("Deferred.make<number, number>()")).toBe(
-      '["perform",["deferredMakeOf",["nat"],["nat"]],["lit",["unit"]]]',
+      '{"_tag":"perform","op":{"_tag":"deferredMakeOf","value":{"_tag":"nat"},"error":{"_tag":"nat"}},' +
+        '"request":{"_tag":"lit","value":{"_tag":"unit"}}}',
     )
   })
   test("Deferred.make() without its type arguments is refused", () => {
@@ -116,7 +129,8 @@ describe("rows: the shape the grammar could not decide", () => {
   test("Deferred.make<string, number>() is another instance, read at its own types", () => {
     // Until part B the faces spelled one instance, and this spelling was refused.
     expect(json("Deferred.make<string, number>()")).toBe(
-      '["perform",["deferredMakeOf",["string"],["nat"]],["lit",["unit"]]]',
+      '{"_tag":"perform","op":{"_tag":"deferredMakeOf","value":{"_tag":"string"},"error":{"_tag":"nat"}},' +
+        '"request":{"_tag":"lit","value":{"_tag":"unit"}}}',
     )
   })
   test("Ref.make<number>(0) carries type arguments its row does not declare", () => {
@@ -142,7 +156,9 @@ describe("rows: the shape the grammar could not decide", () => {
   test("an unknown call in effect position is an unknown head, not a yielded atom application", () => {
     expect(refusal("add(1, 2)")).toEqual({ _tag: "unknownHead", name: "add" })
     expect(refusal("Effect.tap(1)")).toEqual({ _tag: "unknownHead", name: "Effect.tap" })
-    expect(json("Effect.fail(add(1, 2))")).toBe('["fail",["app","add",["cons",["lit",["nat",1]],["cons",["lit",["nat",2]],["nil"]]]]]')
+    expect(json("Effect.fail(add(1, 2))")).toBe(
+      '{"_tag":"fail","error":{"_tag":"app","atom":"add","args":[{"_tag":"lit","value":{"_tag":"nat","value":1}},' +
+        '{"_tag":"lit","value":{"_tag":"nat","value":2}}]}}')
   })
 })
 
@@ -154,11 +170,12 @@ describe("tuple calls", () => {
     ["Deferred.succeed", "deferredSucceed"],
     ["Deferred.fail", "deferredFail"],
   ] as const
-  const pair = ["app", "pair", ["cons", ["lit", ["nat", 1]], ["cons", ["lit", ["nat", 7]], ["nil"]]]]
+  const nat = (value: number) => ({ _tag: "lit", value: { _tag: "nat", value } })
+  const pair = { _tag: "app", atom: "pair", args: [nat(1), nat(7)] }
 
   for (const [spelling, op] of tupleRows) {
     test(`${spelling} reads its two arguments into its operation and pair request`, () => {
-      expect(JSON.parse(json(`${spelling}(1, 7)`))).toEqual(["perform", [op], pair])
+      expect(JSON.parse(json(`${spelling}(1, 7)`))).toEqual({ _tag: "perform", op: { _tag: op }, request: pair })
     })
     test(`${spelling} refuses its former one-request call`, () => {
       expect(refusal(`${spelling}(pair(1, 7))`)).toEqual({ _tag: "arity", head: spelling })
@@ -171,16 +188,19 @@ describe("tuple calls", () => {
   }
 
   test("a saved tuple request reads its two component reads as the same bound variable", () => {
-    expect(JSON.parse(json("Effect.flatMap(Effect.succeed(pair(1, 7)), (a0) => Ref.set(fst(a0), snd(a0)))"))).toEqual([
-      "bind", ["succeed", pair], ["perform", ["refSet"], ["var", 0]],
-    ])
+    expect(JSON.parse(json("Effect.flatMap(Effect.succeed(pair(1, 7)), (a0) => Ref.set(fst(a0), snd(a0)))"))).toEqual({
+      _tag: "bind", first: { _tag: "succeed", value: pair },
+      rest: { _tag: "perform", op: { _tag: "refSet" }, request: { _tag: "var", index: 0 } },
+    })
   })
   test("components of two different identifiers are an ordinary pair", () => {
-    expect(JSON.parse(json("Effect.flatMap(Effect.succeed(pair(1, 7)), (a0) => Effect.flatMap(Effect.succeed(pair(2, 8)), (a1) => Ref.set(fst(a0), snd(a1))))"))).toEqual([
-      "bind", ["succeed", pair],
-      ["bind", ["succeed", ["app", "pair", ["cons", ["lit", ["nat", 2]], ["cons", ["lit", ["nat", 8]], ["nil"]]]]],
-        ["perform", ["refSet"], ["app", "pair", ["cons", ["app", "fst", ["cons", ["var", 0], ["nil"]]], ["cons", ["app", "snd", ["cons", ["var", 1], ["nil"]]], ["nil"]]]]]],
-    ])
+    expect(JSON.parse(json("Effect.flatMap(Effect.succeed(pair(1, 7)), (a0) => Effect.flatMap(Effect.succeed(pair(2, 8)), (a1) => Ref.set(fst(a0), snd(a1))))"))).toEqual({
+      _tag: "bind", first: { _tag: "succeed", value: pair },
+      rest: { _tag: "bind", first: { _tag: "succeed", value: { _tag: "app", atom: "pair", args: [nat(2), nat(8)] } },
+        rest: { _tag: "perform", op: { _tag: "refSet" }, request: { _tag: "app", atom: "pair", args: [
+          { _tag: "app", atom: "fst", args: [{ _tag: "var", index: 0 }] },
+          { _tag: "app", atom: "snd", args: [{ _tag: "var", index: 1 }] }] } } },
+    })
   })
   test("tuple requests retain ordinary scope checks", () => {
     expect(refusal("Ref.set(fst(a0), snd(a0))")).toEqual({ _tag: "unknownIdent", name: "a0" })
@@ -202,10 +222,12 @@ describe("tuple calls", () => {
 
 describe("the synchronous runIn adapter", () => {
   test("its callback adds no binder and returns the runIn action", () => {
-    expect(JSON.parse(json("Effect.flatMap(Effect.succeed(1), (a0) => Effect.flatMap(Effect.succeed(2), (a1) => Effect.withFiber(() => { Fiber.runIn(a0, a1); return Effect.void })))"))).toEqual([
-      "bind", ["succeed", ["lit", ["nat", 1]]],
-      ["bind", ["succeed", ["lit", ["nat", 2]]], ["withFiber", ["runIn", ["var", 0], ["var", 1]]]],
-    ])
+    const nat = (value: number) => ({ _tag: "lit", value: { _tag: "nat", value } })
+    expect(JSON.parse(json("Effect.flatMap(Effect.succeed(1), (a0) => Effect.flatMap(Effect.succeed(2), (a1) => Effect.withFiber(() => { Fiber.runIn(a0, a1); return Effect.void })))"))).toEqual({
+      _tag: "bind", first: { _tag: "succeed", value: nat(1) },
+      rest: { _tag: "bind", first: { _tag: "succeed", value: nat(2) },
+        rest: { _tag: "withFiber", action: { _tag: "runIn", target: { _tag: "var", index: 0 }, scope: { _tag: "var", index: 1 } } } },
+    })
   })
   test("the former raw synchronous call stays reserved and refused", () => {
     // reserved, and it heads no program clause (it occurs inside the adapter's skeleton only)
@@ -239,7 +261,8 @@ describe("the synchronous runIn adapter", () => {
 describe("binders are depths", () => {
   test("the continuation of flatMap binds a<n>", () => {
     expect(json("Effect.flatMap(Effect.succeed(1), (a0) => Effect.succeed(a0))")).toBe(
-      '["bind",["succeed",["lit",["nat",1]]],["succeed",["var",0]]]',
+      '{"_tag":"bind","first":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":1}}},' +
+        '"rest":{"_tag":"succeed","value":{"_tag":"var","index":0}}}',
     )
   })
   test("a wrong binder name matches no row: the head's argument list is refused", () => {
@@ -250,7 +273,8 @@ describe("binders are depths", () => {
   })
   test("acquireRelease binds the resource and the exit", () => {
     expect(json("Effect.acquireRelease(Effect.succeed(1), (a0, a1) => Effect.succeed(a1))")).toBe(
-      '["acquireRelease",["succeed",["lit",["nat",1]]],["succeed",["var",1]]]',
+      '{"_tag":"acquireRelease","acquire":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":1}}},' +
+        '"release":{"_tag":"succeed","value":{"_tag":"var","index":1}}}',
     )
   })
 })
@@ -288,11 +312,13 @@ describe("the join", () => {
   const key = 'Context.Service<"k4_4", number>("k4_4")'
   const leaf = `Layer.succeed(${key}, 7)`
   test("reads a service with both numeric fields", () => {
-    expect(json(`Effect.service(${key})`)).toBe('["service",{"name":{"value":4},"service":{"value":4}}]')
+    expect(json(`Effect.service(${key})`)).toBe('{"_tag":"service","key":{"name":{"value":4},"service":{"value":4}}}')
   })
   test("reads provided values and both local options", () => {
     expect(json(`Effect.provideService(Effect.service(${key}), ${key}, 7)`)).toBe(
-      '["provideService",{"name":{"value":4},"service":{"value":4}},["lit",["nat",7]],["service",{"name":{"value":4},"service":{"value":4}}]]',
+      '{"_tag":"provideService","key":{"name":{"value":4},"service":{"value":4}},' +
+        '"value":{"_tag":"lit","value":{"_tag":"nat","value":7}},' +
+        '"body":{"_tag":"service","key":{"name":{"value":4},"service":{"value":4}}}}',
     )
     for (const options of ["", ", { local: true }"]) {
       const result = readTypeScript(`Effect.provide(Effect.service(${key}), ${leaf}${options})`)
@@ -339,16 +365,16 @@ describe("the join", () => {
     expect(refusal(`Effect.service(${invalid})`)).toEqual({ _tag: "shape", what: "service key" })
   })
   test("checks reserved and untyped keys against the native signature", () => {
-    expect(json('Effect.service(Scope.Scope)')).toBe('["service",{"name":{"value":0},"service":{"value":0}}]')
+    expect(json('Effect.service(Scope.Scope)')).toBe('{"_tag":"service","key":{"name":{"value":0},"service":{"value":0}}}')
     expect(json('Effect.service(Context.Service<"k4_7", Ref.Ref<number>>("k4_7"))')).toBe(
-      '["service",{"name":{"value":4},"service":{"value":7}}]',
+      '{"_tag":"service","key":{"name":{"value":4},"service":{"value":7}}}',
     )
-    expect(json('Effect.service(Context.Service("k1_4"))')).toBe('["service",{"name":{"value":1},"service":{"value":4}}]')
+    expect(json('Effect.service(Context.Service("k1_4"))')).toBe('{"_tag":"service","key":{"name":{"value":1},"service":{"value":4}}}')
     expect(refusal('Effect.service(Context.Service<number>("k1_4"))')).toEqual({ _tag: "shape", what: "service key" })
   })
   test("keeps service keys exact at the JavaScript integer boundary", () => {
     expect(json('Effect.service(Context.Service<"k9007199254740991_4", number>("k9007199254740991_4"))')).toBe(
-      '["service",{"name":{"value":9007199254740991},"service":{"value":4}}]',
+      '{"_tag":"service","key":{"name":{"value":9007199254740991},"service":{"value":4}}}',
     )
     for (const key of ['Context.Service<"k9007199254740992_4", number>("k9007199254740992_4")',
       'Context.Service("k4_9007199254740993")']) {
@@ -357,10 +383,10 @@ describe("the join", () => {
   })
   test("checks the external service handle spellings at codes 8 and 9", () => {
     expect(json('Effect.service(Context.Service<"k4_8", SqlClient.SqlClient>("k4_8"))')).toBe(
-      '["service",{"name":{"value":4},"service":{"value":8}}]',
+      '{"_tag":"service","key":{"name":{"value":4},"service":{"value":8}}}',
     )
     expect(json('Effect.service(Context.Service<"k5_9", KeyValueStore.KeyValueStore>("k5_9"))')).toBe(
-      '["service",{"name":{"value":5},"service":{"value":9}}]',
+      '{"_tag":"service","key":{"name":{"value":5},"service":{"value":9}}}',
     )
     expect(refusal('Effect.service(Context.Service<"k4_8", KeyValueStore.KeyValueStore>("k4_8"))')).toEqual(
       { _tag: "shape", what: "service key" },
@@ -397,7 +423,7 @@ describe("the n-ary merge", () => {
     const layer = layerOf("Layer.mergeAll()")
     expect(layer._tag).toBe("mergeAll")
     if (layer._tag === "mergeAll") expect(layer.layers).toEqual([])
-    expect(json("Effect.provide(Effect.succeed(7), Layer.mergeAll())")).toContain('["mergeAll",["nil"]]')
+    expect(json("Effect.provide(Effect.succeed(7), Layer.mergeAll())")).toContain('{"_tag":"mergeAll","layers":[]}')
   })
   test("Layer.merge is never read as the n-ary one", () => {
     expect(layerOf(`Layer.merge(${leaf}, ${leaf})`)._tag).toBe("merge")
@@ -412,6 +438,9 @@ describe("layer references", () => {
   const kRef = 'Context.Service<"k6_7", Ref.Ref<number>>("k6_7")'
   const k44 = { name: { value: 4 }, service: { value: 4 } }
   const k67 = { name: { value: 6 }, service: { value: 7 } }
+  const lit = (value: number) => ({ _tag: "lit", value: { _tag: "nat", value } })
+  const ref = (...target: number[]) => ({ _tag: "ref", target })
+  const succeed44 = (value: number) => ({ _tag: "succeed", key: k44, value: { _tag: "nat", value } })
 
   test("L_1_0_0_0_0 in layer position is a reference to that path", () => {
     const result = readTypeScript("Effect.provide(Effect.succeed(7), L_1_0_0_0_0)")
@@ -439,23 +468,24 @@ describe("layer references", () => {
   ].join("\n")
 
   test("a two-declaration module puts the layer back at its path and leaves the second site a ref", () => {
-    expect(JSON.parse(json(diamond))).toEqual([
-      "bind",
-      ["perform", ["refMake"], ["lit", ["nat", 0]]],
-      ["provideService", k67, ["var", 0], [
-        "bind",
-        ["provideLayer",
-          ["merge", ["effect", k44, ["succeed", ["lit", ["nat", 5]]]], ["ref", [1, 0, 0, 0, 0]]],
-          false,
-          ["service", k44]],
-        ["perform", ["refGet"], ["var", 0]],
-      ]],
-    ])
+    expect(JSON.parse(json(diamond))).toEqual({
+      _tag: "bind",
+      first: { _tag: "perform", op: { _tag: "refMake" }, request: lit(0) },
+      rest: { _tag: "provideService", key: k67, value: { _tag: "var", index: 0 }, body: {
+        _tag: "bind",
+        first: { _tag: "provideLayer",
+          layer: { _tag: "merge", left: { _tag: "effect", key: k44, body: { _tag: "succeed", value: lit(5) } },
+            right: ref(1, 0, 0, 0, 0) },
+          isLocal: false,
+          body: { _tag: "service", key: k44 } },
+        rest: { _tag: "perform", op: { _tag: "refGet" }, request: { _tag: "var", index: 0 } },
+      } },
+    })
   })
   test("the same block without its declaration leaves both sites references", () => {
     const both = JSON.parse(json(diamond.split("\n").filter((line) => !line.startsWith("export const L_")).join("\n")))
-    expect(both[2][3][1][1][1]).toEqual(["ref", [1, 0, 0, 0, 0]])
-    expect(both[2][3][1][1][2]).toEqual(["ref", [1, 0, 0, 0, 0]])
+    expect(both.rest.body.first.layer.left).toEqual(ref(1, 0, 0, 0, 0))
+    expect(both.rest.body.first.layer.right).toEqual(ref(1, 0, 0, 0, 0))
   })
   // A constant before the main whose name is no path spelling and that is no service's key or
   // layer leads a definition block (Lean `defsPrefix`): this one is no definition's header.
@@ -479,12 +509,10 @@ describe("layer references", () => {
       `export const main = Effect.provide(Effect.succeed(7), ` +
         `Layer.mergeAll(L_0_0_0, Layer.orDie(Layer.succeed(${key}, 9)), L_0_0_0))`,
     ].join("\n")
-    expect(JSON.parse(json(source))[1]).toEqual([
-      "mergeAll",
-      ["cons", ["succeed", k44, ["nat", 7]],
-        ["cons", ["orDie", ["succeed", k44, ["nat", 9]]],
-          ["cons", ["ref", [0, 0, 0]], ["nil"]]]],
-    ])
+    expect(JSON.parse(json(source)).layer).toEqual({
+      _tag: "mergeAll",
+      layers: [succeed44(7), { _tag: "orDie", inner: succeed44(9) }, ref(0, 0, 0)],
+    })
   })
   // Declarations go back ancestors first, so a target inside another target has a site by
   // the time its turn comes (`Eff.restoreAll`); `printModule` emits them the other way round.
@@ -495,8 +523,8 @@ describe("layer references", () => {
       `export const main = Effect.provide(Effect.provide(Effect.succeed(7), L_0), L_0)`,
     ].join("\n")
     const read = JSON.parse(json(source))
-    expect(read[1]).toEqual(["merge", ["succeed", k44, ["nat", 7]], ["ref", [0, 0]]])
-    expect(read[3][1]).toEqual(["ref", [0]])
+    expect(read.layer).toEqual({ _tag: "merge", left: succeed44(7), right: ref(0, 0) })
+    expect(read.body.layer).toEqual(ref(0))
   })
   // A restore site's body is its child 0 (`Node.child`, `src/Effect4/Program/NodeLenses.lean`).
   // The first provision's layer is at [1, 0, 0, 0, 0]: root bind → child 1 uninterruptible →
@@ -509,15 +537,15 @@ describe("layer references", () => {
         `Effect.uninterruptible(pipe(Effect.flatMap(Effect.provide(Effect.succeed(1), L_1_0_0_0_0), ` +
         `(a1) => Effect.provide(Effect.succeed(2), L_1_0_0_0_0)), a0)))`,
     ].join("\n")
-    expect(JSON.parse(json(source))).toEqual([
-      "bind",
-      ["withFiber", ["getInterruptible"]],
-      ["uninterruptible", ["restore", ["var", 0], [
-        "bind",
-        ["provideLayer", ["succeed", k44, ["nat", 7]], false, ["succeed", ["lit", ["nat", 1]]]],
-        ["provideLayer", ["ref", [1, 0, 0, 0, 0]], false, ["succeed", ["lit", ["nat", 2]]]],
-      ]]],
-    ])
+    expect(JSON.parse(json(source))).toEqual({
+      _tag: "bind",
+      first: { _tag: "withFiber", action: { _tag: "getInterruptible" } },
+      rest: { _tag: "uninterruptible", body: { _tag: "restore", saved: { _tag: "var", index: 0 }, body: {
+        _tag: "bind",
+        first: { _tag: "provideLayer", layer: succeed44(7), isLocal: false, body: { _tag: "succeed", value: lit(1) } },
+        rest: { _tag: "provideLayer", layer: ref(1, 0, 0, 0, 0), isLocal: false, body: { _tag: "succeed", value: lit(2) } },
+      } } },
+    })
   })
 })
 
@@ -641,11 +669,13 @@ describe("supplied tables and method rows", () => {
 describe("conditional handlers", () => {
   test("canonical catch binds the first error", () => {
     expect(json("Effect.catch(Effect.fail(7), (a0) => Effect.succeed(a0))")).toBe(
-      '["catchIf",["lit",["bool",true]],["fail",["lit",["nat",7]]],["succeed",["var",0]]]')
+      '{"_tag":"catchIf","test":{"_tag":"lit","value":{"_tag":"bool","value":true}},' +
+        '"body":{"_tag":"fail","error":{"_tag":"lit","value":{"_tag":"nat","value":7}}},' +
+        '"handler":{"_tag":"succeed","value":{"_tag":"var","index":0}}}')
   })
   test("predicate and handler both see only their own binder", () => {
     const source = "Effect.catchIf(Effect.fail(7), (a0) => eq(a0, 7), (a0) => Effect.succeed(a0), undefined)"
-    expect(JSON.parse(json(source))[0]).toBe("catchIf")
+    expect(JSON.parse(json(source))._tag).toBe("catchIf")
     expect(refusal(source.replace("(a0) => eq", "(a1) => eq"))._tag).toBe("arity")
     expect(refusal(source.replace("(a0) => Effect.succeed", "(a1) => Effect.succeed"))._tag).toBe("arity")
   })
@@ -660,11 +690,13 @@ describe("conditional handlers", () => {
 
 // The reader is one matcher over the table Lean prints from (`templates.gen.ts`). These are
 // images the retired hand reader refused; each expected JSON is Lean's own reader's
-// (`Api.roundTrip`, `OCaml5.Eff.effV`) for the same program.
+// (`Api.roundTrip`), in the tagged print (`ShapeDoc.printTree`), for the same program.
 describe("the images only the table reader reads", () => {
   test("the boolean decision: all three thunks capture without adding binders", () => {
     expect(json("Effect.flatMap(Effect.succeed(true), (a0) => ifCase(() => a0, () => Effect.succeed(a0), () => Effect.fail(a0)))")).toBe(
-      '["bind",["succeed",["lit",["bool",true]]],["select",["var",0],["bool"],["succeed",["var",0]],["fail",["var",0]]]]')
+      '{"_tag":"bind","first":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"bool","value":true}}},' +
+        '"rest":{"_tag":"select","scrutinee":{"_tag":"var","index":0},"decision":{"_tag":"bool"},' +
+        '"arm0":{"_tag":"succeed","value":{"_tag":"var","index":0}},"arm1":{"_tag":"fail","error":{"_tag":"var","index":0}}}}')
   })
   test("the boolean decision refuses malformed calls, thunks, and escaped captures", () => {
     const bodies = ["a0", "Effect.succeed(a0)", "Effect.fail(a0)"]
@@ -690,19 +722,23 @@ describe("the images only the table reader reads", () => {
   })
   test("the option decision: its second arm is under one binder", () => {
     expect(json("Effect.flatMap(Effect.succeed(1), (a0) => optionCase(a0, () => Effect.succeed(undefined), (a1) => Effect.succeed(a1)))")).toBe(
-      '["bind",["succeed",["lit",["nat",1]]],["select",["var",0],["option"],["succeed",["lit",["unit"]]],["succeed",["var",1]]]]')
+      '{"_tag":"bind","first":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":1}}},' +
+        '"rest":{"_tag":"select","scrutinee":{"_tag":"var","index":0},"decision":{"_tag":"option"},' +
+        '"arm0":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"unit"}}},"arm1":{"_tag":"succeed","value":{"_tag":"var","index":1}}}}')
     // the first arm is under none
     expect(refusal("Effect.flatMap(Effect.succeed(1), (a0) => optionCase(a0, () => Effect.succeed(a1), (a1) => Effect.succeed(a1)))")).toEqual(
       { _tag: "unknownIdent", name: "a1" })
   })
   test("the tag decision: the tag is a string hole, both arms under one binder", () => {
     expect(json('Effect.flatMap(Effect.succeed(1), (a0) => caseTag(a0, "cons", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(a1)))')).toBe(
-      '["bind",["succeed",["lit",["nat",1]]],["select",["var",0],["tag","cons"],["succeed",["var",1]],["succeed",["var",1]]]]')
+      '{"_tag":"bind","first":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":1}}},' +
+        '"rest":{"_tag":"select","scrutinee":{"_tag":"var","index":0},"decision":{"_tag":"tag","tag":"cons"},' +
+        '"arm0":{"_tag":"succeed","value":{"_tag":"var","index":1}},"arm1":{"_tag":"succeed","value":{"_tag":"var","index":1}}}}')
   })
   test("the loop image, and the scope of each of its terms", () => {
     const loop = (test: string, step: string, result: string) =>
       `Effect.suspend(() => {\n  let a0 = 0\n  return Effect.map(Effect.whileLoop({\n    while: () => ${test},\n    body: () => Effect.succeed(a0),\n    step: (a1) => {\n      a0 = ${step}\n    },\n  }), () => ${result})\n})`
-    expect(JSON.parse(json(loop("lt(a0, 3)", "add(a0, a1)", "a0")))[0]).toBe("iterate")
+    expect(JSON.parse(json(loop("lt(a0, 3)", "add(a0, a1)", "a0")))._tag).toBe("iterate")
     // the test and the result see the cursor only; the step sees the body's answer too
     expect(refusal(loop("lt(a1, 3)", "add(a0, 1)", "a0"))).toEqual({ _tag: "unknownIdent", name: "a1" })
     expect(refusal(loop("lt(a0, 3)", "add(a0, 1)", "a1"))).toEqual({ _tag: "unknownIdent", name: "a1" })

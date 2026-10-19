@@ -2,7 +2,16 @@ import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { readPrintedSource as ck, recognizeSource as foreignCk } from "../ck.ts"
 import { readPrintedSource as oxc, recognizeSource as foreignOxc } from "../oxc.ts"
-import { effJson } from "../../json.gen.ts"
+import { effJson, type Json } from "../../json.gen.ts"
+import { encodeProgram } from "../../wire.gen.ts"
+
+const lit = (value: number): Json => ({ _tag: "lit", value: { _tag: "nat", value } })
+const v = (index: number): Json => ({ _tag: "var", index })
+const succeed = (value: Json): Json => ({ _tag: "succeed", value })
+/** A golden of `ocaml/eff/goldens` by its canonical bytes (`Canonical.encode`, the `.bin` file). */
+const golden = (name: string): string =>
+  readFileSync(new URL(`../../../../ocaml/eff/goldens/${name}.bin`, import.meta.url)).toString("hex")
+const bytes = (program: Parameters<typeof encodeProgram>[0]): string => Buffer.from(encodeProgram(program)).toString("hex")
 
 for (const readPrintedSource of [ck, oxc]) {
 test("the compiler reader recovers the original printed program", () => {
@@ -11,10 +20,10 @@ test("the compiler reader recovers the original printed program", () => {
 
 test("the printed boolean thunks capture the caller without adding a binder", () => {
   const source = "Effect.flatMap(Effect.succeed(true), (a0) => ifCase(() => a0, () => Effect.succeed(a0), () => Effect.fail(a0)))"
-  expect(effJson(readPrintedSource(source))).toEqual([
-    "bind", ["succeed", ["lit", ["bool", true]]],
-    ["select", ["var", 0], ["bool"], ["succeed", ["var", 0]], ["fail", ["var", 0]]],
-  ])
+  expect(effJson(readPrintedSource(source))).toEqual({
+    _tag: "bind", first: succeed({ _tag: "lit", value: { _tag: "bool", value: true } }),
+    rest: { _tag: "select", scrutinee: v(0), decision: { _tag: "bool" }, arm0: succeed(v(0)), arm1: { _tag: "fail", error: v(0) } },
+  })
 })
 
 test("the printed boolean row refuses noncanonical calls and thunks", () => {
@@ -42,8 +51,8 @@ test("the printed boolean row refuses noncanonical calls and thunks", () => {
   }
 })
 
-const someOne = ["app", "some", ["cons", ["lit", ["nat", 1]], ["nil"]]]
-const consPair = ["app", "pair", ["cons", ["lit", ["str", "cons"]], ["cons", ["lit", ["nat", 1]], ["nil"]]]]
+const someOne = { _tag: "app", atom: "some", args: [lit(1)] }
+const consPair = { _tag: "app", atom: "pair", args: [{ _tag: "lit", value: { _tag: "str", value: "cons" } }, lit(1)] }
 const optionCall = (args: readonly string[], head = "optionCase") =>
   `Effect.flatMap(Effect.succeed(some(1)), (a0) => ${head}(${args.join(", ")}))`
 const optionArgs = ["a0", "() => Effect.succeed(0)", "(a1) => Effect.succeed(a1)"]
@@ -52,10 +61,10 @@ const tagCall = (args: readonly string[], head = "caseTag") =>
 const tagArgs = ["a0", '"cons"', "(a1) => Effect.succeed(a1)", "(a1) => Effect.succeed(0)"]
 
 test("the printed option row binds the payload in its some arm alone", () => {
-  expect(effJson(readPrintedSource(optionCall(optionArgs)))).toEqual([
-    "bind", ["succeed", someOne],
-    ["select", ["var", 0], ["option"], ["succeed", ["lit", ["nat", 0]]], ["succeed", ["var", 1]]],
-  ])
+  expect(effJson(readPrintedSource(optionCall(optionArgs)))).toEqual({
+    _tag: "bind", first: succeed(someOne),
+    rest: { _tag: "select", scrutinee: v(0), decision: { _tag: "option" }, arm0: succeed(lit(0)), arm1: succeed(v(1)) },
+  })
 })
 
 test("the printed option row refuses noncanonical calls and arms", () => {
@@ -70,10 +79,10 @@ test("the printed option row refuses noncanonical calls and arms", () => {
 })
 
 test("the printed tag row reads its literal tag and binds the scrutinee in both arms", () => {
-  expect(effJson(readPrintedSource(tagCall(tagArgs)))).toEqual([
-    "bind", ["succeed", consPair],
-    ["select", ["var", 0], ["tag", "cons"], ["succeed", ["var", 1]], ["succeed", ["lit", ["nat", 0]]]],
-  ])
+  expect(effJson(readPrintedSource(tagCall(tagArgs)))).toEqual({
+    _tag: "bind", first: succeed(consPair),
+    rest: { _tag: "select", scrutinee: v(0), decision: { _tag: "tag", tag: "cons" }, arm0: succeed(v(1)), arm1: succeed(lit(0)) },
+  })
 })
 
 test("the printed tag row refuses noncanonical calls, tags and arms", () => {
@@ -107,31 +116,32 @@ test("the printed n-ary merge keeps zero, one, and three layers", () => {
 
 test("the printed diamond recovers the original Lean golden including its defining path", () => {
   const source = `export const L_0_0 = Layer.effect(${key}, Effect.succeed(7)); export const main = Effect.provide(Effect.service(${key}), Layer.merge(L_0_0, L_0_0))`
-  const expected = JSON.parse(readFileSync(new URL("../../../../ocaml/eff/goldens/pDiamond.json", import.meta.url), "utf8"))
-  expect(effJson(readPrintedSource(source))).toEqual(expected)
+  expect(bytes(readPrintedSource(source))).toBe(golden("pDiamond"))
 })
 
 test("the layer definition is restored at its named position inside a mergeAll spine", () => {
   const source = `const L_0_0_1_0 = ${layer}; Effect.provide(Effect.succeed(7), Layer.mergeAll(L_0_0_1_0, L_0_0_1_0, L_0_0_1_0))`
-  expect(effJson(readPrintedSource(source))).toEqual([
-    "provideLayer", ["mergeAll", ["cons", ["ref", [0, 0, 1, 0]],
-      ["cons", ["succeed", k44, ["nat", 7]], ["cons", ["ref", [0, 0, 1, 0]], ["nil"]]]]],
-    false, ["succeed", ["lit", ["nat", 7]]],
-  ])
+  expect(effJson(readPrintedSource(source))).toEqual({
+    _tag: "provideLayer", layer: { _tag: "mergeAll", layers: [{ _tag: "ref", target: [0, 0, 1, 0] },
+      { _tag: "succeed", key: k44, value: { _tag: "nat", value: 7 } }, { _tag: "ref", target: [0, 0, 1, 0] }] },
+    isLocal: false, body: succeed(lit(7)),
+  })
 })
 
 test("nested layer declarations restore ancestors before their children", () => {
   const source = `export const L_0_0 = ${layer}; export const L_0 = Layer.merge(L_0_0, L_0_0); export const main = Effect.provide(Effect.provide(Effect.succeed(7), L_0), L_0)`
-  expect(effJson(readPrintedSource(source))).toEqual([
-    "provideLayer", ["merge", ["succeed", k44, ["nat", 7]], ["ref", [0, 0]]], false,
-    ["provideLayer", ["ref", [0]], false, ["succeed", ["lit", ["nat", 7]]]],
-  ])
+  expect(effJson(readPrintedSource(source))).toEqual({
+    _tag: "provideLayer",
+    layer: { _tag: "merge", left: { _tag: "succeed", key: k44, value: { _tag: "nat", value: 7 } }, right: { _tag: "ref", target: [0, 0] } },
+    isLocal: false,
+    body: { _tag: "provideLayer", layer: { _tag: "ref", target: [0] }, isLocal: false, body: succeed(lit(7)) },
+  })
 })
 
 test("a layer identifier without a declaration stays a reference", () => {
-  expect(effJson(readPrintedSource("Effect.provide(Effect.succeed(7), L_0)"))).toEqual([
-    "provideLayer", ["ref", [0]], false, ["succeed", ["lit", ["nat", 7]]],
-  ])
+  expect(effJson(readPrintedSource("Effect.provide(Effect.succeed(7), L_0)"))).toEqual({
+    _tag: "provideLayer", layer: { _tag: "ref", target: [0] }, isLocal: false, body: succeed(lit(7)),
+  })
 })
 
 test("only canonical path names, leading const layers, and one main program are accepted", () => {
@@ -151,11 +161,11 @@ test("only canonical path names, leading const layers, and one main program are 
 
 // The mask that restores (decisions rows 244 to 246). The getter prints as the mask that answers
 // its own parameter, and a restore site as `pipe(body, saved)` (`Codegen/Templates.lean`). The
-// oracles are Lean's goldens: one restore site around a wait, two masks, a saved state used
-// outside its mask, and a saved term that is no saved state.
+// oracles are Lean's goldens, by their canonical bytes: one restore site around a wait, two masks,
+// a saved state used outside its mask, and a saved term that is no saved state.
 test("the printed mask recovers the original Lean goldens", () => {
   const getter = (n: number) => `Effect.uninterruptibleMask((a${n}) => Effect.succeed(a${n}))`
-  for (const [golden, source] of [
+  for (const [name, source] of [
     ["pMask", `Effect.flatMap(Deferred.make<number, number>(), (a0) => Effect.flatMap(Deferred.succeed(a0, 7), (a1) => ` +
       `Effect.flatMap(${getter(2)}, (a2) => Effect.uninterruptible(pipe(Deferred.await(a0), a2)))))`],
     ["pMaskNested", `Effect.flatMap(${getter(0)}, (a0) => Effect.uninterruptible(Effect.flatMap(${getter(1)}, (a1) => ` +
@@ -164,9 +174,10 @@ test("the printed mask recovers the original Lean goldens", () => {
       `(a0) => pipe(Effect.succeed(3), a0))`],
     ["pIllRestoreBool", "pipe(Effect.succeed(1), true)"],
   ] as const) {
-    const expected = JSON.parse(readFileSync(new URL(`../../../../ocaml/eff/goldens/${golden}.json`, import.meta.url), "utf8"))
-    expect(effJson(readPrintedSource(source))).toEqual(expected)
+    expect(bytes(readPrintedSource(source))).toBe(golden(name))
   }
+  // the control: the four oracles are four programs, so a reading that matches one matches no other
+  expect(new Set(["pMask", "pMaskNested", "pMaskEscape", "pIllRestoreBool"].map(golden)).size).toBe(4)
 })
 
 test("a mask whose callback does not answer its own parameter is no printed image", () => {
@@ -200,10 +211,10 @@ for (const recognizeSource of [foreignCk, foreignOxc]) {
     const verdict = verdicts[0]!
     expect(verdict.kind).toBe("lifted")
     if (verdict.kind !== "lifted") throw new Error("expected retained foreign conditional")
-    expect(effJson(verdict.eff)).toEqual([
-      "bind", ["succeed", ["lit", ["bool", true]]],
-      ["select", ["var", 0], ["bool"], ["succeed", ["lit", ["nat", 1]]], ["succeed", ["lit", ["nat", 2]]]],
-    ])
+    expect(effJson(verdict.eff)).toEqual({
+      _tag: "bind", first: succeed({ _tag: "lit", value: { _tag: "bool", value: true } }),
+      rest: { _tag: "select", scrutinee: v(0), decision: { _tag: "bool" }, arm0: succeed(lit(1)), arm1: succeed(lit(2)) },
+    })
   })
   test("foreign recognition still refuses malformed suspended conditionals", () => {
     for (const body of [
