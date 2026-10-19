@@ -7,11 +7,14 @@ import Effect4.Store.Domain.ProgramWire
 The tools print a program as JSON with each list an array (`Canonical.print`), the
 encoding `ts/eff/eff.gen.ts` types, and read an agent's JSON in any order
 (`Canonical.ofJsonAnyOrder`). The law is exactness modulo that normaliser
-(`Canonical.ofJsonAnyOrder_exact`). These two lines are finite evaluations of the round trip,
-which no theorem states.
+(`Canonical.ofJsonAnyOrder_exact`). These lines are finite evaluations of the round trip and of
+the public print, which no theorem states, and one control.
 
 * **Tested: a program written by hand as `ts/eff/eff.gen.ts` types it reads.**
 * **Tested: the tools' print reads back with every object's entries reversed.**
+* **Tested: the public print is that hand encoding** (decisions row 418, D2).
+* **Control: the cases print (`ShapeDoc.print`) is another JSON value**, since it writes each list
+  family by its `cons` cells; the readers' laws name it as their normal form.
 -/
 
 set_option autoImplicit false
@@ -58,5 +61,9 @@ def listedAsTs : Json :=
 -- tested: the tools' print reads back with every object's entries reversed
 #guard ((Canonical.ofJsonAnyOrder (reverseObjs (Canonical.print listed)) :
   Option NativeEff).map hexOf) == some (hexOf listed)
+-- tested: the public print is the hand encoding, each list an array (decisions row 418, D2)
+#guard Canonical.print listed = listedAsTs
+-- control: the cases print writes the same program's lists by their cells, so the prints part
+#guard (Canonical.shape NativeEff).print (Canonical.toVal listed) ≠ Canonical.print listed
 
 end Test.Program.JsonFormControls
