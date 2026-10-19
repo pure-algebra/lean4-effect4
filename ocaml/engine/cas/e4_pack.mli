@@ -312,7 +312,7 @@ val refusal_to_string : refusal -> string
 val read : reader -> seg:seg -> off:off -> (record, refusal) result
 
 (** The record's RECORDED digest and its node_bytes.  Checks 'R', the CRC and the length.
-    Does NOT re-hash: that is [read] (and `E4_cas.verify`). *)
+    Does NOT re-hash: that is [read] (and `E4_cas.checked_image`). *)
 val read_at : reader -> seg:seg -> off:off -> (E4_addr.Addr.t * string) option
 
 (** digest and node_len only — 41 bytes; the rebuild path (PK4). *)

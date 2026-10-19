@@ -5,7 +5,7 @@
          named property: L-CAS-1 the address, L-CAS-2 exactness, L-CAS-3 injectivity,
          L-CAS-4 the admission order (a node that fails two tests answers the FIRST one Lean
          would), L-CAS-5 grow-only and the outcomes, L-CAS-6 the recorded digest is a
-         cache and `verify` is the identity, L-CAS-7 closure is the transfer unit, L-CAS-8
+         cache and the checked image is the identity, L-CAS-7 closure is the transfer unit, L-CAS-8
          recovery replays a word (its crash half is in test_crash.ml).
      G2* golden G2 replayed through `put`: every case's store built as ../goldens/cases.txt's
          header names it, and the answer compared to Lean's word, with `corrupt` read as
@@ -13,14 +13,16 @@
          Every row must agree; no admission exception remains.
          `g2-conflict` is also checked raw: its occupant does not hash
          to its address, so put answers `corrupt`.
-     CS7-h  `verify` and `verify_node` refuse a handle in a content payload, as `put` does.
+     CS7-h  the checked image and `verify_node` refuse a handle in a content payload, as `put`
+            does.
      G3* golden G3 replayed through `advance_root`, with the kind and dangling checks now
          real: the resolver is this store's own kind lookup.
      G6* golden G6: three nodes in two insertion orders.  `nodes` differ, every `find`
          agrees, the closures are BYTE-IDENTICAL to each other and to Lean's cut.
-     G7* golden G7: `verify` on Lean's good store and its four mutations, over stores forged
-         on disk record by record (a node filed under a wrong key is not something `put` can
-         make — that is the point of the case).
+     G7* golden G7: Lean's `Store.verify` on its good store and its mutations, read through
+         the checked open (`E4_disk.open_`, e4_cas.mli CS7), over stores forged on disk record
+         by record (a node filed under a wrong key is not something `put` can make — that is
+         the point of the case).
      G8* golden G8 (seams ST3): results replayed through `put` over forged preloads, and two
          words from nothing (the genesis read from g1-genesisNode) through `word_wf` and
          `apply_word`.  Every row must agree with Lean: the envelope refusals, the query edge
@@ -29,6 +31,8 @@
      D5* the differential of §4.2 D5 on generated DAGs: the same nodes in two topological
          orders give different `nodes` and byte-identical closures.
      M*  the mutation check of §4.1: one byte of a golden flipped and the comparison goes red.
+     A3.1 one record's tag damaged below the published end (Codex's quality review): the
+         checked open refuses it at the record, and `verify_node` refuses the address.
 
    Everything runs in a fresh directory under the system's temporary directory (TMPDIR; made by
    E4_check.temp_dir), removed at the end.  Exit code 0 iff every check passed. *)
@@ -103,6 +107,18 @@ let raw_node bytes =
 let word_word = function
   | Ok (o, _) -> E4_cas.outcome_word o
   | Error a -> E4_cas.admission_word a
+;;
+
+(* The store's verification (e4_cas.mli CS7): the checked image of a view, as a word. *)
+let checked_word ro =
+  match E4_cas.checked_image ro with
+  | Ok _ -> "ok"
+  | Error why -> E4_cas.admission_word why
+;;
+
+let node_word = function
+  | Ok () -> "ok"
+  | Error why -> E4_cas.admission_word why
 ;;
 
 (* ============================================================ a Val reader for the goldens *)
@@ -342,6 +358,15 @@ let cases () =
 (* ============================================================ stores on disk *)
 
 let opts = { E4_cas.default_opts with seg_max = 1 lsl 20 }
+
+(* The checked open of a directory (E4_disk.open_): the store's one verification. *)
+let checked_open dir =
+  match E4_disk.open_ ~dir opts with
+  | Ok disk ->
+    E4_disk.close disk;
+    Ok ()
+  | Error why -> Error why
+;;
 
 let with_store f =
   let d = fresh_dir () in
@@ -619,10 +644,10 @@ let test_outcomes () =
   E4_cas.close s
 ;;
 
-(* ============================================================ L-CAS-6: verify is the identity *)
+(* ============================================================ L-CAS-6: verification *)
 
 let test_verify_identity () =
-  print_endline "-- L-CAS-6: the recorded digest is a cache; verify re-hashes";
+  print_endline "-- L-CAS-6: the recorded digest is a cache; the checked image re-hashes";
   let good = E4_node.encode probe_schema in
   let flipped = Bytes.of_string good in
   Bytes.set
@@ -635,17 +660,19 @@ let test_verify_identity () =
   check
     "L-CAS-6 a read that trusts the recorded digest hands back the forged bytes"
     (E4_cas.get_bytes ro schema_addr = Some flipped);
+  let corrupt = "corrupt " ^ hex schema_addr in
   check
-    "L-CAS-6 verify re-hashes and refuses it as digestMismatch"
-    (match E4_cas.verify ro with
-     | Error e -> E4_cas.verify_error_word e = "digestMismatch"
-     | Ok () -> false);
-  (* L-IDX-0: verify never consults the index, and dropping the index changes no answer *)
-  let before = E4_cas.verify ro in
+    "L-CAS-6 the checked image re-hashes and refuses it as corrupt at its address"
+    (checked_word ro = corrupt);
+  check
+    "L-CAS-6 verify_node refuses the address the same way"
+    (node_word (E4_cas.verify_node ro schema_addr) = corrupt);
+  (* L-IDX-0: the checked image never consults the index, and dropping it changes no answer *)
+  let before = checked_word ro in
   E4_cas.drop_index ro;
   check
-    "L-CAS-6 verify gives the same verdict with the index dropped"
-    (E4_cas.verify ro = before);
+    "L-CAS-6 the checked image gives the same verdict with the index dropped"
+    (String.equal (checked_word ro) before);
   check
     "L-CAS-6 the dropped index rebuilds and answers the same"
     (E4_cas.get_bytes ro schema_addr = Some flipped && E4_cas.index_count ro = 1);
@@ -656,20 +683,25 @@ let test_verify_identity () =
     ignore (E4_cas.put s probe_entry);
     E4_cas.commit s;
     let ro = E4_cas.read_only s in
-    check "L-CAS-6 verify on a store this module wrote is ok" (E4_cas.verify ro = Ok ());
+    check
+      "L-CAS-6 the checked image of a store this module wrote is ok"
+      (checked_word ro = "ok");
     check
       "L-CAS-6 verify_node agrees on every node"
-      (List.for_all (fun (a, _) -> E4_cas.verify_node ro a = Ok ()) (E4_cas.nodes ro)))
+      (List.for_all
+         (fun (a, _) -> Result.is_ok (E4_cas.verify_node ro a))
+         (E4_cas.nodes ro)))
 ;;
 
-(* ============================================================ CS7-h: verify checks handles *)
+(* ============================================================ CS7-h: handles in content *)
 
-(* A record `put` would refuse as handleInContent can only be forged on disk.  verify and
-   verify_node refuse it as put does; the same payload at a run-relative kind is the control
+(* A record `put` would refuse as handleInContent can only be forged on disk.  The checked image
+   and verify_node refuse it as put does; the same payload at a run-relative kind is the control
    that the check is about content kinds and nothing else. *)
 let test_verify_handles () =
   print_endline
-    "-- CS7-h: verify refuses a handle in content, as put does (amendment M2's default)";
+    "-- CS7-h: the checked image refuses a handle in content, as put does (amendment \
+     M2's default)";
   let spec = E4_addr.Addr.bytes schema_addr in
   let payload = v_list [ v_handle 2 7 ] in
   let verdicts kind =
@@ -683,11 +715,7 @@ let test_verify_handles () =
         []
     in
     let ro = E4_cas.open_ro ~dir:d in
-    let w = function
-      | Ok () -> "ok"
-      | Error e -> E4_cas.verify_error_word e
-    in
-    let r = w (E4_cas.verify ro), w (E4_cas.verify_node ro a) in
+    let r = checked_word ro, node_word (E4_cas.verify_node ro a) in
     let put_word =
       let s = open_writer ~dir:(fresh_dir ()) opts in
       ignore (E4_cas.put s probe_schema);
@@ -700,11 +728,14 @@ let test_verify_handles () =
   in
   let (v, vn), pw = verdicts E4_kind.Export in
   check "CS7-h put refuses the handle at a content kind" (pw = "handleInContent");
-  check "CS7-h verify refuses the forged record as handleInContent" (v = "handleInContent");
+  check
+    "CS7-h the checked image refuses the forged record as handleInContent"
+    (v = "handleInContent");
   check "CS7-h verify_node refuses it as handleInContent" (vn = "handleInContent");
   let (v, vn), pw = verdicts E4_kind.Tape in
   check
-    "CS7-h control: at a run-relative kind put, verify and verify_node all admit it"
+    "CS7-h control: at a run-relative kind put, the checked image and verify_node all \
+     admit it"
     (pw = "fresh" && v = "ok" && vn = "ok")
 ;;
 
@@ -1101,15 +1132,40 @@ let test_g3 () =
 
 (* ============================================================ golden G7 *)
 
+(* Lean's `Store.verify` words, golden G7's expected column, read through the checked open
+   (e4_cas.mli CS7).  Its refusal is said in Lean's words: a record whose bytes do not hash to its
+   address is `digestMismatch`, a root the image cannot resolve is `rootUnresolved <name>`, and a
+   model refusal keeps its own word.  The checked open admits in write order, and Lean's verify
+   resolves an edge anywhere in the store, so a `dangling` at an address the store holds LATER is
+   a forward reference that the checked open refuses first.  The two result rows are such stores
+   by Lean's design (CasGoldens.lean, `g7ResultCases`): each row asserts that both refuse, and the
+   result rule itself is golden G8's, through the same admission. *)
+let lean_verify_word = function
+  | Ok () -> "ok"
+  | Error (E4_admission.Fault (E4_fault.Corrupt _)) -> "digestMismatch"
+  | Error (E4_admission.Fault (E4_fault.Root { name; _ })) -> "rootUnresolved " ^ name
+  | Error why -> E4_cas.admission_word why
+;;
+
+let forward_reference records = function
+  | Error (E4_admission.Model (E4_admission.Dangling d)) ->
+    List.exists (fun (k, _) -> String.equal k (E4_addr.Addr.bytes d)) records
+  | Ok () | Error _ -> false
+;;
+
+let forward_rows = [ "g7-result-poisoned"; "g7-result-not-envelope" ]
+
 let test_g7 () =
-  print_endline "-- golden G7: verify on a good store and its mutations";
+  print_endline
+    "-- golden G7: Lean's verify on a store and its mutations, through the checked open";
   let rows = List.filter (fun (_, f, _) -> f = "g7") (cases ()) in
   if rows = []
   then skip "G7 the verify goldens" "no g7 rows in cases.txt"
   else (
     let ok = ref 0
     and total = ref 0
-    and bad = ref [] in
+    and bad = ref []
+    and forward = ref [] in
     List.iter
       (fun (name, _, expected) ->
          match golden name with
@@ -1125,22 +1181,39 @@ let test_g7 () =
                  if List.length roots <> List.length rs
                  then bad := (name ^ " (bad roots)") :: !bad
                  else (
-                   let d = forged records roots in
-                   let ro = E4_cas.open_ro ~dir:d in
-                   let got =
-                     match E4_cas.verify ro with
-                     | Ok () -> "ok"
-                     | Error e -> E4_cas.verify_error_word e
-                   in
-                   E4_cas.close_ro ro;
-                   if got = expected
+                   let got = checked_open (forged records roots) in
+                   let word = lean_verify_word got in
+                   if String.equal word expected
                    then incr ok
+                   else if
+                     (not (String.equal expected "ok")) && forward_reference records got
+                   then (
+                     incr ok;
+                     forward := name :: !forward;
+                     note
+                       "  g7 %s: Lean says %s; the checked open refuses first, at a \
+                        forward reference: %s"
+                       name
+                       expected
+                       word)
                    else (
                      bad := name :: !bad;
-                     note "  g7 %s: Lean says %s, verify says %s" name expected got)))
+                     note
+                       "  g7 %s: Lean says %s, the checked open says %s"
+                       name
+                       expected
+                       word)))
             | _ -> bad := (name ^ " (not a pair)") :: !bad))
       rows;
-    check (Printf.sprintf "G7 %d/%d verify rows agree with Lean" !ok !total) (!bad = []))
+    check
+      (Printf.sprintf
+         "G7 %d/%d verify rows agree with Lean through the checked open"
+         !ok
+         !total)
+      (!bad = []);
+    check
+      "G7 a forward reference stands in for Lean's verdict on the two result rows only"
+      (List.sort String.compare !forward = List.sort String.compare forward_rows))
 ;;
 
 (* ============================================================ golden G8: results *)
@@ -1332,7 +1405,9 @@ let test_d5 () =
      in
      E4_cas.close s;
      r && c && same);
-  check "D5 both stores verify" (E4_cas.verify ra = Ok () && E4_cas.verify rb = Ok ());
+  check
+    "D5 both stores pass the checked image"
+    (checked_word ra = "ok" && checked_word rb = "ok");
   E4_cas.close sa;
   E4_cas.close sb
 ;;
@@ -1392,16 +1467,46 @@ let test_mutation () =
           let rogood = E4_cas.open_ro ~dir:dgood in
           let dbad = forged ((d0, flip b0 (String.length b0 - 1)) :: rest) [] in
           let robad = E4_cas.open_ro ~dir:dbad in
-          check "M3 verify is ok on the golden store" (E4_cas.verify rogood = Ok ());
+          check "M3 the checked image admits the golden store" (checked_word rogood = "ok");
           check
-            "M3 verify is digestMismatch when one payload byte is flipped"
-            (match E4_cas.verify robad with
-             | Error e -> E4_cas.verify_error_word e = "digestMismatch"
-             | Ok () -> false);
+            "M3 the checked image refuses it as corrupt when one payload byte is flipped"
+            (checked_word robad = "corrupt " ^ hex (addr_of d0));
           E4_cas.close_ro rogood;
           E4_cas.close_ro robad
         | _ -> skip "M3 the G7 mutation check" "the golden is not a storeVal")
      | _ -> skip "M3 the G7 mutation check" "the golden is not a storeVal")
+;;
+
+(* ============================================================ A3.1: damage below the boundary *)
+
+(* Codex's quality review, A3.1 (codex-review/probes/standards/storage_probe.ml): one committed
+   schema node, then its record's tag byte replaced with 'X'.  The scan of the published range
+   stops at the first record, before the published end. *)
+let test_damaged_record () =
+  print_endline "-- A3.1: a record tag damaged below the published end";
+  let d = fresh_dir () in
+  let s = open_writer ~dir:d opts in
+  ignore (E4_cas.put s probe_schema);
+  E4_cas.commit s;
+  E4_cas.close s;
+  check
+    "A3.1 control: the undamaged store passes the checked open"
+    (Result.is_ok (checked_open d));
+  let path = E4_pack.seg_path ~dir:d 0 in
+  let bytes = Bytes.of_string (read_file path) in
+  Bytes.set bytes E4_pack.head_length 'X';
+  Out_channel.with_open_bin path (fun ch -> Out_channel.output_bytes ch bytes);
+  check
+    "A3.1 the checked open refuses it at the record, before the published end"
+    (match checked_open d with
+     | Error (E4_admission.Fault (E4_fault.Record { seg = 0; off; _ })) ->
+       off = E4_pack.head_length
+     | Ok () | Error _ -> false);
+  let ro = E4_cas.open_ro ~dir:d in
+  check
+    "A3.1 verify_node refuses the damaged address"
+    (Result.is_error (E4_cas.verify_node ro schema_addr));
+  E4_cas.close_ro ro
 ;;
 
 (* ============================================================ the rest of the interface *)
@@ -1543,6 +1648,7 @@ let () =
   test_g8 ();
   test_d5 ();
   test_mutation ();
+  test_damaged_record ();
   test_queries ();
   test_reopen ();
   rm_rf root_dir;

@@ -8,7 +8,7 @@ let get = function
   | Error _ -> failwith "unexpected refusal"
 ;;
 
-let opts = { E4_cas.default_opts with seg_max = 512; index_slots = 16 }
+let opts = { E4_cas.seg_max = 512; index_slots = 16 }
 
 (* A fresh scratch directory under the system's temporary directory, and its removal with every
    sealed entry under it: the harness's (E4_check). *)

@@ -15,9 +15,9 @@
                names it `Bad_crc` / `Bad_digest` at the exact offset, admits exactly the
                prefix, and the pack is truncated there.
            (b) BELOW the watermark: those records were admitted when they were written and
-               the control commit is the proof, so open does not re-scan them (CS6).  `verify`
-               is what finds the corruption — `digestMismatch`, never a silent wrong answer —
-               and `verify_on_open` turns it into a refusal to open.
+               the control commit is the proof, so the writer's open does not re-scan them
+               (CS6).  The checked open (`E4_disk.open_`, e4_cas.mli CS7) is what finds the
+               corruption — a refusal that names the record, never a silent wrong answer.
      X3  lose the index: delete `index/`, and drop the in-memory table.  Every answer is the
          same, on resident and on absent digests (L-IDX-0).
      X4  the control file: a stale `control.tmp`; a `pack_end` that names bytes that are not
@@ -40,6 +40,8 @@ let open_writer ~dir opts =
   | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
 ;;
 
+(* The store's verification (e4_cas.mli CS7): the checked image of a view. *)
+let checked ro = Result.is_ok (E4_cas.checked_image ro)
 let check = E4_check.check ~gap:Two
 let note fmt = Printf.printf ("NOTE  " ^^ fmt ^^ "\n%!")
 let skip name why = Printf.printf "SKIP  %s (%s)\n%!" name why
@@ -208,7 +210,7 @@ let test_x1 () =
        in
        let got = E4_cas.nodes ro in
        if List.length got <> List.length want then ok_prefix := false;
-       if E4_cas.verify ro <> Ok () then ok_verify := false;
+       if not (checked ro) then ok_verify := false;
        if not (E4_cas.closed ro) then ok_verify := false;
        let ends_at =
          match List.rev want with
@@ -227,7 +229,7 @@ let test_x1 () =
          lost;
        E4_cas.commit s;
        if List.length (E4_cas.nodes ro) <> List.length nodes then ok_regrow := false;
-       if E4_cas.verify ro <> Ok () then ok_regrow := false;
+       if not (checked ro) then ok_regrow := false;
        E4_cas.close s;
        rm_rf d)
     cuts;
@@ -236,7 +238,7 @@ let test_x1 () =
        "X1 over %d cuts: exactly the records wholly before the cut are recovered"
        (List.length cuts))
     !ok_prefix;
-  check "X1 every recovered store verifies and is Closed" !ok_verify;
+  check "X1 every recovered store passes the checked image and is Closed" !ok_verify;
   check "X1 the pack is truncated to the end of the last good record" !ok_trunc;
   check "X1 a put of the lost nodes succeeds and the store verifies again" !ok_regrow;
   rm_rf d0
@@ -279,7 +281,7 @@ let corrupt_tail_case name field =
   check
     (Printf.sprintf "X2(a) %s: exactly the prefix is admitted" name)
     (List.length (E4_cas.nodes ro) = List.length nodes - 1);
-  check (Printf.sprintf "X2(a) %s: the prefix verifies" name) (E4_cas.verify ro = Ok ());
+  check (Printf.sprintf "X2(a) %s: the prefix passes the checked image" name) (checked ro);
   check
     (Printf.sprintf "X2(a) %s: the pack is truncated at the failure" name)
     (file_size (seg0 d) = off);
@@ -298,14 +300,14 @@ let test_x2 () =
   corrupt_tail_case "a flipped digest byte" `Digest;
   corrupt_tail_case "a flipped payload byte" `Payload;
   (* (b) below the watermark: the record was admitted when it was written and the control
-     commit is the proof, so open does not re-scan it (CS6).  `verify` is what finds it.
-     Two shapes, and they answer differently on purpose:
+     commit is the proof, so the writer's open does not re-scan it (CS6).  The checked open is
+     what finds it.  Two shapes, and they answer differently on purpose:
        b1  the CRC is CONSISTENT with the corrupted bytes — the mutation L-CAS-6 exists for.
-           `read_at`, which trusts the recorded digest, hands the bytes back; `verify`
-           re-hashes and says `digestMismatch`.
+           `read_at`, which trusts the recorded digest, hands the bytes back; the checked
+           open re-hashes and refuses the address as corrupt.
        b2  a raw flipped byte, so the CRC no longer holds.  The record does not read at all,
-           and `verify` says `undecodable` — the nearest of Lean's VerifyError words for
-           "these bytes are not the node they claim to be".  Never a silent wrong answer. *)
+           and the checked open refuses it as a record fault at its own offset.  Never a
+           silent wrong answer. *)
   let nodes = chain 4 in
   let d0 = fresh_dir () in
   build d0 nodes;
@@ -353,20 +355,15 @@ let test_x2 () =
     "X2(b1) the read that trusts the recorded digest hands the bytes back"
     (E4_cas.get_bytes ro (E4_addr.Addr.of_digest (fst (List.nth originals 1)))
      = Some (snd (List.nth corrupted 1)));
-  check
-    "X2(b1) verify re-hashes and finds it: digestMismatch"
-    (match E4_cas.verify ro with
-     | Error e -> E4_cas.verify_error_word e = "digestMismatch"
-     | Ok () -> false);
   E4_cas.close s;
+  let corrupted_addr = E4_addr.Addr.of_digest (fst (List.nth originals 1)) in
   check
-    "X2(b1) verify_on_open turns it into a refusal to open"
-    (match E4_cas.open_rw ~dir:d1 { opts with E4_cas.verify_on_open = true } with
-     | Error (E4_cas.Fault (E4_fault.Store m)) ->
-       String.length m > 7 && String.sub m 0 7 = "verify:"
+    "X2(b1) the checked open re-hashes and refuses the address as corrupt"
+    (match E4_disk.open_ ~dir:d1 opts with
+     | Error (E4_cas.Fault (E4_fault.Corrupt at)) -> E4_addr.Addr.equal at corrupted_addr
      | Error _ -> false
-     | Ok t ->
-       E4_cas.close t;
+     | Ok disk ->
+       E4_disk.close disk;
        false);
   rm_rf d1;
   let d2 = fresh_dir () in
@@ -379,11 +376,19 @@ let test_x2 () =
     "X2(b2) a raw flipped byte below the watermark does not stop the open"
     ((E4_cas.recovery s).E4_cas.stop = E4_cas.Clean);
   check
-    "X2(b2) the record does not read at all, and verify says undecodable"
-    (match E4_cas.verify ro with
-     | Error e -> E4_cas.verify_error_word e = "undecodable"
-     | Ok () -> false);
+    "X2(b2) the record does not read at all, and the checked image refuses it there"
+    (match E4_cas.checked_image ro with
+     | Error (E4_cas.Fault (E4_fault.Record { seg = 0; off = at; _ })) -> at = off
+     | Ok _ | Error _ -> false);
   E4_cas.close s;
+  check
+    "X2(b2) the checked open refuses it at the record's own offset"
+    (match E4_disk.open_ ~dir:d2 opts with
+     | Error (E4_cas.Fault (E4_fault.Record { seg = 0; off = at; _ })) -> at = off
+     | Error _ -> false
+     | Ok disk ->
+       E4_disk.close disk;
+       false);
   rm_rf d2;
   rm_rf d0
 ;;
@@ -429,7 +434,7 @@ let test_x3 () =
   check
     "X3 with the in-memory table dropped, every answer is the same"
     (answers ro1 = before);
-  check "X3 verify is unchanged by either" (E4_cas.verify ro1 = Ok ());
+  check "X3 the checked image is unchanged by either" (checked ro1);
   E4_cas.close_ro ro1;
   (* an index file whose coverage is past the pack's end is discarded, not believed *)
   let s = open_writer ~dir:d opts in
@@ -576,7 +581,9 @@ let test_x5 () =
   check
     "X5 the generation is strictly increasing across the reader's re-reads"
     (E4_cas.generation ro > g0);
-  check "X5 the reader's store verifies at every prefix it saw" (E4_cas.verify ro = Ok ());
+  check
+    "X5 the reader's store passes the checked image at every prefix it saw"
+    (checked ro);
   E4_cas.close_ro ro;
   E4_cas.close s;
   rm_rf d
@@ -617,7 +624,7 @@ let test_x7 () =
        if r.E4_cas.stop <> E4_cas.Clean then ok := false;
        if List.length (E4_cas.nodes ro) <> List.length nodes then ok := false;
        if not (E4_cas.closed ro) then ok_closed := false;
-       if E4_cas.verify ro <> Ok () then ok_closed := false;
+       if not (checked ro) then ok_closed := false;
        (* re-admission is in WRITE order: the addresses come back in the order the pack holds *)
        if List.map fst (E4_cas.nodes ro) <> List.map E4_node.address nodes
        then ok_order := false;
@@ -656,7 +663,7 @@ let test_x7 () =
      | _ -> false);
   check
     "X7(b) the prefix is readable and Closed"
-    (List.length (E4_cas.nodes ro) = 2 && E4_cas.closed ro && E4_cas.verify ro = Ok ());
+    (List.length (E4_cas.nodes ro) = 2 && E4_cas.closed ro && checked ro);
   check
     "X7(b) the store refuses to GROW until an operator acts (e4_cas.mli D6)"
     (match E4_cas.put s genesis with
@@ -699,7 +706,7 @@ let test_x7 () =
           (E4_cas.roots ro))
      = 1
      && List.length (E4_cas.nodes ro) = List.length nodes
-     && E4_cas.verify ro = Ok ());
+     && checked ro);
   E4_cas.close s;
   rm_rf d4;
   rm_rf d

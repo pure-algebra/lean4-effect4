@@ -75,17 +75,21 @@
        `Word.toStore earlier`, with `Word.wfFrom earlier w = true`, `Word.Faithful earlier`,
        and `Closed (Word.toStore earlier)`. The result remains faithful and closed.
                                                                      tested (X1, X2, X7)
-   CS7 / L-CAS-6  `verify` is `Store.verify`: it re-reads every record from the pack and
-       re-hashes it, re-decodes it, re-resolves every checked edge at its kind and resolves
-       every root.  It also refuses a handle in content as `put` does (amendment M2's
-       default; `Verify_handle_in_content`, OCaml only), and applies the result rule among
-       every record (`Verify_bad_envelope`, `Verify_poisoned`, as Lean's `verifyResult`).
-       It NEVER consults the index and never trusts a record's recorded digest — both are
-       caches of it.                                  by construction; tested (G7, X3, CS7-h, R1)
+   CS7 / L-CAS-6  The store's verification is the checked image, `checked_image`, which the
+       checked open (`E4_disk.open_`) runs: it re-reads every record from the first to the
+       published end, re-hashes it, re-decodes it and admits it through `Store.checkAll`'s
+       stages, in write order, and it resolves every root.  A scan that stops before the
+       published end is refused with the place and the scan's verdict.  It NEVER consults the
+       index and never trusts a record's recorded digest — both are caches of it.
+       `verify_node` checks one address by the same steps.  Lean's `Store.verify` resolves an
+       edge anywhere in the store; the checked image admits in write order, so it also refuses
+       a forged forward reference, which `put` cannot write.
+                                                by construction; tested (G7, X2, X3, CS7-h, A3.1)
    CS10 Results (seams ST3).  Every entrance — `put`, a transaction, recovery's re-admission,
-       `word_wf`, `closure` and both verifications — applies one result rule: a result node
-       reads as the common envelope, and no other result answers its designated query.  The
-       by-query table is a cache with a rebuild, as the by-Cid index is.            tested (R1)
+       `word_wf`, `closure`, `checked_image` and `verify_node` — applies one result rule: a
+       result node reads as the common envelope, and no other result answers its designated
+       query.  The by-query table is a cache with a rebuild, as the by-Cid index is.
+                                                                                   tested (R1)
    CS8  The store never collects (Store (src/Effect4/Store/Domain/Store.lean), cas-design §8).  `reachable` and `by_cid` are
        queries, never edges (amendment M1: `Reachable` does not walk `Cid` fields), and
        `pin_all` mints the pin roots a publish owes.                          tested (G3)
@@ -118,9 +122,9 @@
        writer's own read view — §1.8 types `put` on `t` and `get_node` on `ro` and gives no
        bridge), `dir`, `generation`, `nodes` (`Store.nodes`, in insertion order, which is what
        makes L-CAS-7 testable), `addresses`, `closed` (`Closed`, Closed (src/Effect4/Store/Domain/Store.lean), as a
-       decision), `recovery`, `drop_index`, `index_count`, and the four printers
-       `outcome_word` / `admission_word` / `verify_error_word` / `recovery_stop_word`, whose
-       vocabulary is Lean's so a golden's `expected` column compares as a string.
+       decision), `recovery`, `drop_index`, `index_count`, and the three printers
+       `outcome_word` / `admission_word` / `recovery_stop_word`, whose vocabulary is Lean's so
+       a golden's `expected` column compares as a string.
    D5  `by_cid` is computed WITHOUT `E4_shape` (lane P2's file): a `Cid` is the payload digest
        (amendment M6), so `by_cid k c` is the addresses of the resident nodes of kind `k`
        whose payload hashes to `c`.  It needs no per-kind field table — the field table is
@@ -157,8 +161,8 @@
        working.  `RootPolicy.pin` is Lean's (`src/Effect4/Store/Domain/Transaction.lean`), but no
        golden pins the `runs/…` names: lane GLD reports M1 as owed
        (2026-09-08-engine-lane-gld-delivery.md §4 O4).
-   D9  `verify_node` re-hashes and re-decodes its one node and resolves its edges through the
-       ordinary lookup; only whole-store `verify` refuses to consult the index (CS7).  A
+   D9  `verify_node` re-hashes and re-decodes its one node and admits it through the ordinary
+       lookup; only the whole-store `checked_image` refuses to consult the index (CS7).  A
        one-node verification that rebuilt the whole table would not be a query anybody could
        afford on the read path. *)
 
@@ -187,33 +191,6 @@ type admission = E4_admission.t =
   | Capacity of string
   | Fault of E4_fault.t
 
-(** `Word.VerifyError` (src/Effect4/Store/Domain/Word.lean), constructor for constructor, with
-    `Verify_handle_in_content` added for amendment M2. *)
-type verify_error =
-  | Digest_mismatch of E4_addr.Addr.t
-  | Undecodable of E4_addr.Addr.t
-  | Verify_malformed_ref of E4_addr.Addr.t
-  | Verify_handle_in_content of E4_addr.Addr.t
-  (** amendment M2's default, as [put] (CS7) *)
-  | Verify_dangling of
-      { node : E4_addr.Addr.t
-      ; missing : E4_addr.Addr.t
-      }
-  | Verify_wrong_kind of
-      { node : E4_addr.Addr.t
-      ; ref_ : E4_addr.Addr.t
-      ; expected : E4_kind.t
-      ; actual : E4_kind.t
-      }
-  | Root_unresolved of string
-  | Verify_bad_envelope of E4_addr.Addr.t
-  (** a result that does not read as the envelope *)
-  | Verify_poisoned of
-      { node : E4_addr.Addr.t
-      ; query : E4_addr.Addr.t
-      ; first : E4_addr.Addr.t
-      } (** another result answers the same designated query (CS10) *)
-
 (** Another writer holds <dir>/LOCK (CS4).  Carries the directory. *)
 exception Locked of string
 
@@ -234,11 +211,6 @@ val outcome_word : outcome -> string
     them, and `unknownTag` as CS2 row 1b names it. *)
 val admission_word : admission -> string
 
-(** "digestMismatch" | "undecodable" | "malformedRef" | "handleInContent" |
-    "dangling <missing hex>" | "wrongKind" | "rootUnresolved <name>" — golden G7's vocabulary,
-    with "handleInContent" added for amendment M2 (CS7). *)
-val verify_error_word : verify_error -> string
-
 (** Frozen checked values. Node bytes pass the exact reader and ordered admission.
     Root targets lie within image_boundary; generations remain exact. *)
 type image =
@@ -254,11 +226,9 @@ val checked_image : ro -> (image, admission) result
 type open_opts =
   { seg_max : int (** pack segment rotation, bytes *)
   ; index_slots : int (** the index's initial capacity *)
-  ; verify_on_open : bool
-    (** run `verify` after recovery; opening returns a concrete fault on failure *)
   }
 
-(** seg_max = 1 GiB (`E4_pack.default_seg_max`), index_slots = 1 lsl 12, no verify.  §1.8's
+(** seg_max = 1 GiB (`E4_pack.default_seg_max`), index_slots = 1 lsl 12.  §1.8's
     default is 1 lsl 20; that is 32 MB of table for a store of any size, and `E4_index` grows
     itself at load 0.6 (IX4), so the large number is only a tax on small stores.  A caller
     that knows how many nodes it will hold passes `index_slots` and lands at the load factor
@@ -447,13 +417,11 @@ type word_error =
     refuses. *)
 val apply_word : t -> binding list -> (unit, word_error) result
 
-(** `Store.verify` (Store.verify (src/Effect4/Store/Domain/Word.lean)).  CS7: its own scan of the pack, every record re-hashed and
-    re-decoded, every checked edge re-resolved at its kind, every root resolved.  The index is
-    not consulted and the recorded digest is not trusted. *)
-val verify : ro -> (unit, verify_error) result
-
-(** `Store.verifyNode` (Store.verifyNode (src/Effect4/Store/Domain/Word.lean)) for one address (D9). *)
-val verify_node : ro -> E4_addr.Addr.t -> (unit, verify_error) result
+(** `Store.verifyNode` (Store.verifyNode (src/Effect4/Store/Domain/Word.lean)) for one address,
+    by the steps `checked_image` takes for each record (CS7, D9): the resident bytes, their
+    digest, `E4_node.decode`, then the admission stages.  An address with no resident record is
+    `Dangling` at itself; bytes that do not hash to the address are `Fault (Corrupt _)`. *)
+val verify_node : ro -> E4_addr.Addr.t -> (unit, admission) result
 
 (** `Closed` (Closed (src/Effect4/Store/Domain/Store.lean)): every resident node's checked edges resolve at their kinds. *)
 val closed : ro -> bool

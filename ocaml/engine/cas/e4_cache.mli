@@ -59,12 +59,13 @@
    CA5 No unbounded growth anywhere.  The slot array is fixed at `create` and the key table is
        fixed with it; neither is ever grown, and no operation allocates a structure whose size
        depends on the number of operations performed.          by construction; tested (B3)
-   CA6 A cache is never consulted for `verify`.  `E4_cas.verify` re-reads the pack and
-       re-hashes it (e4_cas.mli CS7) and no function of this module is reachable from it: this
-       module depends on `E4_cas` and not the other way round, which is the compiler's own
-       statement of CA6.  The test that makes it visible poisons a cache with bytes that are
-       not the node's and shows `verify` still answers `ok` and `E4_cas.get_bytes` still
-       answers the pack's bytes.                               by construction; tested (V1-V3)
+   CA6 A cache is never consulted for verification.  `E4_cas.checked_image` re-reads the pack
+       and re-hashes it, and `E4_cas.verify_node` reads the pack (e4_cas.mli CS7); no function
+       of this module is reachable from either: this module depends on `E4_cas` and not the
+       other way round, which is the compiler's own statement of CA6.  The test that makes it
+       visible poisons a cache with bytes that are not the node's and shows both still answer
+       `ok` and `E4_cas.get_bytes` still answers the pack's bytes.
+                                                               by construction; tested (V1-V3)
    CA7 Total: no function raises on any address, any value and any sequence of operations, and
        a capacity of 0 is a cache that admits nothing rather than an error.        tested (B4)
    CA8 `invariant` is the checker CA2/CA4/CA5 are tested through, and it is exported: the sum

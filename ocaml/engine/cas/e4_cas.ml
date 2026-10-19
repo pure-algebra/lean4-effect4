@@ -9,7 +9,7 @@
      4. admission: the stages in Lean's order, then the edges
      5. put, commit, the roots
      6. words: wf, closure, apply
-     7. verify: its own scan, no index, no trusted digest
+     7. verify: one address, by the steps of the checked image
      8. opening, recovery, closing *)
 
 (* ============================================================ 1. the view *)
@@ -95,41 +95,15 @@ type admission = E4_admission.t =
   | Capacity of string
   | Fault of E4_fault.t
 
-type verify_error =
-  | Digest_mismatch of E4_addr.Addr.t
-  | Undecodable of E4_addr.Addr.t
-  | Verify_malformed_ref of E4_addr.Addr.t
-  | Verify_handle_in_content of E4_addr.Addr.t
-  | Verify_dangling of
-      { node : E4_addr.Addr.t
-      ; missing : E4_addr.Addr.t
-      }
-  | Verify_wrong_kind of
-      { node : E4_addr.Addr.t
-      ; ref_ : E4_addr.Addr.t
-      ; expected : E4_kind.t
-      ; actual : E4_kind.t
-      }
-  | Root_unresolved of string
-  | Verify_bad_envelope of E4_addr.Addr.t
-  | Verify_poisoned of
-      { node : E4_addr.Addr.t
-      ; query : E4_addr.Addr.t
-      ; first : E4_addr.Addr.t
-      }
-
 exception Locked of string
 exception Store_error of string
 
 type open_opts =
   { seg_max : int
   ; index_slots : int
-  ; verify_on_open : bool
   }
 
-let default_opts =
-  { seg_max = E4_pack.default_seg_max; index_slots = 1 lsl 12; verify_on_open = false }
-;;
+let default_opts = { seg_max = E4_pack.default_seg_max; index_slots = 1 lsl 12 }
 
 type recovery_stop =
   | Clean
@@ -213,19 +187,6 @@ let admission_word = function
        ^ E4_addr.Addr.hex second)
   | Capacity reason -> "capacity " ^ reason
   | Fault fault -> E4_fault.word fault
-;;
-
-let verify_error_word = function
-  | Digest_mismatch _ -> "digestMismatch"
-  | Undecodable _ -> "undecodable"
-  | Verify_malformed_ref _ -> "malformedRef"
-  | Verify_handle_in_content _ -> "handleInContent"
-  | Verify_dangling { missing; _ } -> "dangling " ^ E4_addr.Addr.hex missing
-  | Verify_wrong_kind _ -> "wrongKind"
-  | Root_unresolved name -> "rootUnresolved " ^ name
-  | Verify_bad_envelope _ -> "badEnvelope"
-  | Verify_poisoned { query; first; _ } ->
-    "poisoned " ^ E4_addr.Addr.hex query ^ " " ^ E4_addr.Addr.hex first
 ;;
 
 let recovery_stop_word = function
@@ -1239,183 +1200,19 @@ let apply_word t w =
 
 (* ============================================================ 7. verify *)
 
-(* CS7 / L-CAS-6.  `verify` builds its own table by scanning the pack — it never consults the
-   index — and it never trusts a record's recorded digest: every record is re-hashed. *)
-let verify view =
-  let start = E4_index.from_start in
-  let order = ref [] in
-  let tbl : (string, int * int) Hashtbl.t = Hashtbl.create 256 in
-  if pos_lt start view.v_end
-  then
-    ignore
-      (walk_records view ~from:start ~upto:view.v_end ~f:(fun (seg, off) r ->
-         let key = key_of r.E4_pack.r_addr in
-         order := (key, (seg, off)) :: !order;
-         if not (Hashtbl.mem tbl key) then Hashtbl.replace tbl key (seg, off)));
-  let order = List.rev !order in
-  let kinds : (string, E4_kind.t) Hashtbl.t = Hashtbl.create 256 in
-  let read_bytes (seg, off) =
-    match E4_pack.read_at view.v_reader ~seg ~off with
-    | Some (_, b) -> Some b
-    | None -> None
-  in
-  let kind_at key =
-    match Hashtbl.find_opt kinds key with
-    | Some k -> Some k
-    | None ->
-      (match Hashtbl.find_opt tbl key with
-       | None -> None
-       | Some pos ->
-         (match read_bytes pos with
-          | None -> None
-          | Some bytes ->
-            (match E4_node.decode bytes with
-             | Error _ -> None
-             | Ok n ->
-               Hashtbl.replace kinds key n.E4_node.kind;
-               Some n.E4_node.kind)))
-  in
-  (* `Store.verifyResult` (Store.verifyResult (src/Effect4/Store/Domain/Word.lean)): the result
-     rule among every record, named by the first other result for the query. *)
-  let by_query =
-    lazy
-      (let table : (string, (E4_addr.Addr.t * string) list ref) Hashtbl.t =
-         Hashtbl.create 16
-       in
-       List.iter
-         (fun (key, pos) ->
-            match read_bytes pos with
-            | Some bytes
-              when String.length bytes > 1
-                   && Char.code bytes.[1] = E4_kind.byte E4_kind.Result ->
-              (match E4_node.decode bytes with
-               | Ok n ->
-                 (match result_query n with
-                  | Some query ->
-                    cid_add table (key_of query) (E4_addr.Addr.of_digest key, bytes)
-                  | None -> ())
-               | Error _ -> ())
-            | _ -> ())
-         order;
-       table)
-  in
-  let result_of a n =
-    if not (E4_kind.equal n.E4_node.kind E4_kind.Result)
-    then Ok ()
-    else (
-      match result_query n with
-      | None -> Error (Verify_bad_envelope a)
-      | Some query ->
-        let bytes = E4_node.encode n in
-        (match
-           List.find_opt
-             (fun (_, b) -> not (String.equal b bytes))
-             (cid_find (Lazy.force by_query) (key_of query))
-         with
-         | Some (first, _) -> Error (Verify_poisoned { node = a; query; first })
-         | None -> Ok ()))
-  in
-  let edges_of a n =
-    let rec go = function
-      | [] -> Ok ()
-      | (e : E4_addr.Ref.t) :: rest ->
-        (match kind_at (key_of e.E4_addr.Ref.addr) with
-         | None -> Error (Verify_dangling { node = a; missing = e.E4_addr.Ref.addr })
-         | Some k ->
-           if E4_kind.equal k e.E4_addr.Ref.kind
-           then go rest
-           else
-             Error
-               (Verify_wrong_kind
-                  { node = a
-                  ; ref_ = e.E4_addr.Ref.addr
-                  ; expected = e.E4_addr.Ref.kind
-                  ; actual = k
-                  }))
-    in
-    go (E4_node.checked_edges n)
-  in
-  (* `Store.verifyNode` (Store.verifyNode (src/Effect4/Store/Domain/Word.lean)), in `verifyNodes`' order. *)
-  let verify_one key pos =
-    let a = E4_addr.Addr.of_digest key in
-    match read_bytes pos with
-    | None -> Error (Undecodable a)
-    | Some bytes ->
-      if not (String.equal (E4_sha256.digest bytes) key)
-      then Error (Digest_mismatch a)
-      else (
-        match E4_node.decode bytes with
-        | Error _ -> Error (Undecodable a)
-        | Ok n ->
-          if E4_node.malformed_ref n
-          then Error (Verify_malformed_ref a)
-          else if E4_node.handle_in_content n
-          then Error (Verify_handle_in_content a)
-          else (
-            match edges_of a n with
-            | Error e -> Error e
-            | Ok () -> result_of a n))
-  in
-  let rec nodes_pass = function
-    | [] -> Ok ()
-    | (key, pos) :: rest ->
-      (match verify_one key pos with
-       | Ok () -> nodes_pass rest
-       | e -> e)
-  in
-  let rec roots_pass = function
-    | [] -> Ok ()
-    | (r : E4_control.root) :: rest ->
-      (match kind_at (key_of r.E4_control.head.digest) with
-       | Some k when E4_kind.equal k r.E4_control.kind -> roots_pass rest
-       | _ -> Error (Root_unresolved r.E4_control.name))
-  in
-  match nodes_pass order with
-  | Error e -> Error e
-  | Ok () -> roots_pass (E4_control.roots view.v_control)
-;;
-
+(* CS7 / L-CAS-6: the store's verification is `checked_image` (section 4), the walk the checked
+   open (`E4_disk.open_`) runs.  One address is checked by the steps that walk takes for each
+   record: the resident bytes, their digest, `E4_node.decode`, then [admissible]. *)
 let verify_node view a =
   match resident_bytes view a with
-  | None -> Error (Verify_dangling { node = a; missing = a })
+  | None -> Error (Model (E4_admission.Dangling a))
   | Some bytes ->
     if not (String.equal (E4_sha256.digest bytes) (key_of a))
-    then Error (Digest_mismatch a)
+    then Error (Fault (E4_fault.Corrupt a))
     else (
       match E4_node.decode bytes with
-      | Error _ -> Error (Undecodable a)
-      | Ok n ->
-        if E4_node.malformed_ref n
-        then Error (Verify_malformed_ref a)
-        else if E4_node.handle_in_content n
-        then Error (Verify_handle_in_content a)
-        else (
-          let rec go = function
-            | [] -> Ok ()
-            | (e : E4_addr.Ref.t) :: rest ->
-              (match get_kind view e.E4_addr.Ref.addr with
-               | None ->
-                 Error (Verify_dangling { node = a; missing = e.E4_addr.Ref.addr })
-               | Some k ->
-                 if E4_kind.equal k e.E4_addr.Ref.kind
-                 then go rest
-                 else
-                   Error
-                     (Verify_wrong_kind
-                        { node = a
-                        ; ref_ = e.E4_addr.Ref.addr
-                        ; expected = e.E4_addr.Ref.kind
-                        ; actual = k
-                        }))
-          in
-          match go (E4_node.checked_edges n) with
-          | Error e -> Error e
-          | Ok () ->
-            (match check_result view n with
-             | Ok () -> Ok ()
-             | Error (Model (E4_admission.Poisoned (query, first, _))) ->
-               Error (Verify_poisoned { node = a; query; first })
-             | Error _ -> Error (Verify_bad_envelope a))))
+      | Error why -> Error (E4_admission.of_decode why)
+      | Ok n -> admissible view n)
 ;;
 
 let closed view =
@@ -1779,22 +1576,12 @@ let open_rw_exn ~dir opts =
     then (
       view.v_control <- E4_control.set_pack_end view.v_control rec_.ends_at;
       write_control view);
-    let t =
-      { w_pack = pack
-      ; w_view = view
-      ; w_recovery = rec_
-      ; w_blocked = blocked
-      ; w_closed = false
-      }
-    in
-    if opts.verify_on_open
-    then (
-      match verify view with
-      | Ok () -> ()
-      | Error e ->
-        close t;
-        raise (Store_error ("verify: " ^ verify_error_word e)));
-    t
+    { w_pack = pack
+    ; w_view = view
+    ; w_recovery = rec_
+    ; w_blocked = blocked
+    ; w_closed = false
+    }
   with
   | failure ->
     (match !acquired_view with

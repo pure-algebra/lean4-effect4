@@ -16,7 +16,8 @@
               answer is the same after `drop`, and the counters prove the second round really
               re-read the pack.
        V1-V4  CA6: a POISONED cache — bytes that are not the node's, filed under the node's
-              address — changes no answer of `E4_cas.verify`, `verify_node` or `get_bytes`.
+              address — changes no answer of `E4_cas.checked_image`, `verify_node` or
+              `get_bytes`.
               The poison is exhibited first, so the test cannot pass vacuously.
        K1-K2  the decoded tier: `Decoded(V).get` refuses a node whose kind is not `V.kind`
               (D5) and admits nothing for it.
@@ -397,7 +398,7 @@ let test_identity (b : built) =
 (* ---- V1-V4: CA6, the poisoned cache ---- *)
 
 let test_poison (b : built) =
-  print_endline "-- E4_cache: `verify` never consults a cache (CA6, L-CAS-6, risk R3)";
+  print_endline "-- E4_cache: verification never consults a cache (CA6, L-CAS-6, risk R3)";
   let victim = b.b_entries.(Array.length b.b_entries / 2) in
   let truth =
     match E4_cas.get_bytes b.b_ro victim with
@@ -411,10 +412,8 @@ let test_poison (b : built) =
     "V1 the poison is really in the cache (this is what makes V2-V4 mean something)"
     (E4_cache.Bytes_cache.find c victim = Some poison && not (String.equal poison truth));
   check
-    "V2 `E4_cas.verify` is ok with the cache poisoned"
-    (match E4_cas.verify b.b_ro with
-     | Ok () -> true
-     | Error _ -> false);
+    "V2 `E4_cas.checked_image` is ok with the cache poisoned"
+    (Result.is_ok (E4_cas.checked_image b.b_ro));
   check
     "V3 `E4_cas.verify_node` on the poisoned address is ok"
     (match E4_cas.verify_node b.b_ro victim with
@@ -1203,7 +1202,8 @@ let test_mutations (b : built) =
        &&
        (* the naive "child i = argument i" would have taken the term *)
        not (String.equal (E4_subterm.slice p ent) (Eff_wire.encode_term t_unit)));
-  (* X4: the poison test is falsifiable — a store whose pack really is damaged fails verify. *)
+  (* X4: the poison test is falsifiable — a store whose pack really is damaged fails the
+     checked image. *)
   let d = fresh_dir () in
   let st = open_writer ~dir:d E4_cas.default_opts in
   let g = node E4_kind.Schema E4_node.zero_digest (v_ctor 0 [ v_nat 1 ]) in
@@ -1223,14 +1223,12 @@ let test_mutations (b : built) =
   close_out oc;
   let damaged =
     match E4_cas.open_ro ~dir:d with
-    | ro ->
-      (match E4_cas.verify ro with
-       | Ok () -> false
-       | Error _ -> true)
+    | ro -> Result.is_error (E4_cas.checked_image ro)
     | exception _ -> true
   in
   check
-    "X4 the CA6 test is falsifiable: a pack that really is damaged fails `verify`"
+    "X4 the CA6 test is falsifiable: a pack that really is damaged fails the checked \
+     image"
     damaged;
   rm_rf d;
   (* X5: the dependents comparison is falsifiable. *)

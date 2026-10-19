@@ -8,7 +8,8 @@
      index rebuild   A2 cell B4, acceptance >= 1 000 000 nodes/s
      index memory    A2 cell B5, acceptance <= 40 bytes per node
      closure         the lane brief's B4; no A2 acceptance, the number is the deliverable
-     verify          the lane brief's B5; no A2 acceptance, the number is the deliverable
+     checked image   the lane brief's B5 (the store's verification, e4_cas.mli CS7); no A2
+                     acceptance, the number is the deliverable
 
    Every cell is run at TWO node sizes, because three of the five acceptances are bounded by
    SHA-256 throughput and are therefore a function of the node size, not of the store: a put
@@ -118,7 +119,7 @@ let header () =
      ------------------- | ------- |\n"
 ;;
 
-(* The ceiling every put and every verify sits under: one SHA-256 of the node's bytes. *)
+(* The ceiling every put and every checked image sits under: one SHA-256 of the node's bytes. *)
 let bench_sha256 size =
   let s = String.make size 'x' in
   let n = 200_000 in
@@ -133,7 +134,7 @@ let bench_sha256 size =
 let bench_size dir size =
   let dir = Printf.sprintf "%s-%d" dir size in
   mkdir_p dir;
-  let opts = { E4_cas.default_opts with seg_max = 1 lsl 30; index_slots = n_nodes } in
+  let opts = { E4_cas.seg_max = 1 lsl 30; index_slots = n_nodes } in
   let s = open_writer ~dir opts in
   ignore (E4_cas.put s genesis);
   E4_cas.commit s;
@@ -203,15 +204,15 @@ let bench_size dir size =
        (float_of_int st.E4_cas.index_bytes /. float_of_int (max 1 st.E4_cas.nodes)))
     (verdict (st.E4_cas.index_bytes <= 40 * st.E4_cas.nodes));
   let t0 = now () in
-  let v = E4_cas.verify ro in
+  let v = E4_cas.checked_image ro in
   let t_verify = now () -. t0 in
   row
-    "verify"
-    "re-read, re-hash, re-resolve"
+    "checked image"
+    "re-read, re-hash, re-admit"
     st.E4_cas.nodes
     t_verify
     "nodes/s"
-    (if v = Ok () then "ok" else "FAILED");
+    (if Result.is_ok v then "ok" else "FAILED");
   plain
     "store bytes"
     "the pack on disk"
@@ -226,7 +227,7 @@ let bench_size dir size =
 let bench_closure dir =
   let dir = dir ^ "-chain" in
   mkdir_p dir;
-  let opts = { E4_cas.default_opts with seg_max = 1 lsl 30; index_slots = chain_len } in
+  let opts = { E4_cas.seg_max = 1 lsl 30; index_slots = chain_len } in
   let s = open_writer ~dir opts in
   ignore (E4_cas.put s genesis);
   let prev = ref (E4_node.address genesis) in

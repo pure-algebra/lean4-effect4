@@ -752,9 +752,7 @@ let round_trips () =
   (* the same content into a store with a different segment size, index size and insertion
      order must give the same checkpoint address (differential D3 in miniature) *)
   let d3 = fresh_dir () in
-  let st3 =
-    open_writer ~dir:d3 { E4_cas.seg_max = 4096; index_slots = 8; verify_on_open = false }
-  in
+  let st3 = open_writer ~dir:d3 { E4_cas.seg_max = 4096; index_slots = 8 } in
   let spec3 = Ck.ensure_schema st3 in
   (* file some unrelated nodes first, so the pack layout and the insertion order differ *)
   for i = 0 to 20 do
