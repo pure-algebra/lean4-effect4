@@ -1,4 +1,5 @@
 import Effect4.Store.Domain.ShapeRead
+import Effect4.Store.Domain.ShapeJson
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -7,6 +8,12 @@ import Effect4.Laws.Auto.Semantics
 `Store/Domain/ShapeRead.lean` reads a value tree from its JSON print under a shape. Its law is
 exactness: whatever reads is the canonical print of the value it reads (`readIn_exact`). So a
 canonical carrier read from JSON is the carrier whose print that JSON is (`Canonical.ofJson_exact`).
+
+`Store/Domain/ShapeJson.lean` reads the JSON an agent writes, from the profile's tree, and refuses
+at a place. Its laws are exactness modulo the normaliser `ShapeDoc.order` (`readAt_exact`, by one
+induction beside the normaliser), the validity of every refusal's site (`readAt_site`), and the
+agreement of the profile's tree with its binary64 image within the profile
+(`ofBinary64_toBinary64`, over `natOfBinary64_binary64OfNat`).
 
 ## Placement
 
@@ -25,13 +32,29 @@ write of what it reads. Requirement R14 (program as data): the schema form an ag
   host reads as another number. Not established: that every natural binary64 holds exactly reads
   back (the retraction), which the claim leaves out with the round trip; anything of how a host
   parses the datum's text.
+- **`json-read-located`** (proposed claim, role compatibility; its pointer is
+  `CodecProfile.profileLocated_exact`, `Laws/Tool/CodecProfile.lean`). The steps here:
+  `readAt_exact` and `ShapeDoc.readLocated_exact` (exactness modulo `ShapeDoc.order`, for every
+  tree and every agreeing binary64 tree, at every budget); `Canonical.ofJsonAnyOrder_exact`
+  (re-proved through them: the any-order reader is now the located reader's projection);
+  `readAt_site` and `ShapeDoc.readLocated_site` (every refusal names a value of the input, or a
+  field missing from an object of it; Codex's `readLocated_site` with the amended relation);
+  `ShapeDoc.readLocated_erases` (the projection, by definition). Reach: every shape document,
+  every profile tree and every budget. Not established: the round trip; that the old two-pass
+  reader (`ShapeDoc.order`, then `readIn`) accepts exactly what the located reader accepts, which
+  the batteries check on finite inputs; that the reported reason is the input's only fault.
+  Consumers: the tool's JSON profile and the native shell.
+- **`natOfBinary64_binary64OfNat`** (a step of `json-read-located`; consumer
+  `ofBinary64_toBinary64`, then `CodecProfile.read_toBinary64`). Reach: every natural below
+  2^53. It is the retraction `Data/JsonNumber.lean` owed, on the profile's domain; the naturals
+  from 2^53 up with at most 53 significant bits stay owed.
 -/
 
 set_option autoImplicit false
 
 namespace Effect4.Store
 
-open Effect4 (Json Float64)
+open Effect4 (Json Float64 NatJson JsonStep JsonSite Located)
 
 /-- A natural read from a binary64 datum spells that datum. A step of `json-read-exact`. Its
 consumer is `readIn_exact`. -/
@@ -267,15 +290,1058 @@ theorem Canonical.ofJson_exact {α : Type} [Canonical α] {j : Json} {a : α}
   subst hva
   exact ShapeDoc.read_exact hv
 
+/-! ## The binary64 spelling of a natural below 2^53
+
+A natural below 2^53 has at most 53 significant bits, so its binary64 datum (`binary64OfNat`) is
+exact and the reader takes the natural back (`natOfBinary64_binary64OfNat`). This is the theorem
+`Data/JsonNumber.lean` owed for the profile's domain, and the step that lets the profile's tree
+and the binary64 tree read alike (`ofBinary64_toBinary64`). -/
+
+theorem highestBit_go {fuel m acc : Nat} (h : m ≤ fuel) :
+    Effect4.Arch.highestBit.go fuel m acc = acc + m.log2 := by
+  induction fuel generalizing m acc with
+  | zero =>
+    have hm : m = 0 := by omega
+    subst hm
+    rw [Nat.log2_def]
+    rfl
+  | succ fuel ih =>
+    unfold Effect4.Arch.highestBit.go
+    split
+    · rename_i hm
+      rw [Nat.log2_def, if_neg (by omega)]
+      rfl
+    · rename_i hm
+      rw [ih (by omega), Nat.log2_def m, if_pos (by omega)]
+      omega
+
+theorem highestBit_eq (n : Nat) : Effect4.Arch.highestBit n = n.log2 := by
+  unfold Effect4.Arch.highestBit
+  rw [highestBit_go (Nat.le_refl n), Nat.zero_add]
+
+theorem natOfBinary64_binary64OfNat {n : Nat} (h : n < 2 ^ 53) :
+    natOfBinary64 (Effect4.Arch.binary64OfNat n) = some n := by
+  rcases Nat.eq_zero_or_pos n with h0 | hpos
+  · subst h0
+    decide
+  · have hn0 : n ≠ 0 := by omega
+    have hle : 2 ^ n.log2 ≤ n := Nat.log2_self_le hn0
+    have hlt : n < 2 ^ (n.log2 + 1) := Nat.lt_log2_self
+    have he : n.log2 ≤ 52 := by
+      have := (Nat.log2_lt hn0).2 h
+      omega
+    have hk : 2 ^ n.log2 * 2 ^ (52 - n.log2) = 2 ^ 52 := by
+      rw [← Nat.pow_add]
+      congr 1
+      omega
+    have hk1 : 2 ^ (n.log2 + 1) * 2 ^ (52 - n.log2) = 2 ^ 53 := by
+      rw [← Nat.pow_add]
+      congr 1
+      omega
+    have hs1 : 2 ^ 52 ≤ n * 2 ^ (52 - n.log2) := hk ▸ Nat.mul_le_mul_right _ hle
+    have hs2 : n * 2 ^ (52 - n.log2) < 2 ^ 53 :=
+      hk1 ▸ Nat.mul_lt_mul_of_pos_right hlt (Nat.two_pow_pos _)
+    have hbits : (Effect4.Arch.binary64OfNat n).toNat =
+        2 ^ 52 * (1023 + n.log2) + (n * 2 ^ (52 - n.log2) - 2 ^ 52) := by
+      unfold Effect4.Arch.binary64OfNat
+      rw [if_neg hn0]
+      simp only [highestBit_eq, if_pos he, Nat.shiftLeft_eq, Nat.one_mul, UInt64.toNat_ofNat']
+      rw [Nat.mod_eq_of_lt (by omega)]
+      rw [Nat.mul_comm]
+    have hsig : n * 2 ^ (52 - n.log2) - 2 ^ 52 < 2 ^ 52 := by omega
+    have hdiv : (2 ^ 52 * (1023 + n.log2) + (n * 2 ^ (52 - n.log2) - 2 ^ 52)) / 2 ^ 52 =
+        1023 + n.log2 := by
+      rw [Nat.mul_add_div (Nat.two_pow_pos 52), Nat.div_eq_of_lt hsig, Nat.add_zero]
+    have hmod : (2 ^ 52 * (1023 + n.log2) + (n * 2 ^ (52 - n.log2) - 2 ^ 52)) % 2 ^ 52 =
+        n * 2 ^ (52 - n.log2) - 2 ^ 52 := by
+      rw [Nat.mul_add_mod, Nat.mod_eq_of_lt hsig]
+    have hcand : natCandidate (Effect4.Arch.binary64OfNat n) = n := by
+      unfold natCandidate
+      simp only [hbits, hdiv, hmod]
+      rw [if_neg (by omega), Nat.sub_add_cancel hs1]
+      split
+      · rename_i he52
+        have : n.log2 = 52 := by omega
+        simp only [this, Nat.sub_self, Nat.pow_zero, Nat.mul_one]
+      · rw [show 1023 + 52 - (1023 + n.log2) = 52 - n.log2 by omega]
+        exact Nat.mul_div_cancel n (Nat.two_pow_pos _)
+    unfold natOfBinary64
+    rw [hcand, if_pos ⟨by rw [hbits]; unfold Effect4.Arch.binary64Infinity; omega, rfl⟩]
+
+/-! ## The profile's tree and the binary64 tree
+
+`Agrees t j` relates a profile tree to a binary64 tree with the same structure, keys and strings,
+whose numbers are the binary64 data of the tree's naturals; a numeral agrees with any number,
+since every reader refuses it. Both conversions give an agreeing pair (`agrees_toBinary64`,
+`agrees_ofBinary64`), so one exactness proof serves the native face and the binary64 face. -/
+
+mutual
+/-- A profile tree and a binary64 tree agree. -/
+inductive Agrees : NatJson → Json → Prop
+  | null : Agrees .null .null
+  | bool (b : Bool) : Agrees (.bool b) (.bool b)
+  | nat (n : Nat) : Agrees (.nat n) (Effect4.Arch.Json.ofNat n)
+  | numeral (text : String) (x : Float64) : Agrees (.numeral text) (.number x)
+  | str (s : String) : Agrees (.str s) (.str s)
+  | arr {ts : List NatJson} {js : List Json} : AgreesList ts js → Agrees (.arr ts) (.arr js)
+  | obj {es : List (String × NatJson)} {fs : List (String × Json)} :
+      AgreesEntries es fs → Agrees (.obj es) (.obj fs)
+
+inductive AgreesList : List NatJson → List Json → Prop
+  | nil : AgreesList [] []
+  | cons {t : NatJson} {j : Json} {ts : List NatJson} {js : List Json} :
+      Agrees t j → AgreesList ts js → AgreesList (t :: ts) (j :: js)
+
+inductive AgreesEntries : List (String × NatJson) → List (String × Json) → Prop
+  | nil : AgreesEntries [] []
+  | cons (k : String) {t : NatJson} {j : Json} {es : List (String × NatJson)}
+      {fs : List (String × Json)} :
+      Agrees t j → AgreesEntries es fs → AgreesEntries ((k, t) :: es) ((k, j) :: fs)
+end
+
+mutual
+theorem agrees_toBinary64 : ∀ t : NatJson, Agrees t t.toBinary64
+  | .null => .null
+  | .bool b => .bool b
+  | .nat n => .nat n
+  | .numeral text => .numeral text Float64.nan
+  | .str s => .str s
+  | .arr ts => .arr (agreesList_toBinary64 ts)
+  | .obj es => .obj (agreesEntries_toBinary64 es)
+theorem agreesList_toBinary64 : ∀ ts : List NatJson, AgreesList ts (NatJson.toBinary64List ts)
+  | [] => .nil
+  | t :: ts => .cons (agrees_toBinary64 t) (agreesList_toBinary64 ts)
+theorem agreesEntries_toBinary64 :
+    ∀ es : List (String × NatJson), AgreesEntries es (NatJson.toBinary64Entries es)
+  | [] => .nil
+  | (k, t) :: es => .cons k (agrees_toBinary64 t) (agreesEntries_toBinary64 es)
+end
+
+mutual
+theorem agrees_ofBinary64 : ∀ j : Json, Agrees (NatJson.ofBinary64 j) j
+  | .null => .null
+  | .bool b => .bool b
+  | .number x => by
+    unfold NatJson.ofBinary64
+    split
+    · rename_i n hn
+      have hb : Effect4.Arch.binary64OfNat n = x.bits := by
+        unfold natOfBinary64 at hn
+        split at hn
+        · rename_i heq
+          cases hn
+          exact heq.2
+        · cases hn
+      obtain ⟨bits⟩ := x
+      dsimp only at hb
+      subst hb
+      exact .nat n
+    · exact .numeral "" x
+  | .str s => .str s
+  | .arr js => .arr (agreesList_ofBinary64 js)
+  | .obj fs => .obj (agreesEntries_ofBinary64 fs)
+theorem agreesList_ofBinary64 : ∀ js : List Json, AgreesList (NatJson.ofBinary64List js) js
+  | [] => .nil
+  | j :: js => .cons (agrees_ofBinary64 j) (agreesList_ofBinary64 js)
+theorem agreesEntries_ofBinary64 :
+    ∀ fs : List (String × Json), AgreesEntries (NatJson.ofBinary64Entries fs) fs
+  | [] => .nil
+  | (k, j) :: fs => .cons k (agrees_ofBinary64 j) (agreesEntries_ofBinary64 fs)
+end
+
+theorem AgreesEntries.length_eq :
+    ∀ {es : List (String × NatJson)} {fs : List (String × Json)},
+      AgreesEntries es fs → es.length = fs.length
+  | [], _, h => by cases h; rfl
+  | _ :: es, _, h => by
+    cases h with
+    | cons k _ hrest =>
+      simp only [List.length_cons, AgreesEntries.length_eq hrest]
+
+theorem AgreesEntries.entryOf_some {n : String} :
+    ∀ {es : List (String × NatJson)} {fs : List (String × Json)} {t : NatJson},
+      AgreesEntries es fs → NatJson.entryOf n es = some t → ∃ j, entryOf n fs = some j ∧ Agrees t j
+  | [], _, _, _, he => by cases he
+  | (k, t') :: es, _, t, h, he => by
+    cases h with
+    | cons _ ht hrest =>
+      unfold NatJson.entryOf at he
+      unfold entryOf
+      split at he
+      · rename_i hk
+        cases he
+        rw [if_pos hk]
+        exact ⟨_, rfl, ht⟩
+      · rename_i hk
+        rw [if_neg hk]
+        exact AgreesEntries.entryOf_some hrest he
+
+theorem listParts?_eq {cases : List (String × Nat × List (String × Shape))} {t0 t1 : Nat}
+    {item tail : Shape} (h : listParts? cases = some (t0, t1, item, tail)) :
+    cases = [("nil", t0, []), ("cons", t1, [("head", item), ("tail", tail)])] ∧ t0 ≠ t1 := by
+  unfold listParts? at h
+  split at h
+  · split at h
+    · rename_i hc
+      cases h
+      obtain ⟨h0, h1, h2, h3, h4⟩ := hc
+      subst h0 h1 h2 h3
+      exact ⟨rfl, h4⟩
+    · cases h
+  · cases h
+
+theorem printIn_nil {defs : List (String × Shape)} {s : Shape} {name : String}
+    {cases : List (String × Nat × List (String × Shape))} {t0 t1 : Nat} {item tail : Shape}
+    (hs : headShape defs s = .sum name cases) (hp : listParts? cases = some (t0, t1, item, tail)) :
+    printIn defs s (.ctor t0 []) = nilObject := by
+  obtain ⟨hc, _⟩ := listParts?_eq hp
+  subst hc
+  simp only [printIn, hs, caseAt, ↓reduceIte, allNullary, nilObject]
+  rfl
+
+theorem printIn_cons {defs : List (String × Shape)} {s : Shape} {name : String}
+    {cases : List (String × Nat × List (String × Shape))} {t0 t1 : Nat} {item tail : Shape}
+    (hs : headShape defs s = .sum name cases) (hp : listParts? cases = some (t0, t1, item, tail))
+    (x rest : Val) :
+    printIn defs s (.ctor t1 [x, rest]) =
+      .obj [("_tag", .str "cons"), ("head", printIn defs item x), ("tail", printIn defs tail rest)] := by
+  obtain ⟨hc, hne⟩ := listParts?_eq hp
+  subst hc
+  simp only [printIn, hs, caseAt, if_neg hne, ↓reduceIte, allNullary, printFields]
+  rfl
+
+
+
+/-! ## Exactness of the profile's reader -/
+
+/-- A bound `Except` that answers reads its first step. -/
+theorem except_bind_ok {ε α β : Type} {e : Except ε α} {f : α → Except ε β} {b : β}
+    (h : e.bind f = .ok b) : ∃ a, e = .ok a ∧ f a = .ok b := by
+  cases e with
+  | error x => cases h
+  | ok a => exact ⟨a, rfl, h⟩
+
+/-- A mapped `Except` that answers reads its argument. -/
+theorem except_map_ok {ε α β : Type} {e : Except ε α} {f : α → β} {b : β}
+    (h : e.map f = .ok b) : ∃ a, e = .ok a ∧ f a = b := by
+  cases e with
+  | error x => cases h
+  | ok a =>
+    cases h
+    exact ⟨a, rfl, rfl⟩
+
+/-- The fields read are as many as the shape's. A step of `readFieldsAt_exact`. -/
+theorem readFieldsAt_length {defs : List (String × Shape)} {es : List (String × NatJson)}
+    {p : List JsonStep} :
+    ∀ {fuel : Nat} {fields : List (String × Shape)} {xs : List Val},
+      readFieldsAt defs fuel fields es p = .ok xs → xs.length = fields.length
+  | _, [], _, h => by
+    unfold readFieldsAt at h
+    cases h
+    rfl
+  | 0, _ :: _, _, h => by
+    unfold readFieldsAt at h
+    cases h
+  | fuel + 1, (n, s) :: fields, xs, h => by
+    unfold readFieldsAt at h
+    split at h
+    · obtain ⟨x, -, h2⟩ := except_bind_ok h
+      obtain ⟨xs', hxs, rfl⟩ := except_map_ok h2
+      simp only [List.length_cons, readFieldsAt_length hxs]
+    · cases h
+
+/-- As many printed fields as values, when the values are as many as the fields. -/
+theorem printFields_length {defs : List (String × Shape)} :
+    ∀ {fields : List (String × Shape)} {xs : List Val},
+      xs.length = fields.length → (printFields defs fields xs).length = fields.length
+  | [], [], _ => rfl
+  | (_, _) :: fields, _ :: xs, h => by
+    simp only [List.length_cons, Nat.add_right_cancel_iff] at h
+    simp only [printFields, List.length_cons, printFields_length h]
+
+/-- Under an option, a value that is not `null` is ordered under the item. -/
+theorem orderIn_option {defs : List (String × Shape)} {fuel : Nat} {s item : Shape} {j : Json}
+    (hs : headShape defs s = .option item) (hj : j ≠ .null) :
+    orderIn defs (fuel + 1) s j = orderIn defs fuel item j := by
+  cases j with
+  | null => exact absurd rfl hj
+  | _ => simp only [orderIn, hs]
+
+/-- A tree that agrees with `null` is `null`. -/
+theorem Agrees.null_right {t : NatJson} (h : Agrees t .null) : t = .null := by
+  cases h
+  rfl
+
+
+mutual
+/-- **Whatever the profile's reader reads is the value whose print is its input, normalised**:
+for a binary64 tree that agrees with the input, the normaliser's output is the print, at every
+budget. The pointer's step of `json-read-located`. Its consumer is `ShapeDoc.readLocated_exact`. -/
+@[semantics "exact-codecs" (requirement := R14)]
+theorem readAt_exact {defs : List (String × Shape)} :
+    ∀ {fuel : Nat} {s : Shape} {t : NatJson} {j : Json} {p : List JsonStep} {v : Val},
+      Agrees t j → readAt defs fuel s t p = .ok v → orderIn defs fuel s j = printIn defs s v
+  | 0, _, _, _, _, _, _, h => by
+    unfold readAt at h
+    cases h
+  | fuel + 1, s, t, j, p, v, hA, h => by
+    unfold readAt at h
+    split at h
+    next _ _ item hs =>
+      cases h
+      cases hA
+      simp only [orderIn, hs, printIn]
+    next t' _ _ item hs hnull =>
+      obtain ⟨x, hx, rfl⟩ := except_map_ok h
+      have hj : j ≠ .null := fun hj => hnull (Agrees.null_right (hj ▸ hA))
+      rw [orderIn_option hs hj, readAt_exact hA hx]
+      simp only [printIn, hs]
+    next _ _ item ts hs =>
+      obtain ⟨xs, hxs, rfl⟩ := except_map_ok h
+      cases hA with
+      | arr hts =>
+        simp only [orderIn, hs, printIn, readItems_exact hts hxs]
+    next _ _ f g a b hs =>
+      obtain ⟨x, hx, h2⟩ := except_bind_ok h
+      obtain ⟨y, hy, rfl⟩ := except_map_ok h2
+      cases hA with
+      | arr hts =>
+        cases hts with
+        | cons ha hts' =>
+          cases hts' with
+          | cons hb hnil =>
+            cases hnil
+            simp only [orderIn, hs, printIn, readAt_exact ha hx, readAt_exact hb hy]
+    next _ _ name cases ts hs =>
+      split at h
+      next t0 t1 item tail hp =>
+        cases hA with
+        | arr hts =>
+          simp only [orderIn, hs, hp]
+          exact readSpine_exact hs hp hts h
+      next => cases h
+    next _ _ name fields entries hs =>
+      split at h
+      next => cases h
+      next =>
+        obtain ⟨xs, hxs, h2⟩ := except_bind_ok h
+        unfold closeObject at h2
+        simp only [Bool.false_eq_true, ↓reduceIte, Nat.add_zero] at h2
+        split at h2
+        next => cases h2
+        next =>
+          split at h2
+          next hlen =>
+            cases h2
+            cases hA with
+            | @obj _ fs hes =>
+              have hl : (printFields defs fields xs).length = fs.length := by
+                rw [printFields_length (readFieldsAt_length hxs), hlen, AgreesEntries.length_eq hes]
+              simp only [orderIn, hs, readFieldsAt_exact hes hxs]
+              rw [if_pos hl]
+              simp only [printIn, hs]
+          next => cases h2
+    next _ _ name cases entries hs =>
+      split at h
+      next => cases h
+      next hnull =>
+        split at h
+        next tagName htag =>
+          split at h
+          next tag fields hname =>
+            split at h
+            next => cases h
+            next =>
+              obtain ⟨xs, hxs, h2⟩ := except_bind_ok h
+              unfold closeObject at h2
+              simp only [↓reduceIte] at h2
+              split at h2
+              next => cases h2
+              next =>
+                split at h2
+                next hlen =>
+                  cases h2
+                  cases hA with
+                  | @obj _ fs hes =>
+                    obtain ⟨jt, hjt, hag⟩ := AgreesEntries.entryOf_some hes htag
+                    cases hag
+                    have hl : (printFields defs fields xs).length + 1 = fs.length := by
+                      rw [printFields_length (readFieldsAt_length hxs), hlen,
+                        AgreesEntries.length_eq hes]
+                    simp only [orderIn, hs, hjt, hname, readFieldsAt_exact hes hxs]
+                    rw [if_pos hl]
+                    simp only [printIn, hs, tagOfName_exact hname, hnull, Bool.false_eq_true,
+                      ↓reduceIte]
+                next => cases h2
+          next => cases h
+        next => cases h
+        next => cases h
+    next _ _ hs =>
+      cases h
+      cases hA
+      simp only [orderIn, hs, printIn]
+    next _ _ b hs =>
+      cases h
+      cases hA
+      simp only [orderIn, hs, printIn]
+    next _ _ n hs =>
+      split at h
+      next =>
+        cases h
+        cases hA
+        simp only [orderIn, hs, printIn, Effect4.Arch.Json.ofNat]
+      next => cases h
+    next => cases h
+    next _ _ x hs =>
+      cases h
+      cases hA
+      simp only [orderIn, hs, printIn]
+    next _ _ hx hs =>
+      split at h
+      next d hd =>
+        cases h
+        cases hA
+        simp only [orderIn, hs, printIn, canonicalHex?_exact hd]
+      next => cases h
+    next _ _ hx hs =>
+      split at h
+      next d hd =>
+        cases h
+        cases hA
+        simp only [orderIn, hs, printIn, canonicalHex?_exact hd]
+      next => cases h
+    next _ _ name cases hs =>
+      split at h
+      next hall =>
+        split at h
+        next tag htag =>
+          cases h
+          cases hA
+          simp only [orderIn, hs, printIn, tagOfName_exact htag, hall, ↓reduceIte]
+        next => cases h
+        next => cases h
+      next => cases h
+    next _ _ k hx hs =>
+      split at h
+      next d hd =>
+        cases h
+        cases hA
+        simp only [orderIn, hs, printIn, canonicalHex?_exact hd]
+      next => cases h
+    next _ _ kn hx hs =>
+      split at h
+      next k hk =>
+        split at h
+        next hname =>
+          split at h
+          next d hd =>
+            cases h
+            cases hA with
+            | obj hes =>
+              cases hes with
+              | cons _ hkind hes' =>
+                cases hes' with
+                | cons _ haddr hnil =>
+                  cases hnil
+                  cases hkind
+                  cases haddr
+                  have hkj : kindJson k.byte = .str kn := by
+                    unfold kindName? at hname
+                    obtain ⟨k', hk', hname'⟩ := Option.map_eq_some_iff.mp hname
+                    unfold kindJson
+                    rw [hk']
+                    exact congrArg Json.str hname'
+                  simp only [orderIn, hs, printIn, hkj, canonicalHex?_exact hd]
+          next => cases h
+        next => cases h
+      next => cases h
+    next => cases h
+
+/-- The elements read are printed as the list ordered. A step of `readAt_exact`. -/
+theorem readItems_exact {defs : List (String × Shape)} :
+    ∀ {fuel : Nat} {item : Shape} {ts : List NatJson} {js : List Json} {p : List JsonStep}
+      {i : Nat} {xs : List Val},
+      AgreesList ts js → readItems defs fuel item ts p i = .ok xs →
+        orderList defs fuel item js = printList defs item xs
+  | fuel, _, [], _, _, _, _, hA, h => by
+    cases hA
+    unfold readItems at h
+    cases h
+    cases fuel <;> rfl
+  | 0, _, _ :: _, _, _, _, _, _, h => by
+    unfold readItems at h
+    cases h
+  | fuel + 1, item, t :: ts, _, p, i, _, hA, h => by
+    cases hA with
+    | cons ht hts =>
+      unfold readItems at h
+      obtain ⟨x, hx, h2⟩ := except_bind_ok h
+      obtain ⟨xs, hxs, rfl⟩ := except_map_ok h2
+      simp only [orderList, printList, readAt_exact ht hx, readItems_exact hts hxs]
+
+/-- The fields read are the entries ordered. A step of `readAt_exact`. -/
+theorem readFieldsAt_exact {defs : List (String × Shape)} {es : List (String × NatJson)}
+    {fs : List (String × Json)} {p : List JsonStep} :
+    ∀ {fuel : Nat} {fields : List (String × Shape)} {xs : List Val},
+      AgreesEntries es fs → readFieldsAt defs fuel fields es p = .ok xs →
+        orderFields defs fuel fields fs = some (printFields defs fields xs)
+  | fuel, [], _, _, h => by
+    unfold readFieldsAt at h
+    cases h
+    cases fuel <;> rfl
+  | 0, _ :: _, _, _, h => by
+    unfold readFieldsAt at h
+    cases h
+  | fuel + 1, (n, s) :: fields, _, hA, h => by
+    unfold readFieldsAt at h
+    split at h
+    next t ht =>
+      obtain ⟨x, hx, h2⟩ := except_bind_ok h
+      obtain ⟨xs, hxs, rfl⟩ := except_map_ok h2
+      obtain ⟨j, hj, hag⟩ := AgreesEntries.entryOf_some hA ht
+      simp only [orderFields, hj, readFieldsAt_exact hA hxs, readAt_exact hag hx, Option.map_some,
+        printFields]
+    next => cases h
+
+/-- A list family's array is printed as the normaliser writes its cells. A step of
+`readAt_exact`. -/
+theorem readSpine_exact {defs : List (String × Shape)} :
+    ∀ {fuel t0 t1 : Nat} {item tail s : Shape} {name : String}
+      {cases : List (String × Nat × List (String × Shape))} {ts : List NatJson} {js : List Json}
+      {p : List JsonStep} {i : Nat} {v : Val},
+      headShape defs s = .sum name cases → listParts? cases = some (t0, t1, item, tail) →
+        AgreesList ts js → readSpine defs fuel t0 t1 item tail ts p i = .ok v →
+          orderSpine defs fuel item tail js = printIn defs s v
+  | fuel, _, _, _, _, _, _, _, [], _, _, _, _, hs, hp, hA, h => by
+    cases hA
+    unfold readSpine at h
+    cases h
+    rw [printIn_nil hs hp]
+    cases fuel <;> rfl
+  | 0, _, _, _, _, _, _, _, _ :: _, _, _, _, _, _, _, _, h => by
+    unfold readSpine at h
+    cases h
+  | fuel + 1, _, _, item, tail, _, _, _, t :: ts, _, p, i, _, hs, hp, hA, h => by
+    cases hA with
+    | cons ht hts =>
+      unfold readSpine at h
+      obtain ⟨x, hx, h2⟩ := except_bind_ok h
+      obtain ⟨rest, hrest, rfl⟩ := except_map_ok h2
+      rw [printIn_cons hs hp]
+      split at hrest
+      next name' cases' htail =>
+        split at hrest
+        next t0' t1' item' tail' hp' =>
+          simp only [orderSpine, htail, hp', readAt_exact ht hx,
+            readSpine_exact htail hp' hts hrest]
+        next => cases hrest
+      next => cases hrest
+end
+
+
+mutual
+/-- Agreeing trees have as many nodes, so the reader's budget and the normaliser's are one.
+A step of `ShapeDoc.readLocated_exact`. -/
+theorem Agrees.nodes_eq : ∀ {t : NatJson} {j : Json}, Agrees t j → t.nodes = jsonNodes j
+  | .null, _, h => by cases h; rfl
+  | .bool _, _, h => by cases h; rfl
+  | .nat _, _, h => by cases h; rfl
+  | .numeral _, _, h => by cases h; rfl
+  | .str _, _, h => by cases h; rfl
+  | .arr _, _, h => by
+    cases h with
+    | arr h' => simp only [NatJson.nodes, jsonNodes, AgreesList.nodes_eq h']
+  | .obj _, _, h => by
+    cases h with
+    | obj h' => simp only [NatJson.nodes, jsonNodes, AgreesEntries.nodes_eq h']
+
+/-- `Agrees.nodes_eq` over a list. -/
+theorem AgreesList.nodes_eq :
+    ∀ {ts : List NatJson} {js : List Json}, AgreesList ts js → NatJson.nodesList ts = listNodes js
+  | [], _, h => by cases h; rfl
+  | _ :: _, _, h => by
+    cases h with
+    | cons ht hts =>
+      simp only [NatJson.nodesList, listNodes, Agrees.nodes_eq ht, AgreesList.nodes_eq hts]
+
+/-- `Agrees.nodes_eq` over an object's entries. -/
+theorem AgreesEntries.nodes_eq :
+    ∀ {es : List (String × NatJson)} {fs : List (String × Json)},
+      AgreesEntries es fs → NatJson.nodesEntries es = entryNodes fs
+  | [], _, h => by cases h; rfl
+  | _ :: _, _, h => by
+    cases h with
+    | cons _ ht hes =>
+      simp only [NatJson.nodesEntries, entryNodes, Agrees.nodes_eq ht, AgreesEntries.nodes_eq hes]
+end
+
+/-- **A value tree the profile's reader reads is the one whose print is any agreeing binary64
+tree, normalised.** A step of `json-read-located`. Its consumers are `ShapeDoc.readLocated_exact`
+and `Canonical.ofJsonAnyOrder_exact`. -/
+@[semantics "exact-codecs" (requirement := R14)]
+theorem ShapeDoc.readLocated_exact_of {doc : ShapeDoc} {t : NatJson} {j : Json} {v : Val}
+    (hA : Agrees t j) (h : doc.readLocated t = .ok v) : doc.print v = doc.order j := by
+  unfold ShapeDoc.readLocated treeBudget at h
+  unfold ShapeDoc.print ShapeDoc.order readBudget
+  rw [← Agrees.nodes_eq hA]
+  exact (readAt_exact hA h).symm
+
+/-- **Whatever the profile's reader reads from a tree is the value whose print is the tree's
+binary64 image, normalised by `ShapeDoc.order`.** Exactness of the native face. A step of
+`json-read-located`. Its consumer is `Canonical.readLocated_exact`. -/
+@[semantics "exact-codecs" (requirement := R14)]
+theorem ShapeDoc.readLocated_exact {doc : ShapeDoc} {t : NatJson} {v : Val}
+    (h : doc.readLocated t = .ok v) : doc.print v = doc.order t.toBinary64 :=
+  ShapeDoc.readLocated_exact_of (agrees_toBinary64 t) h
+
+/-- **A carrier read from the profile's tree is the carrier whose canonical print is the tree's
+binary64 image, normalised.** A step of `json-read-located`. Its consumer is
+`CodecProfile.profileLocated_exact` (`Laws/Tool/CodecProfile.lean`). -/
+@[semantics "exact-codecs" (requirement := R14)]
+theorem Canonical.readLocated_exact {α : Type} [Canonical α] {t : NatJson} {a : α}
+    (h : Canonical.readLocated t = .ok a) :
+    Canonical.print a = (Canonical.shape α).order t.toBinary64 := by
+  unfold Canonical.readLocated at h
+  obtain ⟨v, hv, ha⟩ := except_bind_ok h
+  split at ha
+  · rename_i a' ha'
+    cases ha
+    have hva := Canonical.ofVal_exact ha'
+    subst hva
+    exact ShapeDoc.readLocated_exact hv
+  · cases ha
+
 /-- **A carrier read from an agent's JSON is the carrier whose canonical print the normalised JSON
 is**: exactness modulo the named normaliser (`ShapeDoc.order`), which puts objects in the shape's
-order and writes each list given as an array as its cases. A step of `json-read-exact`. Its
-consumer: the session tool's JSON profile (`Tool.CodecProfile`), which reads a request through
-`Canonical.ofJsonAnyOrder` and prints through `Canonical.printArrays`. -/
+order and writes each list given as an array as its cases. The reader is the profile's located
+reader on the binary64 tree's profile tree (`NatJson.ofBinary64`). A step of `json-read-exact`.
+Its consumer: the session tool's JSON profile (`Tool.CodecProfile`), which reads a request
+through it and prints through `Canonical.printArrays`. -/
 @[semantics "exact-codecs" (requirement := R14)]
 theorem Canonical.ofJsonAnyOrder_exact {α : Type} [Canonical α] {j : Json} {a : α}
     (h : Canonical.ofJsonAnyOrder j = some a) :
-    Canonical.print a = (Canonical.shape α).order j :=
-  Canonical.ofJson_exact h
+    Canonical.print a = (Canonical.shape α).order j := by
+  unfold Canonical.ofJsonAnyOrder at h
+  cases hr : Canonical.readLocated (α := α) (NatJson.ofBinary64 j) with
+  | error r =>
+    rw [hr] at h
+    cases h
+  | ok a' =>
+    rw [hr] at h
+    cases h
+    unfold Canonical.readLocated at hr
+    obtain ⟨v, hv, ha⟩ := except_bind_ok hr
+    split at ha
+    · rename_i a'' ha'
+      cases ha
+      have hva := Canonical.ofVal_exact ha'
+      subst hva
+      exact ShapeDoc.readLocated_exact_of (agrees_ofBinary64 j) hv
+    · cases ha
+
+/-- **The located reader erases to its projection**: forgetting where and why it refuses gives
+the `Option` reader. The old `Option` readers are projections of the located one (Codex's R4.1),
+so this law holds by definition, and it is the bridge their callers rewrite by. A step of
+`json-read-located`. -/
+@[semantics "exact-codecs" (requirement := R14)]
+theorem ShapeDoc.readLocated_erases (doc : ShapeDoc) (t : NatJson) :
+    (doc.readLocated t).toOption = doc.readAny t := rfl
+
+
+/-! ## The sites of the profile's refusals -/
+
+/-- **A site in a tree**: a value's path reaches a value of the tree; a missing field's parent is an
+object of the tree, and it lacks the field; a place in the shape is the shape's root. The relation
+`readLocated_site` holds every refusal to. -/
+def _root_.Effect4.JsonSite.Valid (t : NatJson) : JsonSite → Prop
+  | .value p => ∃ u, t.at? p = some u
+  | .missing p f => ∃ entries, t.at? p = some (.obj entries) ∧ NatJson.entryOf f entries = none
+  | .schema p => p = []
+
+/-- A path's value is reached in two legs. A step of `readLocated_site`. -/
+theorem NatJson.at?_append (q : List JsonStep) :
+    ∀ (p : List JsonStep) (t : NatJson), t.at? (p ++ q) = (t.at? p).bind (·.at? q)
+  | [], _ => rfl
+  | .key k :: p, t => by
+    cases t with
+    | obj entries =>
+      simp only [List.cons_append, NatJson.at?]
+      cases NatJson.entryOf k entries with
+      | none => rfl
+      | some t' => exact NatJson.at?_append q p t'
+    | _ => rfl
+  | .index i :: p, t => by
+    cases t with
+    | arr elements =>
+      simp only [List.cons_append, NatJson.at?]
+      cases elements[i]? with
+      | none => rfl
+      | some t' => exact NatJson.at?_append q p t'
+    | _ => rfl
+
+/-- An array's element is reached one index further. A step of `readLocated_site`. -/
+theorem NatJson.at?_index {t₀ : NatJson} {p : List JsonStep} {ts : List NatJson} {i : Nat}
+    {t : NatJson} (hp : t₀.at? p = some (.arr ts)) (hi : ts[i]? = some t) :
+    t₀.at? (p ++ [.index i]) = some t := by
+  rw [NatJson.at?_append, hp]
+  simp only [Option.bind_some, NatJson.at?, hi]
+
+/-- An object's entry is reached one key further. A step of `readLocated_site`. -/
+theorem NatJson.at?_key {t₀ : NatJson} {p : List JsonStep} {entries : List (String × NatJson)}
+    {k : String} {t : NatJson} (hp : t₀.at? p = some (.obj entries))
+    (hk : NatJson.entryOf k entries = some t) : t₀.at? (p ++ [.key k]) = some t := by
+  rw [NatJson.at?_append, hp]
+  simp only [Option.bind_some, NatJson.at?, hk]
+
+/-- The element a dropped list starts with is at its index, and the rest is one more dropped. -/
+theorem drop_eq_cons {α : Type} :
+    ∀ {l : List α} {i : Nat} {a : α} {rest : List α},
+      l.drop i = a :: rest → l[i]? = some a ∧ l.drop (i + 1) = rest
+  | [], i, _, _, h => by
+    rw [List.drop_nil] at h
+    cases h
+  | _ :: _, 0, _, _, h => by
+    rw [List.drop_zero] at h
+    cases h
+    exact ⟨rfl, rfl⟩
+  | _ :: xs, i + 1, _, _, h => by
+    rw [List.drop_succ_cons] at h
+    rw [List.getElem?_cons_succ, List.drop_succ_cons]
+    exact drop_eq_cons h
+
+/-- A mapped `Except` that refuses refused before the map. -/
+theorem except_map_error {ε α β : Type} {e : Except ε α} {f : α → β} {r : ε}
+    (h : e.map f = .error r) : e = .error r := by
+  cases e with
+  | error x =>
+    cases h
+    rfl
+  | ok a => cases h
+
+/-- A bound `Except` that refuses refused at its first step or at its second. -/
+theorem except_bind_error {ε α β : Type} {e : Except ε α} {f : α → Except ε β} {r : ε}
+    (h : e.bind f = .error r) : e = .error r ∨ ∃ a, e = .ok a ∧ f a = .error r := by
+  cases e with
+  | error x =>
+    cases h
+    exact .inl rfl
+  | ok a => exact .inr ⟨a, rfl, h⟩
+
+/-- An object's last checks refuse at the object. A step of `readLocated_site`. -/
+theorem closeObject_site {s : Shape} {fields : List (String × Shape)} {tagged : Bool} {tag : Nat}
+    {entries : List (String × NatJson)} {p : List JsonStep} {args : List Val} {r : JsonRefusal}
+    (h : closeObject s fields tagged tag entries p args = .error r) : r.site = .value p := by
+  unfold closeObject at h
+  split at h
+  · cases h
+    rfl
+  · generalize (if tagged = true then 1 else 0) = k at h
+    split at h
+    · cases h
+    · cases h
+      rfl
+
+mutual
+/-- **Every refusal of the profile's reader names a site of its input**: a value it holds, or a
+field missing from an object it holds. The pointer's step of `json-read-located`'s diagnostic
+property. Its consumer is `ShapeDoc.readLocated_site`. -/
+@[semantics "exact-codecs" (requirement := R14)]
+theorem readAt_site {defs : List (String × Shape)} {t₀ : NatJson} :
+    ∀ {fuel : Nat} {s : Shape} {t : NatJson} {p : List JsonStep} {r : JsonRefusal},
+      t₀.at? p = some t → readAt defs fuel s t p = .error r → JsonSite.Valid t₀ r.site
+  | 0, _, _, _, _, hp, h => by
+    unfold readAt at h
+    cases h
+    exact ⟨_, hp⟩
+  | fuel + 1, s, t, p, r, hp, h => by
+    unfold readAt at h
+    split at h
+    next => cases h
+    next t' _ _ item hs hnull => exact readAt_site hp (except_map_error h)
+    next _ _ item ts hs => exact readItems_site hp List.drop_zero (except_map_error h)
+    next _ _ f g a b hs =>
+      rcases except_bind_error h with h1 | ⟨x, -, h2⟩
+      · exact readAt_site (NatJson.at?_index hp rfl) h1
+      · exact readAt_site (NatJson.at?_index hp rfl) (except_map_error h2)
+    next _ _ name cases ts hs =>
+      split at h
+      next => exact readSpine_site hp List.drop_zero h
+      next =>
+        cases h
+        exact ⟨_, hp⟩
+    next _ _ name fields entries hs =>
+      split at h
+      next =>
+        cases h
+        exact ⟨_, hp⟩
+      next =>
+        rcases except_bind_error h with h1 | ⟨xs, -, h2⟩
+        · exact readFieldsAt_site hp h1
+        · rw [closeObject_site h2]
+          exact ⟨_, hp⟩
+    next _ _ name cases entries hs =>
+      split at h
+      next =>
+        cases h
+        exact ⟨_, hp⟩
+      next =>
+        split at h
+        next tagName htag =>
+          split at h
+          next tag fields hname =>
+            split at h
+            next =>
+              cases h
+              exact ⟨_, hp⟩
+            next =>
+              rcases except_bind_error h with h1 | ⟨xs, -, h2⟩
+              · exact readFieldsAt_site hp h1
+              · rw [closeObject_site h2]
+                exact ⟨_, hp⟩
+          next =>
+            cases h
+            exact ⟨_, hp⟩
+        next u _ htag =>
+          cases h
+          exact ⟨_, NatJson.at?_key hp htag⟩
+        next htag =>
+          cases h
+          exact ⟨entries, hp, htag⟩
+    next =>
+      cases h
+    next =>
+      cases h
+    next _ _ n hs =>
+      split at h
+      next => cases h
+      next =>
+        cases h
+        exact ⟨_, hp⟩
+    next =>
+      cases h
+      exact ⟨_, hp⟩
+    next => cases h
+    next _ _ hx hs =>
+      split at h
+      next => cases h
+      next =>
+        cases h
+        exact ⟨_, hp⟩
+    next _ _ hx hs =>
+      split at h
+      next => cases h
+      next =>
+        cases h
+        exact ⟨_, hp⟩
+    next _ _ name cases hs =>
+      split at h
+      next =>
+        split at h
+        next => cases h
+        next =>
+          cases h
+          exact ⟨_, hp⟩
+        next =>
+          cases h
+          exact ⟨_, hp⟩
+      next =>
+        cases h
+        exact ⟨_, hp⟩
+    next _ _ k hx hs =>
+      split at h
+      next => cases h
+      next =>
+        cases h
+        exact ⟨_, hp⟩
+    next _ _ kn hx hs =>
+      split at h
+      next =>
+        split at h
+        next =>
+          split at h
+          next => cases h
+          next =>
+            cases h
+            exact ⟨_, hp⟩
+        next =>
+          cases h
+          exact ⟨_, hp⟩
+      next =>
+        cases h
+        exact ⟨_, hp⟩
+    next =>
+      cases h
+      exact ⟨_, hp⟩
+
+/-- A list's refusals name sites of the input; an element keeps its index. A step of
+`readAt_site`. -/
+theorem readItems_site {defs : List (String × Shape)} {t₀ : NatJson} {ts₀ : List NatJson}
+    {p : List JsonStep} :
+    ∀ {fuel : Nat} {item : Shape} {ts : List NatJson} {i : Nat} {r : JsonRefusal},
+      t₀.at? p = some (.arr ts₀) → ts₀.drop i = ts →
+        readItems defs fuel item ts p i = .error r → JsonSite.Valid t₀ r.site
+  | _, _, [], _, _, _, _, h => by
+    unfold readItems at h
+    cases h
+  | 0, _, _ :: _, _, _, hp, hd, h => by
+    unfold readItems at h
+    cases h
+    exact ⟨_, NatJson.at?_index hp (drop_eq_cons hd).1⟩
+  | fuel + 1, item, t :: ts, i, r, hp, hd, h => by
+    unfold readItems at h
+    rcases except_bind_error h with h1 | ⟨x, -, h2⟩
+    · exact readAt_site (NatJson.at?_index hp (drop_eq_cons hd).1) h1
+    · exact readItems_site hp (drop_eq_cons hd).2 (except_map_error h2)
+
+/-- A structure's or a case's refusals name sites of the input: a field's value, or the object
+that lacks a field. A step of `readAt_site`. -/
+theorem readFieldsAt_site {defs : List (String × Shape)} {t₀ : NatJson}
+    {entries : List (String × NatJson)} {p : List JsonStep} :
+    ∀ {fuel : Nat} {fields : List (String × Shape)} {r : JsonRefusal},
+      t₀.at? p = some (.obj entries) → readFieldsAt defs fuel fields entries p = .error r →
+        JsonSite.Valid t₀ r.site
+  | _, [], _, _, h => by
+    unfold readFieldsAt at h
+    cases h
+  | 0, _ :: _, _, hp, h => by
+    unfold readFieldsAt at h
+    cases h
+    exact ⟨_, hp⟩
+  | fuel + 1, (n, s) :: fields, r, hp, h => by
+    unfold readFieldsAt at h
+    split at h
+    next t ht =>
+      rcases except_bind_error h with h1 | ⟨x, -, h2⟩
+      · exact readAt_site (NatJson.at?_key hp ht) h1
+      · exact readFieldsAt_site hp (except_map_error h2)
+    next ht =>
+      cases h
+      exact ⟨entries, hp, ht⟩
+
+/-- A list family's array's refusals name sites of the input; an element keeps its index. A step
+of `readAt_site`. -/
+theorem readSpine_site {defs : List (String × Shape)} {t₀ : NatJson} {ts₀ : List NatJson}
+    {p : List JsonStep} :
+    ∀ {fuel t0 t1 : Nat} {item tail : Shape} {ts : List NatJson} {i : Nat} {r : JsonRefusal},
+      t₀.at? p = some (.arr ts₀) → ts₀.drop i = ts →
+        readSpine defs fuel t0 t1 item tail ts p i = .error r → JsonSite.Valid t₀ r.site
+  | _, _, _, _, _, [], _, _, _, _, h => by
+    unfold readSpine at h
+    cases h
+  | 0, _, _, _, _, _ :: _, _, _, hp, hd, h => by
+    unfold readSpine at h
+    cases h
+    exact ⟨_, NatJson.at?_index hp (drop_eq_cons hd).1⟩
+  | fuel + 1, _, _, item, tail, t :: ts, i, r, hp, hd, h => by
+    unfold readSpine at h
+    rcases except_bind_error h with h1 | ⟨x, -, h2⟩
+    · exact readAt_site (NatJson.at?_index hp (drop_eq_cons hd).1) h1
+    · have h3 := except_map_error h2
+      split at h3
+      next =>
+        split at h3
+        next => exact readSpine_site hp (drop_eq_cons hd).2 h3
+        next =>
+          cases h3
+          exact ⟨_, hp⟩
+      next =>
+        cases h3
+        exact ⟨_, hp⟩
+end
+
+/-- **Every refusal of the profile's reader names a site of its input** (Codex's `readLocated_site`,
+with the amended relation: a missing field names its present parent). The pointer's step of
+`json-read-located`'s diagnostic property. Its consumer is `CodecProfile.profileLocated_site`. -/
+@[semantics "exact-codecs" (requirement := R14)]
+theorem ShapeDoc.readLocated_site {doc : ShapeDoc} {t : NatJson} {r : JsonRefusal}
+    (h : doc.readLocated t = .error r) : JsonSite.Valid t r.site :=
+  readAt_site (t₀ := t) (p := []) rfl h
+
+/-- A carrier's refusals name sites of its input: the value tree's, or the root, where the carrier
+refuses a tree that fits. A step of `CodecProfile.profileLocated_site`. -/
+@[semantics "exact-codecs" (requirement := R14)]
+theorem Canonical.readLocated_site {α : Type} [Canonical α] {t : NatJson} {r : JsonRefusal}
+    (h : Canonical.readLocated (α := α) t = .error r) : JsonSite.Valid t r.site := by
+  unfold Canonical.readLocated at h
+  rcases except_bind_error h with h1 | ⟨v, -, h2⟩
+  · exact ShapeDoc.readLocated_site h1
+  · split at h2
+    · cases h2
+    · cases h2
+      exact ⟨t, rfl⟩
+
+
+/-! ## The profile's tree within the profile and its binary64 image (K1)
+
+A profile tree whose naturals are at most `NatJson.limit` and that holds no numeral is the profile
+tree of its own binary64 image (`ofBinary64_toBinary64`). So the native face, which builds the
+profile's tree from text, and the binary64 face, which builds the binary64 tree, read such a
+tree alike. This replaces `kit_json.ml`'s comment-only caveat K1 ("the two spellings agree below
+2^53") with a theorem. -/
+
+mutual
+/-- **A profile tree within the profile**: every natural at most `NatJson.limit`, and no numeral. -/
+def _root_.Effect4.NatJson.within : NatJson → Bool
+  | .nat n => decide (n ≤ NatJson.limit)
+  | .numeral _ => false
+  | .arr ts => NatJson.withinList ts
+  | .obj entries => NatJson.withinEntries entries
+  | _ => true
+
+/-- `within` over a list. -/
+def _root_.Effect4.NatJson.withinList : List NatJson → Bool
+  | [] => true
+  | t :: ts => t.within && NatJson.withinList ts
+
+/-- `within` over an object's entries. -/
+def _root_.Effect4.NatJson.withinEntries : List (String × NatJson) → Bool
+  | [] => true
+  | (_, t) :: entries => t.within && NatJson.withinEntries entries
+end
+
+mutual
+/-- **A profile tree within the profile is the profile tree of its binary64 image.** The step of
+`CodecProfile.read_toBinary64` (`Laws/Tool/CodecProfile.lean`): the two faces read alike within
+the profile. Concept `exact-codecs`, requirement R14. -/
+@[semantics "exact-codecs" (requirement := R14)]
+theorem ofBinary64_toBinary64 : ∀ {t : NatJson}, t.within = true → NatJson.ofBinary64 t.toBinary64 = t
+  | .null, _ => rfl
+  | .bool _, _ => rfl
+  | .nat n, h => by
+    simp only [NatJson.within, decide_eq_true_eq] at h
+    have hn : n < 2 ^ 53 := by
+      unfold NatJson.limit at h
+      omega
+    simp only [NatJson.toBinary64, Effect4.Arch.Json.ofNat, NatJson.ofBinary64,
+      natOfBinary64_binary64OfNat hn]
+  | .numeral _, h => by simp only [NatJson.within, Bool.false_eq_true] at h
+  | .str _, _ => rfl
+  | .arr _, h => by
+    simp only [NatJson.within] at h
+    simp only [NatJson.toBinary64, NatJson.ofBinary64, ofBinary64List_toBinary64List h]
+  | .obj _, h => by
+    simp only [NatJson.within] at h
+    simp only [NatJson.toBinary64, NatJson.ofBinary64, ofBinary64Entries_toBinary64Entries h]
+
+/-- `ofBinary64_toBinary64` over a list. -/
+theorem ofBinary64List_toBinary64List :
+    ∀ {ts : List NatJson}, NatJson.withinList ts = true →
+      NatJson.ofBinary64List (NatJson.toBinary64List ts) = ts
+  | [], _ => rfl
+  | _ :: _, h => by
+    simp only [NatJson.withinList, Bool.and_eq_true] at h
+    simp only [NatJson.toBinary64List, NatJson.ofBinary64List, ofBinary64_toBinary64 h.1,
+      ofBinary64List_toBinary64List h.2]
+
+/-- `ofBinary64_toBinary64` over an object's entries. -/
+theorem ofBinary64Entries_toBinary64Entries :
+    ∀ {entries : List (String × NatJson)}, NatJson.withinEntries entries = true →
+      NatJson.ofBinary64Entries (NatJson.toBinary64Entries entries) = entries
+  | [], _ => rfl
+  | (_, _) :: _, h => by
+    simp only [NatJson.withinEntries, Bool.and_eq_true] at h
+    simp only [NatJson.toBinary64Entries, NatJson.ofBinary64Entries, ofBinary64_toBinary64 h.1,
+      ofBinary64Entries_toBinary64Entries h.2]
+end
 
 end Effect4.Store

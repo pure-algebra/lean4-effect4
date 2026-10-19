@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Store.Domain.Canonical
+public import Effect4.Data.Ascii
 meta import Effect4.Data.Json
 meta import Effect4.Store.Carrier.Digest
 meta import Effect4.Store.Carrier.Val
@@ -27,6 +28,10 @@ prints `null` is ambiguous. On values with neither, reading the print gives the 
 cyclic definition could unwrap forever. So each step, a JSON node, a list or field cell, or an
 option layer, takes one from a budget, and the readers are structural on it. The exactness law
 holds at every budget.
+
+**An agent's JSON reads through the profile.** JSON whose objects come in any order, and whose
+lists may be arrays, is read by the located reader of `Store/Domain/ShapeJson.lean`, which refuses
+at a place, and is exact modulo this module's normaliser (`ShapeDoc.order`).
 -/
 
 @[expose] public section
@@ -59,10 +64,11 @@ def natOfBinary64 (bits : UInt64) : Option Nat :=
   else none
 
 /-- **Bytes from their hex spelling**, where the spelling is the canonical one (`hexString`). The
-spelling is read through its UTF-8 bytes, since a hex digit is one ASCII byte: a traversal of the
-`String` as characters would reach `Classical.choice` through Lean's UTF-8 decoding. -/
+spelling is read through its UTF-8 bytes (`Data.Ascii.bytesOf`), since a hex digit is one ASCII
+byte: a traversal of the `String` as characters would reach `Classical.choice` through Lean's UTF-8
+decoding, and `ByteArray.toList` is no primitive of the OCaml route. -/
 def canonicalHex? (h : String) : Option Bytes :=
-  (bytesOfHexCodes (h.toUTF8.toList.map (·.toNat))).bind fun d =>
+  (bytesOfHexCodes ((Effect4.Data.Ascii.bytesOf h).map (·.toNat))).bind fun d =>
     if hexString d = h then some d else none
 
 /-- **The wire tag of a case name**, where the tag's case is that name: the first case with the
@@ -155,31 +161,37 @@ def entryOf (name : String) : List (String × Json) → Option Json
 `ts/eff/eff.gen.ts` types the program's four lists (`Terms`, `Stmts`, `Effs`, `LayerTerms`) as
 arrays, and its Effect Schema codecs read them so. The canonical print writes them case by case,
 `{"_tag":"cons","head":…,"tail":…}`. So the normaliser below reads either, and the tools print
-arrays (`ShapeDoc.arrays`). The shape, so the canonical bytes and every digest, does not
-change. -/
+arrays (`ShapeDoc.printTree`, `Store/Domain/ShapeJson.lean`). The shape, so the canonical bytes and
+every digest, does not change. -/
 
-/-- **The list rule**: a sum whose cases are exactly `nil`, with no field, and `cons`, with the
-fields `head` and `tail`, under two different tags. The item's shape, where the rule holds. -/
-def listItem? (cases : List (String × Nat × List (String × Shape))) : Option Shape :=
+/-- **The list rule's parts**: a sum whose cases are exactly `nil`, with no field, and `cons`, with
+the fields `head` and `tail`, under two different tags. Where the rule holds: the two tags, the
+head's shape and the tail's shape. -/
+def listParts? (cases : List (String × Nat × List (String × Shape))) :
+    Option (Nat × Nat × Shape × Shape) :=
   match cases with
-  | [(n0, t0, []), (n1, t1, [(k0, head), (k1, _)])] =>
-    if n0 = "nil" ∧ n1 = "cons" ∧ k0 = "head" ∧ k1 = "tail" ∧ t0 ≠ t1 then some head else none
+  | [(n0, t0, []), (n1, t1, [(k0, head), (k1, tail)])] =>
+    if n0 = "nil" ∧ n1 = "cons" ∧ k0 = "head" ∧ k1 = "tail" ∧ t0 ≠ t1 then some (t0, t1, head, tail)
+    else none
   | _ => none
 
-/-- A list's canonical print, from its elements' prints: `nil`, or `cons` of the head before the
-rest. -/
-def consObjects : List Json → Json
-  | [] => .obj [("_tag", .str "nil")]
-  | j :: js => .obj [("_tag", .str "cons"), ("head", j), ("tail", consObjects js)]
+/-- **The list rule**: the item's shape, where the rule holds (`listParts?`). -/
+def listItem? (cases : List (String × Nat × List (String × Shape))) : Option Shape :=
+  (listParts? cases).map fun parts => parts.2.2.1
+
+/-- The empty list's canonical print: the `nil` case. -/
+def nilObject : Json := .obj [("_tag", .str "nil")]
 
 mutual
 /-- **Put each object's entries in its shape's field order**, under a shape: JSON objects are
 unordered, and the canonical print orders a structure's fields, and a case's after its `_tag`, by
-declaration. The named normaliser of the JSON form: an agent's JSON reads once ordered
-(`Canonical.ofJsonAnyOrder`). An array under a list family (`listItem?`) becomes the family's
-canonical print (`consObjects`), its elements ordered under the item's shape. An object that
-lacks a field, or holds another, is left as it is, and reads as none. `fuel` bounds the nodes
-visited; past it the JSON is left as it is. -/
+declaration. The named normaliser of the JSON form: the profile's reader, which reads an agent's
+JSON in any order, is exact modulo it (`Store/Domain/ShapeJson.lean`). An array under a list
+family (`listParts?`) becomes the family's
+canonical print (`orderSpine`): each element ordered under the head's shape of its cell, the rest
+under the tail field's shape, which names the family again. An object that lacks a field, or holds
+another, is left as it is, and reads as none. `fuel` bounds the nodes visited; past it the JSON is
+left as it is. -/
 def orderIn (defs : List (String × Shape)) : Nat → Shape → Json → Json
   | 0, _, j => j
   | fuel + 1, s, j =>
@@ -189,8 +201,8 @@ def orderIn (defs : List (String × Shape)) : Nat → Shape → Json → Json
     | .list item, .arr js => .arr (orderList defs fuel item js)
     | .pair f g, .arr [a, b] => .arr [orderIn defs fuel f a, orderIn defs fuel g b]
     | .sum _ cases, .arr js =>
-      match listItem? cases with
-      | some item => consObjects (orderList defs fuel item js)
+      match listParts? cases with
+      | some (_, _, item, tail) => orderSpine defs fuel item tail js
       | none => .arr js
     | .struct _ fields, .obj entries =>
       match orderFields defs fuel fields entries with
@@ -226,58 +238,24 @@ def orderFields (defs : List (String × Shape)) :
     match entryOf n entries with
     | some j => (orderFields defs fuel fields entries).map ((n, orderIn defs fuel s j) :: ·)
     | none => none
+
+/-- A list family's array, from one element on, as its canonical print: `nil`, or `cons` of the
+element ordered under the cell's head shape and the rest under its tail shape, where that shape is
+a list family again. A rest whose shape is no list family is left as an array, and reads as none.
+`fuel` bounds the elements; past it the rest is left as an array. -/
+def orderSpine (defs : List (String × Shape)) : Nat → Shape → Shape → List Json → Json
+  | _, _, _, [] => nilObject
+  | 0, _, _, js => .arr js
+  | fuel + 1, item, tail, j :: js =>
+    .obj [("_tag", .str "cons"), ("head", orderIn defs fuel item j),
+      ("tail", match headShape defs tail with
+        | .sum _ cases =>
+          match listParts? cases with
+          | some (_, _, item', tail') => orderSpine defs fuel item' tail' js
+          | none => .arr js
+        | _ => .arr js)]
 end
 
-mutual
-/-- **Each list as an array**, under a shape: the canonical print with every list family
-(`listItem?`) written as the array of its elements, as `ts/eff/eff.gen.ts` types it. `orderIn`
-reads it back to the canonical print. `fuel` bounds the nodes visited; past it the JSON is left
-as it is. -/
-def arraysIn (defs : List (String × Shape)) : Nat → Shape → Json → Json
-  | 0, _, j => j
-  | fuel + 1, s, j =>
-    match headShape defs s, j with
-    | .option _, .null => .null
-    | .option item, j' => arraysIn defs fuel item j'
-    | .list item, .arr js => .arr (arraysList defs fuel item js)
-    | .pair f g, .arr [a, b] => .arr [arraysIn defs fuel f a, arraysIn defs fuel g b]
-    | .struct _ fields, .obj entries => .obj (arraysFields defs fuel fields entries)
-    | .sum _ cases, .obj entries =>
-      match listItem? cases with
-      | some item => .arr (arraysSpine defs fuel item (.obj entries))
-      | none =>
-        match entryOf "_tag" entries with
-        | some (.str name) =>
-          match tagOfName name cases with
-          | some (_, fields) => .obj (arraysFields defs fuel fields entries)
-          | none => .obj entries
-        | _ => .obj entries
-    | _, j' => j'
-
-/-- Each element of a list, under the item shape. -/
-def arraysList (defs : List (String × Shape)) : Nat → Shape → List Json → List Json
-  | 0, _, js => js
-  | _ + 1, _, [] => []
-  | fuel + 1, item, j :: js => arraysIn defs fuel item j :: arraysList defs fuel item js
-
-/-- Each entry that names a field, under the field's shape; any other entry, `_tag` among them,
-as it is. -/
-def arraysFields (defs : List (String × Shape)) :
-    Nat → List (String × Shape) → List (String × Json) → List (String × Json)
-  | 0, _, entries => entries
-  | _ + 1, _, [] => []
-  | fuel + 1, fields, (k, j) :: entries =>
-    (k, match fields.lookup k with
-      | some s => arraysIn defs fuel s j
-      | none => j) :: arraysFields defs fuel fields entries
-
-/-- A list's elements, from its canonical print: each `cons`'s head under the item shape, until
-`nil` or anything else. -/
-def arraysSpine (defs : List (String × Shape)) : Nat → Shape → Json → List Json
-  | fuel + 1, item, .obj [("_tag", .str "cons"), ("head", h), ("tail", t)] =>
-    arraysIn defs fuel item h :: arraysSpine defs fuel item t
-  | _, _, _ => []
-end
 
 /-- The budget the readers below give a JSON value: eight steps a node, and 64 more. -/
 def readBudget (j : Json) : Nat := 8 * jsonNodes j + 64
@@ -290,23 +268,9 @@ def ShapeDoc.read (doc : ShapeDoc) (j : Json) : Option Val :=
 def Canonical.ofJson {α : Type} [Canonical α] (j : Json) : Option α :=
   ((Canonical.shape α).read j).bind Canonical.ofVal
 
-/-- **Order a document's JSON**: `orderIn` under its root. -/
+/-- **Order a document's JSON**: `orderIn` under its root. The named normaliser of the profile's
+reader (`Store/Domain/ShapeJson.lean`), whose exactness is stated modulo it. -/
 def ShapeDoc.order (doc : ShapeDoc) (j : Json) : Json :=
   orderIn doc.defs (readBudget j) doc.root j
-
-/-- **Read a canonical carrier from JSON whose objects may be in any order**, and whose lists may
-be arrays: the JSON normalised by the carrier's shape (`ShapeDoc.order`), then read. -/
-def Canonical.ofJsonAnyOrder {α : Type} [Canonical α] (j : Json) : Option α :=
-  Canonical.ofJson ((Canonical.shape α).order j)
-
-/-- **A document's JSON with each list as an array** (`arraysIn` under its root). -/
-def ShapeDoc.arrays (doc : ShapeDoc) (j : Json) : Json :=
-  arraysIn doc.defs (readBudget j) doc.root j
-
-/-- **A carrier's JSON as the tools give it**: its canonical print, each list as an array
-(`ShapeDoc.arrays`); the encoding `ts/eff/eff.gen.ts` types. `Canonical.ofJsonAnyOrder` reads
-it. -/
-def Canonical.printArrays {α : Type} [Canonical α] (a : α) : Json :=
-  (Canonical.shape α).arrays (Canonical.print a)
 
 end Effect4.Store
