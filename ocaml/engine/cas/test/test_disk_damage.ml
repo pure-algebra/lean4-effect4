@@ -1,5 +1,6 @@
-(* Properties: published and sealed damage returns a fault and retains the evidence.
-   These controls distinguish damage from writable uncommitted-tail recovery. *)
+(* Properties: published and sealed damage, and a pack directory that cannot be listed, return a
+   fault and retain the evidence. These controls distinguish damage from writable
+   uncommitted-tail recovery. *)
 open Effect4_engine_cas
 open Disk_test_support
 
@@ -112,8 +113,48 @@ let interior_sealed () =
     | _ -> false)
 ;;
 
+(* A pack directory the writer cannot list is an I/O fault, never an empty store: a listing that
+   failed must not read as "no segments", or the writer recreates segment 0 over committed
+   records (found by seat R1, 2026-10-19: segment 0 went from 121 bytes to 27).  The superuser
+   ignores permission bits, so the case needs an ordinary user. *)
+let unreadable_pack () =
+  if Unix.geteuid () = 0
+  then (
+    print_endline "unreadable pack directory: skipped for the superuser";
+    true)
+  else (
+    let directory = temp () in
+    let disk = open_ directory in
+    ignore (get (E4_disk.commit disk initial));
+    E4_disk.close disk;
+    let pack = Filename.concat directory "pack" in
+    let before = pack_evidence directory in
+    let mode = (Unix.stat pack).Unix.st_perm in
+    Unix.chmod pack 0o300;
+    let result = E4_disk.open_ ~dir:directory opts in
+    Unix.chmod pack mode;
+    let fault =
+      match result with
+      | Error (E4_admission.Fault (E4_fault.Io reason)) ->
+        Printf.printf "unreadable pack directory: Fault io %s\n%!" reason;
+        true
+      | Error why ->
+        Printf.printf "unreadable pack directory: %s\n%!" (E4_cas.admission_word why);
+        false
+      | Ok disk ->
+        E4_disk.close disk;
+        false
+    in
+    let unchanged = before = pack_evidence directory in
+    Printf.printf "unreadable pack directory: pack evidence unchanged=%b\n%!" unchanged;
+    remove directory;
+    fault && unchanged)
+;;
+
 let () =
-  let outcomes = [ published (); short_sealed (); interior_sealed () ] in
+  let outcomes =
+    [ published (); short_sealed (); interior_sealed (); unreadable_pack () ]
+  in
   require (List.for_all Fun.id outcomes) "damage accepted or evidence changed";
   print_endline "published and sealed damage return faults without changing evidence"
 ;;

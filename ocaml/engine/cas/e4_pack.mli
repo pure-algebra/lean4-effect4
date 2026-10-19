@@ -39,7 +39,9 @@
        advances only at a `sync`.                        by construction; tested (G1..G4, X1)
    PK3 Grow-only: no byte already committed is ever rewritten.  The only truncation is of a
        torn tail at open, and only above the last record that passed PK1; `truncate_to`
-       refuses to go below `pack_end`.                   by construction; tested (T1, T2)
+       refuses to go below `pack_end`.  A pack directory that exists and cannot be listed is a
+       failure (Sys_error), never an empty store, so no open recreates a segment over
+       committed records.              by construction; tested (T1, T2; test_disk_damage)
    PK4 `scan` visits records in write order and is O(records), not O(bytes): it reads the
        41-byte header and seeks past node_bytes.  `~verify:true` (and `read`) is the
        O(bytes) form and is what recovery and verification use.
@@ -353,5 +355,6 @@ type scanned =
     each traversal re-reads. *)
 val scan_seq : ?verify:bool -> reader -> from:seg * off -> scanned Seq.t
 
-(** The segment indices present, ascending.  Re-read from the directory at every call. *)
+(** The segment indices present, ascending.  Re-read from the directory at every call.
+    Raises Sys_error when the pack directory exists and cannot be listed (PK3). *)
 val segments : reader -> seg list

@@ -66,10 +66,14 @@ let file_size path =
   | exception Unix.Unix_error _ -> None
 ;;
 
+(* PK3: a pack directory that does not exist holds no segment; one that exists and cannot be
+   listed raises Sys_error.  It is never read as empty, or the writer would recreate segment 0
+   over committed records. *)
 let list_segments dir =
   let d = pack_subdir dir in
   match Sys.readdir d with
-  | exception Sys_error _ -> []
+  | exception Sys_error failure ->
+    if Sys.file_exists d then raise (Sys_error failure) else []
   | names ->
     let ok n =
       String.length n = 11
