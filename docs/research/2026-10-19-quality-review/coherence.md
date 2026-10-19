@@ -9,11 +9,10 @@ before its seat starts.
 ## 1. The one thing to know
 
 The store already has every abstraction its fixes need. Three of R1's six fixes are deletions or
-merges, not additions. One fact also changes a ruling's premise. The write-ahead log, which three
-of the fixes target, has no consumer outside the store's own checkpoints and tests. Its
-all-or-none promise (LG3) is what the pack already gives every commit, through the control file's
-published boundary. Section 5 puts that choice to the owner, and R1 holds the log's three fixes
-until the owner answers.
+merges, not additions. One question also reopens a ruling. The write-ahead log, which three of
+the fixes target, is a second append log beside the pack. Its all-or-none promise (LG3) is the
+same promise the pack keeps for every commit, by the control file's published boundary. Section 5
+puts that choice to the owner, and R1 holds the log's three fixes until the owner answers.
 
 ## 2. The model: who owns what in `ocaml/engine/cas/`
 
@@ -29,8 +28,8 @@ flowchart TB
   CTRL["E4_control: the published boundary<br/>(tmp, sync, rename)"]
   IDX["E4_index: a rebuildable cache"]
   LOCK["E4_lock: one writer per directory"]
-  WAL["E4_wal: a second append log<br/>(no consumer outside the store)"]
-  CP["E4_checkpoint (no consumer outside the store)"]
+  WAL["E4_wal: a second append log<br/>(its own segments, frames, rotation)"]
+  CP["E4_checkpoint"]
   FAULT --> ADM
   ADM --> DISK
   DISK --> CAS
@@ -171,27 +170,31 @@ R1 adds no error type, no state field and no test seam. The one new module repla
 
 ## 5. The log: harden a second log, or keep one
 
-`E4_wal` has 670 lines, a 295-line interface, and 771 lines of tests and bench. Its only user
-outside its tests is `E4_checkpoint.ephemeral`, and nothing outside the store uses
-`E4_checkpoint`. It keeps its own segments, checksummed frames, seal rows, rotation and group
-commit, beside the pack's. The difference that matters is the commit. A pack commit becomes
+`E4_wal` has 670 lines, a 295-line interface, and 771 lines of tests and bench. It keeps its own
+segments, checksummed frames, seal rows, rotation and group commit, beside the pack's. The
+consumer count is not the argument. The owner ruled that lack of a consumer is not a metric
+(2026-09-18), and that the store is code built toward its consumers (2026-10-17). The argument is
+coherence: two constructions make one promise. The difference that matters is the commit. A pack commit becomes
 durable when the control file's boundary moves by one rename, so its records are all present or
 all absent. The log has no such boundary, which is why LG3 fails on a torn batch (A3.4).
 
 Two shapes:
 - **(a) Harden the log, as row 417 (2) rules today.** It gets a batch frame, a format version, a
   failure rule like `E4_disk`'s, and an open bracket like `E4_pack.open_at`'s. That repairs A3.2,
-  A3.4 and A5.1, but it keeps two append logs that make one promise, with no consumer to judge
-  between them.
+  A3.4 and A5.1, but it keeps two constructions of one promise.
 - **(b) One log.** Retire `E4_wal` and `E4_checkpoint.ephemeral`. When a run needs a durable
   journal, its rows are committed as nodes in one `E4_disk` transaction. The pack's published
   boundary makes that commit all or none, `checked_image` checks it at open, and Lean's codec owns
   the rows' bytes. A3.2, A3.4 and A5.1 close by deletion.
 
-Recommendation: (b). It deletes about 1,700 lines and leaves one append log, whose commit already
-meets LG3 by construction. It also gives the journal's bytes to Lean, the owner of the run's
-journal (`docs/core/machine-state.md`, "Journal and diagnostics"). Row 417 (2) was ruled before
-anyone knew that the log has no consumer, so the owner rules again.
+Recommendation: (b), on one condition. It deletes about 1,700 lines and leaves one append log,
+whose commit already meets LG3 by construction. It also gives the journal's bytes to Lean, the
+owner of the run's journal (`docs/core/machine-state.md`, "Journal and diagnostics"). The
+condition is a measured need. A log exists to make many small appends cheap, so (b) holds only if
+a run's journal rate fits the pack's commit cost. If a measurement shows it does not, the second
+log is justified. It should then take its all-or-none promise from the same construction, a
+published boundary. Row 417 (2) was ruled before this comparison was on the table, so the owner
+rules again.
 
 ## 6. R2, the engine and the kit: owners found, probe before start
 

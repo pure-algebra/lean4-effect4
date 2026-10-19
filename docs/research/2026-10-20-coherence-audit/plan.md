@@ -1,7 +1,7 @@
 # The coherence audit: plan and log
 
 Coordinator: the main session, written 2026-10-19 for a run on the morning of 2026-10-20. The run
-is the workflow in this folder, `workflow.js`.
+is the workflow in this folder, `workflow.js`, and every agent reads `orientation.md` first.
 
 ## 1. The one thing to know
 
@@ -30,40 +30,45 @@ owner, 2026-10-19: "if there's bloat, it means that we didn't model our system p
 
 ## 3. The method
 
-Each area's mapper does these steps in order:
-1. **Model.** State the area's desired behavior in the semantics' terms: its sorts, the operations
-   a client needs, the observations that must hold, and its boundaries. Semantics comes before
-   mechanism. A construct is justified by an observation it serves, a measured need or a boundary.
-2. **Inventory.** List the area's modules, types and definitions, with counts from a command.
-3. **Map.** Put each construct against the model element it realizes. Six kinds of surplus follow:
-   - one fact with two owners;
-   - a construct with no consumer;
-   - casework where the model has a fold, a table or an algebra;
-   - a failure the model calls a refusal, which the code swallows or raises;
-   - a wrapper that only renames, or a one-off beside a shared helper;
-   - a definition away from its owner.
-4. **Root cause.** Name the misused case or pattern behind each finding. Findings with one cause
-   share its name, so the plan removes the cause once.
-5. **Minimal target.** Give the smallest shape that keeps every observation, and what it deletes.
-   A target that adds more than it removes is not a finding. A new abstraction must replace at
-   least two owners.
-6. **Evidence.** Each claim has its command and its output. Two constructs are duplicates only if
-   they serve one observation.
+The owner narrowed the run the same evening: three agents, conceptual rather than specific, and
+oriented first in the project's philosophy, pedagogy and inspirations. "Our goal is to maintain
+that coherence of patterns, ideas, and inspirations especially when we refactor."
 
-An adversarial verifier then takes each area's findings. It tries to refute each one: a consumer
-the mapper missed, a different observation, a counterexample, or a target that adds more than it
-removes. One synthesis groups the surviving findings by root cause and plans the slices.
+The orientation is `orientation.md` in this folder. The coordinator wrote it from the
+authorities, the dated organizing principle, the memory of the owner's steers, and 184 of the
+owner's messages since 2026-08-31. Every agent reads it before any code.
+
+Each reader does three things:
+1. **Pattern map.** For each pattern of the organizing principle, say where the area honours it and
+   where it departs. The patterns are:
+   - one free object per sort;
+   - the five arrow kinds and their obligations;
+   - the five constructions;
+   - tables as data, with generation as a fixed point;
+   - one located refusal per judgment;
+   - one owner per fact;
+   - the host boundary;
+   - deep modules.
+2. **Strengths.** Name what already exhibits the patterns cleanly, so no refactor breaks it.
+3. **Departures.** Give at most ten, each at the level of a pattern. Each names the modeling error
+   behind it and a few representative declarations. Each gives the conceptual move that restores
+   coherence, what that move deletes, and what must stay because it serves a distinct observation.
+
+The synthesis first tries to refute each departure. It checks for:
+- consumer-count reasoning;
+- a false duplicate, where two constructs serve different observations;
+- an over-engineered move;
+- an unnamed ruling.
+
+Then it groups what survives by root cause. Each cause gets one design rule that removes the class.
+The refactor is planned as ordered moves, each making the next smaller.
 
 ## 4. Scope
 
-| Area | Paths | Lines |
-| --- | --- | ---: |
-| The Lean session face | `src/Effect4/Tool`, `Laws/Tool`, `Api`, `Run`, `Laws/Run`, `tools/Drivers` | about 32,000 |
-| The Lean program core | `src/Effect4/Program`, `src/Effect4/Data` | about 36,000 |
-| The Lean data plane | `src/Effect4/Store`, `Laws/Store`, `src/Effect4/Schema` | about 29,000 |
-| The lowering compiler | `src/OCaml5`, the generators under `scripts/`, the hand files of `ocaml/gen`, `ocaml/lcnf`, `ocaml/tools` | about 23,000 |
-| The OCaml store | `ocaml/engine/cas` | about 23,500 |
-| The OCaml engine and kit | `ocaml/engine` without `cas`, `ocaml/eff`, `ocaml/clock` | about 26,000 |
+| Reader | What it reads |
+| --- | --- |
+| The Lean core | `src/Effect4/Tool`, `Api`, `Run`, `Program`, `Data`, `Store` and `Schema`, with `tools/Drivers/Session.lean`; the session face and the program and data plane under it |
+| The compiler and the OCaml estate | `src/OCaml5`, the generators under `scripts/`, and `ocaml/` in the large, read as one compiler with one runtime |
 
 Out of this run, and logged as such by the workflow:
 - the machine (`src/Effect4/Machine`, `Laws/Machine`);
@@ -75,14 +80,12 @@ run of its own.
 
 ## 5. The run
 
-- **Agents:** six mappers, each piped into its own verifier as soon as it finishes, then one
-  synthesis, for 13 agents. That is above the session's default size of ten, because the owner
-  asked for the whole core with verification.
-- **Write scope:** every agent is read-only on tracked files. Each writes only its area's note and
-  probes in this folder.
-- **Report:** the synthesis writes `README.md` here. It holds the root causes, the ranked cuts, the
-  slices in order and the owner's decisions.
-- **Start:** after seat R1 has finished, so that the store's mapper reads the repaired store.
+- **Agents:** two readers in parallel, then one adversarial synthesis.
+- **Write scope:** every agent is read-only on tracked files. The readers write `lean-core.md` and
+  `compiler-estate.md` here, and the synthesis writes `README.md`.
+- **Report:** `README.md` holds the root causes, the design rules, the ordered moves, the strengths
+  to preserve and the owner's decisions.
+- **Start:** after seat R1 has finished.
 - **Wave 3:** seats R2 and R3 and E6 wait for the audit's plan, which may reshape them.
 - **Command:** run the workflow with `scriptPath` set to
   `docs/research/2026-10-20-coherence-audit/workflow.js` and `args` set to
