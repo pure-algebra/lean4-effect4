@@ -1,0 +1,368 @@
+{
+  "commit": "3471cbe35e3f91949170e2147dbe46f75cb795fd",
+  "builtin_classes": {
+    "domain": 45,
+    "approximate": 6,
+    "exact": 75,
+    "unsound": 2
+  },
+  "builtin_total": 128,
+  "numeric_rows": [
+    "Nat.decEq",
+    "Nat.beq",
+    "instDecidableEqNat",
+    "Nat.decLt",
+    "Nat.blt",
+    "Nat.decLe",
+    "Nat.ble",
+    "Nat.add",
+    "Nat.mul",
+    "Nat.div",
+    "Nat.mod",
+    "Nat.sub",
+    "Int.ofNat",
+    "Int.negSucc",
+    "Int.decLt",
+    "Int.natAbs",
+    "Int.neg",
+    "Nat.pred",
+    "Nat.pow",
+    "Nat.shiftLeft",
+    "Nat.shiftRight",
+    "Nat.land",
+    "Nat.lor",
+    "Nat.xor",
+    "UInt64.decEq",
+    "instDecidableEqUInt64",
+    "UInt64.toNat",
+    "UInt64.ofNat",
+    "UInt64.ofBitVec",
+    "UInt64.toBitVec",
+    "USize.ofBitVec",
+    "USize.toBitVec",
+    "USize.repr",
+    "USize.ofNat",
+    "USize.toNat",
+    "USize.ofNatLT",
+    "USize.decEq",
+    "USize.sub",
+    "USize.add"
+  ],
+  "nat_field_count": 19,
+  "nat_fields": [
+    "NAT_FIELD Effect4.ServiceName.mk Nat",
+    "NAT_FIELD Effect4.ServiceTypeCode.mk Nat",
+    "NAT_FIELD Effect4.Program.Ty.var Nat",
+    "NAT_FIELD Effect4.Program.Lit.nat Nat",
+    "NAT_FIELD Effect4.Program.Term.var Nat",
+    "NAT_FIELD Effect4.Program.Term.tupleAt Nat",
+    "NAT_FIELD Effect4.Program.NativeOp.external Nat",
+    "NAT_FIELD Effect4.Program.NativeOp.call Nat",
+    "NAT_FIELD Effect4.Program.NativeOp.param Nat",
+    "NAT_FIELD Effect4.Program.DefRole.serviceMethod Nat",
+    "NAT_FIELD Effect4.Program.Eff.yieldNow Nat",
+    "NAT_FIELD Effect4.Program.Eff.invoke Nat",
+    "NAT_FIELD Effect4.Program.LayerTerm.ref List Nat",
+    "NAT_FIELD Effect4.Store.Val.nat Nat",
+    "NAT_FIELD Effect4.Store.Val.ctor Nat",
+    "NAT_FIELD Effect4.Store.Val.handle Nat",
+    "NAT_FIELD Effect4.Store.Val.negInt Nat",
+    "NAT_FIELD Effect4.Machine.Err.tag Nat",
+    "NAT_FIELD Effect4.Machine.Defect.user Nat"
+  ],
+  "generated": {
+    "ocaml/eff/eff_types.ml": {
+      "lines": 366,
+      "int_tokens": 25,
+      "integer_tokens": 7,
+      "saturated_literal_uses": 0
+    },
+    "ocaml/gen/closure_gen.ml": {
+      "lines": 69991,
+      "int_tokens": 3227,
+      "integer_tokens": 6546,
+      "saturated_literal_uses": 1
+    },
+    "ocaml/engine/api_engine.ml": {
+      "lines": 15928,
+      "int_tokens": 1543,
+      "integer_tokens": 1322,
+      "saturated_literal_uses": 0
+    },
+    "ocaml/engine/test/lanes/lanes_gen.ml": {
+      "lines": 2655,
+      "int_tokens": 292,
+      "integer_tokens": 200,
+      "saturated_literal_uses": 0
+    }
+  },
+  "hand_consumer_candidates": [
+    {
+      "file": "ocaml/eff/eff_val.ml",
+      "matching_lines": 32,
+      "lines": 156
+    },
+    {
+      "file": "ocaml/eff/eff_val.mli",
+      "matching_lines": 5,
+      "lines": 18
+    },
+    {
+      "file": "ocaml/eff/test/prop_wire.ml",
+      "matching_lines": 6,
+      "lines": 493
+    },
+    {
+      "file": "ocaml/eff/test/test_eff.ml",
+      "matching_lines": 2,
+      "lines": 270
+    },
+    {
+      "file": "ocaml/eff/test/test_frame.ml",
+      "matching_lines": 2,
+      "lines": 356
+    },
+    {
+      "file": "ocaml/eff/test/test_lean_wire.ml",
+      "matching_lines": 1,
+      "lines": 304
+    },
+    {
+      "file": "ocaml/eff/test/test_metadata.ml",
+      "matching_lines": 1,
+      "lines": 89
+    },
+    {
+      "file": "ocaml/eff/test/test_owner.ml",
+      "matching_lines": 5,
+      "lines": 77
+    },
+    {
+      "file": "ocaml/eff/test/test_val_frames.ml",
+      "matching_lines": 2,
+      "lines": 310
+    },
+    {
+      "file": "ocaml/engine/api_engine_inst.ml",
+      "matching_lines": 2,
+      "lines": 29
+    },
+    {
+      "file": "ocaml/engine/bench/bench_frame.ml",
+      "matching_lines": 11,
+      "lines": 421
+    },
+    {
+      "file": "ocaml/engine/bytes/e4_be.mli",
+      "matching_lines": 1,
+      "lines": 83
+    },
+    {
+      "file": "ocaml/engine/cas/test/bench_cache.ml",
+      "matching_lines": 2,
+      "lines": 370
+    },
+    {
+      "file": "ocaml/engine/cas/test/test_checkpoint.ml",
+      "matching_lines": 2,
+      "lines": 1466
+    },
+    {
+      "file": "ocaml/engine/e4_engine.ml",
+      "matching_lines": 63,
+      "lines": 679
+    },
+    {
+      "file": "ocaml/engine/e4_engine.mli",
+      "matching_lines": 1,
+      "lines": 95
+    },
+    {
+      "file": "ocaml/engine/e4_host.ml",
+      "matching_lines": 3,
+      "lines": 200
+    },
+    {
+      "file": "ocaml/engine/e4_host.mli",
+      "matching_lines": 2,
+      "lines": 90
+    },
+    {
+      "file": "ocaml/engine/e4_instance.ml",
+      "matching_lines": 14,
+      "lines": 193
+    },
+    {
+      "file": "ocaml/engine/e4_instance.mli",
+      "matching_lines": 11,
+      "lines": 99
+    },
+    {
+      "file": "ocaml/engine/kit/kit.ml",
+      "matching_lines": 3,
+      "lines": 461
+    },
+    {
+      "file": "ocaml/engine/kit/kit.mli",
+      "matching_lines": 40,
+      "lines": 286
+    },
+    {
+      "file": "ocaml/engine/kit/kit_author.ml",
+      "matching_lines": 3,
+      "lines": 113
+    },
+    {
+      "file": "ocaml/engine/kit/kit_author.mli",
+      "matching_lines": 12,
+      "lines": 162
+    },
+    {
+      "file": "ocaml/engine/kit/kit_machine.ml",
+      "matching_lines": 2,
+      "lines": 80
+    },
+    {
+      "file": "ocaml/engine/kit/kit_machine.mli",
+      "matching_lines": 9,
+      "lines": 53
+    },
+    {
+      "file": "ocaml/engine/kit/kit_mcp.ml",
+      "matching_lines": 2,
+      "lines": 401
+    },
+    {
+      "file": "ocaml/engine/kit/kit_serve.ml",
+      "matching_lines": 1,
+      "lines": 204
+    },
+    {
+      "file": "ocaml/engine/kit/kit_tool.ml",
+      "matching_lines": 2,
+      "lines": 57
+    },
+    {
+      "file": "ocaml/engine/kit/kit_tool.mli",
+      "matching_lines": 2,
+      "lines": 21
+    },
+    {
+      "file": "ocaml/engine/test/bench_query.ml",
+      "matching_lines": 3,
+      "lines": 447
+    },
+    {
+      "file": "ocaml/engine/test/install/consumer/ok_facade/ok.ml",
+      "matching_lines": 5,
+      "lines": 24
+    },
+    {
+      "file": "ocaml/engine/test/install/consumer/red_built_literal/red.ml",
+      "matching_lines": 2,
+      "lines": 6
+    },
+    {
+      "file": "ocaml/engine/test/install/consumer/red_closure_module/red.ml",
+      "matching_lines": 1,
+      "lines": 4
+    },
+    {
+      "file": "ocaml/engine/test/install/consumer/red_coverage_api_gen/red.ml",
+      "matching_lines": 2,
+      "lines": 2
+    },
+    {
+      "file": "ocaml/engine/test/install/consumer/red_lane_root_api_gen/red.ml",
+      "matching_lines": 2,
+      "lines": 2
+    },
+    {
+      "file": "ocaml/engine/test/kit/test_mcp.ml",
+      "matching_lines": 1,
+      "lines": 501
+    },
+    {
+      "file": "ocaml/engine/test/kit/test_shapes.ml",
+      "matching_lines": 4,
+      "lines": 197
+    },
+    {
+      "file": "ocaml/engine/test/kit/test_tool.ml",
+      "matching_lines": 2,
+      "lines": 269
+    },
+    {
+      "file": "ocaml/engine/test/reference/corpora.ml",
+      "matching_lines": 1,
+      "lines": 340
+    },
+    {
+      "file": "ocaml/engine/test/reference/corpora.mli",
+      "matching_lines": 2,
+      "lines": 92
+    },
+    {
+      "file": "ocaml/engine/test/reference/e4_diff.mli",
+      "matching_lines": 3,
+      "lines": 131
+    },
+    {
+      "file": "ocaml/engine/test/rocq/lane_eval.ml",
+      "matching_lines": 3,
+      "lines": 53
+    },
+    {
+      "file": "ocaml/engine/test/scenarios/test_scenarios.ml",
+      "matching_lines": 10,
+      "lines": 486
+    },
+    {
+      "file": "ocaml/engine/test/stm/stm_tool.ml",
+      "matching_lines": 3,
+      "lines": 350
+    },
+    {
+      "file": "ocaml/engine/test/test_diff.ml",
+      "matching_lines": 2,
+      "lines": 649
+    },
+    {
+      "file": "ocaml/engine/test/test_query.ml",
+      "matching_lines": 1,
+      "lines": 684
+    },
+    {
+      "file": "ocaml/engine/test/test_replay_steps.ml",
+      "matching_lines": 7,
+      "lines": 376
+    },
+    {
+      "file": "ocaml/engine/test/test_serve.ml",
+      "matching_lines": 12,
+      "lines": 377
+    },
+    {
+      "file": "ocaml/engine/test/test_stable_step.ml",
+      "matching_lines": 4,
+      "lines": 59
+    },
+    {
+      "file": "ocaml/engine/tools/api_engine_prelude.ml",
+      "matching_lines": 1,
+      "lines": 573
+    },
+    {
+      "file": "ocaml/gen/test_checker_native.ml",
+      "matching_lines": 3,
+      "lines": 136
+    },
+    {
+      "file": "ocaml/gen/test_native_boundary.ml",
+      "matching_lines": 5,
+      "lines": 86
+    }
+  ],
+  "hand_consumer_candidate_count": 53,
+  "scope": "Numeric tokens include non-Nat fields and indices. Consumer candidates require typed inspection; counts are not promised edit counts."
+}

@@ -328,7 +328,7 @@ Each has a recommendation. Only the first is needed before wave 1.
 | 9 | One wire field name per idea (`Val.nat`'s `n`, `Change.fill`'s `q`); shape digests change | yes | A4 |
 | 10 | MCP 2026-07-28 beside 2025-06-18 | yes, after X1 | X2 |
 | 11 | Delete the Ref instance if C4's evidence holds | yes | C4 |
-| 12 | Naturals in the generated code: exact over Zarith everywhere (the estate plan's D-2), or Zarith only where a native use needs values above 2^62 (decisions row 108, open) | exact everywhere: then row 391 trusts the lowering with no numeric domain | E6 |
+| 12 | Naturals in the generated code: exact over Zarith everywhere (the estate plan's D-2), or Zarith only where a native use needs values above 2^62 (decisions row 108, open) | exact everywhere: then row 391 trusts the lowering with no numeric domain. **Ruled 2026-10-19, row 417 (1)**, with an exact `UInt64` carrier | E6 |
 
 ## 8. What this plan does not establish
 
