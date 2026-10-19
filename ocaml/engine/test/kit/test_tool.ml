@@ -1,9 +1,9 @@
 (* test_tool.ml -- the authoring tool's native shell against Lean's driver (seams S6).
 
-   What it is: the session fixture (tool-requests.jsonl, a copy of
-   Test/fixtures/session/requests.jsonl) served by Kit_tool, the native shell over the generated
-   Tool.serve, and compared with tool-replies.jsonl: the replies tools/Drivers/Session.lean printed
-   for the same lines (Lean's own driver; regenerate with
+   What it is: the session fixture (tool-requests.jsonl, its one copy, which bench_tool and
+   scripts/check-mcp-protocol.py also read) served by Kit_tool, the native shell over the
+   generated Tool.serve, and compared with tool-replies.jsonl: the replies that
+   tools/Drivers/Session.lean printed for the same lines (Lean's own driver; regenerate with
    `lake env lean --run tools/Drivers/Session.lean < tool-requests.jsonl > tool-replies.jsonl`, and
    the same for tool-numbers.jsonl into tool-numbers-replies.jsonl).
    Depends on: Effect4_kit (Kit, Kit_json, Kit_tool), Effect4_gen.Api_gen, Eff_json_text.

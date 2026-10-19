@@ -35,7 +35,7 @@ def main():
         Draft7Validator({"$ref": f"#/definitions/{kind}", "definitions": definitions}).validate(value)
         checks += 1
 
-    fixture = Path(__file__).resolve().parents[1] / "Test/fixtures/session/requests.jsonl"
+    fixture = Path(__file__).resolve().parents[1] / "ocaml/engine/test/kit/tool-requests.jsonl"
     first = json.loads(fixture.read_text().splitlines()[0])
     open_args = {k: v for k, v in first["payload"]["a"].items() if k != "_tag"}
     requests = [
