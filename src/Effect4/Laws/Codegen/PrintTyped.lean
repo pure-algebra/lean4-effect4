@@ -399,13 +399,15 @@ theorem readTyped_of_print_erasure (hl : LawfulSpelling sig spell) {n : Nat} {e 
     readTyped classes sig spell n x = .ok e := by
   exact read_print hl hr hp
 
-/-- The typed reader carries the ordinary reader's exactness at the erased input.
-This is the exactness consumer of the proposed typed-print erasure claim (exact-codecs, R8).
-It states no equality of raw target spellings and no target execution. -/
+/-- The typed reader carries the ordinary reader's exactness at the erased input: the erased
+input is the print of what was read, as it stands or after the renaming of its binders
+(`Rename.expr`). This is the exactness consumer of the proposed typed-print erasure claim
+(exact-codecs, R8). It states no equality of raw target spellings and no target execution. -/
 @[semantics "exact-codecs" (requirement := R8)]
 theorem readTyped_exact (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
     (h : readTyped classes sig spell n x = .ok e) :
-    print sig n e = .ok (eraseJoinArgs classes sig spell n x) := by
+    ∃ y, print sig n e = .ok y ∧ (eraseJoinArgs classes sig spell n x = y ∨
+      Rename.expr (Rename.mint n) (eraseJoinArgs classes sig spell n x) = .ok y) := by
   exact read_exact hl h
 
 end Effect4.Codegen

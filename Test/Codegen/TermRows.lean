@@ -106,11 +106,18 @@ def bodies (a : String) : FnShape → FnName → String
     (.perform (.refModifySomeWith (FnName.image .modifySome 1 .takeAndBump)) (.var 0))).map
       (expr house0 0)
   = .ok "Ref.modifySome(a0, (a1) => pair(a1, some(add(a1, 1))))"
--- red control: the function's parameter is the node's level, so the text of another level is
--- another program's, and it does not read back at this level
-#guard (readEff [] nativeSignature nativeSpell 1
+-- red control: the function's parameter is the node's level, so the reader of the printer's
+-- names refuses the text of another level; the reader renames that binder to the node's level
+-- (`Rename.expr`) and reads the program the printed text spells
+#guard (readMintedAt [] nativeSignature nativeSpell 1
     (.call (.ident "Ref.update") [.ident "a0",
       .lambda [{ name := "a2" }] (.call (.ident "succ") [.ident "a2"])])).isOk = false
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0",
+      .lambda [{ name := "a2" }] (.call (.ident "succ") [.ident "a2"])]) =
+  readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0",
+      .lambda [{ name := "a1" }] (.call (.ident "succ") [.ident "a1"])])
 
 /-! ## 2. The Queue probe's programs
 

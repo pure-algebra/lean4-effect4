@@ -5,8 +5,11 @@ import Effect4.Laws.Codegen.Template
 /-!
 # Laws.Codegen.Read — the reader and the printer over one table (R5.2)
 
-`read_exact`: what the reader accepts prints back to exactly the tree it read. The proof has no
-case per constructor. It is the generic step's, and rests on five things, each stated once:
+`read_exact`: what the reader accepts is the print of what it read, as the text stands or after
+the renaming of its binders to the printer's names (`Rename.expr`, `Codegen/Rename.lean`). Its
+step `readMinted_exact`: what the reader of the printer's names accepts prints back to exactly
+the tree it read. That proof has no case per constructor. It is the generic step's, and rests on
+five things, each stated once:
 
 * the engine lemma of the calculus, `inst_of_match` (a match of a skeleton with distinct holes
   instantiates back), with `inst_congr` (instantiation looks a substitution up at the skeleton's
@@ -1002,17 +1005,45 @@ theorem exactUpTo (hl : LawfulSpelling sig spell) (m : Nat) : ExactUpTo classes 
       (fun fam' hlt d c hc =>
         hlow fam' (by have := famRank_le_one fam; omega) d x c hx hc) h
 
-/-- **Law 12.** What the reader accepts prints back to exactly the tree it read. -/
-theorem read_exact (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
-    (h : readEff classes sig spell n x = .ok e) : print sig n e = .ok x :=
-  (exactUpTo hl (sizeOf x)).1 .eff n x e (Nat.le_refl _)
-    (Laws.Auto.getD_error_eq_ok.mp (Laws.Auto.mapError_eq_ok.mp h))
+/-- What the reader of the printer's names accepts prints back to exactly the tree it read. A
+step of law 12 (`read_exact`) and of `read_renamed`. -/
+theorem readMinted_exact (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
+    (h : readMintedAt classes sig spell n x = .ok e) : print sig n e = .ok x :=
+  (exactUpTo hl (sizeOf x)).1 .eff n x e (Nat.le_refl _) (Laws.Auto.getD_error_eq_ok.mp h)
 
-/-- The same of a layer: a layer is closed, so it is read, and printed, at depth `0`. -/
+/-- **Law 12.** What the reader accepts is the print of what it read, under the reader's named
+normaliser: the text is that print as it stands, or the renaming of its binders to the printer's
+names (`Rename.expr`) writes that print. -/
+theorem read_exact (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
+    (h : readEff classes sig spell n x = .ok e) :
+    ∃ y, print sig n e = .ok y ∧ (x = y ∨ Rename.expr (Rename.mint n) x = .ok y) := by
+  have h' := Laws.Auto.mapError_eq_ok.mp h
+  unfold readEffAt at h'
+  split at h'
+  · rename_i hm
+    cases h'
+    exact ⟨x, readMinted_exact hl hm, .inl rfl⟩
+  · obtain ⟨y, hy, hr⟩ := bind_eq_ok.mp h'
+    exact ⟨y, readMinted_exact hl hr, .inr hy⟩
+
+/-- The layer step of `readLayer_exact`: a layer is closed, so it is read, and printed, at depth
+`0`. -/
+theorem readLayerMinted_exact (hl : LawfulSpelling sig spell) {x : Expr} {l : LayerTerm Op}
+    (h : readLayerMintedAt classes sig spell x = .ok l) : printLayer sig l = .ok x :=
+  (exactUpTo hl (sizeOf x)).1 .layer 0 x l (Nat.le_refl _) (Laws.Auto.getD_error_eq_ok.mp h)
+
+/-- The same of a layer, renamed from no binder. -/
 theorem readLayer_exact (hl : LawfulSpelling sig spell) {x : Expr} {l : LayerTerm Op}
-    (h : readLayer classes sig spell x = .ok l) : printLayer sig l = .ok x :=
-  (exactUpTo hl (sizeOf x)).1 .layer 0 x l (Nat.le_refl _)
-    (Laws.Auto.getD_error_eq_ok.mp (Laws.Auto.mapError_eq_ok.mp h))
+    (h : readLayer classes sig spell x = .ok l) :
+    ∃ y, printLayer sig l = .ok y ∧ (x = y ∨ Rename.expr [] x = .ok y) := by
+  have h' := Laws.Auto.mapError_eq_ok.mp h
+  unfold readLayerAt at h'
+  split at h'
+  · rename_i hm
+    cases h'
+    exact ⟨x, readLayerMinted_exact hl hm, .inl rfl⟩
+  · obtain ⟨y, hy, hr⟩ := bind_eq_ok.mp h'
+    exact ⟨y, readLayerMinted_exact hl hr, .inr hy⟩
 
 end Exact
 

@@ -980,6 +980,21 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   It transports the existing `read_print`, and `readTyped_exact` transports `read_exact`.
   The raw reader still refuses an inserted argument before the erasure.
   No equality of raw foreign spellings follows.
+- **The reader takes any binder names (`binder-names-read`)**: An author names binders as they
+  like (decisions row 418, release item 3).
+  The reader reads the printer's text as it stands (`readMintedAt`, `src/Effect4/Codegen/Read.lean`).
+  It reads any other text after the renaming of its binders to the printer's names.
+  The renaming is the reader's named normaliser (`Rename.expr`, `src/Effect4/Codegen/Rename.lean`).
+  Each use resolves to its nearest binder, by the authoring scope reader's rule (`Authoring.Names.resolve`).
+  The lexical scope is TypeScript's, except that a layer clause closes it and a call's head is a name.
+  A use before its block's declaration is refused, as the source binding analysis refuses it.
+  A text whose binders rename to the print of a readable program reads (`read_renamed`,
+  `src/Effect4/Laws/Codegen/ReadPrint.lean`).
+  It reads to that program, or, when the text is itself a print, to the program it prints.
+  `read_print` keeps its statement.
+  `read_exact` holds under the normaliser: the text is the print, or the renaming writes the print.
+  It establishes nothing that tsgo accepts.
+  The TypeScript reader's agreement is a finite check (`ts/eff/test/read.test.ts`).
 - **A modeled value survives JSON (`modeled-codec`)**: Take a modeled value at the normal form
   of its type. Decoding its encoding and reading it back answers the value
   (`Modeled.codec_roundtrip`, `src/Effect4/Laws/Schema/Modeled.lean`).

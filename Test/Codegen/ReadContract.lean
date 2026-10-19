@@ -585,8 +585,13 @@ open Effect4.Api in
 #guard readEff [] sig spell 0 (.ident "Ref.get") = .error (.arity "Ref.get")
 
 #guard readEff [] sig spell 0 (.call (.ident "Effect.flatMap")
-    [.call (.ident "Effect.succeed") [.int 1], .lambda ["b0"] (.ident "b0")])
+    [.call (.ident "Effect.succeed") [.int 1], .lambda ["a0", "a1"] (.ident "a0")])
   = .error (.arity "Effect.flatMap")
+
+#guard readEff [] sig spell 0 (.call (.ident "Effect.acquireRelease")
+    [.call (.ident "Effect.succeed") [.int 1],
+      .lambda ["r", "r"] (.call (.ident "Effect.succeed") [.ident "r"])])
+  = .error (.binder "r")
 
 #guard readEff [] sig spell 0 (.call (.ident "Effect.forkChild")
     [.call (.ident "Effect.succeed") [.int 1], .object []])
@@ -766,10 +771,11 @@ open Effect4.Api in
 -- read at its face's placeholder term.
 #guard readEff [] nativeSignature nativeSpell 1
     (.call (.ident "Ref.update") [.ident "a0"]) = .error (.arity "Ref.update")
--- A wrong binder: the parameter is not the binder due at this level.
+-- A parameter named like the outer binder shadows it: the renaming reads it as the binder due
+-- at this level (`Rename.expr`), so the function is the same one.
 #guard readEff [] nativeSignature nativeSpell 1
     (.call (.ident "Ref.update") [.ident "a0", .lambda [{ name := "a0" }] (.ident "a0")]) =
-  .error (.arity "Ref.update")
+  .ok (.perform (.refUpdateWith (.var 1)) (.var 0))
 -- A wrong arity: a function of two parameters.
 #guard readEff [] nativeSignature nativeSpell 1
     (.call (.ident "Ref.update") [.ident "a0",
@@ -894,9 +900,10 @@ private def holdsAnnotatedLoop (p : Eff NativeOp) : Bool :=
 above still holds); beside it go the path down to the node that refused, and, when a reserved
 head matched no row, where the nearest row's skeleton and the tree part. -/
 
--- a wrong binder: no row matches, and the row with that head says what it has there
+-- a function of two binders where the row binds one: no row matches, and the row with that
+-- head says what it has there
 #guard readEffAt [] sig spell 0 (.call (.ident "Effect.flatMap")
-    [.call (.ident "Effect.succeed") [.int 1], .lambda ["b0"] (.ident "b0")]) =
+    [.call (.ident "Effect.succeed") [.int 1], .lambda ["a0", "a1"] (.ident "a0")]) =
   .error { why := .arity "Effect.flatMap", expected := some (["argument 1", "parameters"], "a0") }
 
 -- one argument too many
@@ -922,10 +929,111 @@ head matched no row, where the nearest row's skeleton and the tree part. -/
 
 -- for a person
 #guard (match readEffAt [] sig spell 0 (.call (.ident "Effect.flatMap")
-    [.call (.ident "Effect.succeed") [.int 1], .lambda ["b0"] (.ident "b0")]) with
+    [.call (.ident "Effect.succeed") [.int 1], .lambda ["a0", "a1"] (.ident "a0")]) with
   | .error f => f.render
   | .ok _ => "") =
   "Effect4.Program.ReadRefusal.arity \"Effect.flatMap\"; expected a0 at argument 1 > parameters"
+
+/-! ## Binders by lexical scope (release item 3, part b)
+
+An author names binders as they like. The reader reads the printer's text as it stands
+(`readMintedAt`) and any other text after the renaming of its binders to the printer's names,
+each use resolved to its nearest binder (`Rename.expr`). Law 11 holds as it stood; law 12 holds
+under the renaming (`read_exact`); `read_renamed` says a text whose binders rename to a readable
+print reads. These are finite evaluations of what the renaming does, and the red control shows
+why the renaming stands: the reader of the printer's names refuses the same text. The TypeScript
+reader answers the same inputs, the red control aside (`ts/eff/test/read.test.ts`, "binders by
+lexical scope"). -/
+
+section Binders
+
+private def flatMap (first : TypeScript.Expr) (rest : TypeScript.Expr) : TypeScript.Expr :=
+  .call (.ident "Effect.flatMap") [first, rest]
+private def succeed (value : TypeScript.Expr) : TypeScript.Expr :=
+  .call (.ident "Effect.succeed") [value]
+private def one {Op : Type} : Eff Op := .succeed (.lit (.nat 1))
+
+-- an author's binder reads as the printer's: the same program as the printed text
+#guard readEff [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["b"] (succeed (.ident "b")))) =
+  .ok (.bind one (.succeed (.var 0)))
+#guard readEff [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["b"] (succeed (.ident "b")))) =
+  readEff [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["a0"] (succeed (.ident "a0"))))
+-- a printer's name at another level is renamed like any other name
+#guard readEff [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["a5"] (succeed (.ident "a5")))) =
+  .ok (.bind one (.succeed (.var 0)))
+-- red control: the reader of the printer's names refuses the author's text
+#guard (readMintedAt [] sig spell 0
+    (flatMap (succeed (.int 1)) (.lambda ["b"] (succeed (.ident "b"))))).isOk = false
+
+-- nearest binder first: the inner `x` shadows the outer one
+#guard readEff [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["x"]
+    (flatMap (succeed (.int 2)) (.lambda ["x"] (succeed (.ident "x")))))) =
+  .ok (.bind one (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 1))))
+#guard readEff [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["x"]
+    (flatMap (succeed (.int 2)) (.lambda ["y"] (succeed (.ident "x")))))) =
+  .ok (.bind one (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 0))))
+-- a statement's binder scopes from its statement on
+#guard readEff [] sig spell 0 (.call (.ident "Effect.gen") [.generator
+    [.constYield "x" (succeed (.int 1)) none, .constYield "y" (succeed (.int 2)) none,
+      .ret (.ident "x")]]) =
+  readEff [] sig spell 0 (.call (.ident "Effect.gen") [.generator
+    [.constYield "a0" (succeed (.int 1)) none, .constYield "a1" (succeed (.int 2)) none,
+      .ret (.ident "a0")]])
+
+-- a block's binder is in lexical scope over the whole block: a use before its declaration means
+-- it, in its temporal dead zone, and is refused there, even with an outer binder of that name
+#guard readEffAt [] sig spell 0 (.call (.ident "Effect.gen") [.generator
+    [.yieldDiscard (succeed (.ident "x")), .constYield "x" (succeed (.int 2)) none,
+      .ret (.ident "x")]]) =
+  .error { path := [("call", 1), ("generator", 0), ("yieldDiscard", 0),
+    ("call", 1)], why := .unknownIdent "x" }
+#guard (readEff [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["x"]
+    (.call (.ident "Effect.gen") [.generator [.yieldDiscard (succeed (.ident "x")),
+      .constYield "x" (succeed (.int 2)) none, .ret (.ident "x")]])))).isOk = false
+-- a binder that the statement itself holds is nearer than the block's later declaration
+#guard readEff [] sig spell 0 (.call (.ident "Effect.gen") [.generator
+    [.yieldDiscard (flatMap (succeed (.int 1)) (.lambda ["x"] (succeed (.ident "x")))),
+      .constYield "x" (succeed (.int 2)) none, .ret (.ident "x")]]) =
+  readEff [] sig spell 0 (.call (.ident "Effect.gen") [.generator
+    [.yieldDiscard (flatMap (succeed (.int 1)) (.lambda ["a0"] (succeed (.ident "a0")))),
+      .constYield "a0" (succeed (.int 2)) none, .ret (.ident "a0")]])
+
+-- an unbound name is refused where it stands, by the reader, on the program's path
+#guard readEffAt [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["x"] (succeed (.ident "y")))) =
+  .error { path := [("bind", 1), ("succeed", 0)], why := .unknownIdent "y" }
+-- an unbound name of the printer's form that the renamed binder would capture is refused by the
+-- renaming, on the target syntax's path
+#guard readEffAt [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["x"] (succeed (.ident "a0")))) =
+  .error { path := [("call", 2), ("lambda", 0), ("call", 1)], why := .unknownIdent "a0" }
+-- a call's head is a name: a binder there is refused
+#guard readEffAt [] sig spell 0 (flatMap (succeed (.int 1))
+    (.lambda ["f"] (succeed (.call (.ident "f") [.int 1])))) =
+  .error { path := [("call", 2), ("lambda", 0), ("call", 1), ("call", 0)], why := .binder "f" }
+-- a block that declares one name twice is refused, as TypeScript refuses it
+#guard readEffAt [] sig spell 0 (.call (.ident "Effect.gen") [.generator
+    [.constYield "x" (succeed (.int 1)) none, .constYield "x" (succeed (.int 2)) none,
+      .ret (.ident "x")]]) =
+  .error { path := [("call", 1), ("generator", 1)], why := .binder "x" }
+
+-- a layer clause closes the lexical scope: the printer prints a layer at the empty environment
+private def layered (outer inner use : String) : TypeScript.Expr :=
+  flatMap (succeed (.int 1)) (.lambda [outer] (.call (.ident "Effect.provide")
+    [succeed (.ident outer), .call (.ident "Layer.effectDiscard")
+      [flatMap (succeed (.int 2)) (.lambda [inner] (succeed (.ident use)))]]))
+private def layeredProgram {Op : Type} : Eff Op :=
+  .bind one (.provideLayer (.effectDiscard (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 0))))
+    false (.succeed (.var 0)))
+#guard readEff [] sig spell 0 (layered "a0" "a0" "a0") = .ok layeredProgram
+#guard readEff [] sig spell 0 (layered "x" "y" "y") = .ok layeredProgram
+#guard readEff [] sig spell 0 (layered "x" "x" "x") = .ok layeredProgram
+#guard readEffAt [] sig spell 0 (layered "x" "y" "x") =
+  .error { path := [("bind", 1), ("provideLayer", 0), ("effectDiscard", 0), ("bind", 1),
+    ("succeed", 0)], why := .unknownIdent "x" }
+#guard readLayer [] sig spell (.call (.ident "Layer.effectDiscard")
+    [flatMap (succeed (.int 2)) (.lambda ["y"] (succeed (.ident "y")))]) =
+  .ok (.effectDiscard (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 0))))
+
+end Binders
 
 /-! ## The join: keys and all eight layer forms
 

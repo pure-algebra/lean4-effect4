@@ -221,7 +221,7 @@ structure MaskRowsPremises : Prop where
   readExact : ∀ (classes : Classes) (sig : Signature NativeOp)
     (spell : String → List RowArg → Option NativeOp), LawfulSpelling sig spell →
     ∀ (n : Nat) (x : Expr) (e : Eff NativeOp), readEff classes sig spell n x = .ok e →
-      print sig n e = .ok x
+      ∃ y, print sig n e = .ok y ∧ (x = y ∨ Rename.expr (Rename.mint n) x = .ok y)
 
 /-- **The mask's two rows keep the table's premises** (the claim `mask-rows-table-premises`;
 concept `exact-codecs`, requirement R8; decisions row 245).

@@ -57,10 +57,12 @@ def print (program : Program) (table : RowTable := []) : Except PrintRefusal Typ
 
 /-- A program back from one TypeScript expression, at the empty environment: read through the
 table the printer prints from (`src/Effect4/Codegen/Read.lean`, `readT`), a `ReadRefusal` on a
-tree no row matches. A row is accepted only when the printer would choose it for what was
-read, so what is read prints back to the tree read (`read_exact`). A payload class construction
-`new Tag({ … })` reads under the module's `classes` (decisions row 120); a bare expression has
-none. -/
+tree no row matches. The binders take any names: a tree whose binders are not the printer's
+`a0`, `a1`, … reads after their renaming, each use resolved to its nearest binder
+(`Codegen/Rename.lean`). A row is accepted only when the printer would choose it for what was
+read, so what is read prints back to the tree read, as it stands or after that renaming
+(`read_exact`). A payload class construction `new Tag({ … })` reads under the module's
+`classes` (decisions row 120); a bare expression has none. -/
 def read (expression : TypeScript.Expr) (table : RowTable := [])
     (classes : Effect4.Codegen.Classes.Classes := []) : Except ReadRefusal Program :=
   Program.readEff classes (nativeSignature table) (nativeSpell table) 0 expression

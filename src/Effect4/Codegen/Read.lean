@@ -1,5 +1,6 @@
 import Effect4.Codegen.Print
 import Effect4.Codegen.Templates
+import Effect4.Codegen.Rename
 import Effect4.Codegen.RowServices
 import Effect4.Program.Native
 import Effect4.Program.Table
@@ -41,7 +42,10 @@ carries it.
 
 Binders are recovered by comparison, never by decoding: `Var.read n s` is the position `i < n`
 with `Var.name i = s`. Nothing here folds over a string (`String.toList` and its kin reach
-`Classical.choice` on this toolchain).
+`Classical.choice` on this toolchain). That is the printer's naming. An author's text names its
+binders as the author likes: `readEffAt` reads the printer's text as it stands
+(`readMintedAt`), and any other text after the renaming of its binders to the printer's names,
+each use resolved to its nearest binder (`Rename.expr`, `Codegen/Rename.lean`).
 
 Owed (R5.2): `read_print` and `read_exact` over the table, through the engine lemmas
 `match_inst` and `inst_of_match` (`Laws/Codegen/Template.lean`). The hand reader they were
@@ -445,34 +449,6 @@ def captured : (σ : Subst) → (i : Nat) → Option {a : Arg // (i, a) ∈ σ}
   | (j, a) :: rest, i =>
     if h : j = i then some ⟨a, h ▸ List.mem_cons_self⟩
     else (captured rest i).map fun ⟨b, hb⟩ => ⟨b, List.mem_cons_of_mem _ hb⟩
-
-/-- A refusal with where it happened. `path` is the constructor and argument index at each step
-from the root down to the node that refused, outermost first (a list's items are its `cons`
-cells: argument `0` the item, `1` the rest). `expected` is set when a reserved head matched no
-row: the steps down the nearest row's skeleton to where the tree parts from it, and what the
-skeleton has there. The refusal itself stays flat, so nothing that compares refusals moves. -/
-structure ReadFailure where
-  path : List (String × Nat) := []
-  why : ReadRefusal
-  expected : Option (List String × String) := none
-deriving DecidableEq, Repr
-
-/-- A refusal at the node being read. -/
-def ReadFailure.here (why : ReadRefusal) : ReadFailure := { why }
-
-/-- The same failure, seen from the argument `i` of a `ctor` node above it. -/
-def ReadFailure.under (ctor : String) (i : Nat) (f : ReadFailure) : ReadFailure :=
-  { f with path := (ctor, i) :: f.path }
-
-/-- For a person: `bind.1 > succeed.0: unknownIdent a1`, and what was expected where. -/
-def ReadFailure.render (f : ReadFailure) : String :=
-  let at_ := " > ".intercalate (f.path.map fun (ctor, i) => ctor ++ "." ++ toString i)
-  let why := reprStr f.why
-  let expected := match f.expected with
-    | some (steps, what) =>
-      "; expected " ++ what ++ (if steps.isEmpty then "" else " at " ++ " > ".intercalate steps)
-    | none => ""
-  (if at_.isEmpty then "" else at_ ++ ": ") ++ why ++ expected
 
 /-- A table that does not fit the constructor declarations (no `build` for what a row read, a
 sort no capture fills). It is a defect of the table, never of the tree read. -/
@@ -991,20 +967,42 @@ mutual
   termination_by (sizeOf stmts, 0)
 end
 
-/-- A program from a tree, at environment length `n`, under the module's payload classes. -/
-def readEffAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
-    (n : Nat) (x : Expr) : Except ReadFailure (Eff Op) :=
+/-- A program from a tree whose binders carry the printer's names, at environment length `n`,
+under the module's payload classes: the binder at position `i` is `Var.name i`. -/
+def readMintedAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List RowArg → Option Op) (n : Nat) (x : Expr) :
+    Except ReadFailure (Eff Op) :=
   (readT classes sig spell .eff n x).getD (.error (.here (unread .eff)))
+
+/-- A program from a tree, at environment length `n`, under the module's payload classes. The
+printer's text reads as it stands (`readMintedAt`). Any other text reads after the renaming of
+its binders to the printer's names, each use resolved to its nearest binder (`Rename.expr`), so
+an author names binders as they like. -/
+def readEffAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List RowArg → Option Op) (n : Nat) (x : Expr) :
+    Except ReadFailure (Eff Op) :=
+  match readMintedAt classes sig spell n x with
+  | .ok e => .ok e
+  | .error _ => Rename.expr (Rename.mint n) x >>= readMintedAt classes sig spell n
 
 /-- The same with the refusal alone: where it happened is `readEffAt`'s. -/
 def readEff (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
   (readEffAt classes sig spell n x).mapError (·.why)
 
-/-- A layer from a tree. A layer is closed: its bodies are read at environment length `0`. -/
-def readLayerAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
-    (x : Expr) : Except ReadFailure (LayerTerm Op) :=
+/-- A layer from a tree whose binders carry the printer's names. A layer is closed: its bodies
+are read at environment length `0`. -/
+def readLayerMintedAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List RowArg → Option Op) (x : Expr) : Except ReadFailure (LayerTerm Op) :=
   (readT classes sig spell .layer 0 x).getD (.error (.here (unread .layer)))
+
+/-- A layer from a tree: the printer's text as it stands, any other text after the renaming of
+its binders, from no binder. -/
+def readLayerAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List RowArg → Option Op) (x : Expr) : Except ReadFailure (LayerTerm Op) :=
+  match readLayerMintedAt classes sig spell x with
+  | .ok l => .ok l
+  | .error _ => Rename.expr [] x >>= readLayerMintedAt classes sig spell
 
 def readLayer (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (x : Expr) : Except ReadRefusal (LayerTerm Op) :=

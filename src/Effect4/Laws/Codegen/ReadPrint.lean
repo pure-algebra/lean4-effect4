@@ -2437,20 +2437,48 @@ theorem printsBackUpTo (hl : LawfulSpelling sig spell) (m : Nat) : PrintsBackUpT
       (fun fam' hlt d c hr' hp' => hlow fam' (by have := famRank_le_one fam; omega) d c x hx hr' hp')
       hr hp
 
-/-- **Law 11.** What the printer prints of a readable program reads back to it. -/
+/-- What the printer prints of a readable program, the reader of the printer's names reads back
+to it. A step of law 11 (`read_print`) and of `read_renamed`. -/
+theorem readMinted_print (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
+    (hr : Readable classes sig n e = true) {x : Expr} (hp : print sig n e = .ok x) :
+    readMintedAt classes sig spell n x = .ok e := by
+  have h := (printsBackUpTo hl (sizeOf x)).1 .eff n e x (Nat.le_refl _)
+    (by unfold ReadableAt; simpa only [Readable, cataFam, Option.isSome_iff_exists] using hr) hp
+  simp only [readMintedAt, h.1, Option.getD_some]
+
+/-- **Law 11.** What the printer prints of a readable program reads back to it. The printer's
+text reads as it stands, so the renaming never runs on it. -/
 theorem read_print (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
     (hr : Readable classes sig n e = true) {x : Expr} (hp : print sig n e = .ok x) :
     readEff classes sig spell n x = .ok e := by
-  have h := (printsBackUpTo hl (sizeOf x)).1 .eff n e x (Nat.le_refl _)
-    (by unfold ReadableAt; simpa only [Readable, cataFam, Option.isSome_iff_exists] using hr) hp
-  simp only [readEff, readEffAt, h.1, Option.getD_some, Except.mapError]
+  simp only [readEff, readEffAt, readMinted_print hl hr hp, Except.mapError]
 
 /-- The same of a layer, which is closed: read and printed at depth `0`. -/
 theorem readLayer_print (hl : LawfulSpelling sig spell) {l : LayerTerm Op}
     (hr : ReadableAt classes sig .layer l 0) {x : Expr} (hp : printLayer sig l = .ok x) :
     readLayer classes sig spell x = .ok l := by
   have h := (printsBackUpTo hl (sizeOf x)).1 .layer 0 l x (Nat.le_refl _) hr hp
-  simp only [readLayer, readLayerAt, h.1, Option.getD_some, Except.mapError]
+  simp only [readLayer, readLayerAt, readLayerMintedAt, h.1, Option.getD_some, Except.mapError]
+
+/-- **A text whose binders rename to a print reads.** When the renaming of a text's binders to
+the printer's names (`Rename.expr`) writes the print of a readable program, the reader accepts the
+text: it reads to that program, or, when the text is itself the print of a program, to that
+program as the text stands. So an author names binders as they like.
+
+Reach: the reader's acceptance on target syntax, at a lawful spelling and a readable program.
+It does not say that the two programs of the second case differ, or that they agree, and it
+says nothing of what tsgo accepts. -/
+theorem read_renamed (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
+    (hr : Readable classes sig n e = true) {x y : Expr}
+    (hx : Rename.expr (Rename.mint n) x = .ok y) (hp : print sig n e = .ok y) :
+    readEff classes sig spell n x = .ok e ∨
+      ∃ q, readEff classes sig spell n x = .ok q ∧ print sig n q = .ok x := by
+  cases hm : readMintedAt classes sig spell n x with
+  | ok q =>
+    exact .inr ⟨q, by simp only [readEff, readEffAt, hm, Except.mapError], readMinted_exact hl hm⟩
+  | error f =>
+    exact .inl (by
+      simp only [readEff, readEffAt, hm, hx, ok_bind, readMinted_print hl hr hp, Except.mapError])
 
 /-- A readable program reads back from whatever the printer prints of it. -/
 theorem ReadsBack.of_Readable (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
