@@ -2,7 +2,7 @@
 
    What it is: JSON-RPC messages through Kit_mcp.line, checked against Kit_mcp's behaviours and,
    for tool calls, against the same requests through Kit_tool (the JSON lines shell).
-   Depends on: Effect4_kit (Kit, Kit_mcp, Kit_tool), Effect4_gen.Api_gen, Eff_json_text.
+   Depends on: Effect4_kit (Kit_mcp, Kit_tool), Effect4_gen.Api_gen, Yojson (the transport's JSON).
 
    Properties:
    C1  `initialize` names the server; `ping` answers; a notification gets no reply; an unknown
@@ -23,7 +23,6 @@
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine/test/kit *)
 
 open Effect4_kit
-module J = Eff_json_text
 
 let failures = ref 0
 
@@ -33,30 +32,30 @@ let check name ok =
 ;;
 
 let parse s =
-  match Kit.Json.parse s with
-  | Ok j -> Some j
-  | Error _ -> None
+  match Yojson.Safe.from_string s with
+  | j -> Some j
+  | exception Yojson.Json_error _ -> None
 ;;
 
 let field k = function
-  | Some (J.Object f) -> List.assoc_opt k f
+  | Some (`Assoc f) -> List.assoc_opt k f
   | _ -> None
 ;;
 
 let rpc ?id meth params =
-  J.render
-    (J.Object
-       ([ "jsonrpc", J.String "2.0"; "method", J.String meth; "params", J.Object params ]
-        @
-        match id with
-        | Some i -> [ "id", J.Int i ]
-        | None -> []))
+  Yojson.Safe.to_string
+    (`Assoc
+        ([ "jsonrpc", `String "2.0"; "method", `String meth; "params", `Assoc params ]
+         @
+         match id with
+         | Some i -> [ "id", `Int i ]
+         | None -> []))
 ;;
 
 let init_params version =
-  [ "protocolVersion", J.String version
-  ; "capabilities", J.Object []
-  ; "clientInfo", J.Object [ "name", J.String "effect4-test"; "version", J.String "1" ]
+  [ "protocolVersion", `String version
+  ; "capabilities", `Assoc []
+  ; "clientInfo", `Assoc [ "name", `String "effect4-test"; "version", `String "1" ]
   ]
 ;;
 
@@ -75,21 +74,19 @@ let () =
   check
     "C1 initialize names the server"
     (field "name" (field "serverInfo" (field "result" initialized))
-     = Some (J.String "effect4-tool"));
-  check
-    "C1 ping answers"
-    (field "result" (call (rpc ~id:2 "ping" [])) = Some (J.Object []));
+     = Some (`String "effect4-tool"));
+  check "C1 ping answers" (field "result" (call (rpc ~id:2 "ping" [])) = Some (`Assoc []));
   check
     "C1 a notification gets no reply"
     (Kit_mcp.line s (rpc "notifications/initialized" []) = None);
   check
     "C1 an unknown method is -32601"
     (field "code" (field "error" (call (rpc ~id:3 "resources/list" [])))
-     = Some (J.Int (-32601)));
+     = Some (`Int (-32601)));
   check
     "C1 a line that is not JSON is -32700"
     (field "code" (field "error" (Option.bind (Kit_mcp.line s "{") parse))
-     = Some (J.Int (-32700)))
+     = Some (`Int (-32700)))
 ;;
 
 (* C2 *)
@@ -101,14 +98,14 @@ let () =
         "tools"
         (field "result" (Option.bind (Kit_mcp.line s (rpc ~id:1 "tools/list" [])) parse))
     with
-    | Some (J.Array ts) -> ts
+    | Some (`List ts) -> ts
     | _ -> []
   in
   let names =
     List.filter_map
       (fun t ->
          match field "name" (Some t) with
-         | Some (J.String n) -> Some n
+         | Some (`String n) -> Some n
          | _ -> None)
       tools
   in
@@ -120,17 +117,17 @@ let () =
   in
   let supported =
     let rec find = function
-      | J.Object f ->
+      | `Assoc f ->
         (match List.assoc_opt "supported" f with
-         | Some (J.Array ms) ->
+         | Some (`List ms) ->
            Some
              (List.filter_map
                 (function
-                  | J.Array (J.String m :: _) -> Some m
+                  | `List (`String m :: _) -> Some m
                   | _ -> None)
                 ms)
          | _ -> List.find_map (fun (_, v) -> find v) f)
-      | J.Array xs -> List.find_map find xs
+      | `List xs -> List.find_map find xs
       | _ -> None
     in
     Option.bind (parse discover) find
@@ -146,9 +143,9 @@ let () =
     (List.for_all
        (fun t ->
           (match field "description" (Some t) with
-           | Some (J.String d) -> d <> ""
+           | Some (`String d) -> d <> ""
            | _ -> false)
-          && field "type" (field "inputSchema" (Some t)) = Some (J.String "object"))
+          && field "type" (field "inputSchema" (Some t)) = Some (`String "object"))
        tools);
   check
     "C2 every tool has its four hints"
@@ -157,30 +154,30 @@ let () =
           List.for_all
             (fun hint ->
                match field hint (field "annotations" (Some t)) with
-               | Some (J.Bool _) -> true
+               | Some (`Bool _) -> true
                | _ -> false)
             [ "readOnlyHint"; "destructiveHint"; "idempotentHint"; "openWorldHint" ])
        tools);
   let tool name =
-    List.find_opt (fun t -> field "name" (Some t) = Some (J.String name)) tools
+    List.find_opt (fun t -> field "name" (Some t) = Some (`String name)) tools
   in
   let hint name h =
     Option.bind (tool name) (fun t -> field h (field "annotations" (Some t)))
   in
   check
     "C2 a query and describe are read-only, an action is not"
-    (hint "doc" "readOnlyHint" = Some (J.Bool true)
-     && hint "describe" "readOnlyHint" = Some (J.Bool true)
-     && hint "open" "readOnlyHint" = Some (J.Bool false));
+    (hint "doc" "readOnlyHint" = Some (`Bool true)
+     && hint "describe" "readOnlyHint" = Some (`Bool true)
+     && hint "open" "readOnlyHint" = Some (`Bool false));
   check
     "C2 open discards what the session held, and start is not idempotent"
-    (hint "open" "destructiveHint" = Some (J.Bool true)
-     && hint "start" "idempotentHint" = Some (J.Bool false));
+    (hint "open" "destructiveHint" = Some (`Bool true)
+     && hint "start" "idempotentHint" = Some (`Bool false));
   let output name = Option.bind (tool name) (fun t -> field "outputSchema" (Some t)) in
   check
     "C2 no method carries an output schema, and describe carries an object one"
     (List.for_all (fun n -> n = "describe" || Option.is_none (output n)) names
-     && field "type" (output "describe") = Some (J.String "object"))
+     && field "type" (output "describe") = Some (`String "object"))
 ;;
 
 (* C3 *)
@@ -190,9 +187,9 @@ let () =
   in
   let open_args =
     match field "payload" (parse first) with
-    | Some (J.Object p) ->
+    | Some (`Assoc p) ->
       (match List.assoc_opt "a" p with
-       | Some (J.Object a) -> List.filter (fun (k, _) -> k <> "_tag") a
+       | Some (`Assoc a) -> List.filter (fun (k, _) -> k <> "_tag") a
        | _ -> [])
     | _ -> []
   in
@@ -203,9 +200,9 @@ let () =
   and t = Kit_tool.create () in
   let text r =
     match field "content" (field "result" r) with
-    | Some (J.Array [ c ]) ->
+    | Some (`List [ c ]) ->
       (match field "text" (Some c) with
-       | Some (J.String x) -> parse x
+       | Some (`String x) -> parse x
        | _ -> None)
     | _ -> None
   in
@@ -214,18 +211,18 @@ let () =
     Option.bind
       (Kit_mcp.line
          s
-         (rpc ~id "tools/call" [ "name", J.String name; "arguments", J.Object args ]))
+         (rpc ~id "tools/call" [ "name", `String name; "arguments", `Assoc args ]))
       parse
   in
   let opened = call 1 "open" open_args in
   check
     "C3 open answers Kit_tool's reply"
     (text opened = parse (Kit_tool.serve_line t first) && text opened <> None);
-  check "C3 open is no error" (is_error opened = Some (J.Bool false));
+  check "C3 open is no error" (is_error opened = Some (`Bool false));
   check
     "C3 structured open equals text"
     (field "structuredContent" (field "result" opened) = text opened);
-  let doc = call 2 "doc" [ "at_", J.Null ] in
+  let doc = call 2 "doc" [ "at_", `Null ] in
   check
     "C3 doc reads the opened document, as Kit_tool does"
     (text doc = parse (Kit_tool.serve_line t doc_line) && text doc <> None);
@@ -234,23 +231,23 @@ let () =
       3
       "publish"
       [ ( "at_"
-        , J.Object
-            [ "doc", J.Object [ "generation", J.Int 0; "name", J.String "default" ]
-            ; "revision", J.Int 9
+        , `Assoc
+            [ "doc", `Assoc [ "generation", `Int 0; "name", `String "default" ]
+            ; "revision", `Int 9
             ] )
       ]
   in
   check
     "C3 a call at a stale snapshot is a tool error"
-    (is_error stale = Some (J.Bool true));
+    (is_error stale = Some (`Bool true));
   check
     "C3 structured refusal equals text"
     (field "structuredContent" (field "result" stale) = text stale);
   check
     "C3 an unknown tool is -32602"
-    (field "code" (field "error" (call 4 "nope" [])) = Some (J.Int (-32602)));
+    (field "code" (field "error" (call 4 "nope" [])) = Some (`Int (-32602)));
   let notification_args =
-    ("name", J.String "notification") :: List.remove_assoc "name" open_args
+    ("name", `String "notification") :: List.remove_assoc "name" open_args
   in
   check
     "C3 a valid open notification gets no reply"
@@ -258,11 +255,11 @@ let () =
        s
        (rpc
           "tools/call"
-          [ "name", J.String "open"; "arguments", J.Object notification_args ])
+          [ "name", `String "open"; "arguments", `Assoc notification_args ])
      = None);
   check
     "C3 a valid open notification leaves the document unchanged"
-    (text (call 5 "doc" [ "at_", J.Null ]) = text doc)
+    (text (call 5 "doc" [ "at_", `Null ]) = text doc)
 ;;
 
 (* C4: protocol errors do not reach Tool.serve. *)
@@ -272,19 +269,19 @@ let () =
   let code r = field "code" (field "error" r) in
   check
     "C4 tools require initialization"
-    (code (call (rpc ~id:1 "tools/list" [])) = Some (J.Int (-32002)));
+    (code (call (rpc ~id:1 "tools/list" [])) = Some (`Int (-32002)));
   check
     "C4 initialization requires its fields"
-    (code (call (rpc ~id:2 "initialize" [])) = Some (J.Int (-32602)));
+    (code (call (rpc ~id:2 "initialize" [])) = Some (`Int (-32602)));
   check
     "C4 unsupported version selects 2025-06-18"
     (field
        "protocolVersion"
        (field "result" (call (rpc ~id:3 "initialize" (init_params "unknown"))))
-     = Some (J.String "2025-06-18"));
+     = Some (`String "2025-06-18"));
   check
     "C4 tools wait for initialized notification"
-    (code (call (rpc ~id:4 "tools/list" [])) = Some (J.Int (-32002)));
+    (code (call (rpc ~id:4 "tools/list" [])) = Some (`Int (-32002)));
   check
     "C4 malformed initialized notification stays silent"
     (Kit_mcp.line
@@ -293,11 +290,11 @@ let () =
      = None);
   check
     "C4 malformed notification does not initialize"
-    (code (call (rpc ~id:41 "tools/list" [])) = Some (J.Int (-32002)));
-  ignore (Kit_mcp.line s (rpc "notifications/initialized" [ "_meta", J.Int 7 ]));
+    (code (call (rpc ~id:41 "tools/list" [])) = Some (`Int (-32002)));
+  ignore (Kit_mcp.line s (rpc "notifications/initialized" [ "_meta", `Int 7 ]));
   check
     "C4 malformed notification metadata does not initialize"
-    (code (call (rpc ~id:42 "tools/list" [])) = Some (J.Int (-32002)));
+    (code (call (rpc ~id:42 "tools/list" [])) = Some (`Int (-32002)));
   ignore
     (Kit_mcp.line
        s
@@ -308,71 +305,70 @@ let () =
   check
     "C4 duplicate initialize is -32600"
     (code (call (rpc ~id:5 "initialize" (init_params "2025-06-18")))
-     = Some (J.Int (-32600)));
+     = Some (`Int (-32600)));
   check
     "C4 wrong JSON-RPC version is -32600"
     (code (call "{\"jsonrpc\":\"1.0\",\"id\":6,\"method\":\"ping\"}")
-     = Some (J.Int (-32600)));
+     = Some (`Int (-32600)));
   check
     "C4 null request id is -32600"
     (code (call "{\"jsonrpc\":\"2.0\",\"id\":null,\"method\":\"ping\"}")
-     = Some (J.Int (-32600)));
+     = Some (`Int (-32600)));
   check
     "C4 string request id is retained"
     (field "id" (call "{\"jsonrpc\":\"2.0\",\"id\":\"request-7\",\"method\":\"ping\"}")
-     = Some (J.String "request-7"));
+     = Some (`String "request-7"));
   check
     "C4 non-object params are -32602"
     (code (call "{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"tools/call\",\"params\":[]}")
-     = Some (J.Int (-32602)));
+     = Some (`Int (-32602)));
   check
     "C4 non-object arguments are -32602"
     (code
        (call
           "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\",\"params\":{\"name\":\"open\",\"arguments\":[]}}")
-     = Some (J.Int (-32602)));
+     = Some (`Int (-32602)));
   check
     "C4 unreadable arguments are -32602"
     (code
-       (call
-          (rpc ~id:10 "tools/call" [ "name", J.String "open"; "arguments", J.Object [] ]))
-     = Some (J.Int (-32602)));
+       (call (rpc ~id:10 "tools/call" [ "name", `String "open"; "arguments", `Assoc [] ]))
+     = Some (`Int (-32602)));
   check
     "C4 arguments outside the tool numeric profile are -32602"
     (code
        (call
           "{\"jsonrpc\":\"2.0\",\"id\":101,\"method\":\"tools/call\",\"params\":{\"name\":\"doc\",\"arguments\":{\"at_\":0.5}}}")
-     = Some (J.Int (-32602)));
+     = Some (`Int (-32602)));
   check "C4 unknown notification gets no reply" (Kit_mcp.line s (rpc "unknown" []) = None);
   check
     "C4 tool notification does not execute"
-    (Kit_mcp.line s (rpc "tools/call" [ "name", J.String "reset" ]) = None);
+    (Kit_mcp.line s (rpc "tools/call" [ "name", `String "reset" ]) = None);
   check
     "C4 valid fractional metadata is JSON"
     (field
        "result"
        (call
           "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"ping\",\"params\":{\"_meta\":{\"x\":0.5}}}")
-     = Some (J.Object []));
+     = Some (`Assoc []));
   check
     "C4 metadata must be an object"
-    (code (call (rpc ~id:12 "ping" [ "_meta", J.Int 7 ])) = Some (J.Int (-32602)));
+    (code (call (rpc ~id:12 "ping" [ "_meta", `Int 7 ])) = Some (`Int (-32602)));
   check
     "C4 invalid leading-zero number is a parse error"
     (code (call "{\"jsonrpc\":\"2.0\",\"id\":01,\"method\":\"ping\"}")
-     = Some (J.Int (-32700)));
+     = Some (`Int (-32700)));
   check
     "C4 invalid UTF-8 is a parse error"
     (code (call "{\"jsonrpc\":\"2.0\",\"id\":\"\255\",\"method\":\"ping\"}")
-     = Some (J.Int (-32700)));
+     = Some (`Int (-32700)));
   check
     "C4 lone high surrogate is refused without throwing"
     (code (call "{\"jsonrpc\":\"2.0\",\"id\":\"\\ud800\",\"method\":\"ping\"}")
-     = Some (J.Int (-32700)));
+     = Some (`Int (-32700)));
   check
     "C4 lone low surrogate is refused without emitting invalid UTF-8"
     (code (call "{\"jsonrpc\":\"2.0\",\"id\":\"\\udc00\",\"method\":\"ping\"}")
-     = Some (J.Int (-32700)));
+     = Some (`Int (-32700)));
   let numeric_id token =
     let input = "{\"jsonrpc\":\"2.0\",\"id\":" ^ token ^ ",\"method\":\"ping\"}" in
     match Kit_mcp.line s input with
@@ -401,8 +397,8 @@ let () =
        "result"
        (call
           "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"ping\",\"params\":{\"_meta\":{\"progressToken\":1.0}}}")
-     = Some (J.Object []));
-  check "C4 a batch is not an MCP request" (code (call "[]") = Some (J.Int (-32600)))
+     = Some (`Assoc []));
+  check "C4 a batch is not an MCP request" (code (call "[]") = Some (`Int (-32600)))
 ;;
 
 (* C5 *)
@@ -414,11 +410,11 @@ let () =
         "tools"
         (field "result" (Option.bind (Kit_mcp.line s (rpc ~id:1 "tools/list" [])) parse))
     with
-    | Some (J.Array ts) -> ts
+    | Some (`List ts) -> ts
     | _ -> []
   in
   let describe =
-    List.find_opt (fun t -> field "name" (Some t) = Some (J.String "describe")) tools
+    List.find_opt (fun t -> field "name" (Some t) = Some (`String "describe")) tools
   in
   let names =
     match
@@ -430,10 +426,10 @@ let () =
               "properties"
               (Option.bind describe (fun t -> field "inputSchema" (Some t)))))
     with
-    | Some (J.Array ns) ->
+    | Some (`List ns) ->
       List.filter_map
         (function
-          | J.String n -> Some n
+          | `String n -> Some n
           | _ -> None)
         ns
     | _ -> []
@@ -442,17 +438,14 @@ let () =
     Option.bind
       (Kit_mcp.line
          s
-         (rpc
-            ~id
-            "tools/call"
-            [ "name", J.String "describe"; "arguments", J.Object args ]))
+         (rpc ~id "tools/call" [ "name", `String "describe"; "arguments", `Assoc args ]))
       parse
   in
   let text r =
     match field "content" (field "result" r) with
-    | Some (J.Array [ c ]) ->
+    | Some (`List [ c ]) ->
       (match field "text" (Some c) with
-       | Some (J.String x) -> parse x
+       | Some (`String x) -> parse x
        | _ -> None)
     | _ -> None
   in
@@ -462,19 +455,19 @@ let () =
     "C5 each answer points at its definition under its own $defs, structured as its text"
     (List.for_all
        (fun n ->
-          let r = call 2 [ "name", J.String n ] in
+          let r = call 2 [ "name", `String n ] in
           let a = text r in
-          field "$ref" a = Some (J.String ("#/$defs/" ^ n))
+          field "$ref" a = Some (`String ("#/$defs/" ^ n))
           && field n (field "$defs" a) <> None
           && field "structuredContent" (field "result" r) = a
-          && field "isError" (field "result" r) = Some (J.Bool false))
+          && field "isError" (field "result" r) = Some (`Bool false))
        names);
   (* a definition a schema leaves to describe is a $defs entry that only says so *)
   let left =
     List.concat_map
       (fun t ->
          match field "$defs" (field "inputSchema" (Some t)) with
-         | Some (J.Object ds) ->
+         | Some (`Assoc ds) ->
            List.filter_map
              (fun (k, d) ->
                 match
@@ -493,10 +486,10 @@ let () =
     (left <> [] && List.for_all (fun k -> List.mem k names) left);
   check
     "C5 another name is -32602"
-    (code (call 3 [ "name", J.String "Nope" ]) = Some (J.Int (-32602)));
+    (code (call 3 [ "name", `String "Nope" ]) = Some (`Int (-32602)));
   check
     "C5 another argument is -32602"
-    (code (call 4 [ "name", J.String "Eff"; "x", J.Int 1 ]) = Some (J.Int (-32602)))
+    (code (call 4 [ "name", `String "Eff"; "x", `Int 1 ]) = Some (`Int (-32602)))
 ;;
 
 let () =

@@ -6,8 +6,9 @@
    and leave it to `describe`, which answers each definition's schema from Lean's table, and the
    schema of every method's result under `Result`;
    Tool.serve owns actions, queries and refusals. Yojson.Raw keeps transport numbers
-   exact, including request IDs outside OCaml int. Kit_tool admits tool arguments separately.
-   Depends on: Effect4_gen.Api_gen, Kit_tool, Yojson.
+   exact, including request IDs outside OCaml int. A tool's arguments become the profile's tree
+   (Kit.Json.of_raw) inside the request this server writes around them, and Lean reads them.
+   Depends on: Effect4_gen.Api_gen, Kit (Kit.Json), Kit_tool, Yojson.
 
    Behaviours, tested by engine/test/kit/test_mcp.ml:
    M1 Select the supported version; require initialization before tools; never answer a
@@ -17,7 +18,9 @@
       method carries no output schema: every call answers one envelope, whose closed schema is
       `describe`'s `Result`, so `tools/list` holds it once, on request.
    M3 Return the generated reply as structuredContent and identical JSON text. Domain refusals
-      set isError. Unknown tools and invalid arguments are JSON-RPC -32602 errors.
+      set isError. Unknown tools and invalid arguments are JSON-RPC -32602 errors; an argument
+      the profile's reader refuses is named in the error's data by its site in the arguments and
+      its reason (`Tool.Native.relativeRefusal`).
    M4 Retain request IDs, validate message envelopes, and keep protocol errors outside Tool.serve.
       Transport JSON accepts fractional metadata; tool numbers keep CodecProfile's domain.
    M5 List the generated `describe` tool after the methods, by the same function, with its own
@@ -31,6 +34,7 @@
 
 module G = Effect4_gen.Api_gen
 module J = Yojson.Raw
+module K = Kit.Json
 
 let string s = `Stringlit (Yojson.Safe.to_string (`String s))
 
@@ -125,15 +129,18 @@ let create () =
   }
 ;;
 
-let envelope (entry : G.effect4_tool_methods_entry) args : J.t =
-  let payload =
-    `Assoc
-      [ "_tag", string entry.kind
-      ; entry.field, `Assoc (("_tag", string entry.case_name) :: args)
-      ]
-  in
-  `Assoc
-    [ "method", string entry.listing.name; "version", `Intlit "1"; "payload", payload ]
+(* The request this server writes around a tool's arguments: the method's case object, holding
+   the arguments, at `payload.<field>`, under the method's name and version 1 (Lean's entry). *)
+let envelope (entry : G.effect4_tool_methods_entry) (args : (string * K.t) list) : K.t =
+  K.NatJson_obj
+    [ "method", K.NatJson_str entry.listing.name
+    ; "version", K.NatJson_nat 1
+    ; ( "payload"
+      , K.NatJson_obj
+          [ "_tag", K.NatJson_str entry.kind
+          ; entry.field, K.NatJson_obj (("_tag", K.NatJson_str entry.case_name) :: args)
+          ] )
+    ]
 ;;
 
 let reply id result = `Assoc [ "jsonrpc", string "2.0"; "id", id; "result", result ]
@@ -187,33 +194,43 @@ let call server id name args =
   | None when String.equal name describe.listing.name -> definition id args
   | None -> failure id (-32602) ("Unknown tool: " ^ name)
   | Some entry ->
-    let line = Kit_tool.serve_line server.session (J.to_string (envelope entry args)) in
-    (match parse line with
-     | Ok (`Assoc _ as value) ->
-       (match field "refused" value with
-        | Some why ->
-          let input_fault =
-            Option.is_some (text why)
-            || (has_string "_tag" "codec" why && has_string "why" "unreadable" why)
+    (match K.of_raw (`Assoc args) with
+     | Error why ->
+       failure
+         ~data:(`Assoc [ "refused", string why ])
+         id
+         (-32602)
+         "Arguments do not match the tool schema"
+     | Ok (K.NatJson_obj args) ->
+       (match Kit_tool.serve_tree server.session (envelope entry args) with
+        | Ok answer ->
+          let line = K.render answer in
+          (match parse line with
+           | Ok (`Assoc _ as value) ->
+             reply
+               id
+               (`Assoc
+                   [ ( "content"
+                     , `List [ `Assoc [ "type", string "text"; "text", string line ] ] )
+                   ; "structuredContent", value
+                   ; "isError", `Bool (is_refusal value)
+                   ])
+           | _ -> failure id (-32603) "Tool returned an invalid JSON object")
+        | Error why ->
+          (* The codec's refusal is the arguments': its site is placed in them. Any other wire
+             refusal is this server's own. *)
+          let why =
+            G.tool_native_relative_refusal
+              [ G.JsonStep_key "payload"; G.JsonStep_key entry.field ]
+              why
           in
-          let internal = not input_fault in
-          failure
-            ~data:value
-            id
-            (if internal then -32603 else -32602)
-            (if internal
-             then "Tool reply cannot cross the wire"
-             else "Arguments do not match the tool schema")
-        | None ->
-          reply
-            id
-            (`Assoc
-                [ ( "content"
-                  , `List [ `Assoc [ "type", string "text"; "text", string line ] ] )
-                ; "structuredContent", value
-                ; "isError", `Bool (is_refusal value)
-                ]))
-     | _ -> failure id (-32603) "Tool returned an invalid JSON object")
+          let data = J.from_string (K.render (Kit_tool.wire_refused why)) in
+          (match why with
+           | G.Effect4_tool_wire_refusal_codec
+               (G.Effect4_tool_codec_profile_refusal_unreadable _) ->
+             failure ~data id (-32602) "Arguments do not match the tool schema"
+           | _ -> failure ~data id (-32603) "Tool reply cannot cross the wire"))
+     | Ok _ -> failure id (-32603) "Tool arguments did not become an object")
 ;;
 
 let initialize server id params =
@@ -381,5 +398,5 @@ let message server value =
 let line server input =
   match parse input with
   | Error why -> Some (J.to_string (failure `Null (-32700) why))
-  | Ok value -> Option.map J.to_string (message server value)
+  | Ok value -> Option.map (fun reply -> J.to_string reply) (message server value)
 ;;

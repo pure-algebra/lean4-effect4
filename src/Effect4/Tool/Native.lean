@@ -11,8 +11,10 @@ it. This module is what it is generated from (`ocaml/gen/roots.json`, the `api_g
 - A `Session` holds the tool state and the checker memo. The generated interface keeps it abstract
   (`roots.json`, `abstract`), so only `start` and `serve` build one: a native caller cannot forge
   a state or a memo.
-- Envelopes cross as canonical value trees. The shell's one JSON reader and printer (`Kit_json`,
-  driven by each carrier's shape) does the text; the semantics is `Wire.serveEnvelope`'s.
+- Envelopes cross as canonical value trees, or as the profile's JSON tree (`serveTree`). The
+  shell parses the text into the tree and renders the tree as text (`NatJson.render`); reading the
+  tree under the envelope's shape, with a located refusal, and printing the reply are Lean's
+  (`Store/Domain/ShapeJson.lean`). The semantics is `Wire.serveEnvelope`'s.
 - `serve` learns each reply's checked trace; `serveUncached` is its control. The memo changes
   cost, never an answer (`serve_transparent`), so the shell's controls compare the two.
 
@@ -40,12 +42,15 @@ def start : Session := ⟨empty, Memo.empty⟩
 codec within the JSON profile's naturals (`CodecProfile.carries`), serve it at the version-1
 connection, and write the reply envelope's tree, refusing one the profile cannot carry. These are
 the JSON driver's refusals (`CodecProfile.read`, `CodecProfile.write`), so both drivers keep the
-same state. -/
+same state. A value tree has no JSON place finer than its root, so its refusals are located
+there. -/
 def answer (o : Oracle) (state : State) (v : Val) : Checked (Except Wire.Refusal (Val × State)) :=
   match Canonical.ofVal (α := Wire.Envelope Request) v with
-  | none => pure (.error (.codec .unreadable))
+  | none => pure (.error (.codec (.unreadable ⟨.value [], .carrierValue⟩)))
   | some envelope =>
-    if !CodecProfile.carries v then pure (.error (.codec .unreadable)) else do
+    if !CodecProfile.carries v then
+      pure (.error (.codec (.unreadable ⟨.value [], .naturalOutsideProfile CodecProfile.natLimit⟩)))
+    else do
     match ← Wire.serveEnvelope o Wire.Connection.v1 state envelope with
     | .error why => pure (.error why)
     | .ok (next, reply) =>
@@ -75,6 +80,25 @@ def refusalShape : ShapeDoc := shape Wire.Refusal
 
 /-- A wire refusal's value tree. -/
 def refusalToVal (why : Wire.Refusal) : Val := Canonical.toVal why
+
+/-- **One request's JSON tree through the session**: read under the request envelope's shape by
+the profile's located reader, served (`serve`), and the reply envelope printed as the tools print
+it (`ShapeDoc.printTree`). A tree that does not read is the codec's refusal at its place, and the
+session stays as it was. -/
+def serveTree (session : Session) (t : NatJson) : Except Wire.Refusal (NatJson × Session) :=
+  match envelopeShape.readLocated t with
+  | .error why => .error (.codec (.unreadable why))
+  | .ok v => (serve session v).map fun (reply, next) => (replyEnvelopeShape.printTree reply, next)
+
+/-- A wire refusal as the profile's JSON tree, as the tools print it. -/
+def refusalTree (why : Wire.Refusal) : NatJson := refusalShape.printTree (refusalToVal why)
+
+/-- **A refusal relative to a part of the request**: a shell that writes a request around a part
+the agent wrote (the MCP server writes a tool's arguments at `payload.<field>`) places the codec's
+refusal in that part by removing the part's path from the site. Any other refusal is unchanged. -/
+def relativeRefusal (base : List JsonStep) : Wire.Refusal → Wire.Refusal
+  | .codec (.unreadable why) => .codec (.unreadable (why.mapSite (JsonSite.relative base)))
+  | other => other
 
 /-- The tool table an MCP server lists (`Tool/Methods.lean`). -/
 def methods : List Methods.Entry := Methods.entries

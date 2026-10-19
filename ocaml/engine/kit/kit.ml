@@ -254,22 +254,92 @@ let replays (a : app) p (t : trace) =
 let format_version = 2
 
 module Json = struct
-  module J = Eff_json_text
+  type t = G.nat_json =
+    | NatJson_null
+    | NatJson_bool of bool
+    | NatJson_nat of int
+    | NatJson_numeral of string
+    | NatJson_str of string
+    | NatJson_arr of t list
+    | NatJson_obj of (string * t) list
 
-  type t = J.t
+  type refusal = (G.json_site, G.json_reason) G.located
 
-  let parse = Kit_json.parse
-  let render = Kit_json.render
-  let of_doc doc ofv j = Option.bind (Kit_json.read doc j) ofv
+  exception Not_json of string
+
+  let utf8 s =
+    if String.is_valid_utf_8 s then s else raise (Not_json "a string that is not UTF-8")
+  ;;
+
+  (* yojson keeps a string as its literal, quotes and escapes included; Yojson.Safe reads it. *)
+  let string_literal s =
+    match Yojson.Safe.from_string s with
+    | `String v -> utf8 v
+    | _ -> raise (Not_json "a string literal that does not read")
+    | exception Yojson.Json_error why -> raise (Not_json why)
+  ;;
+
+  (* The profile's tree of a yojson value whose literals are raw: a number is a natural where its
+     text is digits that fit the host's integers, else a numeral with its text, which Lean's
+     reader refuses at its place (Store/Domain/ShapeJson.lean). *)
+  let rec tree (v : Yojson.Raw.t) : t =
+    match v with
+    | `Null -> NatJson_null
+    | `Bool b -> NatJson_bool b
+    | `Intlit s ->
+      (match int_of_string_opt s with
+       | Some n when n >= 0 && not (String.starts_with ~prefix:"-" s) -> NatJson_nat n
+       | _ -> NatJson_numeral s)
+    | `Floatlit ("NaN" | "Infinity" | "-Infinity") ->
+      raise (Not_json "NaN and Infinity are no JSON numbers")
+    | `Floatlit s -> NatJson_numeral s
+    | `Stringlit s -> NatJson_str (string_literal s)
+    | `List xs -> NatJson_arr (List.map tree xs)
+    | `Assoc kvs -> NatJson_obj (List.map (fun (k, x) -> utf8 k, tree x) kvs)
+    | `Tuple _ | `Variant _ ->
+      raise (Not_json "a yojson extension (a tuple or a variant)")
+  ;;
+
+  let of_raw v =
+    match tree v with
+    | t -> Ok t
+    | exception Not_json why -> Error why
+  ;;
+
+  let parse s =
+    if not (String.is_valid_utf_8 s)
+    then Error "the text is not UTF-8"
+    else (
+      match Yojson.Raw.from_string s with
+      | v -> of_raw v
+      | exception Yojson.Json_error why ->
+        Error (String.map (fun c -> if Char.equal c '\n' then ' ' else c) why))
+  ;;
+
+  let render (t : t) =
+    let b = Buffer.create 256 in
+    List.iter (fun c -> Buffer.add_char b (Char.chr c)) (G.nat_json_render t);
+    Buffer.contents b
+  ;;
+
+  let read doc j : (Val.t, refusal) result = G.store_shape_doc_read_located doc j
+  let print doc v : t = G.store_shape_doc_print_tree doc v
+
+  let of_doc doc ofv j =
+    match read doc j with
+    | Ok v -> ofv v
+    | Error _ -> None
+  ;;
+
   let program j = of_doc G.run_kit_program_shape G.run_kit_program_of_val j
-  let program_json p = Kit_json.print G.run_kit_program_shape (G.run_kit_program_to_val p)
+  let program_json p = print G.run_kit_program_shape (G.run_kit_program_to_val p)
   let rows j = of_doc G.run_kit_rows_shape G.run_kit_rows_of_val j
-  let rows_json rows = Kit_json.print G.run_kit_rows_shape (G.run_kit_rows_to_val rows)
+  let rows_json rows = print G.run_kit_rows_shape (G.run_kit_rows_to_val rows)
   let services j = of_doc G.run_kit_services_shape G.run_kit_services_of_val j
 
   let exits (j : t) =
     match j with
-    | J.Array js ->
+    | NatJson_arr js ->
       List.fold_right
         (fun j acc ->
            Option.bind acc (fun xs ->
@@ -281,105 +351,107 @@ module Json = struct
     | _ -> None
   ;;
 
-  let exit_json ex = Kit_json.print G.run_kit_exit_shape (G.run_kit_exit_to_val ex)
-  let value_json v = Kit_json.print G.run_kit_val_shape v
-  let ty_json t = Kit_json.print G.run_kit_ty_shape (G.run_kit_ty_to_val t)
-  let eff_ty_json t = Kit_json.print G.run_kit_eff_ty_shape (G.run_kit_eff_ty_to_val t)
-  let refusal_json r = Kit_json.print G.run_kit_refusal_shape (G.run_kit_refusal_to_val r)
-  let admit_json r = Kit_json.print G.run_kit_admit_shape (G.run_kit_admit_to_val r)
+  let exit_json ex = print G.run_kit_exit_shape (G.run_kit_exit_to_val ex)
+  let value_json v = print G.run_kit_val_shape v
+  let ty_json t = print G.run_kit_ty_shape (G.run_kit_ty_to_val t)
+  let eff_ty_json t = print G.run_kit_eff_ty_shape (G.run_kit_eff_ty_to_val t)
+  let refusal_json r = print G.run_kit_refusal_shape (G.run_kit_refusal_to_val r)
+  let admit_json r = print G.run_kit_admit_shape (G.run_kit_admit_to_val r)
 
   let check_json a p =
     match check a p with
     | Ok t ->
       (match admit a p with
        | Some why ->
-         J.Object [ "status", J.String "refused"; "admission", admit_json why ]
+         NatJson_obj [ "status", NatJson_str "refused"; "admission", admit_json why ]
        | None ->
-         J.Object
-           [ "status", J.String "ok"
+         NatJson_obj
+           [ "status", NatJson_str "ok"
            ; "type", eff_ty_json t
            ; ( "text"
-             , J.String
+             , NatJson_str
                  (Printf.sprintf
                     "Effect<%s, %s>"
                     (ty_text t.EffTy.answer)
                     (ty_text t.EffTy.error)) )
            ])
-    | Error r -> J.Object [ "status", J.String "refused"; "refusal", refusal_json r ]
+    | Error r ->
+      NatJson_obj [ "status", NatJson_str "refused"; "refusal", refusal_json r ]
   ;;
 
   let row_fields (a : app) i =
-    ("row", J.Int i)
+    ("row", NatJson_nat i)
     ::
     (match List.nth_opt a.G.rows i with
-     | Some (r : Row.t) -> [ "name", J.String r.Row.name ]
+     | Some (r : Row.t) -> [ "name", NatJson_str r.Row.name ]
      | None -> [])
   ;;
 
   let call_json a (i, v, ex) =
-    J.Object (row_fields a i @ [ "request", value_json v; "answer", exit_json ex ])
+    NatJson_obj (row_fields a i @ [ "request", value_json v; "answer", exit_json ex ])
   ;;
 
   let fault_json = function
     | Some (ReplyFault_answerType t) ->
-      [ "fault", J.String "answerType"; "expected", J.String (ty_text t) ]
+      [ "fault", NatJson_str "answerType"; "expected", NatJson_str (ty_text t) ]
     | Some (ReplyFault_errorType t) ->
-      [ "fault", J.String "errorType"; "expected", J.String (ty_text t) ]
-    | Some ReplyFault_reservedDefect -> [ "fault", J.String "reservedDefect" ]
-    | None -> [ "fault", J.String "refusedByTheEngine" ]
+      [ "fault", NatJson_str "errorType"; "expected", NatJson_str (ty_text t) ]
+    | Some ReplyFault_reservedDefect -> [ "fault", NatJson_str "reservedDefect" ]
+    | None -> [ "fault", NatJson_str "refusedByTheEngine" ]
   ;;
 
   let stop_json a = function
-    | Finished ex -> [ "status", J.String "finished"; "exit", exit_json ex ]
+    | Finished ex -> [ "status", NatJson_str "finished"; "exit", exit_json ex ]
     | Waiting (i, v) ->
-      [ "status", J.String "waiting"
-      ; "waiting", J.Object (row_fields a i @ [ "request", value_json v ])
+      [ "status", NatJson_str "waiting"
+      ; "waiting", NatJson_obj (row_fields a i @ [ "request", value_json v ])
       ]
     | Refused (i, v, ex, f) ->
-      [ "status", J.String "refused"
+      [ "status", NatJson_str "refused"
       ; ( "refused"
-        , J.Object
+        , NatJson_obj
             (row_fields a i
              @ [ "request", value_json v; "reply", exit_json ex ]
              @ fault_json f) )
       ]
     | Unsettled ->
-      [ "status", J.String "unsettled"
-      ; "note", J.String "the budget ended first: a finite probe, not a divergence"
+      [ "status", NatJson_str "unsettled"
+      ; "note", NatJson_str "the budget ended first: a finite probe, not a divergence"
       ]
-    | Stopped why -> [ "status", J.String "stopped"; "note", J.String why ]
+    | Stopped why -> [ "status", NatJson_str "stopped"; "note", NatJson_str why ]
   ;;
 
   let trace_json a (t : trace) =
-    J.Object
+    NatJson_obj
       (stop_json a t.stop
-       @ [ "calls", J.Array (List.map (call_json a) (calls t))
-         ; "tape", J.Array (List.map exit_json (tape_of t))
+       @ [ "calls", NatJson_arr (List.map (call_json a) (calls t))
+         ; "tape", NatJson_arr (List.map exit_json (tape_of t))
          ])
   ;;
 
   let report_json a (r : 's report) =
-    J.Object
+    NatJson_obj
       ((match r.budget with
-        | Some k -> [ "budget", J.Int k ]
+        | Some k -> [ "budget", NatJson_nat k ]
         | None -> [])
        @ stop_json a r.trace.stop
-       @ [ "via", J.String (if r.by_tree then "tree" else "machine")
-         ; "calls", J.Array (List.map (call_json a) (calls r.trace))
+       @ [ "via", NatJson_str (if r.by_tree then "tree" else "machine")
+         ; "calls", NatJson_arr (List.map (call_json a) (calls r.trace))
          ]
        @ (match r.agrees with
-          | Some b -> [ "machine", J.String (if b then "agrees" else "disagrees") ]
+          | Some b -> [ "machine", NatJson_str (if b then "agrees" else "disagrees") ]
           | None -> [])
        @
        if List.is_empty r.frames
        then []
        else
          [ ( "frames"
-           , J.Array
+           , NatJson_arr
                (List.mapi
                   (fun k t ->
                      match trace_json a t with
-                     | J.Object fields -> J.Object (("budget", J.Int k) :: fields)
+                     | NatJson_obj fields ->
+                       NatJson_obj (("budget", NatJson_nat k) :: fields)
                      | j -> j)
                   r.frames) )
          ])

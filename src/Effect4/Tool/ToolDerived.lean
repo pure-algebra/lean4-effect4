@@ -24,11 +24,13 @@
 --    Effect4.Tool.ActionAnswer Except@Effect4.Tool.Refusal@Effect4.Tool.ActionAnswer \
 --    Effect4.Program.Suggest.Suggestion Effect4.Tool.RunAnswer Effect4.Tool.PreviewRun \
 --    Effect4.Tool.PreviewAnswer Effect4.Tool.Answer \
---    Except@Effect4.Tool.Refusal@Effect4.Tool.Answer Effect4.Tool.Reply \
+--    Except@Effect4.Tool.Refusal@Effect4.Tool.Answer Effect4.Tool.Reply Effect4.JsonStep \
+--    Effect4.JsonSite Effect4.Store.JsonReason \
+--    Effect4.Located@Effect4.JsonSite@Effect4.Store.JsonReason \
 --    Effect4.Tool.CodecProfile.Refusal Effect4.Tool.Wire.Refusal \
 --    Effect4.Tool.Wire.Envelope@Effect4.Tool.Request \
 --    Effect4.Tool.Wire.Envelope@Effect4.Tool.Reply
--- Carriers read from: Effect4.Program.Sketch, Effect4.Program.Typing.Focus, Effect4.Program.Edit, Effect4.Program.Typing.SourceDocument, Effect4.Program.Typing.SourceSession, Effect4.Program.Typing.FillSet, Effect4.Program.Typing.Suggest, Effect4.Api, Effect4.Run.LiveRecord, Effect4.Run.Event, Effect4.Program.Typing.Call, Effect4.Run.View, Effect4.Machine.Wake, Effect4.Machine.Alphabets, Effect4.Machine.Stores, Effect4.Program.Compile, Effect4.Machine.Context, Effect4.Run.Preview, Effect4.Run.Tree, Effect4.Tool.Origin, Effect4.Tool.Protocol, Effect4.Program.Typing.Table, Init.Prelude, Effect4.Tool.CodecProfile, Effect4.Tool.WireTypes
+-- Carriers read from: Effect4.Program.Sketch, Effect4.Program.Typing.Focus, Effect4.Program.Edit, Effect4.Program.Typing.SourceDocument, Effect4.Program.Typing.SourceSession, Effect4.Program.Typing.FillSet, Effect4.Program.Typing.Suggest, Effect4.Api, Effect4.Run.LiveRecord, Effect4.Run.Event, Effect4.Program.Typing.Call, Effect4.Run.View, Effect4.Machine.Wake, Effect4.Machine.Alphabets, Effect4.Machine.Stores, Effect4.Program.Compile, Effect4.Machine.Context, Effect4.Run.Preview, Effect4.Run.Tree, Effect4.Tool.Origin, Effect4.Tool.Protocol, Effect4.Program.Typing.Table, Init.Prelude, Effect4.Data.NatJson, Effect4.Store.Domain.ShapeJson, Effect4.Data.Located, Effect4.Tool.CodecProfile, Effect4.Tool.WireTypes
 import Effect4.Tool.Serve
 import Effect4.Tool.WireTypes
 import Effect4.Tool.CheckDerived
@@ -8145,38 +8147,361 @@ instance instCanonical : Canonical (_root_.Effect4.Tool.Reply) :=
 
 end T_95_root_95__46_Effect4_46_Tool_46_ReplyC
 
+namespace T_95_root_95__46_Effect4_46_JsonStepC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "Effect4.JsonStep"
+     [("key", 0, [("name", (shape _root_.String).root)]),
+      ("index", 1, [("n", (shape _root_.Nat).root)])],
+   (shape _root_.String).defs ++ (shape _root_.Nat).defs⟩
+
+def toVal : _root_.Effect4.JsonStep → Val
+  | .key a0 => .ctor 0 [Canonical.toVal a0]
+  | .index a0 => .ctor 1 [Canonical.toVal a0]
+
+def ofVal : Val → Option (_root_.Effect4.JsonStep)
+  | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .key
+  | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .index
+  | _ => none
+
+/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
+
+theorem ofVal_arm0 (v0 : Val) :
+    ofVal (.ctor 0 [v0]) =
+      (Canonical.ofVal (α := _root_.String) v0).map .key := rfl
+theorem ofVal_arm1 (v0 : Val) :
+    ofVal (.ctor 1 [v0]) =
+      (Canonical.ofVal (α := _root_.Nat) v0).map .index := rfl
+
+theorem ofVal_toVal (a : _root_.Effect4.JsonStep) : ofVal (toVal a) = some a := by
+  cases a with
+  | «key» a0 => simp only [toVal, ofVal_arm0, Canonical.ofVal_toVal, Option.map_some]
+  | «index» a0 => simp only [toVal, ofVal_arm1, Canonical.ofVal_toVal, Option.map_some]
+
+theorem lift_T_95_root_95__46_String (x : _root_.String) :
+    acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+    _ _ (Canonical.fits x)
+theorem lift_T_95_root_95__46_Nat (x : _root_.Nat) :
+    acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.JsonStep) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «key» a0 =>
+    exact accepts_sum _ _ _ 0 "key" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_String a0) (acceptsFields_nil _))
+  | «index» a0 =>
+    exact accepts_sum _ _ _ 1 "index" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Nat a0) (acceptsFields_nil _))
+
+instance instCanonical : Canonical (_root_.Effect4.JsonStep) :=
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end T_95_root_95__46_Effect4_46_JsonStepC
+
+namespace T_95_root_95__46_Effect4_46_JsonSiteC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "Effect4.JsonSite"
+     [("value", 0, [("path", (shape (@_root_.List (_root_.Effect4.JsonStep))).root)]),
+      ("missing", 1, [("parent", (shape (@_root_.List (_root_.Effect4.JsonStep))).root),
+        ("field", (shape _root_.String).root)]),
+      ("schema", 2, [("path", (shape (@_root_.List (_root_.Effect4.JsonStep))).root)])],
+   (shape (@_root_.List (_root_.Effect4.JsonStep))).defs ++ (shape _root_.String).defs⟩
+
+def toVal : _root_.Effect4.JsonSite → Val
+  | .value a0 => .ctor 0 [Canonical.toVal a0]
+  | .missing a0 a1 => .ctor 1 [Canonical.toVal a0, Canonical.toVal a1]
+  | .schema a0 => .ctor 2 [Canonical.toVal a0]
+
+def ofVal : Val → Option (_root_.Effect4.JsonSite)
+  | .ctor 0 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.Effect4.JsonStep))) v0).map .value
+  | .ctor 1 [v0, v1] =>
+    match Canonical.ofVal (α := (@_root_.List (_root_.Effect4.JsonStep))) v0,
+        Canonical.ofVal (α := _root_.String) v1 with
+    | some a0, some a1 => some (.missing a0 a1)
+    | _, _ => none
+  | .ctor 2 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.Effect4.JsonStep))) v0).map .schema
+  | _ => none
+
+/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
+
+theorem ofVal_arm0 (v0 : Val) :
+    ofVal (.ctor 0 [v0]) =
+      (Canonical.ofVal (α := (@_root_.List (_root_.Effect4.JsonStep))) v0).map .value := rfl
+theorem ofVal_arm1 (v0 : Val) (v1 : Val) :
+    ofVal (.ctor 1 [v0, v1]) =
+      (match Canonical.ofVal (α := (@_root_.List (_root_.Effect4.JsonStep))) v0,
+          Canonical.ofVal (α := _root_.String) v1 with
+      | some a0, some a1 => some (.missing a0 a1)
+      | _, _ => none) := rfl
+theorem ofVal_arm2 (v0 : Val) :
+    ofVal (.ctor 2 [v0]) =
+      (Canonical.ofVal (α := (@_root_.List (_root_.Effect4.JsonStep))) v0).map .schema := rfl
+
+theorem ofVal_toVal (a : _root_.Effect4.JsonSite) : ofVal (toVal a) = some a := by
+  cases a with
+  | «value» a0 => simp only [toVal, ofVal_arm0, Canonical.ofVal_toVal, Option.map_some]
+  | «missing» a0 a1 => simp only [toVal, ofVal_arm1, Canonical.ofVal_toVal]
+  | «schema» a0 => simp only [toVal, ofVal_arm2, Canonical.ofVal_toVal, Option.map_some]
+
+theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_JsonStep_41_ (x : (@_root_.List (_root_.Effect4.JsonStep))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.JsonStep))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+    _ _ (Canonical.fits x)
+theorem lift_T_95_root_95__46_String (x : _root_.String) :
+    acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.JsonSite) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «value» a0 =>
+    exact accepts_sum _ _ _ 0 "value" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_JsonStep_41_ a0) (acceptsFields_nil _))
+  | «missing» a0 a1 =>
+    exact accepts_sum _ _ _ 1 "missing" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_JsonStep_41_ a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_String a1) (acceptsFields_nil _)))
+  | «schema» a0 =>
+    exact accepts_sum _ _ _ 2 "schema" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_JsonStep_41_ a0) (acceptsFields_nil _))
+
+instance instCanonical : Canonical (_root_.Effect4.JsonSite) :=
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end T_95_root_95__46_Effect4_46_JsonSiteC
+
+namespace T_95_root_95__46_Effect4_46_Store_46_JsonReasonC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "Effect4.Store.JsonReason"
+     [("expected", 0, [("shape", (shape _root_.Effect4.Store.Shape).root)]),
+      ("unknownField", 1, [("name", (shape _root_.String).root)]),
+      ("duplicateField", 2, [("name", (shape _root_.String).root)]),
+      ("unknownCase", 3, [("name", (shape _root_.String).root)]),
+      ("naturalOutsideProfile", 4, [("limit", (shape _root_.Nat).root)]),
+      ("carrierValue", 5, []),
+      ("unsupportedProfile", 6, []),
+      ("budget", 7, [])],
+   (shape _root_.Effect4.Store.Shape).defs ++ (shape _root_.String).defs ++
+     (shape _root_.Nat).defs⟩
+
+def toVal : _root_.Effect4.Store.JsonReason → Val
+  | .expected a0 => .ctor 0 [Canonical.toVal a0]
+  | .unknownField a0 => .ctor 1 [Canonical.toVal a0]
+  | .duplicateField a0 => .ctor 2 [Canonical.toVal a0]
+  | .unknownCase a0 => .ctor 3 [Canonical.toVal a0]
+  | .naturalOutsideProfile a0 => .ctor 4 [Canonical.toVal a0]
+  | .carrierValue => .ctor 5 []
+  | .unsupportedProfile => .ctor 6 []
+  | .budget => .ctor 7 []
+
+def ofVal : Val → Option (_root_.Effect4.Store.JsonReason)
+  | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Store.Shape) v0).map .expected
+  | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .unknownField
+  | .ctor 2 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .duplicateField
+  | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .unknownCase
+  | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .naturalOutsideProfile
+  | .ctor 5 [] => some .carrierValue
+  | .ctor 6 [] => some .unsupportedProfile
+  | .ctor 7 [] => some .budget
+  | _ => none
+
+/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
+
+theorem ofVal_arm0 (v0 : Val) :
+    ofVal (.ctor 0 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.Store.Shape) v0).map .expected := rfl
+theorem ofVal_arm1 (v0 : Val) :
+    ofVal (.ctor 1 [v0]) =
+      (Canonical.ofVal (α := _root_.String) v0).map .unknownField := rfl
+theorem ofVal_arm2 (v0 : Val) :
+    ofVal (.ctor 2 [v0]) =
+      (Canonical.ofVal (α := _root_.String) v0).map .duplicateField := rfl
+theorem ofVal_arm3 (v0 : Val) :
+    ofVal (.ctor 3 [v0]) =
+      (Canonical.ofVal (α := _root_.String) v0).map .unknownCase := rfl
+theorem ofVal_arm4 (v0 : Val) :
+    ofVal (.ctor 4 [v0]) =
+      (Canonical.ofVal (α := _root_.Nat) v0).map .naturalOutsideProfile := rfl
+
+theorem ofVal_toVal (a : _root_.Effect4.Store.JsonReason) : ofVal (toVal a) = some a := by
+  cases a with
+  | «expected» a0 => simp only [toVal, ofVal_arm0, Canonical.ofVal_toVal, Option.map_some]
+  | «unknownField» a0 => simp only [toVal, ofVal_arm1, Canonical.ofVal_toVal, Option.map_some]
+  | «duplicateField» a0 => simp only [toVal, ofVal_arm2, Canonical.ofVal_toVal, Option.map_some]
+  | «unknownCase» a0 => simp only [toVal, ofVal_arm3, Canonical.ofVal_toVal, Option.map_some]
+  | «naturalOutsideProfile» a0 => simp only [toVal, ofVal_arm4, Canonical.ofVal_toVal, Option.map_some]
+  | «carrierValue» => rfl
+  | «unsupportedProfile» => rfl
+  | «budget» => rfl
+
+theorem lift_T_95_root_95__46_Effect4_46_Store_46_Shape (x : _root_.Effect4.Store.Shape) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Store.Shape).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_T_95_root_95__46_String (x : _root_.String) :
+    acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_T_95_root_95__46_Nat (x : _root_.Nat) :
+    acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Store.JsonReason) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «expected» a0 =>
+    exact accepts_sum _ _ _ 0 "expected" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Store_46_Shape a0) (acceptsFields_nil _))
+  | «unknownField» a0 =>
+    exact accepts_sum _ _ _ 1 "unknownField" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_String a0) (acceptsFields_nil _))
+  | «duplicateField» a0 =>
+    exact accepts_sum _ _ _ 2 "duplicateField" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_String a0) (acceptsFields_nil _))
+  | «unknownCase» a0 =>
+    exact accepts_sum _ _ _ 3 "unknownCase" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_String a0) (acceptsFields_nil _))
+  | «naturalOutsideProfile» a0 =>
+    exact accepts_sum _ _ _ 4 "naturalOutsideProfile" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Nat a0) (acceptsFields_nil _))
+  | «carrierValue» =>
+    exact accepts_sum _ _ _ 5 "carrierValue" [] [] rfl (acceptsFields_nil _)
+  | «unsupportedProfile» =>
+    exact accepts_sum _ _ _ 6 "unsupportedProfile" [] [] rfl (acceptsFields_nil _)
+  | «budget» =>
+    exact accepts_sum _ _ _ 7 "budget" [] [] rfl (acceptsFields_nil _)
+
+instance instCanonical : Canonical (_root_.Effect4.Store.JsonReason) :=
+  ⟨shapeDoc, toVal, guarded toVal ofVal,
+    fun a => guarded_toVal _ _ a (ofVal_toVal a), fun h => guarded_exact h, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end T_95_root_95__46_Effect4_46_Store_46_JsonReasonC
+
+namespace T_64__95_root_95__46_Effect4_46_Located_32__40__95_root_95__46_Effect4_46_JsonSite_41__32__40__95_root_95__46_Effect4_46_Store_46_JsonReason_41_C
+
+def shapeDoc : ShapeDoc :=
+  ⟨.struct "Effect4.Located(Effect4.JsonSite, Effect4.Store.JsonReason)" [
+     ("site", (shape _root_.Effect4.JsonSite).root),
+     ("reason", (shape _root_.Effect4.Store.JsonReason).root)],
+   (shape _root_.Effect4.JsonSite).defs ++ (shape _root_.Effect4.Store.JsonReason).defs⟩
+
+def toVal : @_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason) → Val
+  | .mk a0 a1 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1]
+
+def ofVal : Val → Option (@_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason))
+  | .ctor 0 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Effect4.JsonSite) v0,
+        Canonical.ofVal (α := _root_.Effect4.Store.JsonReason) v1 with
+    | some a0, some a1 => some ⟨a0, a1⟩
+    | _, _ => none
+  | _ => none
+
+theorem ofVal_toVal (a : @_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason)) : ofVal (toVal a) = some a := by
+  obtain ⟨a0, a1⟩ := a
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : @_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason)} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · next v0 v1 =>
+    split at h
+    · next b0 b1 h0 h1 =>
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    · exact nomatch h
+  · exact nomatch h
+
+theorem lift_T_95_root_95__46_Effect4_46_JsonSite (x : _root_.Effect4.JsonSite) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.JsonSite).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+    _ _ (Canonical.fits x)
+theorem lift_T_95_root_95__46_Effect4_46_Store_46_JsonReason (x : _root_.Effect4.Store.JsonReason) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Store.JsonReason).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : @_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason)) : shapeDoc.accepts (toVal a) = true := by
+  obtain ⟨a0, a1⟩ := a
+  apply accepts_struct
+  exact
+    (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_JsonSite a0)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Store_46_JsonReason a1) (acceptsFields_nil _)))
+
+instance instCanonical : Canonical (@_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason)) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end T_64__95_root_95__46_Effect4_46_Located_32__40__95_root_95__46_Effect4_46_JsonSite_41__32__40__95_root_95__46_Effect4_46_Store_46_JsonReason_41_C
+
 namespace T_95_root_95__46_Effect4_46_Tool_46_CodecProfile_46_RefusalC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Effect4.Tool.CodecProfile.Refusal"
      [("unsupportedProfile", 0, []),
-      ("unreadable", 1, []),
+      ("unreadable", 1, [
+        ("why", (shape (@_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason))).root)]),
       ("unprintable", 2, [])],
-   []⟩
+   (shape (@_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason))).defs⟩
 
 def toVal : _root_.Effect4.Tool.CodecProfile.Refusal → Val
   | .unsupportedProfile => .ctor 0 []
-  | .unreadable => .ctor 1 []
+  | .unreadable a0 => .ctor 1 [Canonical.toVal a0]
   | .unprintable => .ctor 2 []
 
 def ofVal : Val → Option (_root_.Effect4.Tool.CodecProfile.Refusal)
   | .ctor 0 [] => some .unsupportedProfile
-  | .ctor 1 [] => some .unreadable
+  | .ctor 1 [v0] => (Canonical.ofVal (α := (@_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason))) v0).map .unreadable
   | .ctor 2 [] => some .unprintable
   | _ => none
+
+/-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
+
+theorem ofVal_arm1 (v0 : Val) :
+    ofVal (.ctor 1 [v0]) =
+      (Canonical.ofVal (α := (@_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason))) v0).map .unreadable := rfl
 
 theorem ofVal_toVal (a : _root_.Effect4.Tool.CodecProfile.Refusal) : ofVal (toVal a) = some a := by
   cases a with
   | «unsupportedProfile» => rfl
-  | «unreadable» => rfl
+  | «unreadable» a0 => simp only [toVal, ofVal_arm1, Canonical.ofVal_toVal, Option.map_some]
   | «unprintable» => rfl
+
+theorem lift_T_64__95_root_95__46_Effect4_46_Located_32__40__95_root_95__46_Effect4_46_JsonSite_41__32__40__95_root_95__46_Effect4_46_Store_46_JsonReason_41_ (x : (@_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Effect4.Located (_root_.Effect4.JsonSite) (_root_.Effect4.Store.JsonReason))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => hp)
+    _ _ (Canonical.fits x)
 
 theorem fits (a : _root_.Effect4.Tool.CodecProfile.Refusal) : shapeDoc.accepts (toVal a) = true := by
   cases a with
   | «unsupportedProfile» =>
     exact accepts_sum _ _ _ 0 "unsupportedProfile" [] [] rfl (acceptsFields_nil _)
-  | «unreadable» =>
-    exact accepts_sum _ _ _ 1 "unreadable" [] [] rfl (acceptsFields_nil _)
+  | «unreadable» a0 =>
+    exact accepts_sum _ _ _ 1 "unreadable" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Effect4_46_Located_32__40__95_root_95__46_Effect4_46_JsonSite_41__32__40__95_root_95__46_Effect4_46_Store_46_JsonReason_41_ a0) (acceptsFields_nil _))
   | «unprintable» =>
     exact accepts_sum _ _ _ 2 "unprintable" [] [] rfl (acceptsFields_nil _)
 

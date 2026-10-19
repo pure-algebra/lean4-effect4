@@ -34,6 +34,7 @@ constructor	Effect4.Machine.Err.Text	Effect4.Machine.Err.text	-	Eff_types.Err.Te
 type	Effect4.Machine.Err.t	Effect4.Machine.Err	0	Eff_types.Err
 type	Effect4.Machine.Payload.t	Effect4.Machine.Payload	0	Eff_types.Payload
 type	Effect4.Machine.RefKey.t	Effect4.Machine.RefKey	0	Eff_types.RefKey
+value	Effect4.NatJson.render	Effect4.NatJson.render	-	Api_gen.nat_json_render
 constructor	Effect4.Program.ActionTerm.AwaitAll	Effect4.Program.ActionTerm.awaitAll	-	Eff_types.ActionTerm.AwaitAll
 constructor	Effect4.Program.ActionTerm.AwaitAllFailFast	Effect4.Program.ActionTerm.awaitAllFailFast	-	Eff_types.ActionTerm.AwaitAllFailFast
 constructor	Effect4.Program.ActionTerm.AwaitNewChildren	Effect4.Program.ActionTerm.awaitNewChildren	-	Eff_types.ActionTerm.AwaitNewChildren
@@ -338,6 +339,8 @@ field	Effect4.ServiceKey.service	Effect4.ServiceKey.service	-	Eff_types.ServiceK
 type	Effect4.ServiceKey.t	Effect4.ServiceKey	0	Eff_types.ServiceKey
 type	Effect4.ServiceName.t	Effect4.ServiceName	0	Eff_types.ServiceName
 type	Effect4.ServiceTypeCode.t	Effect4.ServiceTypeCode	0	Eff_types.ServiceTypeCode
+value	Effect4.Store.ShapeDoc.print_tree	Effect4.Store.ShapeDoc.printTree	-	Api_gen.store_shape_doc_print_tree
+value	Effect4.Store.ShapeDoc.read_located	Effect4.Store.ShapeDoc.readLocated	-	Api_gen.store_shape_doc_read_located
 constructor	Effect4.Store.Val.Bool	Effect4.Store.Val.bool	-	Eff_types.Val.Bool
 constructor	Effect4.Store.Val.Bytes	Effect4.Store.Val.bytes	-	Eff_types.Val.Bytes
 constructor	Effect4.Store.Val.Ctor	Effect4.Store.Val.ctor	-	Eff_types.Val.Ctor
@@ -370,8 +373,11 @@ value	Effect4.Tool.Native.envelope_shape	Effect4.Tool.Native.envelopeShape	-	Api
 value	Effect4.Tool.Native.methods	Effect4.Tool.Native.methods	-	Api_gen.tool_native_methods
 value	Effect4.Tool.Native.refusal_shape	Effect4.Tool.Native.refusalShape	-	Api_gen.tool_native_refusal_shape
 value	Effect4.Tool.Native.refusal_to_val	Effect4.Tool.Native.refusalToVal	-	Api_gen.tool_native_refusal_to_val
+value	Effect4.Tool.Native.refusal_tree	Effect4.Tool.Native.refusalTree	-	Api_gen.tool_native_refusal_tree
+value	Effect4.Tool.Native.relative_refusal	Effect4.Tool.Native.relativeRefusal	-	Api_gen.tool_native_relative_refusal
 value	Effect4.Tool.Native.reply_envelope_shape	Effect4.Tool.Native.replyEnvelopeShape	-	Api_gen.tool_native_reply_envelope_shape
 value	Effect4.Tool.Native.serve	Effect4.Tool.Native.serve	-	Api_gen.tool_native_serve
+value	Effect4.Tool.Native.serve_tree	Effect4.Tool.Native.serveTree	-	Api_gen.tool_native_serve_tree
 value	Effect4.Tool.Native.serve_uncached	Effect4.Tool.Native.serveUncached	-	Api_gen.tool_native_serve_uncached
 value	Effect4.Tool.Native.start	Effect4.Tool.Native.start	-	Api_gen.tool_native_start
 abstract	Effect4.Tool.State.t	Effect4.Tool.State	0	Api_gen.state

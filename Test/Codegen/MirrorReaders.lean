@@ -35,7 +35,6 @@ open Conform.Manifest
   for (path, key) in [
       ("ocaml/eff/eff_ctors.ml", "let ctor_index_ty : Ty.t -> int ="),
       ("ocaml/eff/eff_ctors.ml", "let ctor_name_ty : Ty.t -> string ="),
-      ("ocaml/eff/eff_json.ml", "let rec json_ty (v : Ty.t) : Eff_json_text.t ="),
       ("ocaml/eff/eff_wire.ml", "let rec emit_ty (b : Eff_frame.writer) (v : Ty.t) : unit =")] do
     let text ← IO.FS.readFile path
     match ocamlMatchArms text key with

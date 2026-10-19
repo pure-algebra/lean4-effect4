@@ -5,7 +5,7 @@
    checker memo learns new entries; it prints the mean milliseconds of the first and the last 100
    edits. A memo whose lookup scans its entries makes the last edits slower; a flat cost means
    the scan is not what a request pays.
-   Run from the repository root (it reads the session fixture):
+   Run from the repository root (it reads the session fixture, tool-requests.jsonl beside it):
      opam exec --switch=effect4 -- dune build --root ocaml ./engine/test/kit/bench_tool.exe
      ./ocaml/_build/default/engine/test/kit/bench_tool.exe 1000 *)
 open Effect4_kit
@@ -21,7 +21,9 @@ let () =
   let n = if Array.length Sys.argv > 1 then int_of_string Sys.argv.(1) else 2000 in
   let t = Kit_tool.create () in
   let first =
-    In_channel.with_open_bin "Test/fixtures/session/requests.jsonl" In_channel.input_line
+    In_channel.with_open_bin
+      "ocaml/engine/test/kit/tool-requests.jsonl"
+      In_channel.input_line
     |> Option.get
   in
   ignore (Kit_tool.serve_line t first);

@@ -2,17 +2,18 @@
 ;   The behaviours are Lean's, lowered by LCNF into ../../gen/api_gen.ml (the api closure,
 ;   ocaml/gen/roots.json): the call tree at a budget and its runs (Effect4.Run.Tree), the checker,
 ;   program and reply admission, each carrier's canonical image (Effect4.Run.Kit), and Lean's
-;   authoring surface (Effect4.Program.Authoring). The modules here are host code over it: the
-;   face and its one run (Kit), JSON by shapes (Kit_json), the authoring face (Kit_author), the
+;   authoring surface (Effect4.Program.Authoring), and each carrier's JSON (Store.ShapeJson: the
+;   located reader and the printer; yojson parses the text). The modules here are host code over
+;   it: the face and its one run (Kit), the authoring face (Kit_author), the
 ;   machine under a reactor (Kit_machine, over E4_host), the commands' requests (Kit_serve), and
 ;   the authoring tool's shells: JSON lines (Kit_tool) and MCP (Kit_mcp). The driver `eff` is
 ;   bin/; a run's picture is the view's (tools/view/v).
 
 (library
  (name effect4_kit)
- (modules kit_json kit kit_author kit_machine kit_serve kit_tool kit_mcp)
+ (modules kit kit_author kit_machine kit_serve kit_tool kit_mcp)
  (flags
-  (:standard -w -4-9-26-27-32-33-35-37-39-40-41-42-44-45-69-70))
+  (:standard -w +a-4-9-40-41-42-44-45-70))
  (public_name effect4_kit)
  (libraries effect4_eff effect4_clock effect4_gen effect4_engine yojson))
 

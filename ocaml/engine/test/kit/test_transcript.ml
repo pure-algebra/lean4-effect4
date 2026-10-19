@@ -5,7 +5,7 @@
    phase 1 moves the kit onto generated names and adapters, and slice 1.7 replaces Kit_serve's
    request execution; both must keep every answer, and this test fails at the line of any answer
    that moves. (`eff mcp` serves the authoring tool, Kit_mcp, tested by test_mcp.ml.)
-   Depends on: Effect4_kit (Kit, Kit_serve), Eff_json_text.
+   Depends on: Effect4_kit (Kit, Kit_serve).
 
    The transcript, one request a line and its answer on the next:
      serve> REQUEST  a request line, through serve_line
@@ -28,7 +28,7 @@
    Rewrite: E4_KIT_TRANSCRIPT_REWRITE=$PWD/engine/test/kit/serve.transcript, then the same. *)
 
 open Effect4_kit
-module J = Eff_json_text
+module J = Kit.Json
 
 (* X4: the one rule that would hide an unstable field of an answer. None exists today. *)
 let normalize (answer : string) : string = answer
@@ -88,9 +88,9 @@ let read_lines path =
 
 let status_of (answer : string) : string =
   match Kit.Json.parse answer with
-  | Ok (J.Object fields) ->
+  | Ok (J.NatJson_obj fields) ->
     (match List.assoc_opt "status" fields with
-     | Some (J.String s) -> s
+     | Some (J.NatJson_str s) -> s
      | _ -> "?")
   | _ -> "?"
 ;;

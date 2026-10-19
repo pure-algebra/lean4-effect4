@@ -32,7 +32,6 @@
 
 open Effect4_kit
 open Kit_serve
-module J = Eff_json_text
 
 let lines (f : string -> string option) =
   let rec loop () =

@@ -43,6 +43,11 @@ module Machine = struct
   module RefKey = Eff_types.RefKey
 end
 
+module NatJson = struct
+  let render =
+    Api_gen.nat_json_render
+end
+
 module Program = struct
   module ActionTerm = Eff_types.ActionTerm
   module Authoring = struct
@@ -273,6 +278,12 @@ module ServiceName = Eff_types.ServiceName
 module ServiceTypeCode = Eff_types.ServiceTypeCode
 
 module Store = struct
+  module ShapeDoc = struct
+    let print_tree =
+      Api_gen.store_shape_doc_print_tree
+    let read_located =
+      Api_gen.store_shape_doc_read_located
+  end
   module Val = Eff_types.Val
 end
 
@@ -297,10 +308,16 @@ module Tool = struct
       Api_gen.tool_native_refusal_shape
     let refusal_to_val =
       Api_gen.tool_native_refusal_to_val
+    let refusal_tree =
+      Api_gen.tool_native_refusal_tree
+    let relative_refusal =
+      Api_gen.tool_native_relative_refusal
     let reply_envelope_shape =
       Api_gen.tool_native_reply_envelope_shape
     let serve =
       Api_gen.tool_native_serve
+    let serve_tree =
+      Api_gen.tool_native_serve_tree
     let serve_uncached =
       Api_gen.tool_native_serve_uncached
     let start =

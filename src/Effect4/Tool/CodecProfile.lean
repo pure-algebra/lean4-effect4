@@ -1,15 +1,26 @@
 module
-public import Effect4.Store.Domain.ShapeRead
+public import Effect4.Store.Domain.ShapeJson
 
 /-!
-The JSON boundary refuses option shapes whose item can print null.
-It carries naturals up to I-JSON's safe bound (`natLimit`, RFC 7493 §2.2), which every JSON client
-reads exactly; both drivers refuse a value past it (`carries`), on read and on write.
-Each written value also rechecks its own JSON read, so rounded numbers do not silently change values.
-Placement proposal: exact-codecs, R8/R12; codec-profile-retains-value, compatibility.
+# Tool.CodecProfile — the tool's JSON profile
+
+The tool reads and writes its carriers as JSON through one profile. It refuses option shapes whose
+item can print null (`supports`). It carries naturals up to I-JSON's safe bound (`natLimit`, RFC
+7493 §2.2), which every JSON client reads exactly: the reader refuses a natural past it at its
+place, and both drivers refuse a value past it on write (`carries`). Each written value rechecks
+its own JSON read, so a rounded number cannot change a value silently.
+
+The reader is located (`readLocated`): it reads the profile's tree (`Effect4.NatJson`) by the
+located reader of `Store/Domain/ShapeJson.lean`, and a refusal names a site and a reason. The
+profile refuses an unsupported shape at the shape's root, and a value tree the carrier refuses at
+the input's root. `read`, on the binary64 tree, is its projection: the same refusal, under the
+codec's own alphabet (`Refusal.unreadable`).
+
+Placement proposal: exact-codecs, R8/R12; claims codec-profile-retains-value and
+json-read-located (`Laws/Tool/CodecProfile.lean`), compatibility.
 Reach: canonical carriers admitted by this explicit JSON profile and the per-value write guard.
 Exclusions: raw-text identity, binary codecs, native parsing, and whole-program admission.
-Consumer: the generated Tool and Check JSON drivers.
+Consumer: the generated Tool and Check JSON drivers, and the native shell (`Tool/Native.lean`).
 The Shape traversals below require exact census entries when integrated.
 -/
 @[expose] public section
@@ -17,11 +28,12 @@ set_option autoImplicit false
 namespace Effect4.Tool.CodecProfile
 open Effect4.Store
 
+/-- **Why the profile refuses a value**: the profile does not carry its shape; its JSON does not
+read, at a site and for a reason; or the value cannot be printed within the profile. -/
 inductive Refusal where
   | unsupportedProfile
-  | unreadable
+  | unreadable (why : JsonRefusal)
   | unprintable
-deriving DecidableEq
 
 /-- An unresolved named item is refused conservatively beneath an option. -/
 def nullItem (defs : List (String × Shape)) (item : Shape) : Bool :=
@@ -53,8 +65,9 @@ end
 def supports (doc : ShapeDoc) : Bool :=
   supported doc.defs doc.root && supportedFields doc.defs doc.defs
 
-/-- The largest natural the profile carries: `2^53 - 1`, I-JSON's safe integer bound. -/
-def natLimit : Nat := 9007199254740991
+/-- The largest natural the profile carries: `2^53 - 1`, I-JSON's safe integer bound, the largest
+natural the profile's tree reads (`NatJson.limit`). -/
+def natLimit : Nat := NatJson.limit
 
 mutual
 /-- **A value tree the profile carries**: every natural, and every handle key, at most `natLimit`.
@@ -74,22 +87,26 @@ def carriesList : List Val → Bool
   | x :: xs => carries x && carriesList xs
 end
 
+/-- **Read a carrier from the profile's tree, or refuse at a place**: a shape the profile does not
+carry is refused at the shape's root; otherwise the located reader (`Canonical.readLocated`). -/
+def readLocated {α : Type} [Canonical α] (t : Effect4.NatJson) : Except JsonRefusal α :=
+  if supports (Canonical.shape α) then Canonical.readLocated t
+  else .error ⟨.schema [], .unsupportedProfile⟩
+
+/-- **Read a carrier from the binary64 tree**: the located reader on its profile tree
+(`NatJson.ofBinary64`), its refusal under the codec's alphabet. -/
 def read {α : Type} [Canonical α] (json : Effect4.Json) : Except Refusal α :=
-  if supports (Canonical.shape α) then
-    match Canonical.ofJsonAnyOrder json with
-    | some value => if carries (Canonical.toVal value) then .ok value else .error .unreadable
-    | none => .error .unreadable
-  else .error .unsupportedProfile
+  (readLocated (Effect4.NatJson.ofBinary64 json)).mapError .unreadable
 
 def write {α : Type} [Canonical α] (value : α) : Except Refusal Effect4.Json :=
   if supports (Canonical.shape α) then
     if !carries (Canonical.toVal value) then .error .unprintable else
     let json := Canonical.printArrays value
-    match Canonical.ofJsonAnyOrder (α := α) json with
-    | some decoded =>
+    match read (α := α) json with
+    | .ok decoded =>
       if Canonical.toVal decoded = Canonical.toVal value then .ok json
       else .error .unprintable
-    | none => .error .unprintable
+    | .error _ => .error .unprintable
   else .error .unsupportedProfile
 
 end Effect4.Tool.CodecProfile

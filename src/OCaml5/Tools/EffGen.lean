@@ -17,14 +17,15 @@ Writes into `<outdir>`:
 * `eff_wire.ml`     — the canonical byte encoding (`src/Effect4/Store/Domain/Canonical.lean` framing,
                       constructor tag 10 with the index as a `Nat` frame) and its exact,
                       length-directed decoder, per type, over the hand-written `Eff_frame`;
-* `eff_json.ml`     — the JSON printer (a printer only) per type, over `Eff_json_text`;
 * `eff_native.ml`   — the native alphabet as data: atom names and const-generic metadata,
                       every built-in `NativeOp` value with its `Row`, the empty-table external placeholder, the
                       signature's scope key;
 * `eff_manifest.txt` — one line per family: constructor names, arities and argument carriers;
 * `goldens/<name>.{bin,json,ty}` and `goldens/corpus.txt` — the corpus below, encoded by the
-                      rule the Lean side states (`V.bytes`), printed, and typed by
-                      `Effect4.Program.typeOf` at the native signature.
+                      rule the Lean side states (`V.bytes`), printed in `V`'s spelling
+                      (`V.json`, which `ts/eff`'s tests read; no OCaml printer of it remains), and
+                      typed by `Effect4.Program.typeOf` at the native signature. A carrier's JSON
+                      on the OCaml side is Lean's own, lowered (`ShapeDoc.printTree`).
 
 What is derived and what is written by hand, precisely:
 
@@ -146,7 +147,7 @@ def main (args : List String) : IO Unit := do
   -- `Eff_types` that an `open` of it reads (`typesInterface`)
   let files : List (String × OCaml5.Ml.Module) :=
     [("eff_layout.ml", layoutModule bs), ("eff_ctors.ml", ctorsModule bs),
-     ("eff_wire.ml", wireModule bs), ("eff_subterm.ml", subterm), ("eff_json.ml", jsonModule bs),
+     ("eff_wire.ml", wireModule bs), ("eff_subterm.ml", subterm),
      ("eff_native.ml", nativeModule nul typed fn st)]
   for (file, m) in files do
     let diags := OCaml5.Ml.checkModule m [effTypes]

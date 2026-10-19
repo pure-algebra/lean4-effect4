@@ -23,14 +23,14 @@
    document, its address [0], the history, drafts at [0] at a generation and revision, a revert,
    text that is not JSON, and an unknown tag. A draft is mostly drawn at the session's current
    generation and revision, so most drafts land.
-   Depends on: Effect4_kit (Kit, Kit_json, Kit_tool), Effect4_gen.Api_gen, Eff_json_text,
+   Depends on: Effect4_kit (Kit, Kit.Json, Kit_tool), Effect4_gen.Api_gen,
    qcheck-stm, Stm_support.
    The evidence is host-only: finite runs on this machine. The oracle is Lean's code lowered by
    LCNF, so a disagreement names a shell or lowering fault; no theorem reaches the runs. *)
 
 open Effect4_kit
 module G = Effect4_gen.Api_gen
-module J = Eff_json_text
+module J = Kit.Json
 
 type req =
   | Open of int (** 0: the session fixture's program; 1: succeed 1 *)
@@ -103,7 +103,7 @@ let observe reply =
 ;;
 
 let field k = function
-  | J.Object kvs -> List.assoc_opt k kvs
+  | J.NatJson_obj kvs -> List.assoc_opt k kvs
   | _ -> None
 ;;
 
@@ -113,11 +113,11 @@ let now_of reply =
   | Error _ -> None
   | Ok j ->
     (match Option.bind (field "payload" j) (field "now") with
-     | Some (J.Object _ as now) ->
+     | Some (J.NatJson_obj _ as now) ->
        (match
           Option.bind (field "doc" now) (field "generation"), field "revision" now
         with
-        | Some (J.Int g), Some (J.Int r) -> Some (g, r)
+        | Some (J.NatJson_nat g), Some (J.NatJson_nat r) -> Some (g, r)
         | _ -> None)
      | _ -> None)
 ;;
@@ -131,7 +131,7 @@ let summary reply =
   else (
     let tag j =
       match field "_tag" j with
-      | Some (J.String t) -> t
+      | Some (J.NatJson_str t) -> t
       | _ -> "-"
     in
     let digest = String.sub (Digest.to_hex (Digest.string reply)) 0 12 in
@@ -140,7 +140,7 @@ let summary reply =
     | Ok j ->
       let meth =
         match field "method" j with
-        | Some (J.String m) -> m
+        | Some (J.NatJson_str m) -> m
         | _ -> "-"
       in
       let result = Option.bind (field "payload" j) (field "result") in
@@ -181,15 +181,13 @@ let oracle (s : served) (r : req) =
       match Kit.Json.parse (line r) with
       | Error _ -> "refused", None
       | Ok json ->
-        (match Kit_json.read G.tool_native_envelope_shape json with
-         | None -> "refused", None
-         | Some v ->
+        (match Kit.Json.read G.tool_native_envelope_shape json with
+         | Error _ -> "refused", None
+         | Ok v ->
            (match G.tool_native_serve_uncached session v with
             | Error _ -> "refused", None
             | Ok (reply, next) ->
-              let text =
-                J.render (Kit_json.print G.tool_native_reply_envelope_shape reply)
-              in
+              let text = J.render (J.print G.tool_native_reply_envelope_shape reply) in
               let name = s.name ^ ";" ^ show_req r in
               Hashtbl.replace sessions name next;
               text, Some { name; now = now_of text }))

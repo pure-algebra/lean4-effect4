@@ -9,10 +9,14 @@
      P2  decode (encode v ^ junk) = Some (v, |encode v|)       (self-delimiting; junk not read)
      P3  decode_exact (encode v ^ junk) = None                 (exactness)
      P4  encode is injective on the sample (a hash table of the encodings)
-     P5  the JSON printer terminates on every sample
+     P5  Lean's JSON, lowered: the sample's print as the tools print it (`ShapeDoc.printTree`)
+         reads back to the sample under Lean's located reader (`ShapeDoc.readLocated`), or is
+         refused for a natural above the profile's limit (2^53 - 1); a term, a decision and fork
+         options are read inside a program that holds them
    Exit status 1 on any failure. *)
 
 open Eff_types
+module G = Effect4_gen.Api_gen
 
 let rng = Random.State.make [| 42 |]
 let ri n = Random.State.int rng n
@@ -303,6 +307,21 @@ let fail what i =
   Printf.printf "FAIL: %s at sample %d\n%!" what i
 ;;
 
+(* P5: a value tree's JSON print reads back to it, or is refused for a natural above the
+   profile's limit, the only refusal a print earns (the printer writes no numeral). *)
+let reads_back (doc : G.shape_doc) (v : Val.t) : bool =
+  match G.store_shape_doc_read_located doc (G.store_shape_doc_print_tree doc v) with
+  | Ok v' -> Eff_val.equal v v'
+  | Error { G.reason = G.JsonReason_naturalOutsideProfile _; _ } -> true
+  | Error _ -> false
+;;
+
+let program_reads_back (p : NativeOp.t Eff.t) : bool =
+  reads_back G.run_kit_program_shape (G.run_kit_program_to_val p)
+;;
+
+let unit_program : NativeOp.t Eff.t = Eff.Succeed (Term.Lit Lit.Unit)
+
 let property
       (what : string)
       (n : int)
@@ -310,7 +329,7 @@ let property
       (encode : 'a -> string)
       (decode_exact : string -> 'a option)
       (decode : string -> ('a * int) option)
-      (print : 'a -> string)
+      (json : 'a -> bool)
   : unit
   =
   let seen = Hashtbl.create 1024 in
@@ -331,7 +350,7 @@ let property
      | Some v' when v' <> v -> fail (what ^ ": P4 two values with one encoding") i
      | _ -> Hashtbl.replace seen b v);
     incr checks;
-    if String.length (print v) = 0 then fail (what ^ ": P5 JSON") i
+    if not (json v) then fail (what ^ ": P5 Lean's JSON reads back") i
   done
 ;;
 
@@ -393,7 +412,7 @@ let () =
          Eff_wire.encode_term
          Eff_wire.decode_term_exact
          (fun s -> at Eff_wire.decode_term s 0 (String.length s))
-         Eff_json.print_term)
+         (fun t -> program_reads_back (Eff.Succeed t)))
     record_controls;
   List.iteri
     (fun i term ->
@@ -404,7 +423,7 @@ let () =
          Eff_wire.encode_term
          Eff_wire.decode_term_exact
          (fun s -> at Eff_wire.decode_term s 0 (String.length s))
-         Eff_json.print_term)
+         (fun t -> program_reads_back (Eff.Succeed t)))
     tuple_controls;
   List.iteri
     (fun i term ->
@@ -415,7 +434,7 @@ let () =
          Eff_wire.encode_term
          Eff_wire.decode_term_exact
          (fun s -> at Eff_wire.decode_term s 0 (String.length s))
-         Eff_json.print_term)
+         (fun t -> program_reads_back (Eff.Succeed t)))
     fold_controls;
   List.iteri
     (fun i decision ->
@@ -426,7 +445,8 @@ let () =
          Eff_wire.encode_decision
          Eff_wire.decode_decision_exact
          (fun s -> at Eff_wire.decode_decision s 0 (String.length s))
-         Eff_json.print_decision)
+         (fun d ->
+            program_reads_back (Eff.Select (Term.Var 0, d, unit_program, unit_program))))
     decision_controls;
   property
     "eff"
@@ -435,7 +455,7 @@ let () =
     Eff_wire.encode_eff
     Eff_wire.decode_eff_exact
     (fun s -> at Eff_wire.decode_eff s 0 (String.length s))
-    Eff_json.print_eff;
+    program_reads_back;
   property
     "ty"
     400
@@ -443,7 +463,7 @@ let () =
     Eff_wire.encode_ty
     Eff_wire.decode_ty_exact
     (fun s -> at Eff_wire.decode_ty s 0 (String.length s))
-    Eff_json.print_ty;
+    (fun t -> reads_back G.run_kit_ty_shape (G.run_kit_ty_to_val t));
   property
     "row"
     200
@@ -451,7 +471,7 @@ let () =
     Eff_wire.encode_row
     Eff_wire.decode_row_exact
     (fun s -> at Eff_wire.decode_row s 0 (String.length s))
-    Eff_json.print_row;
+    (fun r -> reads_back G.run_kit_rows_shape (G.run_kit_rows_to_val [ r ]));
   property
     "eff_ty"
     200
@@ -459,7 +479,7 @@ let () =
     Eff_wire.encode_eff_ty
     Eff_wire.decode_eff_ty_exact
     (fun s -> at Eff_wire.decode_eff_ty s 0 (String.length s))
-    Eff_json.print_eff_ty;
+    (fun t -> reads_back G.run_kit_eff_ty_shape (G.run_kit_eff_ty_to_val t));
   property
     "fork_options"
     50
@@ -467,7 +487,7 @@ let () =
     Eff_wire.encode_fork_options
     Eff_wire.decode_fork_options_exact
     (fun s -> at Eff_wire.decode_fork_options s 0 (String.length s))
-    Eff_json.print_fork_options;
+    (fun o -> program_reads_back (Eff.WithFiber (ActionTerm.Fork (unit_program, o))));
   Printf.printf "prop_wire: %d checks, %d failures (seed 42)\n%!" !checks !failures;
   if !failures > 0 then exit 1
 ;;
