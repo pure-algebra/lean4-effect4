@@ -5,9 +5,11 @@ import Effect4.Laws.Auto.Semantics
 /-!
 # Laws.Store.ShapeRead — whatever reads from JSON is that value's print
 
-`Store/Domain/ShapeRead.lean` reads a value tree from its JSON print under a shape. Its law is
-exactness: whatever reads is the canonical print of the value it reads (`readIn_exact`). So a
-canonical carrier read from JSON is the carrier whose print that JSON is (`Canonical.ofJson_exact`).
+`Store/Domain/ShapeRead.lean` reads a value tree from its cases print (`ShapeDoc.print`) under a
+shape. Its law is exactness: whatever reads is the cases print of the value it reads
+(`readIn_exact`). So a canonical carrier read from JSON is the carrier whose cases print that JSON
+is (`Canonical.ofJson_exact`). The public print, each list an array, is `Canonical.print`
+(`Store/Domain/ShapeJson.lean`); the cases print is the normal form each law below names.
 
 `Store/Domain/ShapeJson.lean` reads the JSON an agent writes, from the profile's tree, and refuses
 at a place. Its laws are exactness modulo the normaliser `ShapeDoc.order` (`readAt_exact`, by one
@@ -324,11 +326,11 @@ theorem ShapeDoc.read_exact {doc : ShapeDoc} {j : Json} {v : Val} (h : doc.read 
     doc.print v = j :=
   readIn_exact h
 
-/-- **A carrier read from JSON is the carrier whose canonical print that JSON is.** The pointer
+/-- **A carrier read from JSON is the carrier whose cases print that JSON is.** The pointer
 of `json-read-exact`. -/
 @[semantics "exact-codecs" (requirement := R8)]
 theorem Canonical.ofJson_exact {α : Type} [Canonical α] {j : Json} {a : α}
-    (h : Canonical.ofJson j = some a) : Canonical.print a = j := by
+    (h : Canonical.ofJson j = some a) : (Canonical.shape α).print (Canonical.toVal a) = j := by
   unfold Canonical.ofJson at h
   obtain ⟨v, hv, ha⟩ := Option.bind_eq_some_iff.mp h
   have hva := Canonical.ofVal_exact ha
@@ -982,13 +984,13 @@ theorem ShapeDoc.readLocated_exact {doc : ShapeDoc} {t : NatJson} {v : Val}
     (h : doc.readLocated t = .ok v) : doc.print v = doc.order t.toBinary64 :=
   ShapeDoc.readLocated_exact_of (agrees_toBinary64 t) h
 
-/-- **A carrier read from the profile's tree is the carrier whose canonical print is the tree's
+/-- **A carrier read from the profile's tree is the carrier whose cases print is the tree's
 binary64 image, normalised.** A step of `json-read-located`. Its consumer is
 `CodecProfile.profileLocated_exact` (`Laws/Tool/CodecProfile.lean`). -/
 @[semantics "exact-codecs" (requirement := R8)]
 theorem Canonical.readLocated_exact {α : Type} [Canonical α] {t : NatJson} {a : α}
     (h : Canonical.readLocated t = .ok a) :
-    Canonical.print a = (Canonical.shape α).order t.toBinary64 := by
+    (Canonical.shape α).print (Canonical.toVal a) = (Canonical.shape α).order t.toBinary64 := by
   unfold Canonical.readLocated at h
   obtain ⟨v, hv, ha⟩ := except_bind_ok h
   split at ha
@@ -999,16 +1001,16 @@ theorem Canonical.readLocated_exact {α : Type} [Canonical α] {t : NatJson} {a 
     exact ShapeDoc.readLocated_exact hv
   · cases ha
 
-/-- **A carrier read from an agent's JSON is the carrier whose canonical print the normalised JSON
+/-- **A carrier read from an agent's JSON is the carrier whose cases print the normalised JSON
 is**: exactness modulo the named normaliser (`ShapeDoc.order`), which puts objects in the shape's
 order and writes each list given as an array as its cases. The reader is the profile's located
 reader on the binary64 tree's profile tree (`NatJson.ofBinary64`). A step of `json-read-exact`.
 Its consumer: the session tool's JSON profile (`Tool.CodecProfile`), which reads a request
-through it and prints through `Canonical.printArrays`. -/
+through it and prints through `Canonical.print`, each list an array. -/
 @[semantics "exact-codecs" (requirement := R8)]
 theorem Canonical.ofJsonAnyOrder_exact {α : Type} [Canonical α] {j : Json} {a : α}
     (h : Canonical.ofJsonAnyOrder j = some a) :
-    Canonical.print a = (Canonical.shape α).order j := by
+    (Canonical.shape α).print (Canonical.toVal a) = (Canonical.shape α).order j := by
   unfold Canonical.ofJsonAnyOrder at h
   cases hr : Canonical.readLocated (α := α) (NatJson.ofBinary64 j) with
   | error r =>

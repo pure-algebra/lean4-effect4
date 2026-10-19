@@ -161,8 +161,8 @@
     {
       "Note": "`Tree` is the store's own carrier (a name space as content, src/Effect4/Store/Domain/Node.lean); its instance is emitted here beside `Pin`'s so no area above the store supplies a store type's instance (coordinator, 2026-09-05, after lane C's note).",
       "Name": "Pin",
-      "Flags": ["--module", "--meta-imports", "Effect4.Store.Domain.Pin,Effect4.Store.Domain.Node"],
-      "Imports": "Effect4.Store.Domain.Pin,Effect4.Store.Domain.Node",
+      "Flags": ["--module", "--meta-imports", "Effect4.Store.Domain.Pin,Effect4.Store.Domain.Node,Effect4.Store.Domain.ShapeJson"],
+      "Imports": "Effect4.Store.Domain.Pin,Effect4.Store.Domain.Node,Effect4.Store.Domain.ShapeJson",
       "Out": "src\\Effect4\\Store\\Domain\\PinDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\pin.lean",
       "Kinds": [
@@ -206,7 +206,7 @@
     {
       "Note": "The refusals an agent can be shown, as content (decisions row 17): the scope reader's, the checker's, the authoring call's, the printer's, the reader's and the build's (the eight of the row's source, scout C 3.3), with admission's and the table's, which the Runner group carried before, and the signature's that admission reports (decisions row 21). Placed before Runner, which imports it. The build refusal is declared in Effect4.Api.Author; importing it brings no keyword since the authoring syntax is scoped (seat J2). The host session's refusal stays in Runner: the generator names a type's section by its last name, and Authoring.Refusal is here.",
       "Name": "Refusals",
-      "Imports": "Effect4.Api.Codegen,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program,Effect4.Api.Author",
+      "Imports": "Effect4.Api.Codegen,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program,Effect4.Api.Author,Effect4.Store.Domain.ShapeJson",
       "Out": "src\\Effect4\\Api\\RefusalsDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\refusals.lean",
       "Kinds": [],
@@ -245,7 +245,7 @@
     {
       "Note": "The runner's byte boundary: a journal row, its verdict and what a holder observes. `ReasonAnnotations` and the error payload `Payload` (decisions row 120) have a proof field, so their instances are the hand ones in Store/Domain/AnnotationsCanonical.lean and Store/Domain/PayloadCanonical.lean, imported before `Err`; every applied carrier is listed before the type that holds it. Admission's and the table's refusals are the Refusals group's; a call the machine waits on (a record, decisions row 16), a fiber's status and a run's observation are the readings of Run.observe (decisions row 17).",
       "Name": "Runner",
-      "Imports": "Effect4.Api.Runner,Effect4.Store.Domain.Derived.Value,Effect4.Store.Domain.AnnotationsCanonical,Effect4.Store.Domain.PayloadCanonical,Effect4.Store.Domain.Clock,Effect4.Store.Domain.Derived.Program,Effect4.Api.Derived,Effect4.Api.RefusalsDerived,Effect4.Run",
+      "Imports": "Effect4.Api.Runner,Effect4.Store.Domain.Derived.Value,Effect4.Store.Domain.AnnotationsCanonical,Effect4.Store.Domain.PayloadCanonical,Effect4.Store.Domain.Clock,Effect4.Store.Domain.Derived.Program,Effect4.Api.Derived,Effect4.Api.RefusalsDerived,Effect4.Run,Effect4.Store.Domain.ShapeJson",
       "Out": "src\\Effect4\\Api\\RunnerDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\runner.lean",
       "Kinds": [],

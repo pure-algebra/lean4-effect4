@@ -6,7 +6,7 @@ import Effect4.Laws.Store.ShapeRead
 
 A tool reads its requests with Lean's JSON parser (`Lean.Json.parse`) and writes its answers as
 `Lean.Json`. The tree's JSON (`Effect4.Json`) is what the canonical carriers print and read
-(`Canonical.print`, `Canonical.ofJsonAnyOrder`, `src/Effect4/Store/Domain/ShapeRead.lean`). This
+(`Canonical.print`, `Canonical.ofJsonAnyOrder`, `src/Effect4/Store/Domain/ShapeJson.lean`). This
 module moves a value between the two.
 
 - **Lean's to the tree's** (`ofLeanJson`): an object's entries in Lean's order, sorted by key,
@@ -81,11 +81,11 @@ def toLeanEntries : List (String × Effect4.Json) → List (String × Lean.Json)
   | (k, j) :: entries => (k, toLeanJson j) :: toLeanEntries entries
 end
 
-/-- **A value's JSON print, as Lean's JSON**: its generated canonical print with each list as an
-array (`Canonical.printArrays`), the one structured projection the tools give of a carrier. It is
+/-- **A value's JSON print, as Lean's JSON**: its public print with each list as an
+array (`Canonical.print`), the one structured projection the tools give of a carrier. It is
 the encoding `ts/eff/eff.gen.ts` types, and `Canonical.ofJsonAnyOrder` reads it. -/
 def printJson {α : Type} [Canonical α] (a : α) : Lean.Json :=
-  toLeanJson (Canonical.printArrays a)
+  toLeanJson (Canonical.print a)
 
 /-! ## A value read from its JSON print -/
 

@@ -18,9 +18,9 @@ R14 the sketch checker's; neither reads JSON.
   each successful guarded write. Not established: total writing, raw JSON text identity, the native
   parser. Consumer: the Tool driver emits only a JSON value that reads as the original carrier.
 - **`json-read-located`** (proposed claim, role compatibility; pointer `profileLocated_exact`):
-  whatever the profile's located reader reads from a tree is the carrier whose canonical print is
-  the tree's binary64 image, normalised by `ShapeDoc.order`; every refusal names a site of the
-  input (`profileLocated_site`); the located reader erases to the codec's reader
+  whatever the profile's located reader reads from a tree is the carrier whose cases print
+  (`ShapeDoc.print`) is the tree's binary64 image, normalised by `ShapeDoc.order`; every refusal
+  names a site of the input (`profileLocated_site`); the located reader erases to the codec's reader
   (`profileLocated_erases`), and a guarded write reads back through it (`write_readLocated`).
   Reach: the explicit JSON profile, with no budget; the binary64 face through
   `NatJson.ofBinary64`, the native face directly. Not established: the round trip of an arbitrary
@@ -51,7 +51,7 @@ theorem write_read {α : Type} [Canonical α] (value : α) (json : Effect4.Json)
       cases h
     | true =>
       simp only [hc, Bool.not_true, Bool.false_eq_true, ↓reduceIte] at h
-      cases hr : read (α := α) (Canonical.printArrays value) with
+      cases hr : read (α := α) (Canonical.print value) with
       | error r =>
         rw [hr] at h
         cases h
@@ -78,11 +78,12 @@ theorem profileLocated_erases {α : Type} [Canonical α] (j : Json) :
   unfold read
   cases readLocated (α := α) (NatJson.ofBinary64 j) <;> rfl
 
-/-- **Whatever the profile reads is the carrier whose canonical print is the input's binary64
+/-- **Whatever the profile reads is the carrier whose cases print is the input's binary64
 image, normalised.** The pointer of `json-read-located`. -/
 @[semantics "exact-codecs" (requirement := R8)]
 theorem profileLocated_exact {α : Type} [Canonical α] {t : NatJson} {a : α}
-    (h : readLocated t = .ok a) : Canonical.print a = (Canonical.shape α).order t.toBinary64 := by
+    (h : readLocated t = .ok a) :
+    (Canonical.shape α).print (Canonical.toVal a) = (Canonical.shape α).order t.toBinary64 := by
   unfold readLocated at h
   split at h
   · exact Canonical.readLocated_exact h

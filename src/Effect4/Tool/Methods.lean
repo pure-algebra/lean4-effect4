@@ -25,7 +25,7 @@ nothing names a request by hand:
 `describe` is the one tool that is no method: it has its own listing, with the schemas of its
 arguments and of its result, and its hints.
 
-`schemaIn` reads a shape as the tools print it (`Canonical.printArrays`, `CodecProfile`): a
+`schemaIn` reads a shape as the tools print it (`Canonical.print`, `CodecProfile`): a
 structure is an object of its fields; a sum is a string when no case has a field, an array when it
 is a list family (`listItem?`), and otherwise an object whose `_tag` names the case, the cases
 with no field sharing one branch; a list is an array; an option is `null` or its item; a pair is a

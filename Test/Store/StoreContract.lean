@@ -18,6 +18,7 @@ Doc comments cannot precede `#guard`, so the receipts carry line comments.
 -/
 
 import Effect4.Store.Domain.Canonical
+import Effect4.Store.Domain.ShapeJson
 import Effect4.Store.Domain.Node
 import Effect4.Store.Domain.ProgramWire
 import Test.Store.Templates

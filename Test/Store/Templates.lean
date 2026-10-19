@@ -1,4 +1,5 @@
 import TestSupport.CasEntry
+import Effect4.Store.Domain.ShapeJson
 /-
 Contract: the hand `Canonical` instances the generator emits, written the way it writes them.
 

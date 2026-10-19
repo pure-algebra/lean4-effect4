@@ -125,8 +125,8 @@ def reasons : List TypeReason :=
    .invokeArity "use" 1 0, .unboundVariable [] 3 1, .unknownAtom [0] "inc",
    .refusedArguments [] "succ" [.bool]]
 
-/-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
-all-nullary sum prints as; the empty string for anything else. -/
+/-- The name the public print (`Canonical.print`) writes for a sum's value: its `_tag` field, or
+the string an all-nullary sum prints as; the empty string for anything else. -/
 def printedHead : Effect4.Json → String
   | .str s => s
   | .obj entries => match entries.lookup "_tag" with
@@ -205,7 +205,7 @@ def printedHead : Effect4.Json → String
 -- hand-written `TypeReason.head` on every constructor (the list is every case, in order) ...
 #guard reasons.map TypeReason.head == Canonical.heads TypeReason
 #guard reasons.all fun x => Canonical.head x == x.head
--- ... and with the name `ShapeDoc.print` writes, for every value of the group's sums.
+-- ... and with the name `Canonical.print` writes, for every value of the group's sums.
 #guard tables.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard rowReasons.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard serviceReasons.all fun x => Canonical.head x == printedHead (Canonical.print x)

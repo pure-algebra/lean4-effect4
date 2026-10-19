@@ -106,7 +106,7 @@ def read {α : Type} [Canonical α] (json : Effect4.Json) : Except Refusal α :=
 def write {α : Type} [Canonical α] (value : α) : Except Refusal Effect4.Json :=
   if supports (Canonical.shape α) then
     if !carries (Canonical.toVal value) then .error .unprintable else
-    let json := Canonical.printArrays value
+    let json := Canonical.print value
     match read (α := α) json with
     | .ok decoded =>
       if Canonical.toVal decoded = Canonical.toVal value then .ok json

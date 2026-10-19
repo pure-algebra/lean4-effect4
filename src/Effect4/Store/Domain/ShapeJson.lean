@@ -41,8 +41,8 @@ normalised by `ShapeDoc.order` (`readLocated_exact`). The reader takes its steps
 does, so the law is proved by one induction beside it.
 
 **The printer** (`ShapeDoc.printTree`) is `ShapeDoc.print` with each list family written as the
-array of its elements, the encoding `ts/eff/eff.gen.ts` types. `Canonical.printArrays`, the
-binary64 tree the tools give, is its image.
+array of its elements, the encoding `ts/eff/eff.gen.ts` types. `Canonical.print`, a carrier's one
+public JSON (decisions row 418, D2), is its image on the binary64 tree.
 
 The old `Option` readers are projections of the located one: `ShapeDoc.readAny`, and
 `Canonical.ofJsonAnyOrder` on the binary64 tree.
@@ -428,10 +428,10 @@ end
 family as an array. -/
 def ShapeDoc.printTree (doc : ShapeDoc) (v : Val) : NatJson := printTreeIn doc.defs doc.root v
 
-/-- **A carrier's JSON as the tools give it**, as the binary64 tree: its print to the profile's tree
-(`ShapeDoc.printTree`), each list as an array; the encoding `ts/eff/eff.gen.ts` types. The
-profile's reader reads it. -/
-def Canonical.printArrays {α : Type} [Canonical α] (a : α) : Json :=
+/-- **A carrier's public JSON**, as the binary64 tree: its print to the profile's tree
+(`ShapeDoc.printTree`), each list as an array; the encoding `ts/eff/eff.gen.ts` types and `toJson`
+writes (decisions row 418, D2). The profile's reader reads it. -/
+def Canonical.print {α : Type} [Canonical α] (a : α) : Json :=
   ((Canonical.shape α).printTree (Canonical.toVal a)).toBinary64
 
 end Effect4.Store

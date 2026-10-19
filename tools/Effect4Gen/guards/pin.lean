@@ -33,8 +33,8 @@ def sample : Pin :=
 #guard Content.kind Pin = .source
 #guard (Canonical.document Pin).representation.tag = .objects
 
--- The printer follows the shape: keys in declaration order, the role as its constructor's
--- name, the digest as lowercase hex, the lines as an array.
+-- The public print (`Canonical.print`) follows the shape: keys in declaration order, the role
+-- as its constructor's name, the digest as lowercase hex, the lines as an array.
 #guard Canonical.print sample =
   .obj [ ("package", .str "effect"), ("version", .str "4.0.0-rc.112"), ("file", .str "src/Queue.ts")
        , ("declaration", .str "releaseCapacity"), ("role", .str "internal")

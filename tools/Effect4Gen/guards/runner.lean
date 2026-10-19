@@ -81,7 +81,7 @@ def observation : Run.Observation :=
 #guard Canonical.decode (α := Run.Observation) (Canonical.encode observation ++ [0]) = none
 #guard (Canonical.shape Run.Observation).accepts (Canonical.toVal observation)
 -- `Canonical.head` (decisions row 17, seat J2): the constructor's name read off the shape is the
--- name `ShapeDoc.print` writes, for every value of the group's thirteen sums.
+-- name `Canonical.print` writes, for every value of the group's thirteen sums.
 -- An error payload (decisions row 120) is a handle-free record frame, carried in its value's own
 -- canonical bytes and read back exactly; the reader refuses a frame that holds a handle.
 def payloadFrame : Effect4.Store.Val :=

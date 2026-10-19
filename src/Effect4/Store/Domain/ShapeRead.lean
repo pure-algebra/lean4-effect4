@@ -7,15 +7,15 @@ meta import Effect4.Store.Carrier.Digest
 meta import Effect4.Store.Carrier.Val
 
 /-!
-# Store.ShapeRead — reading a canonical carrier back from its JSON print
+# Store.ShapeRead — reading a canonical carrier back from its cases print
 
 `ShapeDoc.print` (`Store/Domain/Shape.lean`) writes a value tree as JSON, the names from the shape
-and the structure from the value. This module reads that JSON back, under the same shape. It is
-the schema form an agent can write: a program, a type or a row as JSON, instead of canonical
-bytes.
+and the structure from the value, every sum by its cases. This module reads that JSON back, under
+the same shape, and normalises an agent's JSON into it. The public print, each list an array, is
+`Canonical.print` (`Store/Domain/ShapeJson.lean`; decisions row 418, D2).
 
-**The reader accepts only the canonical print.** Each case checks that the JSON is what the
-printer writes for the value it reads: a number is the binary64 of a natural, hex is lowercase
+**The reader accepts only the cases print.** Each case checks that the JSON is what the
+cases print writes for the value it reads: a number is the binary64 of a natural, hex is lowercase
 and exact, a field list is the shape's in order, a case name names the case its tag prints. So
 whatever reads is that value's print, with no fragment condition (`readIn_exact`,
 `Laws/Store/ShapeRead.lean`).
@@ -189,8 +189,8 @@ theorem sizeOf_entryOf_lt {name : String} :
 /-! ## The strict reader -/
 
 mutual
-/-- **Read a value tree under a shape** from its JSON print; none where the JSON is not the
-canonical print of a value fitting the shape's head. An option layer reads the same value under
+/-- **Read a value tree under a shape** from its cases print; none where the JSON is not the
+cases print of a value fitting the shape's head. An option layer reads the same value under
 the item, and refuses a name it unfolded since the last JSON node (`optionLayer?`). -/
 def readIn (defs : List (String × Shape)) (seen : List String) (s : Shape) (j : Json) :
     Option Val :=
@@ -264,10 +264,10 @@ end
 /-! ## The list rule: a list family's JSON is an array
 
 `ts/eff/eff.gen.ts` types the program's four lists (`Terms`, `Stmts`, `Effs`, `LayerTerms`) as
-arrays, and its Effect Schema codecs read them so. The canonical print writes them case by case,
-`{"_tag":"cons","head":…,"tail":…}`. So the normaliser below reads either, and the tools print
-arrays (`ShapeDoc.printTree`, `Store/Domain/ShapeJson.lean`). The shape, so the canonical bytes and
-every digest, does not change. -/
+arrays, and its Effect Schema codecs read them so. The cases print writes them case by case,
+`{"_tag":"cons","head":…,"tail":…}`. So the normaliser below reads either, and the public print
+writes arrays (`Canonical.print`, through `ShapeDoc.printTree`, `Store/Domain/ShapeJson.lean`).
+The shape, so the canonical bytes and every digest, does not change. -/
 
 /-- **The list rule's parts**: a sum whose cases are exactly `nil`, with no field, and `cons`, with
 the fields `head` and `tail`, under two different tags. Where the rule holds: the two tags, the
@@ -284,15 +284,15 @@ def listParts? (cases : List (String × Nat × List (String × Shape))) :
 def listItem? (cases : List (String × Nat × List (String × Shape))) : Option Shape :=
   (listParts? cases).map fun parts => parts.2.2.1
 
-/-- The empty list's canonical print: the `nil` case. -/
+/-- The empty list's cases print: the `nil` case. -/
 def nilObject : Json := .obj [("_tag", .str "nil")]
 
 mutual
 /-- **Put each object's entries in its shape's field order**, under a shape: JSON objects are
-unordered, and the canonical print orders a structure's fields, and a case's after its `_tag`, by
+unordered, and the cases print orders a structure's fields, and a case's after its `_tag`, by
 declaration. The named normaliser of the JSON form: the profile's reader, which reads an agent's
 JSON in any order, is exact modulo it (`Store/Domain/ShapeJson.lean`). An array under a list
-family (`listParts?`) becomes the family's canonical print (`orderSpine`): each element ordered
+family (`listParts?`) becomes the family's cases print (`orderSpine`): each element ordered
 under the head's shape of its cell, the rest under the tail field's shape, which names the family
 again. An object that lacks a field, or holds another, is left as it is, and reads as none. An
 option layer orders the same value under the item; a layer that returns to a name it unfolded
@@ -360,7 +360,7 @@ decreasing_by
   · exact Prod.Lex.left _ _ (sizeOf_entryOf_lt _he)
   · exact Prod.Lex.right _ (Prod.Lex.right _ (Nat.lt_succ_self _))
 
-/-- A list family's array, from one element on, as its canonical print: `nil`, or `cons` of the
+/-- A list family's array, from one element on, as its cases print: `nil`, or `cons` of the
 element ordered under the cell's head shape and the rest under its tail shape, where that shape is
 a list family again. A rest whose shape is no list family is left as an array, and reads as
 none. -/
@@ -382,11 +382,11 @@ decreasing_by
     omega
 end
 
-/-- **Read a value tree under a shape document** from its JSON print. -/
+/-- **Read a value tree under a shape document** from its cases print. -/
 def ShapeDoc.read (doc : ShapeDoc) (j : Json) : Option Val :=
   readIn doc.defs [] doc.root j
 
-/-- **Read a canonical carrier from its JSON print** (`Canonical.print`). -/
+/-- **Read a canonical carrier from its cases print** (`ShapeDoc.print` under its shape). -/
 def Canonical.ofJson {α : Type} [Canonical α] (j : Json) : Option α :=
   ((Canonical.shape α).read j).bind Canonical.ofVal
 

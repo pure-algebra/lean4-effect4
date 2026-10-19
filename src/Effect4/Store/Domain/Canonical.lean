@@ -118,12 +118,10 @@ theorem digest_congr {a b : α} (h : a = b) : digest a = digest b := congrArg di
 and rendered by the downstream Schema.OfShape arrow. -/
 def document (α : Type) [Canonical α] : Effect4.Document := (shape α).document
 
-/-- The JSON of a carrier, read off its shape. -/
-def print (a : α) : Effect4.Json := (shape α).print (toVal a)
-
 /-- The name of a carrier's constructor, read off its shape (decisions row 17): the case a sum's
-value carries, found by its wire tag (`caseAt`), which is the name `ShapeDoc.print` writes (the
-`_tag` field, or the string an all-nullary sum prints as); a structure's name; and the empty
+value carries, found by its wire tag (`caseAt`), which is the name its print writes
+(`Canonical.print`, `Store/Domain/ShapeJson.lean`: the `_tag` field, or the string an all-nullary
+sum prints as; a list family's value prints as an array); a structure's name; and the empty
 string for a value whose shape names no constructor (a primitive, or a tag no case carries). One
 definition for every canonical sum, where a hand-written `head` per sum (`TypeReason.head`) would
 be one each; the generated groups' guards hold it against both. -/
@@ -709,8 +707,6 @@ open Canonical in
 -- The address of a string is the address of its bytes: today's `digestOf "Effect.gen"`.
 open Canonical in
 #guard digest "Effect.gen" = sha256 (Val.encode (.str "Effect.gen"))
-open Canonical in
-#guard print (some (3 : Nat), "x") = Effect4.Json.arr [Arch.Json.ofNat 3, .str "x"]
 open Canonical in
 #guard (Canonical.document UInt64).references.length = 1
 

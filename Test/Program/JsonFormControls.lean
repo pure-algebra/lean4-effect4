@@ -4,7 +4,7 @@ import Effect4.Store.Domain.ProgramWire
 /-!
 # The JSON form of a program: the controls
 
-The tools print a program as JSON with each list an array (`Canonical.printArrays`), the
+The tools print a program as JSON with each list an array (`Canonical.print`), the
 encoding `ts/eff/eff.gen.ts` types, and read an agent's JSON in any order
 (`Canonical.ofJsonAnyOrder`). The law is exactness modulo that normaliser
 (`Canonical.ofJsonAnyOrder_exact`). These two lines are finite evaluations of the round trip,
@@ -56,7 +56,7 @@ def listedAsTs : Json :=
 -- tested: the program written by hand as `ts/eff/eff.gen.ts` types it reads
 #guard ((Canonical.ofJsonAnyOrder listedAsTs : Option NativeEff).map hexOf) == some (hexOf listed)
 -- tested: the tools' print reads back with every object's entries reversed
-#guard ((Canonical.ofJsonAnyOrder (reverseObjs (Canonical.printArrays listed)) :
+#guard ((Canonical.ofJsonAnyOrder (reverseObjs (Canonical.print listed)) :
   Option NativeEff).map hexOf) == some (hexOf listed)
 
 end Test.Program.JsonFormControls

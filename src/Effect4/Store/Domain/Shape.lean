@@ -13,7 +13,7 @@ meta import Effect4.Store.Carrier.Digest
 # Store.Shape
 
 Owner: the pure shape language a canonical carrier describes itself in, the checker
-that says a value tree fits a shape, and the JSON printer. The downstream
+that says a value tree fits a shape, and the cases print. The downstream
 `Effect4.Schema.OfShape` module owns the schema rendering arrow; this foundation
 imports no Schema module. Store Domain remains above Schema.
 
@@ -29,9 +29,13 @@ one candidate. This permits `acceptsIn_mono` and the product Canonical instance'
 appended tables without a uniqueness field in the class. A definition whose
 body is itself `named` is one step away and accepts nothing.
 
-The printer uses lowercase hex and the JSON-number rule `Json.ofNat` over
-`binary64OfNat`, owned by `Effect4.Arch.JsonNumber` in Data/JsonNumber. The distinct
-`Shape.render : Shape → String` below supplies the structural Repr only.
+The cases print (`ShapeDoc.print`) writes every sum by its cases, a list family as its `nil`
+and `cons` cells too. It is the normal form the JSON readers are exact against
+(`Store/Domain/ShapeRead.lean`). A carrier's public print, each list an array, is
+`Canonical.print` (`Store/Domain/ShapeJson.lean`; decisions row 418, D2). The cases print uses
+lowercase hex and the JSON-number rule `Json.ofNat` over `binary64OfNat`, owned by
+`Effect4.Arch.JsonNumber` in Data/JsonNumber. The distinct `Shape.render : Shape → String` below
+supplies the structural Repr only.
 -/
 
 @[expose] public section
@@ -392,7 +396,7 @@ theorem acceptsIn_of_not_named (defs : List (String × Shape)) (s : Shape) (v : 
   rw [candidates_of_not_named defs s h]
   simp
 
-/-! ## The printer: `ShapeDoc.print` -/
+/-! ## The cases print: `ShapeDoc.print` -/
 
 /-- The lowercase hex string of a byte string. -/
 def hexString (bs : Bytes) : String := String.ofList (hexOfBytes bs)
@@ -410,9 +414,10 @@ def kindJson (b : UInt8) : Json :=
   | none => .null
 
 mutual
-/-- The printer: the Q5 table read from the value's side. The shape supplies the names (fields,
-cases, kinds) and the value supplies the structure, so a value that does not fit still prints,
-by structure, under `_ctor`/`args`. -/
+/-- The cases print: the Q5 table read from the value's side. The shape supplies the names
+(fields, cases, kinds) and the value supplies the structure, so a value that does not fit still
+prints, by structure, under `_ctor`/`args`. A list family prints by its cases; the public print
+(`Canonical.print`) writes it as an array. -/
 def printIn (defs : List (String × Shape)) : Shape → Val → Json
   | _, .unit => .null
   | _, .bool b => .bool b
@@ -462,7 +467,7 @@ def printFields (defs : List (String × Shape)) : List (String × Shape) → Lis
   | _, _ => []
 end
 
-/-- The printer of a shape document: the value under the root, names from the table. -/
+/-- The cases print of a shape document: the value under the root, names from the table. -/
 def ShapeDoc.print (doc : ShapeDoc) (v : Val) : Json := printIn doc.defs doc.root v
 
 /-! ## The census entry, guarded: the shape of `StdLib/Entry.lean:23-49` -/
