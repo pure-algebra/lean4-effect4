@@ -32,7 +32,7 @@
    Each directory is found by an ancestor walk from the working directory; the variables
    E4_EFF_GOLDENS, E4_HEX_GOLDENS, E4_TRUTH_CORPUS and E4_LEAN_CORPUS name one instead.
 
-   Depends on: effect4_eff (Eff_types, Eff_wire), stdlib.  Nothing in this
+   Depends on: effect4_eff (Eff_types, Eff_wire), yojson (corpus.json), stdlib.  Nothing in this
    module touches an engine: it is programs, not runs.
 
    Behaviours:

@@ -213,178 +213,23 @@ let truth () : program list * load_report * string list =
 
 (* -------------------------------------------------------- corpus.json, as an oracle *)
 
-(* A minimal JSON reader, and the tree it gives (Eff_json_text's six constructors, kept here when
-   that module retired with the kit's JSON twins, C6). corpus.json is the only JSON this lane
-   reads. *)
-type json =
-  | Null
-  | Bool of bool
-  | Int of int
-  | String of string
-  | Array of json list
-  | Object of (string * json) list
-
-exception Json_error of string
-
-let json_parse (s : string) : json =
-  let n = String.length s in
-  let i = ref 0 in
-  let fail m = raise (Json_error (Printf.sprintf "%s at byte %d" m !i)) in
-  let peek () = if !i < n then s.[!i] else '\000' in
-  let rec skip () =
-    if !i < n
-    then (
-      match s.[!i] with
-      | ' ' | '\t' | '\n' | '\r' ->
-        incr i;
-        skip ()
-      | _ -> ())
-  in
-  let lit w v =
-    let l = String.length w in
-    if !i + l <= n && String.sub s !i l = w
-    then (
-      i := !i + l;
-      v)
-    else fail ("expected " ^ w)
-  in
-  let string_ () =
-    if peek () <> '"' then fail "expected a string";
-    incr i;
-    let b = Buffer.create 16 in
-    let rec go () =
-      if !i >= n
-      then fail "unterminated string"
-      else (
-        match s.[!i] with
-        | '"' -> incr i
-        | '\\' ->
-          incr i;
-          if !i >= n then fail "unterminated escape";
-          (match s.[!i] with
-           | 'n' ->
-             Buffer.add_char b '\n';
-             incr i
-           | 't' ->
-             Buffer.add_char b '\t';
-             incr i
-           | 'r' ->
-             Buffer.add_char b '\r';
-             incr i
-           | 'b' ->
-             Buffer.add_char b '\b';
-             incr i
-           | 'f' ->
-             Buffer.add_char b '\012';
-             incr i
-           | 'u' ->
-             if !i + 4 >= n then fail "short \\u";
-             let h = String.sub s (!i + 1) 4 in
-             i := !i + 5;
-             Buffer.add_char b (Char.chr (int_of_string ("0x" ^ h) land 0xff))
-           | c ->
-             Buffer.add_char b c;
-             incr i);
-          go ()
-        | c ->
-          Buffer.add_char b c;
-          incr i;
-          go ())
-    in
-    go ();
-    Buffer.contents b
-  in
-  let number () =
-    let start = !i in
-    let ok c =
-      (c >= '0' && c <= '9') || c = '-' || c = '+' || c = '.' || c = 'e' || c = 'E'
-    in
-    while !i < n && ok s.[!i] do
-      incr i
-    done;
-    let t = String.sub s start (!i - start) in
-    match int_of_string_opt t with
-    | Some k -> Int k
-    | None -> String t
-  in
-  let rec value () =
-    skip ();
-    match peek () with
-    | '{' ->
-      incr i;
-      skip ();
-      if peek () = '}'
-      then (
-        incr i;
-        Object [])
-      else (
-        let acc = ref [] in
-        let rec go () =
-          skip ();
-          let k = string_ () in
-          skip ();
-          if peek () <> ':' then fail "expected :";
-          incr i;
-          let v = value () in
-          acc := (k, v) :: !acc;
-          skip ();
-          match peek () with
-          | ',' ->
-            incr i;
-            go ()
-          | '}' -> incr i
-          | _ -> fail "expected , or }"
-        in
-        go ();
-        Object (List.rev !acc))
-    | '[' ->
-      incr i;
-      skip ();
-      if peek () = ']'
-      then (
-        incr i;
-        Array [])
-      else (
-        let acc = ref [] in
-        let rec go () =
-          let v = value () in
-          acc := v :: !acc;
-          skip ();
-          match peek () with
-          | ',' ->
-            incr i;
-            go ()
-          | ']' -> incr i
-          | _ -> fail "expected , or ]"
-        in
-        go ();
-        Array (List.rev !acc))
-    | '"' -> String (string_ ())
-    | 't' -> lit "true" (Bool true)
-    | 'f' -> lit "false" (Bool false)
-    | 'n' -> lit "null" Null
-    | _ -> number ()
-  in
-  let v = value () in
-  skip ();
-  v
-;;
-
-let jfield (k : string) (v : json) : json option =
+(* corpus.json is this lane's one JSON input, and no carrier reads it: yojson parses it, and
+   three projections read the fields the oracle needs. *)
+let jfield (k : string) (v : Yojson.Safe.t) : Yojson.Safe.t option =
   match v with
-  | Object kvs -> List.assoc_opt k kvs
+  | `Assoc kvs -> List.assoc_opt k kvs
   | _ -> None
 ;;
 
-let jstr (v : json option) : string option =
+let jstr (v : Yojson.Safe.t option) : string option =
   match v with
-  | Some (String s) -> Some s
+  | Some (`String s) -> Some s
   | _ -> None
 ;;
 
-let jint (v : json option) : int option =
+let jint (v : Yojson.Safe.t option) : int option =
   match v with
-  | Some (Int k) -> Some k
+  | Some (`Int k) -> Some k
   | _ -> None
 ;;
 
@@ -400,11 +245,11 @@ let truth_expectations () : (truth_expect list, string) result =
   match find_path ~env:"E4_TRUTH_CORPUS" [ "harness"; "truth"; "corpus.json" ] with
   | None -> Error "harness/truth/corpus.json not found from the cwd"
   | Some path ->
-    (match json_parse (read_file path) with
-     | exception Json_error m -> Error m
+    (match Yojson.Safe.from_string (read_file path) with
+     | exception Yojson.Json_error m -> Error m
      | j ->
        (match jfield "programs" j with
-        | Some (Array ps) ->
+        | Some (`List ps) ->
           Ok
             (List.filter_map
                (fun p ->
