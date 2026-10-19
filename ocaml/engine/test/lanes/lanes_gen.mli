@@ -280,6 +280,26 @@ and effect4_tool_wire_refusal =
   | Effect4_tool_wire_refusal_version of string * int * int
   | Effect4_tool_wire_refusal_method of string * string
   | Effect4_tool_wire_refusal_connection
+and text_ctx =
+  Closure_gen.text_ctx =
+    TextCtx_top
+  | TextCtx_item of nat_json list * text_ctx
+  | TextCtx_member of (string * nat_json) list * string * text_ctx
+and text_mode =
+  Closure_gen.text_mode =
+    TextMode_value of text_ctx
+  | TextMode_firstItem of text_ctx
+  | TextMode_firstKey of text_ctx
+  | TextMode_key of (string * nat_json) list * text_ctx
+  | TextMode_colon of (string * nat_json) list * string * text_ctx
+  | TextMode_afterItem of nat_json list * text_ctx
+  | TextMode_afterMember of (string * nat_json) list * text_ctx
+  | TextMode_done of nat_json
+and ('site, 'reason) located =
+  ('site, 'reason) Closure_gen.located = {
+  site : 'site;
+  reason : 'reason;
+}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp =
   ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) Closure_gen.run_interp = {
   to_prim_interp : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp;
@@ -877,11 +897,6 @@ and step =
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
   | Step_celled of sync_op * Eff_types.Val.t
-and ('site, 'reason) located =
-  ('site, 'reason) Closure_gen.located = {
-  site : 'site;
-  reason : 'reason;
-}
 and type_reason =
   Closure_gen.type_reason =
     TypeReason_term of Eff_types.Term.t
@@ -1069,7 +1084,6 @@ and json_reason =
   | JsonReason_naturalOutsideProfile of int
   | JsonReason_carrierValue
   | JsonReason_unsupportedProfile
-  | JsonReason_budget
 and listing =
   Closure_gen.listing = {
   name : string;
@@ -1099,6 +1113,20 @@ and json_step =
   Closure_gen.json_step =
     JsonStep_key of string
   | JsonStep_index of int
+and text_reason =
+  Closure_gen.text_reason =
+    TextReason_value
+  | TextReason_separator
+  | TextReason_key
+  | TextReason_colon
+  | TextReason_digit
+  | TextReason_leadingZero
+  | TextReason_quote
+  | TextReason_escape
+  | TextReason_control
+  | TextReason_surrogate
+  | TextReason_utf8
+  | TextReason_end_
 and ctx =
   Closure_gen.ctx = {
   services : Eff_types.Val.t context;

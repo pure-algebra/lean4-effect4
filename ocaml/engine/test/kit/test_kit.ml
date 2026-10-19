@@ -13,13 +13,13 @@
        always true and calls nothing is unsettled at every limit tried; a definition that calls
        itself at once is unsettled too; each frame extends the one before; the budget a run
        settles at is the least one, every frame before it cut, on loops of 0 to 40 rounds.  tested
-   T2  The JSON text parser (yojson) reads RFC 8259 JSON into the profile's tree. A number that
-       is no natural (a sign, a fraction, an exponent, past the int range) is a numeral, which
-       Lean's reader refuses at its place; a key written twice reaches the reader, which refuses
-       it at its object. yojson's text is wider than RFC 8259: it skips comments, takes an
-       unquoted key and takes a control byte inside a string, and the controls pin all three.
-       It refuses a leading zero, trailing text, a bad escape and a lone surrogate, and the
-       tree refuses NaN and yojson's tuples.                                tested
+   T2  The JSON text parser is Lean's grammar, lowered (NatJson.parse, the one both session
+       drivers read with): RFC 8259 JSON into the profile's tree. A number that is no plain
+       natural (a sign, a fraction, an exponent, more than 16 digits) is a numeral, which Lean's
+       reader refuses at its place; a key written twice reaches the reader, which refuses it at
+       its object. It refuses a comment, an unquoted key, a control byte inside a string, a
+       leading zero, trailing text, a bad escape, a lone surrogate, NaN and a tuple, each at its
+       byte, and the controls pin the three where yojson's text was wider.  tested
    T3  JSON: a program, a row table and a tape print and read back to themselves. On the
        fixture, Lean's JSON print reads to the program its bytes decode to, and the kit prints
        Lean's JSON, up to the order of an object's keys (Lean's printer sorts them).  tested
@@ -239,16 +239,18 @@ let t2 () =
           -> true
         | _ -> false)
      | Error _ -> false);
-  (* Controls: where yojson's text is wider than RFC 8259. A change of parser moves these. *)
+  (* Controls: where yojson's text was wider than RFC 8259, Lean's grammar refuses, at the byte. *)
   check
-    "T2 control: a comment is skipped"
-    (Kit.Json.parse "/* c */ 1 // d" = Ok (J.NatJson_nat 1));
+    "T2 control: a comment is refused at its byte"
+    (Kit.Json.parse "/* c */ 1 // d" = Error "JSON text at byte 0: expected a value");
   check
-    "T2 control: an unquoted key is taken"
-    (Kit.Json.parse "{a:1}" = Ok (J.NatJson_obj [ "a", J.NatJson_nat 1 ]));
+    "T2 control: an unquoted key is refused at its byte"
+    (Kit.Json.parse "{a:1}"
+     = Error "JSON text at byte 1: expected an object's key, a string");
   check
-    "T2 control: a control byte inside a string is taken"
-    (Kit.Json.parse "\"a\tb\"" = Ok (J.NatJson_str "a\tb"))
+    "T2 control: a control byte inside a string is refused at its byte"
+    (Kit.Json.parse "\"a\tb\""
+     = Error "JSON text at byte 2: expected no control byte inside a string")
 ;;
 
 let round_trip_program p =

@@ -279,7 +279,8 @@ module Json = struct
     | exception Yojson.Json_error why -> raise (Not_json why)
   ;;
 
-  (* The profile's tree of a yojson value whose literals are raw: a number is a natural where its
+  (* The profile's tree of a yojson value whose literals are raw, for the MCP transport's
+     arguments (kit_mcp.ml), which Lean's grammar read first: a number is a natural where its
      text is digits that fit the host's integers, else a numeral with its text, which Lean's
      reader refuses at its place (Store/Domain/ShapeJson.lean). *)
   let rec tree (v : Yojson.Raw.t) : t =
@@ -306,14 +307,12 @@ module Json = struct
     | exception Not_json why -> Error why
   ;;
 
+  (* Lean's text grammar, lowered (src/Effect4/Store/Domain/JsonText.lean): the text's bytes,
+     each an int, read into the tree; a refusal is Lean's sentence, with its byte offset. *)
   let parse s =
-    if not (String.is_valid_utf_8 s)
-    then Error "the text is not UTF-8"
-    else (
-      match Yojson.Raw.from_string s with
-      | v -> of_raw v
-      | exception Yojson.Json_error why ->
-        Error (String.map (fun c -> if Char.equal c '\n' then ' ' else c) why))
+    match G.nat_json_parse (List.init (String.length s) (fun i -> Char.code s.[i])) with
+    | Ok t -> Ok t
+    | Error why -> Error (G.nat_json_refusal_text why)
   ;;
 
   let render (t : t) =

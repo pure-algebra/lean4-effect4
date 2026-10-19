@@ -44,6 +44,10 @@ module Machine = struct
 end
 
 module NatJson = struct
+  let parse =
+    Api_gen.nat_json_parse
+  let refusal_text =
+    Api_gen.nat_json_refusal_text
   let render =
     Api_gen.nat_json_render
 end

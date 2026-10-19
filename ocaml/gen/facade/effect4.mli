@@ -45,7 +45,14 @@ module Machine :
     module Payload = Eff_types.Payload
     module RefKey = Eff_types.RefKey
   end
-module NatJson : sig val render : Api_gen.nat_json -> int list end
+module NatJson :
+  sig
+    val parse :
+      int list ->
+      (Api_gen.nat_json, (int, Api_gen.text_reason) Api_gen.located) result
+    val refusal_text : (int, Api_gen.text_reason) Api_gen.located -> string
+    val render : Api_gen.nat_json -> int list
+  end
 module Program :
   sig
     module ActionTerm = Eff_types.ActionTerm

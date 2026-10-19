@@ -174,6 +174,123 @@ def refusalOf (doc : ShapeDoc) (t : NatJson) : Option JsonRefusal :=
 #guard match Canonical.readLocated (α := Program.Check.CheckInput) (.obj [("_tag", .str "nope")]) with
   | .error ⟨.value [], .unknownCase "nope"⟩ => true | _ => false
 
+/-! ## No budget: every refusal is the input's
+
+The reader recurses on the tree, then on the names unfolded since the last node, then on the
+shape (`optionLayer?`, `Store/Domain/ShapeRead.lean`), with no budget. The base's reader refused
+with the reason `budget` at eight steps a node and 64 more; each control below names what it
+refused, and what the reader answers now. -/
+
+/-- A name whose definition returns to it through options alone. -/
+def loopDoc : ShapeDoc := ⟨.named "A", [("A", .option (.named "A"))]⟩
+
+/-- Two names that return to each other through options alone. -/
+def loopPairDoc : ShapeDoc :=
+  ⟨.named "A", [("A", .option (.named "B")), ("B", .option (.named "A"))]⟩
+
+/-- A shape under `n` options. -/
+def underOptions : Nat → Shape → Shape
+  | 0, s => s
+  | n + 1, s => .option (underOptions n s)
+
+/-- A hundred options over a natural: one node takes a hundred and one steps. -/
+def deepDoc : ShapeDoc := ⟨underOptions 100 .nat, []⟩
+
+/-- A structure with a hundred fields of one name. -/
+def sameNamesDoc : ShapeDoc := ⟨.struct "S" (List.replicate 100 ("a", .nat)), []⟩
+
+/-- A name under an option and a pair: each pair is a node, so the names unfolded start again. -/
+def nodeDoc : ShapeDoc := ⟨.named "T", [("T", .option (.pair (.named "T") (.named "T")))]⟩
+
+-- control: a value under a loop of options refuses as `expected` at its place, where the base
+-- refused with `budget`; `null` reads as the option's `none`
+#guard match refusalOf loopDoc (.nat 5) with
+  | some ⟨.value [], .expected (.named "A")⟩ => true | _ => false
+#guard (loopDoc.readAny .null).map Val.encode = some Val.none.encode
+-- control: a loop through two names refuses at the name it returns to
+#guard match refusalOf loopPairDoc (.str "x") with
+  | some ⟨.value [], .expected (.named "A")⟩ => true | _ => false
+-- control: inside an array, the refusal keeps the element's place
+#guard match refusalOf ⟨.list (.named "A"), [("A", .option (.named "A"))]⟩ (.arr [.null, .bool true])
+    with
+  | some ⟨.value [.index 1], .expected (.named "A")⟩ => true | _ => false
+-- tested: a natural under a hundred options reads, where the base refused with `budget` (72
+-- steps for one node), and its print is the natural
+#guard ((deepDoc.readAny (.nat 5)).map fun v => NatJson.render (deepDoc.printTree v)) =
+  some (NatJson.codes "5")
+-- control: an object with one of a hundred fields of one name refuses as `expected` at the
+-- object, where the base refused with `budget` (80 steps)
+#guard match refusalOf sameNamesDoc (.obj [("a", .nat 1)]) with
+  | some ⟨.value [], .expected (.struct "S" _)⟩ => true | _ => false
+-- tested: a name met again below a node reads
+#guard (nodeDoc.readAny (.arr [.null, .arr [.null, .null]])).map Val.encode =
+  some (Val.some (.pair .none (.some (.pair .none .none)))).encode
+-- control: the strict reader refuses the loop and reads the deep option, as the located one does
+#guard readIn loopDoc.defs [] loopDoc.root (Canonical.print (5 : Nat)) = none
+#guard (readIn deepDoc.defs [] deepDoc.root (Canonical.print (5 : Nat))).isSome
+
+/-! ## The profile's text: one grammar for both drivers
+
+`NatJson.parse` (`Store/Domain/JsonText.lean`) reads the text both session drivers receive. Its law
+is the round trip of the compact text (`NatJson.parse_render`, `Laws/Store/JsonText.lean`). A
+number that is no plain natural, and a key written twice, reach the reader, which refuses them at
+their place; a comment, an unquoted key and a control byte refuse at their byte. -/
+
+-- reader: the round trip at a real carrier, sampleDoc's print through text and back
+#guard match NatJson.parse (NatJson.render (sampleDoc.printTree sampleValue)) with
+  | .ok t => (sampleDoc.readAny t).map Val.encode = some sampleValue.encode
+  | .error _ => false
+-- tested: white space between tokens reads as the compact text does
+#guard match NatJson.parse (NatJson.codes
+    " { \"xs\" : [ 1 ] ,\n \"e\" : { \"_tag\" : \"b\" } , \"k\" : \"x\" }\r\n") with
+  | .ok t => NatJson.render t = NatJson.codes "{\"xs\":[1],\"e\":{\"_tag\":\"b\"},\"k\":\"x\"}"
+  | .error _ => false
+-- control: a comment, an unquoted key, a control byte inside a string, a leading zero, a lone
+-- surrogate and text after the value refuse at their byte, with what the grammar expects there
+#guard match NatJson.parse (NatJson.codes "/* c */ 1") with
+  | .error ⟨0, .value⟩ => true | _ => false
+#guard match NatJson.parse (NatJson.codes "{a:1}") with
+  | .error ⟨1, .key⟩ => true | _ => false
+#guard match NatJson.parse (NatJson.codes "\"a\tb\"") with
+  | .error ⟨2, .control⟩ => true | _ => false
+#guard match NatJson.parse (NatJson.codes "007") with
+  | .error ⟨1, .leadingZero⟩ => true | _ => false
+#guard match NatJson.parse (NatJson.codes "\"\\ud800\"") with
+  | .error ⟨7, .surrogate⟩ => true | _ => false
+#guard match NatJson.parse (NatJson.codes "[1] 2") with
+  | .error ⟨4, .end_⟩ => true | _ => false
+#guard NatJson.codes (NatJson.refusalText ⟨4, .end_⟩) =
+  NatJson.codes "JSON text at byte 4: expected the end of the text"
+-- control: `-0` and `1e0` read as numerals, which the reader refuses at their place
+#guard match NatJson.parse (NatJson.codes "-0") with
+  | .ok t =>
+    match (ShapeDoc.mk .nat []).readLocated t with
+    | .error ⟨.value [], .expected .nat⟩ => true | _ => false
+  | .error _ => false
+#guard match NatJson.parse (NatJson.codes "1e0") with
+  | .ok t =>
+    match (ShapeDoc.mk .nat []).readLocated t with
+    | .error ⟨.value [], .expected .nat⟩ => true | _ => false
+  | .error _ => false
+-- control: 2^53 and a natural of 17 digits both refuse as outside the profile, at their place
+#guard match NatJson.parse (NatJson.codes "9007199254740992") with
+  | .ok t =>
+    match (ShapeDoc.mk .nat []).readLocated t with
+    | .error ⟨.value [], .naturalOutsideProfile _⟩ => true | _ => false
+  | .error _ => false
+#guard match NatJson.parse (NatJson.codes "18446744073709551616") with
+  | .ok t =>
+    match (ShapeDoc.mk .nat []).readLocated t with
+    | .error ⟨.value [], .naturalOutsideProfile _⟩ => true | _ => false
+  | .error _ => false
+-- control: a key written twice reaches the reader, which refuses it at its object
+#guard match NatJson.parse (NatJson.codes
+    "{\"xs\":[],\"xs\":[],\"e\":{\"_tag\":\"b\"},\"k\":\"x\"}") with
+  | .ok t =>
+    match refusalOf sampleDoc t with
+    | some ⟨.value [], .duplicateField "xs"⟩ => true | _ => false
+  | .error _ => false
+
 /-! ## Probe 1's four `unreadable` refusals, relative to the MCP tool's arguments -/
 
 /-- An object with its `_tag`. -/

@@ -127,10 +127,10 @@ serve> {"op":"run","program":{"_tag":"iterate","cursorTy":null,"initial":{"_tag"
 ## lines no tool call can carry, through serve_line
 # not JSON
 serve> this is not json
-< {"status":"error","message":"Line 1, bytes 0-16: Invalid token 'this is not json'"}
+< {"status":"error","message":"JSON text at byte 0: expected a value"}
 # empty
 serve>
-< {"status":"error","message":"Blank input data"}
+< {"status":"error","message":"JSON text at byte 0: expected a value"}
 # an array
 serve> [1,2,3]
 < {"status":"error","message":"a request is a JSON object"}
@@ -142,4 +142,4 @@ serve> {"op":3}
 < {"status":"error","message":"a request names its op"}
 # trailing bytes
 serve> {"op":"check"} x
-< {"status":"error","message":"Line 1, bytes 15-16: Junk after end of JSON value: 'x'"}
+< {"status":"error","message":"JSON text at byte 15: expected the end of the text"}

@@ -5,9 +5,11 @@
    hints, from Lean's method descriptors), where the argument schemas name the program's grammar
    and leave it to `describe`, which answers each definition's schema from Lean's table, and the
    schema of every method's result under `Result`;
-   Tool.serve owns actions, queries and refusals. Yojson.Raw keeps transport numbers
-   exact, including request IDs outside OCaml int. A tool's arguments become the profile's tree
-   (Kit.Json.of_raw) inside the request this server writes around them, and Lean reads them.
+   Tool.serve owns actions, queries and refusals. Lean's text grammar reads each line
+   (Kit.Json.parse, the one both session drivers read with); its tree becomes the transport's
+   Yojson.Raw value with each number's text kept, so request IDs outside OCaml int stay exact.
+   A tool's arguments become the profile's tree (Kit.Json.of_raw) inside the request this server
+   writes around them, and Lean reads them.
    Depends on: Effect4_gen.Api_gen, Kit (Kit.Json), Kit_tool, Yojson.
 
    Behaviours, tested by engine/test/kit/test_mcp.ml:
@@ -58,27 +60,24 @@ let has_string key expected value =
   Option.fold ~none:false ~some:(String.equal expected) (string_field key value)
 ;;
 
-(* Yojson also admits extensions. The MCP transport accepts JSON alone. *)
-let rec standard = function
-  | `Null | `Bool _ | `Intlit _ -> true
-  | `Stringlit _ as value -> Option.is_some (text value)
-  | `Floatlit value -> value <> "NaN" && value <> "Infinity" && value <> "-Infinity"
-  | `List values -> List.for_all standard values
-  | `Assoc fields ->
-    List.for_all (fun (key, value) -> String.is_valid_utf_8 key && standard value) fields
-  | `Tuple _ | `Variant _ -> false
+(* The transport's yojson value of a tree Lean's grammar read: the same JSON, each number by its
+   text, so an id or a metadata number keeps its spelling. A numeral stays a [`Floatlit], which
+   [valid_id] reads by its text, so [K.of_raw] takes every value back to the tree it was, and a
+   tool's arguments are the tree Lean's grammar read. *)
+let rec raw (t : K.t) : J.t =
+  match t with
+  | K.NatJson_null -> `Null
+  | K.NatJson_bool b -> `Bool b
+  | K.NatJson_nat n -> `Intlit (string_of_int n)
+  | K.NatJson_numeral s -> `Floatlit s
+  | K.NatJson_str s -> string s
+  | K.NatJson_arr ts -> `List (List.map raw ts)
+  | K.NatJson_obj es -> `Assoc (List.map (fun (k, v) -> k, raw v) es)
 ;;
 
-let parse line =
-  if not (String.is_valid_utf_8 line)
-  then Error "Expected UTF-8 JSON"
-  else (
-    match J.from_string line with
-    | value when standard value -> Ok value
-    | _ -> Error "Expected JSON without extensions"
-    | exception Yojson.Json_error why -> Error why)
-;;
-
+(* A line of the transport, read by Lean's text grammar, the one the session drivers read with
+   (Kit.Json.parse). *)
+let parse line = Result.map raw (K.parse line)
 let supported_version = "2025-06-18"
 
 type phase =
