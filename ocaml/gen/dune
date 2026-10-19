@@ -1,11 +1,31 @@
 ; The LCNF route's output and its smoke check. From ocaml/: dune build gen && dune test gen.
-; `api_gen.ml` (Effect4.Api.run / Effect4.Api.replay and their whole closure, run by
-; api_check, with the machine's own functions as coverage roots) is GENERATED; its header
-; carries the regenerating command, and `make gen-lcnf` runs it (ocaml/gen/roots.json).
-; Its join points are `let[@local always]`, and `-w @55` makes warning 55 an error in every
-; profile: ocamlopt refuses a join point it cannot compile to a static jump. Every stanza that
-; compiles the route's output carries the flag (engine/, and engine/test/ todo, ctors, modeled
-; and rocq).
+; `closure_gen.ml` (Effect4.Api.run / Effect4.Api.replay and their whole closure, run by
+; api_check, with the machine's own functions as coverage roots) and `api_gen.ml`, the facade
+; over it, are GENERATED; their headers carry the regenerating command, and `make gen-lcnf` runs
+; it (ocaml/gen/roots.json). Their join points are `let[@local always]`, and `-w @55` makes
+; warning 55 an error in every profile: ocamlopt refuses a join point it cannot compile to a
+; static jump. Every stanza that compiles the route's output carries the flag (engine/, and
+; engine/test/ lanes, todo, ctors, modeled and rocq).
+;
+; The one compiled closure (D1): every node the api artifact's roots reach, lowered and compiled
+; once. A package-private library of effect4_gen (`package`, no `public_name`): it installs with
+; effect4_gen, which links it, but an installed client names none of its modules
+; (engine/test/install, the red_closure_* controls). Inside this project the test lanes'
+; unit engine/test/lanes/lanes_gen.ml includes it, so the records Api_gen seals are concrete
+; there. Its interface (closure_gen.mli) keeps every type and the values its two scopes call.
+
+(library
+ (name effect4_closure)
+ (package effect4_gen)
+ (wrapped false)
+ (modules closure_gen)
+ (flags
+  (:standard -w @55))
+ (libraries effect4_clock effect4_eff effect4_lcnf))
+
+; The installed face of the closure: Api_gen is `include Closure_gen`, and its interface
+; (api_gen.mli, read off the closure's typed tree) keeps the public and linkage roots, declares
+; the closure's types as its own and seals the recipe's packages.
 
 (library
  (name effect4_gen)
@@ -13,7 +33,7 @@
  (modules api_gen)
  (flags
   (:standard -w @55))
- (libraries effect4_clock effect4_eff effect4_lcnf))
+ (libraries effect4_closure effect4_clock effect4_eff effect4_lcnf))
 
 (executable
  (name api_check)

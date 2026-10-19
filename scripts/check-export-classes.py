@@ -3,9 +3,11 @@
 
 The recipe (ocaml/gen/roots.json, read by OCaml5.Lcnf.Export) gives each root one class.
 An artefact's interface exports its public and linkage roots and hides its internal and
-coverage roots. Each case below compiles one client with ocamlc. A positive case must
-compile. A red case must fail with OCaml's own error, and the error must name the
-refused value. The OCaml workspace must already be built (make check-ocaml builds it).
+coverage roots. The api artefact compiles its closure once, in Closure_gen (D1): the
+closure's interface adds the values the test lanes call, and Api_gen, the facade over it,
+exports the public and linkage roots alone. Each case below compiles one client with ocamlc.
+A positive case must compile. A red case must fail with OCaml's own error, and the error must
+name the refused value. The OCaml project must already be built (make check-ocaml builds it).
 These finite controls establish interface scope only: no behaviour and no lowering.
 """
 from pathlib import Path
@@ -15,7 +17,7 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 build = root / 'ocaml/_build/default'
-includes = ['gen/.effect4_gen.objs/byte', 'eff/.effect4_eff.objs/byte',
+includes = ['gen/.effect4_gen.objs/byte', 'gen/.effect4_closure.objs/byte', 'eff/.effect4_eff.objs/byte',
             'clock/.effect4_clock.objs/byte', 'lcnf/.effect4_lcnf.objs/byte',
             'engine/.effect4_engine.objs/byte', 'engine/bytes/.effect4_bytes.objs/byte']
 compiler = ['opam', 'exec', '--switch=effect4', '--', 'ocamlc', '-color', 'never',
@@ -24,6 +26,7 @@ for directory in includes:
     compiler += ['-I', str(build / directory)]
 
 G = 'module G = Effect4_gen.Api_gen\n'
+C = 'module C = Closure_gen\n'
 E = 'module E = Effect4_engine.Api_engine_inst\n'
 # name: (expected exit, client source, the text a refusal must name)
 cases = {
@@ -32,6 +35,12 @@ cases = {
     'api-gen-linkage': (0, G + 'let s = G.stores_empty\n', None),
     'api-gen-coverage': (2, G + 'let f = G.dispatcher_insert\n', 'dispatcher_insert'),
     'api-gen-coverage-machine': (2, G + 'let f = G.run_machine_update\n', 'run_machine_update'),
+    # A value the closure exports to the test lanes is no value of Api_gen.
+    'api-gen-lane-value': (2, G + 'let f = G.store_image_equiv\n', 'store_image_equiv'),
+    # The closure, named inside the project (D1): the value the lanes call is bound, and a
+    # coverage root stays hidden by the closure's own interface too.
+    'closure-lane-value': (0, C + 'let f = C.store_image_equiv\n', None),
+    'closure-coverage': (2, C + 'let f = C.dispatcher_insert\n', 'dispatcher_insert'),
     # Api_engine, through the instance whose interface includes the functor's result: a linkage
     # root is exported; an internal root (called by the prelude only) and a coverage root are not.
     'engine-linkage': (0, E + 'let c = E.empty_ctx\n', None),

@@ -1040,6 +1040,12 @@ structure Translated where
   /-- The unqualified heads of the extern rows and carrier operations the body calls
   (`St.externHeads`): names of hand functions, which no generated declaration may take. -/
   externHeads : Array String := #[]
+  /-- The type constants the body constructs or destructs (`St.realTypes`): they need a full
+  declaration in the unit that emits this declaration, or in a unit it includes. -/
+  realTypes : Array Name := #[]
+  /-- The type constants its annotations name (`St.mentioned`): they need at least a
+  placeholder there. -/
+  mentioned : Array Name := #[]
   /-- The LCNF signature, for the reader. -/
   signature : String
   recursive : Bool
@@ -1100,7 +1106,8 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
     -- Only an actual free reference to this emitted binding needs a recursive singleton.
     return { leanName := d.name, userName := userName, ocamlName := ocamlName, bind := b,
              callees := callees, externDeps := (← get).externDeps,
-             freeRefs := (← get).freeRefs, externHeads := (← get).externHeads, signature := sig,
+             freeRefs := (← get).freeRefs, externHeads := (← get).externHeads,
+             realTypes := (← get).realTypes, mentioned := (← get).mentioned, signature := sig,
              recursive := (← get).freeRefs.contains ocamlName }
   -- A join point is translated before the jumps to it, so which of its parameters are handed
   -- a carrier is known only after a pass: translate again with those parameters seeded until
@@ -1156,12 +1163,28 @@ structure Closure where
   wantedCargs : Array (Name × Nat × String) := #[]
   /-- Every place a carrier was turned back into the Lean list. -/
   toLists : Array String := #[]
+  /-- Where each later root group of the walk (`phases`) begins in `decls`: the index of its first
+  declaration. The declarations before the first start are those the artifact's own roots reach,
+  since the walk closes over them before any later group begins. -/
+  phaseStarts : Array Nat := #[]
 
 /-- Every refusal of the closure: the translation's, then the clock boundary's. -/
 def Closure.problems (c : Closure) : Array String := c.todos ++ c.clockRefusals
 
 private def pushNew (a : Array Name) (n : Name) : Array Name :=
   if a.contains n then a else a.push n
+
+/-- How many declarations the artifact's own roots reach: the walk's first phase, every
+declaration when there is no later one. -/
+def Closure.ownCount (c : Closure) : Nat :=
+  c.phaseStarts[0]?.getD c.decls.size
+
+/-- The type constants a run of declarations needs, in the order the walk met them: those they
+construct or destruct, then those their annotations name, gathered as `Closure.absorb` gathers
+them, so the run of every declaration gives `Closure.realTypes` and `Closure.mentioned`. -/
+def typesOfDecls (ds : Array Translated) : Array Name × Array Name :=
+  ds.foldl (fun (real, named) t => (t.realTypes.foldl pushNew real, t.mentioned.foldl pushNew named))
+    (#[], #[])
 
 /-- One translated declaration and what its translation recorded, added to the closure. The
 walk and `retranslate` both build a closure this way, so the two agree on every field. -/
@@ -1183,7 +1206,9 @@ carrier-inference rounds stay private; only the final checked closure is returne
 `phases` are further root groups, walked in order once the walk from `roots` and every earlier
 phase is done: one walk, one set of translated declarations, and a declaration two phases reach is
 translated once, in the earlier phase. So an artifact's consumers (`OCaml5.Lcnf.Export`) share a
-node, and the first consumer's declarations come in the order its own walk gives them. -/
+node, and the first consumer's declarations come in the order its own walk gives them. The index
+where each phase begins is `Closure.phaseStarts`: the declarations before the first are exactly
+those `roots` reach, which no later phase walks again. -/
 private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
     (ex : Externs := {}) (phases : Array (Array Name) := #[]) :
     CoreM (Closure × Array ClockFlow.Flow) := do
@@ -1199,6 +1224,7 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
     if i == queue.size then
       queue := queue ++ phases.getD phase #[]
       phase := phase + 1
+      c := { c with phaseStarts := c.phaseStarts.push c.decls.size }
       continue
     let n := queue[i]!
     i := i + 1
@@ -1311,7 +1337,7 @@ def retranslate (c : Closure) (tn : TypeNames) (ex : Externs) : CoreM Closure :=
   let mono := persistedMonoIndex env
   let mut out : Closure :=
     { frontier := c.frontier, missing := c.missing, wrapperRefs := c.wrapperRefs,
-      clockRefusals := c.clockRefusals }
+      clockRefusals := c.clockRefusals, phaseStarts := c.phaseStarts }
   for t in c.decls do
     let some d := mono.findIn? env t.leanName
       | throwError "retranslate: no mono declaration for {t.leanName}"

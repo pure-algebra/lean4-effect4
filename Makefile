@@ -181,10 +181,10 @@ LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean 
   $(wildcard tools/Conform/Lcnf/*.lean tools/Conform/Core/*.lean tools/Conform/Source/*.lean) \
   ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml \
   scripts/lib/lcnf_interfaces.py $(wildcard ocaml/gen/interface/*.ml ocaml/gen/interface/*.mli) ocaml/gen/interface/dune $(PRODUCER_COMMON)
-LCNF_OUT := ocaml/eff/eff_types.ml ocaml/eff/eff_types.mli ocaml/gen/api_gen.ml \
-  ocaml/gen/api_gen.mli ocaml/gen/closure-api_gen.tsv ocaml/engine/api_engine.ml \
-  ocaml/engine/api_engine.mli ocaml/gen/closure-api_engine.tsv ocaml/engine/test/lanes/lanes_gen.ml \
-  ocaml/engine/test/lanes/lanes_gen.mli ocaml/gen/closure-lanes_gen.tsv ocaml/engine/test/todo/todo_gen.ml \
+LCNF_OUT := ocaml/eff/eff_types.ml ocaml/eff/eff_types.mli ocaml/gen/closure_gen.ml \
+  ocaml/gen/closure_gen.mli ocaml/gen/api_gen.ml ocaml/gen/api_gen.mli ocaml/gen/closure-api_gen.tsv \
+  ocaml/engine/api_engine.ml ocaml/engine/api_engine.mli ocaml/gen/closure-api_engine.tsv \
+  ocaml/engine/test/lanes/lanes_gen.ml ocaml/engine/test/lanes/lanes_gen.mli ocaml/engine/test/todo/todo_gen.ml \
   ocaml/engine/test/todo/todo_gen.mli ocaml/engine/test/ctors/ctors_gen.ml \
   ocaml/engine/test/ctors/ctors_gen.mli ocaml/engine/test/modeled/modeled_gen.ml \
   ocaml/engine/test/modeled/modeled_gen.mli ocaml/engine/test/rocq/rocq_gen.ml \

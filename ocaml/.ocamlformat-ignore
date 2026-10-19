@@ -34,6 +34,8 @@ engine/test/todo/todo_gen.mli
 gen/api_check.ml
 gen/api_gen.ml
 gen/api_gen.mli
+gen/closure_gen.ml
+gen/closure_gen.mli
 gen/facade/effect4.ml
 gen/facade/effect4.mli
 tools/typed_lint/test/generated.ml

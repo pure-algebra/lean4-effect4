@@ -82,25 +82,67 @@ for what, p in twins:
     print(f'{n:6d}  {p}  ({what})')
 print(f'{total:6d}  total')
 
-print('== 3. Generated closures that repeat api_gen.ml')
-base = defs('ocaml/gen/api_gen.ml')
-for p in ['ocaml/engine/test/lanes/lanes_gen.ml', 'ocaml/engine/test/todo/todo_gen.ml',
-          'ocaml/engine/test/modeled/modeled_gen.ml', 'ocaml/engine/test/ctors/ctors_gen.ml',
-          'ocaml/engine/test/rocq/rocq_gen.ml']:
-    if not os.path.exists(os.path.join(ROOT, p)):
+print('== 3. Generated units that repeat the one compiled closure')
+# Since D1 (wave 2, C5) the api artifact compiles its closure once, in ocaml/gen/closure_gen.ml,
+# and api_gen.ml is a facade over it; before, api_gen.ml held the closure itself. The lanes' unit
+# lanes_gen.ml compiles only the nodes the lanes alone reach. api_engine.ml lowers the same
+# declarations over the engine's carriers, another target profile, and stays apart by the
+# identity check (`lake exe lcnfgen --identity`), so it is not counted here.
+closure = 'ocaml/gen/closure_gen.ml'
+if not os.path.exists(os.path.join(ROOT, closure)):
+    closure = 'ocaml/gen/api_gen.ml'
+base = defs(closure)
+print(f'{closure}: {lines(closure)} lines, {len(base)} top-level definitions')
+for p in ['ocaml/gen/api_gen.ml', 'ocaml/engine/test/lanes/lanes_gen.ml',
+          'ocaml/engine/test/todo/todo_gen.ml', 'ocaml/engine/test/modeled/modeled_gen.ml',
+          'ocaml/engine/test/ctors/ctors_gen.ml', 'ocaml/engine/test/rocq/rocq_gen.ml']:
+    if p == closure or not os.path.exists(os.path.join(ROOT, p)):
         continue
     d = defs(p)
-    print(f'{p}: {lines(p)} lines, {len(d)} top-level definitions, {len(d & base)} also in api_gen.ml')
+    print(f'{p}: {lines(p)} lines, {len(d)} top-level definitions, '
+          f'{len(d & base)} also in {os.path.basename(closure)}')
 
 print('== 4. Packaging')
 opams = [os.path.join(dp, f) for dp, _, fs in os.walk(OC) if '_build' not in dp
          for f in fs if f.endswith('.opam')]
-pub = subprocess.run(['grep', '-rn', 'public_name', OC, '--include=dune'], capture_output=True,
+pub = subprocess.run(['grep', '-rn', '^ (public_name', OC, '--include=dune'], capture_output=True,
                      text=True).stdout
 pub = [l for l in pub.splitlines() if '_build' not in l]
-print(f'.opam files {len(opams)}; public_name stanzas {len(pub)}')
+projects = [os.path.join(dp, f) for dp, _, fs in os.walk(OC) if '_build' not in dp
+            and 'consumer' not in dp for f in fs if f == 'dune-project']
+print(f'dune-project files {len(projects)} (the install lane\'s outside consumer not counted); '
+      f'.opam files {len(opams)}; public_name stanzas {len(pub)}')
 for l in pub:
     print('  ' + l.replace(ROOT + '/', ''))
+
+
+def stanzas(text):
+    # The top-level forms of a dune file, comments dropped.
+    text = '\n'.join(l.split(';')[0] for l in text.splitlines())
+    out, depth, start = [], 0, 0
+    for i, c in enumerate(text):
+        if c == '(':
+            if depth == 0:
+                start = i
+            depth += 1
+        elif c == ')':
+            depth -= 1
+            if depth == 0:
+                out.append(text[start:i + 1])
+    return out
+
+
+private = []
+for dp, _, fs in os.walk(OC):
+    if '_build' in dp or 'consumer' in dp or 'dune' not in fs:
+        continue
+    for s in stanzas(open(os.path.join(dp, 'dune')).read()):
+        if s.startswith('(library') and '(package ' in s and '(public_name' not in s:
+            name = re.search(r'\(name ([a-z_0-9]+)\)', s).group(1)
+            private.append(f'{os.path.relpath(os.path.join(dp, "dune"), ROOT)}: {name}')
+print(f'package-private libraries {len(private)}')
+for l in sorted(private):
+    print('  ' + l)
 
 print('== 5. Hand library modules with no .mli (rule 5)')
 missing = []

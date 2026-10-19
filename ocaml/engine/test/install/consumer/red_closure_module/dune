@@ -1,0 +1,8 @@
+; Red control of the closure's scope (D1): the one compiled closure is the package-private library
+; effect4_closure of effect4_gen. It installs with effect4_gen, which links it, but an installed
+; client names none of its modules, so a value the closure exports to the test lanes stays
+; unbound.
+; ../../check_install.sh expects this build to fail with the line of red.expected.
+(executable
+ (name red)
+ (libraries effect4_gen.effect4))

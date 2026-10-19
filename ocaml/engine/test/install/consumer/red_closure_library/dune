@@ -1,0 +1,7 @@
+; Red control of the closure's scope (D1): an installed client that links the package-private
+; library by its installed name, effect4_gen.__private__.effect4_closure, still names none of its
+; modules: dune links the archive but hands the compiler no path to its interfaces.
+; ../../check_install.sh expects this build to fail with the line of red.expected.
+(executable
+ (name red)
+ (libraries effect4_gen.__private__.effect4_closure))
