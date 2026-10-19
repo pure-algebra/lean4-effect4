@@ -7,5 +7,15 @@ type t
 (** A session where no action is accepted, with an empty checker memo. *)
 val create : unit -> t
 
+(** One request's JSON tree through the session (`Tool.Native.serveTree`): the reply envelope's
+    tree, or the wire's refusal; a refused request leaves the session as it was. *)
+val serve_tree
+  :  t
+  -> Kit.Json.t
+  -> (Kit.Json.t, Effect4_gen.Api_gen.effect4_tool_wire_refusal) result
+
+(** A wire refusal as the line protocol writes it: [{"refused": <the refusal's JSON>}]. *)
+val wire_refused : Effect4_gen.Api_gen.effect4_tool_wire_refusal -> Kit.Json.t
+
 (** One request line in, one reply line out; a refused line leaves the session as it was. *)
 val serve_line : t -> string -> string

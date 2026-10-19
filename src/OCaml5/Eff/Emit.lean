@@ -9,8 +9,7 @@ import Effect4.Program.TyFoldExtras
 **What it is.** The `eff/` library as OCaml syntax (`OCaml5.Ml.Syntax`), one module per generated
 file: `ctorsModule` (`eff_ctors.ml`: the constructor tables and the literal visitor),
 `wireModule` (`eff_wire.ml`: the canonical byte encoding and its exact, length-directed decoder
-over the hand-written `Eff_frame`), `jsonModule` (`eff_json.ml`), `subtermModule`
-(`eff_subterm.ml`), `nativeModule` (`eff_native.ml`: the native atom names, const-generic metadata
+over the hand-written `Eff_frame`), `subtermModule` (`eff_subterm.ml`), `nativeModule` (`eff_native.ml`: the native atom names, const-generic metadata
 and operation rows as data) and `layoutModule` (`eff_layout.ml`), with `manifest`
 (`eff_manifest.txt`, text). The driver `OCaml5.Tools.EffGen` checks each module
 (`OCaml5.Ml.checkModule`) and renders it (`OCaml5.Ml.render`), as the LCNF route does. Program
@@ -45,8 +44,8 @@ def hex4 (n : Nat) : String :=
   "".pushn '0' (4 - s.length) ++ s
 
 /-- A JSON string: `"` and `\` escaped, control characters as `\n \r \t \b \f` or `\u00XX`,
-everything else verbatim. The OCaml renderer (`eff_json_text.ml`) follows the same rule byte
-for byte. -/
+everything else verbatim: the goldens' spelling (`V.json`), the rule of the profile's renderer
+(`NatJson.render`) too. -/
 def jsonStr (s : String) : String :=
   let esc (c : Char) : String :=
     if c == '"' then "\\\"" else if c == '\\' then "\\\\"
@@ -278,46 +277,6 @@ def wireModule (bs : List (List Family)) : Ml.Module :=
             (.fn ["s"] (call "decode_eff" [.var "s", .int 0, call "String.length" [.var "s"]]))),
           letOne (bind "decode_program_exact" [] (.arrow .string (.option (.named "program")))
             (.var "decode_eff_exact"))] }
-
-/-! ## eff_json.ml -/
-
-partial def jsonOf : OTy → Ml.Expr → Ml.Expr
-  | .int, x => .ctor "Eff_json_text.Int" [x]
-  | .bool, x => .ctor "Eff_json_text.Bool" [x]
-  | .string, x => .ctor "Eff_json_text.String" [x]
-  | .unit, _ => .ctor "Eff_json_text.Array" [.listLit []]
-  | .option a, x =>
-    .matchE x [(.ctor "None" [], .ctor "Eff_json_text.Null" []),
-               (.ctor "Some" [.var "y"], jsonOf a (.var "y"))]
-  | .list a, x => .ctor "Eff_json_text.Array" [call "List.map" [.fn ["y"] (jsonOf a (.var "y")), x]]
-  | .prod a c, x =>
-    .letPat (.tuple [.var "y0", .var "y1"]) x
-      (.ctor "Eff_json_text.Array" [.listLit [jsonOf a (.var "y0"), jsonOf c (.var "y1")]])
-  | .named n, x => call s!"json_{n}" [x]
-  | .requirements, x => .ctor "Eff_json_text.Array" [call "List.map" [.var "json_service_key", x]]
-
-def jsonBind (f : Family) : Ml.Bind :=
-  let o := f.spec.oname
-  if f.isStruct then
-    let c := f.ctors.head!
-    let fields := c.args.map fun (nm, t) =>
-      Ml.Expr.tuple [.str nm, jsonOf t (if f.trivial then .var "r" else .field (.var "r") (ofield f.spec.leanName nm))]
-    bind s!"json_{o}" [("r", f.ty)] (.named "Eff_json_text.t")
-      (.ctor "Eff_json_text.Object" [.listLit fields])
-  else
-    bind s!"json_{o}" [("v", f.ty)] (.named "Eff_json_text.t") (.matchE (.var "v") (f.ctors.map fun c =>
-      (ctorPatNamed f.spec.leanName c,
-       .ctor "Eff_json_text.Array" [.listLit (.ctor "Eff_json_text.String" [.str c.short] ::
-         (c.args.zip (argNames c)).map fun ((_, t), a) => jsonOf t (.var a))])))
-
-def jsonModule (bs : List (List Family)) : Ml.Module :=
-  { name := "eff_json",
-    items := headerItems ("Eff_json: the JSON printer of every carrier of Eff_types (a printer only; there is no JSON parser). Rule: a constructor is [\"ctorName\", arg1, ...] with the Lean constructor name; a structure is {\"field\": value} with the Lean field names; lists are arrays; options null / value; unit []; pairs [a, b]; numbers, booleans and strings as themselves. Rendering (Eff_json_text.render) is compact, with the escaping stated there; the Lean side (EffGen.lean, V.json) prints the same bytes (tested: goldens).")
-      ++ [.openD "Eff_types"]
-      ++ bs.flatMap fun b =>
-          [.letD true (b.map jsonBind)]
-          ++ b.map fun f => letOne (bind s!"print_{f.spec.oname}" [("v", f.ty)] .string
-               (call "Eff_json_text.render" [call s!"json_{f.spec.oname}" [.var "v"]])) }
 
 /-! ## eff_subterm.ml: the children table, the node sum and one witness per constructor -/
 

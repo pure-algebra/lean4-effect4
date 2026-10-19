@@ -1,5 +1,6 @@
-(* Selected metadata boundary: Lean bytes decode/re-encode exactly; hand JSON
-   agrees; malformed framing and noncanonical requirement lists are refused. *)
+(* Selected metadata boundary: Lean bytes decode/re-encode exactly; malformed framing and
+   noncanonical requirement lists are refused. The fixture's JSON column is `V`'s spelling, which
+   ts/eff/test/metadata.test.ts reads; no OCaml printer of that spelling remains (C6). *)
 let read path =
   let ic = open_in_bin path in
   let s = really_input_string ic (in_channel_length ic) in
@@ -20,12 +21,11 @@ let check label ok =
   if not ok then failwith label
 ;;
 
-let exercise name bytes expected decode encode print =
+let exercise name bytes decode encode =
   match decode bytes with
   | None -> failwith (name ^ ": exact decoder refused Lean fixture")
   | Some value ->
     check (name ^ ": bytes") (encode value = bytes);
-    check (name ^ ": JSON") (print value = expected);
     check (name ^ ": trailing") (decode (bytes ^ "\000") = None);
     check
       (name ^ ": truncated")
@@ -37,7 +37,6 @@ let exercise name bytes expected decode encode print =
 
 let () =
   let open Eff_wire in
-  let open Eff_json in
   let families = ref [] in
   read "../goldens/metadata.tsv"
   |> String.split_on_char '\n'
@@ -45,32 +44,17 @@ let () =
     | "" -> ()
     | line ->
       (match String.split_on_char '\t' line with
-       | [ name; family; hex; json; _node ] ->
+       | [ name; family; hex; _json; _node ] ->
          families := family :: !families;
          let bytes = unhex hex in
          (match family with
-          | "Ty" -> exercise name bytes json decode_ty_exact encode_ty print_ty
-          | "RowKind" ->
-            exercise name bytes json decode_row_kind_exact encode_row_kind print_row_kind
-          | "RowShape" ->
-            exercise
-              name
-              bytes
-              json
-              decode_row_shape_exact
-              encode_row_shape
-              print_row_shape
+          | "Ty" -> exercise name bytes decode_ty_exact encode_ty
+          | "RowKind" -> exercise name bytes decode_row_kind_exact encode_row_kind
+          | "RowShape" -> exercise name bytes decode_row_shape_exact encode_row_shape
           | "Registration" ->
-            exercise
-              name
-              bytes
-              json
-              decode_registration_exact
-              encode_registration
-              print_registration
-          | "Row" -> exercise name bytes json decode_row_exact encode_row print_row
-          | "EffTy" ->
-            exercise name bytes json decode_eff_ty_exact encode_eff_ty print_eff_ty
+            exercise name bytes decode_registration_exact encode_registration
+          | "Row" -> exercise name bytes decode_row_exact encode_row
+          | "EffTy" -> exercise name bytes decode_eff_ty_exact encode_eff_ty
           | _ -> failwith ("unsupported metadata family " ^ family))
        | _ -> failwith "metadata TSV arity"));
   check

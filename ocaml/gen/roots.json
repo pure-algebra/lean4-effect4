@@ -166,7 +166,13 @@
         "Effect4.Tool.Native.refusalShape",
         "Effect4.Tool.Native.refusalToVal",
         "Effect4.Tool.Native.methods",
-        "Effect4.Tool.Native.describe"
+        "Effect4.Tool.Native.describe",
+        "Effect4.Tool.Native.serveTree",
+        "Effect4.Tool.Native.refusalTree",
+        "Effect4.Tool.Native.relativeRefusal",
+        "Effect4.Store.ShapeDoc.readLocated",
+        "Effect4.Store.ShapeDoc.printTree",
+        "Effect4.NatJson.render"
       ],
       "linkage": [
         "Effect4.Api.load",

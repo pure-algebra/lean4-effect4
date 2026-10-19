@@ -6,7 +6,7 @@
     carrier's canonical image. The machine is the engine ([Kit_machine], [E4_host]). [run] is the
     one call: it picks the runner, as Lean's [Effect4.Run.atBudget] does, so a caller never asks
     which part of the language a program uses.
-    Depends on: Eff_types, Effect4_gen.Api_gen (generated), Kit_json, Kit_machine.
+    Depends on: Eff_types, Effect4_gen.Api_gen (generated), Kit_machine, Yojson (the text).
 
     Behaviours it holds itself to, each by construction over the generated code:
     B1  The checker is Lean's: [check] answers what [Api.check] answers, a type or a located
@@ -20,8 +20,11 @@
         request and the host's state; [None] leaves the call waiting (decisions row 408 (1)).
     B5  Every reply is admitted at its call's row before it is applied (the session's reply
         admission, [Program.admitAnswer]); a reply that does not fit is not applied.
-    B6  JSON reads exactly: a carrier read from JSON is the carrier whose value tree the JSON
-        prints, or nothing. *)
+    B6  JSON is Lean's: yojson parses the text into the profile's tree ([Effect4.NatJson]), and
+        Lean's lowered reader and printer do the rest ([ShapeDoc.readLocated],
+        [ShapeDoc.printTree], [NatJson.render]). A carrier read from JSON is the carrier whose
+        canonical print is the JSON, normalised ([ShapeDoc.readLocated_exact]); a refusal names
+        its site and its reason. *)
 
 (** {1 The carriers} *)
 
@@ -193,10 +196,42 @@ val replays : app -> program -> trace -> bool option
 val format_version : int
 
 module Json : sig
-  type t = Eff_json_text.t
+  (** The profile's JSON tree ([Effect4.NatJson]): a number is a natural, and a number the tree
+      does not hold as one (a negative number, a fraction, a natural past the host's integers) is
+      a numeral with its text, which every reader refuses at its place. *)
+  type t = Effect4_gen.Api_gen.nat_json =
+    | NatJson_null
+    | NatJson_bool of bool
+    | NatJson_nat of int
+    | NatJson_numeral of string
+    | NatJson_str of string
+    | NatJson_arr of t list
+    | NatJson_obj of (string * t) list
 
+  (** A refusal of the profile's reader: a reason at a site ([Store.JsonRefusal]). *)
+  type refusal =
+    ( Effect4_gen.Api_gen.json_site
+      , Effect4_gen.Api_gen.json_reason )
+      Effect4_gen.Api_gen.located
+
+  (** The tree of one JSON text, or why it is none. yojson parses it ([Yojson.Raw], so each
+      number keeps its text); a yojson extension (a tuple, a variant, NaN, Infinity) or a string
+      that is not UTF-8 is refused. yojson's acceptance is the text's: it also skips comments. *)
   val parse : string -> (t, string) result
+
+  (** The tree of a yojson value whose literals are raw, as [parse] makes it. *)
+  val of_raw : Yojson.Raw.t -> (t, string) result
+
+  (** The compact text: Lean's [NatJson.render], lowered. *)
   val render : t -> string
+
+  (** A value tree from JSON under a shape document: Lean's located reader, lowered
+      ([ShapeDoc.readLocated]). *)
+  val read : Effect4_gen.Api_gen.shape_doc -> t -> (Eff_types.Val.t, refusal) result
+
+  (** A value tree as JSON under a shape document, each list family as an array: Lean's printer,
+      lowered ([ShapeDoc.printTree]). *)
+  val print : Effect4_gen.Api_gen.shape_doc -> Eff_types.Val.t -> t
 
   (** A program from its JSON print (the session tool's form), objects in any order. *)
   val program : t -> program option

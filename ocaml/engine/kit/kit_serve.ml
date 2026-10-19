@@ -4,7 +4,7 @@
    its answer as JSON, and its line protocol, JSON lines (`eff serve`): a function from one input
    line to its output line, so the lane tests it in-process and `eff` is a loop around it. The
    Model Context Protocol face (`eff mcp`) is the authoring tool's (Kit_mcp), not these commands'.
-   Depends on: Kit, Eff_json_text.
+   Depends on: Kit (Kit.Json, the profile's JSON tree).
 
    Behaviours it holds itself to:
    S1  Every answer is one JSON object with a "status": the command's own ("ok", "refused",
@@ -16,7 +16,7 @@
        ("via"), and for a settled tree run whether the machine agrees ("machine": "agrees");
        "fast" skips the machine's run.                                 tested (T10) *)
 
-module J = Eff_json_text
+module J = Kit.Json
 
 exception Input of string
 
@@ -114,11 +114,11 @@ let answer (r : request) : J.t =
     let p = program () in
     (match Kit.explore app ~budget:r.budget ~width:r.width p with
      | Error at ->
-       J.Object
-         [ "status", J.String "outside"
-         ; "path", J.Array (List.map (fun i -> J.Int i) at)
+       J.NatJson_obj
+         [ "status", J.NatJson_str "outside"
+         ; "path", J.NatJson_arr (List.map (fun i -> J.NatJson_nat i) at)
          ; ( "note"
-           , J.String
+           , J.NatJson_str
                "explore walks the call tree, and this node has no arm in it (a fork, a \
                 scope, a service, a layer); run runs the program on the machine" )
          ]
@@ -128,50 +128,52 @@ let answer (r : request) : J.t =
          then []
          else (
            match Kit.replays app p t with
-           | Some b -> [ "machine", J.String (if b then "agrees" else "disagrees") ]
+           | Some b -> [ "machine", J.NatJson_str (if b then "agrees" else "disagrees") ]
            | None -> [])
        in
-       J.Object
-         [ "status", J.String "paths"
-         ; "budget", J.Int r.budget
+       J.NatJson_obj
+         [ "status", J.NatJson_str "paths"
+         ; "budget", J.NatJson_nat r.budget
          ; ( "paths"
-           , J.Array
+           , J.NatJson_arr
                (List.map
                   (fun t ->
                      match Kit.Json.trace_json app t with
-                     | J.Object fields -> J.Object (fields @ replay t)
+                     | J.NatJson_obj fields -> J.NatJson_obj (fields @ replay t)
                      | j -> j)
                   traces) )
          ])
   | op -> input "unknown operation %S (the operations are check, run and explore)" op
 ;;
 
-let error_json e = J.Object [ "status", J.String "error"; "message", J.String e ]
+let error_json e =
+  J.NatJson_obj [ "status", J.NatJson_str "error"; "message", J.NatJson_str e ]
+;;
 
 (* `eff serve`: one request a line, {"op": …, "program": …, "rows": […], "tape": […], "limit": n,
    "frames": b, "budget": k, "width": n, "fast": b}; one answer a line. *)
 let request_of_json (j : J.t) : request =
   let fields =
     match j with
-    | J.Object f -> f
+    | J.NatJson_obj f -> f
     | _ -> input "a request is a JSON object"
   in
   let field k = List.assoc_opt k fields in
   let int k d =
     match field k with
-    | Some (J.Int n) -> n
+    | Some (J.NatJson_nat n) -> n
     | None -> d
     | Some _ -> input "%s is a number" k
   in
   let flag k =
     match field k with
-    | Some (J.Bool b) -> b
+    | Some (J.NatJson_bool b) -> b
     | None -> false
     | Some _ -> input "%s is true or false" k
   in
   { op =
       (match field "op" with
-       | Some (J.String s) -> s
+       | Some (J.NatJson_str s) -> s
        | _ -> input "a request names its op")
   ; program = Option.map program_of_json (field "program")
   ; rows =

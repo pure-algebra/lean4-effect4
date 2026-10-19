@@ -200,6 +200,17 @@ and run = {
 }
 and prepared
 and session
+and effect4_tool_codec_profile_refusal =
+    Effect4_tool_codec_profile_refusal_unsupportedProfile
+  | Effect4_tool_codec_profile_refusal_unreadable of
+      (json_site, json_reason) located
+  | Effect4_tool_codec_profile_refusal_unprintable
+and effect4_tool_wire_refusal =
+    Effect4_tool_wire_refusal_codec of effect4_tool_codec_profile_refusal
+  | Effect4_tool_wire_refusal_unselected of string
+  | Effect4_tool_wire_refusal_version of string * int * int
+  | Effect4_tool_wire_refusal_method of string * string
+  | Effect4_tool_wire_refusal_connection
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp = {
   to_prim_interp : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp;
   park_of :
@@ -901,16 +912,19 @@ and raw = {
   generation : int;
 }
 and state
-and effect4_tool_codec_profile_refusal =
-    Effect4_tool_codec_profile_refusal_unsupportedProfile
-  | Effect4_tool_codec_profile_refusal_unreadable
-  | Effect4_tool_codec_profile_refusal_unprintable
-and effect4_tool_wire_refusal =
-    Effect4_tool_wire_refusal_codec of effect4_tool_codec_profile_refusal
-  | Effect4_tool_wire_refusal_unselected of string
-  | Effect4_tool_wire_refusal_version of string * int * int
-  | Effect4_tool_wire_refusal_method of string * string
-  | Effect4_tool_wire_refusal_connection
+and json_site =
+    JsonSite_value of json_step list
+  | JsonSite_missing of json_step list * string
+  | JsonSite_schema of json_step list
+and json_reason =
+    JsonReason_expected of shape
+  | JsonReason_unknownField of string
+  | JsonReason_duplicateField of string
+  | JsonReason_unknownCase of string
+  | JsonReason_naturalOutsideProfile of int
+  | JsonReason_carrierValue
+  | JsonReason_unsupportedProfile
+  | JsonReason_budget
 and listing = {
   name : string;
   description : string;
@@ -922,6 +936,15 @@ and listing = {
   open_world : bool;
 }
 and describe = { listing : listing; answers : (string * string) list; }
+and nat_json =
+    NatJson_null
+  | NatJson_bool of bool
+  | NatJson_nat of int
+  | NatJson_numeral of string
+  | NatJson_str of string
+  | NatJson_arr of nat_json list
+  | NatJson_obj of (string * nat_json) list
+and json_step = JsonStep_key of string | JsonStep_index of int
 and ctx = {
   services : Eff_types.Val.t context;
   max_ops_before_yield : int;
@@ -1137,6 +1160,30 @@ and site =
   | Site_column of int list
   | Site_application
 and 'a envelope = { method_ : string; version : int; payload : 'a; }
+and kind =
+    Kind_source
+  | Kind_export
+  | Kind_type
+  | Kind_schema
+  | Kind_program
+  | Kind_annotation
+  | Kind_entry
+  | Kind_query
+  | Kind_result
+  | Kind_chunk
+  | Kind_tree
+  | Kind_manifest
+  | Kind_component
+  | Kind_vector
+  | Kind_fiber
+  | Kind_job
+  | Kind_tape
+  | Kind_log
+  | Kind_exits
+  | Kind_receipt
+  | Kind_checkpoint
+  | Kind_profile
+  | Kind_table
 and prog_name =
     ProgName_value of Eff_types.Val.t
   | ProgName_failCause of
@@ -1983,30 +2030,6 @@ and recorded_reply = {
     (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
     Eff_types.Completion.t;
 }
-and kind =
-    Kind_source
-  | Kind_export
-  | Kind_type
-  | Kind_schema
-  | Kind_program
-  | Kind_annotation
-  | Kind_entry
-  | Kind_query
-  | Kind_result
-  | Kind_chunk
-  | Kind_tree
-  | Kind_manifest
-  | Kind_component
-  | Kind_vector
-  | Kind_fiber
-  | Kind_job
-  | Kind_tape
-  | Kind_log
-  | Kind_exits
-  | Kind_receipt
-  | Kind_checkpoint
-  | Kind_profile
-  | Kind_table
 and memo
 and oracle
 and hit_rule
@@ -2493,6 +2516,17 @@ val tool_native_refusal_shape : shape_doc
 val tool_native_refusal_to_val : effect4_tool_wire_refusal -> Eff_types.Val.t
 val tool_native_methods : effect4_tool_methods_entry list
 val tool_native_describe : describe
+val store_shape_doc_read_located :
+  shape_doc ->
+  nat_json -> (Eff_types.Val.t, (json_site, json_reason) located) result
+val store_shape_doc_print_tree : shape_doc -> Eff_types.Val.t -> nat_json
+val tool_native_serve_tree :
+  session ->
+  nat_json -> (nat_json * session, effect4_tool_wire_refusal) result
+val tool_native_refusal_tree : effect4_tool_wire_refusal -> nat_json
+val tool_native_relative_refusal :
+  json_step list -> effect4_tool_wire_refusal -> effect4_tool_wire_refusal
+val nat_json_render : nat_json -> int list
 val program_check_run : check_input -> verdict
 val program_check_oracle_uncached : oracle
 val program_check_checked_pure' : 'a0 -> 'a0 checked

@@ -76,9 +76,10 @@ serve> {"op":"run","program":{"_tag":"perform","op":{"_tag":"sleep"},"request":{
 # run stopped: outside the profile
 serve> {"op":"run","program":{"_tag":"bind","first":{"_tag":"withFiber","action":{"_tag":"fork","program":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":7}}},"options":{"startImmediately":false,"daemon":false,"maskMode":"inherit"}}},"rest":{"_tag":"succeed","value":{"_tag":"app","atom":"add","args":[{"_tag":"lit","value":{"_tag":"nat","value":9007199254740991}},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}}}}
 < {"status":"stopped","note":"outside the host profile: arithmetic: a sum outside the program's profile (DI-56)","via":"machine","calls":[]}
-# run stopped: a literal outside the profile
+# run refused: a literal above the JSON profile's limit (2^53 - 1), refused where the JSON reads
+# (the machine's own literal profile, DI-56, is reached through a program's bytes)
 serve> {"op":"run","program":{"_tag":"bind","first":{"_tag":"withFiber","action":{"_tag":"fork","program":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":7}}},"options":{"startImmediately":false,"daemon":false,"maskMode":"inherit"}}},"rest":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":9007199254740992}}}}}
-< {"status":"stopped","note":"a program outside the host profile: literal: a natural outside the program's profile (DI-56)","via":"machine","calls":[]}
+< {"status":"error","message":"the program's JSON does not read as a program"}
 
 ## explore: the paths, and a program outside the call tree
 # explore paths
@@ -126,10 +127,10 @@ serve> {"op":"run","program":{"_tag":"iterate","cursorTy":null,"initial":{"_tag"
 ## lines no tool call can carry, through serve_line
 # not JSON
 serve> this is not json
-< {"status":"error","message":"JSON at byte 0: unknown word"}
+< {"status":"error","message":"Line 1, bytes 0-16: Invalid token 'this is not json'"}
 # empty
 serve>
-< {"status":"error","message":"JSON at byte 0: expected a value"}
+< {"status":"error","message":"Blank input data"}
 # an array
 serve> [1,2,3]
 < {"status":"error","message":"a request is a JSON object"}
@@ -141,4 +142,4 @@ serve> {"op":3}
 < {"status":"error","message":"a request names its op"}
 # trailing bytes
 serve> {"op":"check"} x
-< {"status":"error","message":"JSON at byte 15: text after the value"}
+< {"status":"error","message":"Line 1, bytes 15-16: Junk after end of JSON value: 'x'"}

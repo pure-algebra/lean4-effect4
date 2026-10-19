@@ -27,7 +27,7 @@
                generator that was built on the hand-written checker: the programs come
                from Lean as bytes, and the verdicts ride along as data.
 
-   Depends on: effect4_eff (Eff_types, Eff_wire, Eff_json_text), stdlib.  Nothing in this
+   Depends on: effect4_eff (Eff_types, Eff_wire), stdlib.  Nothing in this
    module touches an engine: it is programs, not runs.
 
    Behaviours:
@@ -255,11 +255,20 @@ let truth () : program list * load_report * string list =
 
 (* -------------------------------------------------------- corpus.json, as an oracle *)
 
-(* A minimal JSON reader.  `Eff_json_text` is a printer with no parser anywhere in the
-   library (its own header says so), and corpus.json is the only JSON this lane reads. *)
+(* A minimal JSON reader, and the tree it gives (Eff_json_text's six constructors, kept here when
+   that module retired with the kit's JSON twins, C6). corpus.json is the only JSON this lane
+   reads. *)
+type json =
+  | Null
+  | Bool of bool
+  | Int of int
+  | String of string
+  | Array of json list
+  | Object of (string * json) list
+
 exception Json_error of string
 
-let json_parse (s : string) : Eff_json_text.t =
+let json_parse (s : string) : json =
   let n = String.length s in
   let i = ref 0 in
   let fail m = raise (Json_error (Printf.sprintf "%s at byte %d" m !i)) in
@@ -337,8 +346,8 @@ let json_parse (s : string) : Eff_json_text.t =
     done;
     let t = String.sub s start (!i - start) in
     match int_of_string_opt t with
-    | Some k -> Eff_json_text.Int k
-    | None -> Eff_json_text.String t
+    | Some k -> Int k
+    | None -> String t
   in
   let rec value () =
     skip ();
@@ -349,7 +358,7 @@ let json_parse (s : string) : Eff_json_text.t =
       if peek () = '}'
       then (
         incr i;
-        Eff_json_text.Object [])
+        Object [])
       else (
         let acc = ref [] in
         let rec go () =
@@ -369,14 +378,14 @@ let json_parse (s : string) : Eff_json_text.t =
           | _ -> fail "expected , or }"
         in
         go ();
-        Eff_json_text.Object (List.rev !acc))
+        Object (List.rev !acc))
     | '[' ->
       incr i;
       skip ();
       if peek () = ']'
       then (
         incr i;
-        Eff_json_text.Array [])
+        Array [])
       else (
         let acc = ref [] in
         let rec go () =
@@ -391,11 +400,11 @@ let json_parse (s : string) : Eff_json_text.t =
           | _ -> fail "expected , or ]"
         in
         go ();
-        Eff_json_text.Array (List.rev !acc))
-    | '"' -> Eff_json_text.String (string_ ())
-    | 't' -> lit "true" (Eff_json_text.Bool true)
-    | 'f' -> lit "false" (Eff_json_text.Bool false)
-    | 'n' -> lit "null" Eff_json_text.Null
+        Array (List.rev !acc))
+    | '"' -> String (string_ ())
+    | 't' -> lit "true" (Bool true)
+    | 'f' -> lit "false" (Bool false)
+    | 'n' -> lit "null" Null
     | _ -> number ()
   in
   let v = value () in
@@ -403,21 +412,21 @@ let json_parse (s : string) : Eff_json_text.t =
   v
 ;;
 
-let jfield (k : string) (v : Eff_json_text.t) : Eff_json_text.t option =
+let jfield (k : string) (v : json) : json option =
   match v with
-  | Eff_json_text.Object kvs -> List.assoc_opt k kvs
+  | Object kvs -> List.assoc_opt k kvs
   | _ -> None
 ;;
 
-let jstr (v : Eff_json_text.t option) : string option =
+let jstr (v : json option) : string option =
   match v with
-  | Some (Eff_json_text.String s) -> Some s
+  | Some (String s) -> Some s
   | _ -> None
 ;;
 
-let jint (v : Eff_json_text.t option) : int option =
+let jint (v : json option) : int option =
   match v with
-  | Some (Eff_json_text.Int k) -> Some k
+  | Some (Int k) -> Some k
   | _ -> None
 ;;
 
@@ -437,7 +446,7 @@ let truth_expectations () : (truth_expect list, string) result =
      | exception Json_error m -> Error m
      | j ->
        (match jfield "programs" j with
-        | Some (Eff_json_text.Array ps) ->
+        | Some (Array ps) ->
           Ok
             (List.filter_map
                (fun p ->

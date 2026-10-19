@@ -1,6 +1,7 @@
-; effect4_eff — see README.md. Generated modules (eff_types, eff_layout, eff_wire, eff_subterm, eff_json,
+; effect4_eff — see README.md. Generated modules (eff_types, eff_layout, eff_wire, eff_subterm,
 ; eff_native) come from `make gen-eff` (src/OCaml5/Tools/EffGen.lean) and carry a GENERATED
-; header; eff_frame, eff_json_text and eff_val are the hand-written kernel. Standard library only.
+; header; eff_frame and eff_val are the hand-written kernel. Standard library only. A carrier's
+; JSON is Lean's, lowered into effect4_gen (Store.ShapeJson); this library holds none.
 
 (library
  (name effect4_eff)
@@ -8,14 +9,12 @@
  (wrapped false)
  (modules
   eff_frame
-  eff_json_text
   eff_val
   eff_types
   eff_ctors
   eff_layout
   eff_wire
   eff_subterm
-  eff_json
   eff_native)
  (flags
   (:standard -w -4-9-39-40-41-42-44-45-70)))

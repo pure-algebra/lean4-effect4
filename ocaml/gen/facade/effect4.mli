@@ -45,6 +45,7 @@ module Machine :
     module Payload = Eff_types.Payload
     module RefKey = Eff_types.RefKey
   end
+module NatJson : sig val render : Api_gen.nat_json -> int list end
 module Program :
   sig
     module ActionTerm = Eff_types.ActionTerm
@@ -656,7 +657,21 @@ module Run :
 module ServiceKey = Eff_types.ServiceKey
 module ServiceName = Eff_types.ServiceName
 module ServiceTypeCode = Eff_types.ServiceTypeCode
-module Store : sig module Val = Eff_types.Val end
+module Store :
+  sig
+    module ShapeDoc :
+      sig
+        val print_tree :
+          Api_gen.shape_doc -> Eff_types.Val.t -> Api_gen.nat_json
+        val read_located :
+          Api_gen.shape_doc ->
+          Api_gen.nat_json ->
+          (Eff_types.Val.t,
+           (Api_gen.json_site, Api_gen.json_reason) Api_gen.located)
+          result
+      end
+    module Val = Eff_types.Val
+  end
 module Supervision :
   sig
     module ForkOptions = Eff_types.ForkOptions
@@ -674,11 +689,23 @@ module Tool :
         val refusal_shape : Api_gen.shape_doc
         val refusal_to_val :
           Api_gen.effect4_tool_wire_refusal -> Eff_types.Val.t
+        val refusal_tree :
+          Api_gen.effect4_tool_wire_refusal -> Api_gen.nat_json
+        val relative_refusal :
+          Api_gen.json_step list ->
+          Api_gen.effect4_tool_wire_refusal ->
+          Api_gen.effect4_tool_wire_refusal
         val reply_envelope_shape : Api_gen.shape_doc
         val serve :
           Api_gen.session ->
           Eff_types.Val.t ->
           (Eff_types.Val.t * Api_gen.session,
+           Api_gen.effect4_tool_wire_refusal)
+          result
+        val serve_tree :
+          Api_gen.session ->
+          Api_gen.nat_json ->
+          (Api_gen.nat_json * Api_gen.session,
            Api_gen.effect4_tool_wire_refusal)
           result
         val serve_uncached :

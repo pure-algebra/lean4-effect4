@@ -62,14 +62,6 @@
     },
     {
       "family": "Effect4.Program.Ty",
-      "file": "ocaml/eff/eff_json.ml",
-      "reader": "ocaml-match-arms",
-      "key": "let rec json_ty (v : Ty.t) : Eff_json_text.t =",
-      "stripPrefix": "Ty.",
-      "note": "census row 8: the generated JSON printer"
-    },
-    {
-      "family": "Effect4.Program.Ty",
       "file": "ocaml/eff/eff_wire.ml",
       "reader": "ocaml-match-arms",
       "key": "let rec emit_ty (b : Eff_frame.writer) (v : Ty.t) : unit =",

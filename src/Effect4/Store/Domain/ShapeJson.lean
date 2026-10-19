@@ -355,7 +355,8 @@ def printTreeIn (defs : List (String × Shape)) : Shape → Val → NatJson
     | .anyRef => .obj [("kind", kindTree k), ("address", .str (hexString d))]
     | _ => .str (hexString d)
   | _, .handle k n => .obj [("handle", .nat k.toNat), ("key", .nat n)]
-  | _, .negInt n => .obj [("int", .str (toString (-((n : Int) + 1))))]
+  -- `-(n+1)` by its digits, as `toString` writes the integer: the lowered route has no `Int.add`.
+  | _, .negInt n => .obj [("int", .str ("-" ++ toString (n + 1)))]
   | _, .float b => .obj [("float64", .str (hexString (be64 b.toNat)))]
 
 /-- The elements of a list, each under the item shape. -/

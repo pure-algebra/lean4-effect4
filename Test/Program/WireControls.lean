@@ -129,6 +129,10 @@ def refusalOf (doc : ShapeDoc) (t : NatJson) : Option JsonRefusal :=
   NatJson.codes "{\"xs\":[1],\"e\":{\"_tag\":\"b\"},\"k\":\"x\"}"
 #guard (sampleDoc.readAny (sampleDoc.printTree sampleValue)).map Val.encode =
   some sampleValue.encode
+-- tested: a negative integer prints as the binary64 printer's `toString` writes it, with no
+-- `Int.add` (which the lowered route lacks)
+#guard NatJson.render ((ShapeDoc.mk .unit []).printTree (.negInt 4)) = NatJson.codes "{\"int\":\"-5\"}"
+#guard (ShapeDoc.mk .unit []).print (.negInt 4) = .obj [("int", .str "-5")]
 -- control: an array's element keeps its index inside a list family's array
 #guard match refusalOf sampleDoc (withXs (.arr [.nat 1, .str "x"])) with
   | some ⟨.value [.key "xs", .index 1], .expected _⟩ => true | _ => false

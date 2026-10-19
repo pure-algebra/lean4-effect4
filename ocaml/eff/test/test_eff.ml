@@ -1,6 +1,10 @@
 (* test_eff — the battery of effect4_eff (hand-written).
-   1. Goldens: every goldens/<name>.bin decodes exactly, re-encodes byte for byte and prints
-      the JSON of goldens/<name>.json; structural corruptions of the bytes are refused. The
+   1. Goldens: every goldens/<name>.bin decodes exactly and re-encodes byte for byte, and its JSON
+      print as the tools print it (Lean's `ShapeDoc.printTree`, lowered) reads back to it under
+      Lean's located reader (`ShapeDoc.readLocated`, lowered), or is refused for a natural above
+      the profile's limit; structural corruptions of the bytes
+      are refused. goldens/<name>.json holds the program in `V`'s spelling, which ts/eff's tests
+      read; no OCaml printer of that spelling remains (C6). The
       `.ty` beside each golden and the verdict column of corpus.txt are Lean's own typing
       (`typeOf`, `wellTyped`), printed for the record and compared with nothing here: since
       2026-09-13 the typing has one face, `effTy`, and those files are its expected output,
@@ -9,6 +13,7 @@
    Exit status 1 on any failure; the counts are printed last. *)
 
 open Eff_types
+module G = Effect4_gen.Api_gen
 
 let checks = ref 0
 let failures = ref 0
@@ -51,6 +56,18 @@ let corpus : (string * bool) list =
 
 let golden_bin name = read_file (goldens ^ name ^ ".bin")
 
+(* A program's JSON print (Lean's printer, lowered) reads back to it (Lean's reader, lowered), or
+   is refused for a natural above the profile's limit (2^53 - 1), as pIllTupleAtIndex's index is. *)
+let json_reads_back (p : NativeOp.t Eff.t) : bool =
+  let tree =
+    G.store_shape_doc_print_tree G.run_kit_program_shape (G.run_kit_program_to_val p)
+  in
+  match G.store_shape_doc_read_located G.run_kit_program_shape tree with
+  | Ok v -> G.run_kit_program_of_val v = Some p
+  | Error { G.reason = G.JsonReason_naturalOutsideProfile _; _ } -> true
+  | Error _ -> false
+;;
+
 let ellipsis (n : int) (s : string) : string =
   if String.length s <= n then s else String.sub s 0 (n - 1) ^ "\226\128\166"
 ;;
@@ -81,7 +98,6 @@ let () =
   List.iter
     (fun (name, typed) ->
        let bin = golden_bin name in
-       let json = strip (read_file (goldens ^ name ^ ".json")) in
        let ty = strip (read_file (goldens ^ name ^ ".ty")) in
        match Eff_wire.decode_program_exact bin with
        | None ->
@@ -102,11 +118,11 @@ let () =
            (String.length bin)
            "ok"
            (if Eff_wire.encode_program p = bin then "identical" else "DIFFERS")
-           (if Eff_json.print_eff p = json then "equal" else "DIFFERS")
+           (if json_reads_back p then "reads" else "DIFFERS")
            (if typed then "typed" else "ill")
            (ellipsis 44 ty);
          check (name ^ ": re-encodes byte for byte") (Eff_wire.encode_program p = bin);
-         check (name ^ ": JSON equals the Lean printer's") (Eff_json.print_eff p = json);
+         check (name ^ ": Lean's JSON print reads back") (json_reads_back p);
          check
            (name ^ ": decode reports the whole length as rest")
            (Eff_wire.decode_program bin = Some (p, String.length bin));

@@ -15,7 +15,9 @@
        tools/Effect4Gen/wire-tags.json), and no family gives one tag to two constructors;
    L2  every <name>.hex decodes exactly (no trailing bytes, no repairs);
    L3  re-encoding the decoded program reproduces Lean's bytes exactly;
-   L4  the JSON printer runs on it;
+   L4  its JSON print as the tools print it (Lean's `ShapeDoc.printTree`, lowered) reads back to
+       it under Lean's located reader (`ShapeDoc.readLocated`, lowered), or is refused for a
+       natural above the profile's limit;
    L5  for the programs the two corpora define identically (the producer compares actual
        Eff values and emits same-programs.txt, independently checked against decoded values), Lean's bytes are byte for byte this library's goldens/<name>.bin. Where a
        name is shared but the Lean definition differs (pGen, pCatch), the comparison is
@@ -26,6 +28,8 @@
    (it is the same from either build root) or given as argv(1), and when the directory is
    absent the test says so and passes rather than pretending. Regenerate them with
    `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff`. *)
+
+module G = Effect4_gen.Api_gen
 
 let checks = ref 0
 let failures = ref 0
@@ -247,8 +251,17 @@ let () =
            let re = Eff_wire.encode_program p in
            check (name ^ ": re-encoding reproduces Lean's bytes") (re = bytes);
            check
-             (name ^ ": the JSON printer runs")
-             (String.length (Eff_json.print_eff p) > 0);
+             (name ^ ": Lean's JSON print reads back")
+             (match
+                G.store_shape_doc_read_located
+                  G.run_kit_program_shape
+                  (G.store_shape_doc_print_tree
+                     G.run_kit_program_shape
+                     (G.run_kit_program_to_val p))
+              with
+              | Ok v -> G.run_kit_program_of_val v = Some p
+              | Error { G.reason = G.JsonReason_naturalOutsideProfile _; _ } -> true
+              | Error _ -> false);
            check
              (name ^ ": a trailing byte is refused")
              (Eff_wire.decode_program_exact (bytes ^ "\000") = None);
