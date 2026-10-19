@@ -16,6 +16,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REF_WORD = re.compile(r'\bRef\b(?!\.(make|get|set|update|modify))')
+# A test that no carrier reaches: its failures are not the mutant's.  stm_admit runs a toy
+# engine, and its parallel test P1 failed under load in tree B (stm_admit-p1.txt).
+NOT_REACHED = {'stm_admit'}
 
 
 def load(label):
@@ -76,6 +79,9 @@ def main():
         free = tests_of(ra, lambda r, c: not is_ref(r, c))
         caught_a = set((ra['failing tests'] if ra else '-').split(',')) - {'-', ''}
         caught_b = set((rb['failing tests'] if rb else '-').split(',')) - {'-', ''}
+        unrelated = (caught_a | caught_b) & NOT_REACHED
+        caught_a -= NOT_REACHED
+        caught_b -= NOT_REACHED
         if rb is not None:
             if by_ref and not caught_b:
                 ref_missed.append(mid)
@@ -85,8 +91,10 @@ def main():
             survivors.append(mid)
         what = WHAT.get(mid, '')
         fmt = lambda s: ', '.join(sorted(s)) if s else '—'
+        free -= NOT_REACHED
+        note = f' (and {", ".join(sorted(unrelated))}, not reached)' if unrelated else ''
         out.write(f'| {mid} | {what} | {fmt(by_ref)} | {fmt(free)} | '
-                  f'{fmt(caught_b) if rb else "(not run)"} |\n')
+                  f'{fmt(caught_b) if rb else "(not run)"}{note} |\n')
     out.write(f'\n{len(ids)} mutants.  Caught by a Ref check in A and by nothing in B: '
               f'{", ".join(ref_missed) or "none"}.  Caught in A and by nothing in B: '
               f'{", ".join(any_missed) or "none"}.  Caught by nothing in either tree: '

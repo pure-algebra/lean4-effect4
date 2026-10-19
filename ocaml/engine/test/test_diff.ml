@@ -14,8 +14,9 @@
 
      Gen vs Fast  catches a wrong extern row and a wrong carrier law alike.  A third engine,
                   `Ref` (the seam's file over list twins of the carriers), once told the two
-                  apart.  The mutant campaign of 2026-10-18 found that this pair catches every
-                  carrier mutant Ref caught, and Ref was deleted
+                  apart.  The mutant campaign of 2026-10-18 found every carrier mutant that a
+                  Ref check caught caught by a test without Ref, this pair or another (a
+                  whole-report comparison with Gen, a property test), and Ref was deleted
                   (docs/research/2026-10-18-slices/receipt-w2-engine.md).  A divergence names
                   its field and position; the carriers' property tests (prop_*, test_buckets)
                   then say whether a carrier law broke.

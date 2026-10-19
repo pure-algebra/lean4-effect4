@@ -15,8 +15,8 @@
                                E4_fibers_view
 
    A second application over list twins of the seven, `Ref`, was deleted on 2026-10-18: the
-   mutant campaign found every carrier mutant it caught caught by the differential against the
-   generated machine (docs/research/2026-10-18-slices/receipt-w2-engine.md).
+   mutant campaign found every carrier mutant that a `Ref` check caught caught by a test without
+   `Ref` (docs/research/2026-10-18-slices/receipt-w2-engine.md).
 
    Everything else -- the drive loop, the answer alphabet, every renderer -- is written ONCE in
    `E4_engine.Make`, which ascribes `E4_engine.INSTANCE` to each instance.  The result exposes the generated roots and the adapter projections through e4_instance.mli.
