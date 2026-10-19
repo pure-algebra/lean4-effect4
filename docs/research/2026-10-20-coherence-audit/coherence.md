@@ -174,7 +174,8 @@ replaces.
 
 Done: the vocabulary, in the dictionary (`5418973ea`, `c92fe3633`) and the workspace rename
 (`a12b2bbd2`). Left: three deep-core comments and one `#guard`, with the next edit of their files.
-Row 418 records this plan. Release item 1, `docs/STATE.md` as one page, is done.
+Row 418 records this plan. Release item 1, `docs/STATE.md` as one page, is done. Item 2 is
+done too: `docs/core/semantics.md` §2.11 holds the typed-editing concept, as prose.
 
 ### 9.1 The release track
 

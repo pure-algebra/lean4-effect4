@@ -1,7 +1,7 @@
 # Semantics: the language's judgments, their literature and their obligations
 
 The authority for what Effect4's semantic judgments mean, which literature each adopts or adapts,
-where the language cuts away from that literature, and which properties each must have. Ten
+where the language cuts away from that literature, and which properties each must have. Eleven
 concepts, each in four parts: what the literature defines; our adaptation, assumptions and
 exclusions; the definition and judgment in the tree; the required properties.
 
@@ -46,6 +46,8 @@ The metatheory is organized around ten stable domain concepts:
 8. **Context Requirements & Provision** (`context-requirements`)
 9. **Host Session Protocol & Boundary** (`host-session-protocol`)
 10. **Translation & Simulation Metatheory** (`translation-simulation`)
+11. **Typed Editing** (`typed-editing`; decisions row 414 (5); prose only while semantics
+    generation is paused, row 418 (6))
 
 Every claim in this document is backed by an explicit evidence class:
 - **proved**: Verified kernel theorem located in the tree (`file:line`), quoted with exact signature.
@@ -1906,6 +1908,125 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   (`ref_steps_agree` (`src/Effect4/Laws/Library/Ref/Operations.lean`)).
   None of these laws states a wrapper, a schedule, a whole run, liveness or a host's behaviour
   (decisions rows 330, 331 and 335).
+
+### 2.11 Concept 11: Typed Editing (`typed-editing`)
+
+Decisions row 414 (5) ruled this concept: it owns sketches, places, edit policies, documents,
+fills, suggestions, expected context and marking. Row 418 adds the workspace and the verdict, the
+two objects the tool holds. This section is prose only. Semantics generation is paused (row 418
+(6)). So the semantics registry (`tools/ProofGraph/Registry.lean`) has no entry for this concept yet. The claims of part 4 keep their present
+concepts until generation resumes.
+
+#### 1. What the Literature Defines
+- **Typed holes.** An expression with holes is the object an editor holds. The source is Omar,
+  Voysey, Hilton and others, *Hazelnut: A Bidirectionally Typed Structure Editor Calculus*, POPL
+  2017 (read in `docs/research/2026-10-06-seat-GAP-study.md` §3). Each hole has an entry with its
+  type, and filling a hole is an operation of its own. The source is Omar, Voysey, Chugh and
+  Hammer, *Live Functional Programming with Typed Holes*, ICFP 2019 (vendored as
+  `vendor/papers/gradual-holes/omar-live-typed-holes-1805.00155v4.pdf`).
+- **Total marking.** A checker marks each ill-typed position and goes on. So it types every
+  position of a program, not only the ones before the first error. The source is Zhao, Maroof,
+  Dukkipati, Blinn, Pan and Omar, *Total Type Error Localization and Recovery with Holes*, POPL
+  2024 (vendored as `vendor/papers/gradual-holes/zhao-marking-popl24.pdf`).
+- **The focus of a typed decomposition.** A typed program splits at an address into a context and
+  a focus. Any program of the focus's type stands in the focus's place. The source is Carroll,
+  Madhavapeddy and Omar 2026, Theorem 5.2 (read in the head of
+  `src/Effect4/Laws/Program/Typing/Replace.lean`).
+- **Incremental attribute evaluation.** An edit re-evaluates only the attributes it reaches
+  (Reps, Teitelbaum and Demers 1983; recalled, `docs/research/2026-10-08-live-authoring.md` §2).
+
+#### 2. Effect4 Adaptation, Assumptions, and Exclusions
+- **A hole is a host row.** A sketch is a program over its application's row table, extended by
+  one hole row per hole (`Row.hole`, `src/Effect4/Program/Sketch.lean`). So every fold, the
+  checker and the printer read a sketch as a program, and editing adds no program syntax.
+- **An edit is data.** A place is a hole's index or an address with the sub-program it must still
+  hold (`Place`, `src/Effect4/Program/Typing/SourceDocument.lean`). An action fills or omits at a
+  place (`DocAction`, same file). A policy says how a feed decides an edit (`FeedPolicy`,
+  `src/Effect4/Program/Typing/SourceSession.lean`).
+- **Each object is a state reached by its journal.** A document is reached by its actions
+  (`Doc.replayedState`), a fill set by its submissions (`FillSet.constructed`), and the workspace
+  by its accepted actions (`Tool.State.replayed`). This is the monoid action of concept 7, the
+  same construction as a run's journal (`docs/research/2026-10-20-coherence-audit/coherence.md`
+  §3).
+- **A suggestion is a fill that was not taken.** `Suggest.suggestOne` evaluates a candidate by the
+  same `keepExact` feed that certifies a fill (`src/Effect4/Program/Typing/Suggest.lean`), so a
+  suggestion and a fill never disagree.
+- **The verdict is the checker's.** The checker is one `Except` fold whose refusal is located
+  (`Checker.check`, `Checker.explain`, `src/Effect4/Program/Checker.lean`). The checker's memo
+  changes cost, never an answer (`Check.Oracle.eq_uncached`, `src/Effect4/Program/Check.lean`).
+- **Expected context.** The focus gives each address the environment and the type that the rest of
+  the program gives it (`Focus`, `envAt`, `src/Effect4/Program/Typing/Focus.lean`). The type an
+  address is expected to have, with its substitution law, is not defined yet (the slices plan's
+  L2, `expectAt`).
+- **Marking.** The annotation marks a subtree past a refused read as not reached
+  (`Annotate.unreached`, `src/Effect4/Program/Typing/Annotate.lean`). Total marking is not defined
+  yet (L3). Row 414 (6) starts it with explicit unknown contexts.
+- **Text in, data judged.** An agent writes Effect TypeScript, and the reader turns it into `Eff`
+  (row 418 (4)). This concept judges the data, not the text.
+- **Exclusions.** No cursor calculus: an edit is an addressed replacement, not a structure
+  editor's movement. No live evaluation of a hole's closure. No merge of two writers' edits until
+  L4 states how a stale edit moves to a new snapshot.
+
+#### 3. Project Definition and Judgment
+A place and a policy are the data an edit carries (`src/Effect4/Program/Typing/SourceDocument.lean`,
+`src/Effect4/Program/Typing/SourceSession.lean`):
+```lean
+inductive Place where
+  | hole (index : Nat)
+  | at_ (path : List Nat) (expected : NativeEff)
+
+inductive FeedPolicy where
+  | draft
+  | keepExact
+  | recheck
+```
+The judgment of a document is coherence: its table is its sketch's source table
+(`SourceSession.Coherent`, `src/Effect4/Program/Typing/SourceSession.lean`). The tool serves one
+transition over a workspace (`Tool.serve`; `Tool.Native.Workspace`, `src/Effect4/Tool/Native.lean`),
+and a workspace persists as a chain of `WorkspaceEntry` nodes (`Tool.Exchange`,
+`src/Effect4/Tool/Exchange.lean`).
+
+#### 4. Required Properties and Obligations
+The claims below state this concept's properties today. They move here when generation resumes.
+Their statuses are generated, never written here.
+- **A sketch is a conservative extension** (concept 7 today): `sketch-conservative`,
+  `sketch-weakening`, `hole-rule`, `module-holes-conservative`.
+- **A typed program splits at an address** (concept 7): `addressed-replacement`,
+  `typed-replacement`, `focus-function`.
+- **The address table is the checker's answer at every address** (concept 7): `address-table`,
+  `annotate-table`, `module-address-table`, `module-annotate-table`, `source-annotation-agrees`.
+- **An edit splices the table** (concept 7): `edit-splices-table`, `module-table-splices`,
+  `omit-splices-table`.
+- **A feed keeps the document coherent, under each policy** (concept 7): `edit-session-coherent`,
+  `edit-session-undo`, `edit-repaint-set`, `source-feed-coherent`, `source-feed-edit`,
+  `source-feed-draft`, `source-feed-keep-exact`, `source-feed-root`, `source-session-coherent`,
+  `source-session-undo`, `source-session-draft-transport`.
+- **A document's actions replay to its state** (concept 7): `source-document-coherent`,
+  `source-document-replay`, `source-document-atomic`, `source-document-step`,
+  `source-document-commit`, `source-document-local-keep`, `source-document-single-transport`,
+  `source-document-revert`.
+- **A fill set publishes what it constructed** (concept 7): `kept-fill-reference`,
+  `pending-fill-construction`, `pending-fill-publication`.
+- **The checker's verdict is placed, and its memo changes no answer** (concepts 7 and 9):
+  `checker-placed-verdict`, `checker-ask-value`, `checker-oracle-agrees`.
+- **The workspace is one transition, and its stored history loads back** (concept 9):
+  `tool-serve-appends`, `tool-serve-refuses`, `tool-serve-query`, `tool-serve-transparent`,
+  `tool-transcript-replays`, `tool-serve-answers`, `workspace-load-own`,
+  `workspace-commits-once`, `workspace-refuses`.
+
+The codecs of a sketch and of a workspace entry (`sketch-wire`, `workspace-entry-exact`) stay with
+concept 5, which owns every exact codec.
+
+Owed, with no definition yet (the slices plan's lane L and row 414 (3)):
+- **A feed checks only the new subtree** (`feed-checks-subtree`, L1).
+- **An address has an expected type, with its substitution law** (`expectAt`, L2).
+- **Total marking agrees with the checker** (`marking-agrees`, L3).
+- **A stale edit rebases onto a new snapshot** (`kept-edit-rebases`, L4).
+- **One query answers full admission** (`checkProgram`, row 414 (3)).
+
+This concept serves R14 (a sketch checks and explains its types) and R6 (the tool's transitions),
+and the first release (row 418 (1)). It establishes no live evaluation of holes, no merge of
+concurrent edits, and nothing about the text an agent writes before the reader.
 
 ## 3. The object-language glossary (moved 2026-10-03)
 

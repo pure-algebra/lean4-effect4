@@ -56,8 +56,8 @@ and a document are each a state reached by its journal. The dictionary
 The release track of `coherence.md` §9.1 (row 418). The first release is Lean authoring, the
 TypeScript face, and the tool over MCP.
 
-1. This page, as one page true at HEAD.
-2. The typed-editing concept's prose in `docs/core/semantics.md` (row 414 (5)).
+Done: 1, this page; 2, the typed-editing concept's prose (`docs/core/semantics.md` §2.11).
+
 3. The TypeScript slice: `ts/eff` reads and writes the canonical tagged print; binders named by
    scope.
 4. Agent text in: `open` and `fill` take Effect TypeScript text through the reader.
