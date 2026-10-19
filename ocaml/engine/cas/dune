@@ -2,8 +2,8 @@
 ; envelope), then the pack, the index, the control file, the WAL, checkpoints and the caches
 ; (docs/research/2026-09-08-engine-a2-persistence.md §3; lanes P0-P10).  Flat: one e4_*.ml per
 ; module with its .mli and a Behaviours list at its head (ocaml/STANDARDS.md §2); tests in
-; test/.  A sub-library of the engine's dune project (ocaml/engine/dune-project); it declares
-; no dune-project of its own.
+; test/.  A library of the estate's one dune project (ocaml/dune-project), in its own
+; package.
 ;
 ; Dependencies: the stdlib, unix (the file classes lanes P1/P3/P5 land), effect4_bytes for
 ; E4_sha256 / E4_hex / E4_be (never a second hash and never a second framing writer -- brief

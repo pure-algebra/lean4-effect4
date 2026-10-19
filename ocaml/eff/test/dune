@@ -9,7 +9,7 @@
  (modules test_eff)
  (libraries effect4_eff effect4_gen)
  (deps
-  (glob_files %{project_root}/goldens/*)))
+  (glob_files ../goldens/*)))
 
 (test
  (name prop_wire)
@@ -31,26 +31,27 @@
  (modules test_val_frames)
  (libraries effect4_eff)
  (deps
-  (glob_files %{project_root}/goldens/*)))
+  (glob_files ../goldens/*)))
 
 ; The differential against Lean's own encoder (Effect4.Program.Wire, printed as hex by
-; src/OCaml5/Tools/EffWire.lean into ocaml/goldens/eff). That directory is a sibling of this
-; dune project, so it cannot be a tracked dep: the test reaches it relatively and says so
-; when it is absent. Our own goldens are deps because it compares against them.
+; src/OCaml5/Tools/EffWire.lean into ocaml/goldens/eff). The ocaml/ project builds no rule in that
+; directory (../../dune lists the dirs it builds), so it cannot be a tracked dep: the test reaches
+; it relatively and says so when it is absent. Our own goldens are deps because it compares
+; against them.
 
 (test
  (name test_lean_wire)
  (modules test_lean_wire)
  (libraries effect4_eff effect4_gen)
  (deps
-  (glob_files %{project_root}/goldens/*)))
+  (glob_files ../goldens/*)))
 
 (test
  (name test_metadata)
  (modules test_metadata)
  (libraries effect4_eff)
  (deps
-  (glob_files %{project_root}/goldens/*)))
+  (glob_files ../goldens/*)))
 
 ; The program types at their owner, read by a client (slice 1.2a): the Eff-Stmt-Stmts cycle
 ; traversed with its type parameter kept, the Lean names in the generated tables, and the wire

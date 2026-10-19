@@ -1,8 +1,8 @@
 # The OCaml estate
 
 OCaml is the primary host of the Effect model (ruling of 2026-09-04, `docs/research/
-2026-09-04-ocaml-estate-and-parity.md`). This directory is one dune workspace that holds every
-OCaml program of the estate. Its Lean half is the lake library `OCaml5` under `src/OCaml5/`
+2026-09-04-ocaml-estate-and-parity.md`). This directory is one dune project that holds every
+OCaml program of the estate in eight packages (`dune-project`). Its Lean half is the lake library `OCaml5` under `src/OCaml5/`
 (root module `src/OCaml5.lean`). `STANDARDS.md` holds the estate to nine rules. Four govern form:
 
 * libraries with thin drivers;
@@ -99,7 +99,7 @@ fresh run.
 | `eff/eff_{ctors,wire,subterm,json,native,layout}.ml`, `eff/eff_manifest.txt`, `eff/goldens/*` | `src/OCaml5/Tools/EffGen.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` |
 | `goldens/eff/*` | `src/OCaml5/Tools/EffWire.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff` |
 | `engine/cas/e4_kind.ml`, `e4_admission.ml`, `e4_root_policy.ml`, `e4_result.ml` and their `.mli` | `src/OCaml5/Store/Facts.lean`, through `Tools/CasFacts.lean` | `python3 scripts/generate.py --only cas` |
-| `*/effect4_*.opam` (eight) | dune, from each `dune-project`'s package fields (`generate_opam_files`) | any `dune build`; `opam lint` passes all eight |
+| `effect4_*.opam` (eight, beside `dune-project`) | dune, from the package fields of the one `dune-project` (`generate_opam_files`) | any `dune build`; `opam lint` passes all eight |
 | `engine/cas/goldens/*` | `src/OCaml5/Tools/CasGoldens.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean ocaml/engine/cas/goldens` |
 
 ## Owed

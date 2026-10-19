@@ -23,9 +23,9 @@
        name is shared but the Lean definition differs (pGen, pCatch), the comparison is
        reported, not asserted.
 
-   The Lean goldens live outside this dune project (ocaml/goldens/eff, a sibling of
-   ocaml/eff), so they cannot be a tracked dune dependency: the path is reached relatively
-   (it is the same from either build root) or given as argv(1), and when the directory is
+   The Lean goldens live in a directory the dune project builds no rule in (ocaml/goldens/eff,
+   a sibling of ocaml/eff), so they cannot be a tracked dune dependency: the path is reached
+   relatively or given as argv(1), and when the directory is
    absent the test says so and passes rather than pretending. Regenerate them with
    `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff`. *)
 

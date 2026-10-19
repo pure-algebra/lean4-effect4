@@ -2,8 +2,8 @@
 ; forwards to Eff_frame), hexadecimal (E4_hex),
 ; and SHA-256 (E4_sha256). It names no engine module, so it sits below the engine and the CAS:
 ; the CAS needs the engine only for E4_checkpoint. Unwrapped, as effect4_eff and effect4_clock
-; are, so the generated engine and the CAS name its modules directly. A sub-library of the
-; engine's dune project (ocaml/engine/dune-project), as cas/ is.
+; are, so the generated engine and the CAS name its modules directly. A library of the
+; estate's one dune project (ocaml/dune-project), in its own package, as cas/ is.
 
 (library
  (name effect4_bytes)

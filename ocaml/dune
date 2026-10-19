@@ -1,11 +1,12 @@
-; The OCaml estate as one dune workspace (README.md). `dune build` from this directory
-; builds every project listed here into ocaml/_build; each is its own nested dune project
-; and can still be built alone with `dune build --root .` from inside it.
+; The OCaml estate as one dune project (README.md, dune-project). `dune build` from this
+; directory builds every directory listed here into ocaml/_build, and `dune build <dir>` one of
+; them.
 ;
-;   gen/     the LCNF route: Fibers.lean as generated typed OCaml, and its check
+;   gen/     the LCNF route: Lean's machine and checker as generated typed OCaml, and its check
 ;   eff/     the Eff program IR as an OCaml library (typed embedding, wire, checker)
 ;   engine/  the host engine under the generated machine: math, carriers, persistence,
 ;            queueing, query (docs/research/2026-09-08-engine-brief.md)
+;   clock/   exact naturals over Zarith (`effect4_clock`)
 ;   lcnf/    the runtime library every generated file links (`effect4_lcnf`)
 ;   tools/   the estate's own checks: `typed_lint`, rule 7 of STANDARDS.md on the typed tree
 ;

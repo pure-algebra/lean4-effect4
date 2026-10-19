@@ -1,5 +1,4 @@
-; The LCNF route's output and its smoke check. Build standalone from this directory:
-;   dune build --root . && dune test --root .
+; The LCNF route's output and its smoke check. From ocaml/: dune build gen && dune test gen.
 ; `api_gen.ml` (Effect4.Api.run / Effect4.Api.replay and their whole closure, run by
 ; api_check, with the machine's own functions as coverage roots) is GENERATED; its header
 ; carries the regenerating command, and `make gen-lcnf` runs it (ocaml/gen/roots.json).
