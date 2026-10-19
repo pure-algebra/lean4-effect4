@@ -1,0 +1,791 @@
+-- Seat 3b, 2026-10-19: the proved first step of option B (receipt-item3b.md, "Open items").
+-- Not landed: under the landed reader (the printer's text first, then the renaming) no law
+-- consumes it. Option B reads every text after the renaming; its read-back law then needs the
+-- renaming to fix every print, of which this is the first half: a text whose binders are the
+-- printer's names for their levels renames to itself (`Rename.expr_of_minted`). The second half,
+-- that every print of a program whose atoms spell no layer clause is in that form, is not
+-- written. Parts 1 and 2 below built against the working tree on 2026-10-19 (Lean v4.33.1), when
+-- `Codegen/Rename.lean` still imported `Codegen/Read.lean`. To restore: append part 1 to
+-- `src/Effect4/Codegen/Rename.lean` before its last line, and part 2 as
+-- `src/Effect4/Laws/Codegen/Rename.lean`, then build and audit both.
+
+-- ======================================================================== part 1: the form
+/-! ## The normal form: every binder is the printer's name for its level -/
+
+/-- The normal form's carrier: an expression's own name when it is a bare identifier, and
+whether it is in normal form at a scope's length; a statement's verdict at a scope's length, with
+the length after it; an object entry's verdict. -/
+abbrev Normal : ExprFam → Type
+  | .expr => Option String × (Nat → Bool)
+  | .stmt => Nat → Bool × Nat
+  | .objectentry => Nat → Bool
+
+/-- Parameters that are the printer's names for the levels from `m` on. -/
+def mintedParams (m : Nat) : List Parameter → Bool
+  | [] => true
+  | p :: ps => decide (p.name = Var.name m) && mintedParams (m + 1) ps
+
+/-- A block in normal form, each statement at the length the statements before it leave. -/
+def blockMinted : Nat → List (Normal .stmt) → Bool
+  | _, [] => true
+  | m, s :: ss => (s m).1 && blockMinted (s m).2 ss
+
+/-- The normal form, one constructor at a time. -/
+def mintedAlg : ExprAlgebra Normal where
+  expr_ident s := (some s, fun _ => true)
+  expr_str _ := (none, fun _ => true)
+  expr_int _ := (none, fun _ => true)
+  expr_float64Bits _ := (none, fun _ => true)
+  expr_bool _ := (none, fun _ => true)
+  expr_jsNull := (none, fun _ => true)
+  expr_call fn args := (none, fun m =>
+    (fn.1.isSome || fn.2 m) && args.all (·.2 (if closes fn.1 then 0 else m)))
+  expr_object fs := (none, fun m => fs.all (·.2.2 m))
+  expr_objectML fs := (none, fun m => fs.all (·.2.2 m))
+  expr_objectQuoted fs := (none, fun m => fs.all (·.2.2 m))
+  expr_objectQuotedML fs := (none, fun m => fs.all (·.2.2 m))
+  expr_objectFromEntries fs := (none, fun m => fs.all (·.2.2 m))
+  expr_arr xs := (none, fun m => xs.all (·.2 m))
+  expr_arrow _ body := (none, body.2)
+  expr_generic fn _ := (none, fun m => fn.1.isSome || fn.2 m)
+  expr_lambda ps body _ := (none, fun m => mintedParams m ps && body.2 (m + ps.length))
+  expr_method target _ args := (none, fun m => target.2 m && args.all (·.2 m))
+  expr_member target _ := (none, target.2)
+  expr_generator body := (none, fun m => blockMinted m body)
+  expr_cond t a b := (none, fun m => t.2 m && a.2 m && b.2 m)
+  expr_arrowBlock ps body _ := (none, fun m =>
+    mintedParams m ps && blockMinted (m + ps.length) body)
+  expr_index target key := (none, fun m => target.2 m && key.2 m)
+  expr_new c args := (none, fun m => (c.1.isSome || c.2 m) && args.all (·.2 m))
+  expr_objectWith _ es := (none, fun m => es.all (· m))
+  stmt_constYield name value _ := fun m => (decide (name = Var.name m) && value.2 m, m + 1)
+  stmt_ret value := fun m => (value.2 m, m)
+  stmt_yieldDiscard value := fun m => (value.2 m, m)
+  stmt_letDefinite name _ := fun m => (decide (name = Var.name m), m + 1)
+  stmt_letInit name value _ := fun m => (decide (name = Var.name m) && value.2 m, m + 1)
+  stmt_assign _ value := fun m => (value.2 m, m)
+  stmt_whileTrue _ body := fun m => (blockMinted m body, m)
+  stmt_switch s cs := fun m => (s.2 m && cs.all (blockMinted m ·.2), m)
+  stmt_ifElse t a b := fun m => (t.2 m && blockMinted m a && blockMinted m b, m)
+  stmt_labelled _ body := fun m => (blockMinted m body, m)
+  stmt_scopedGen name body e := fun m =>
+    (decide (name = Var.name m) && blockMinted m body && e.2 m, m + 1)
+  stmt_scopedGenMasked name body e := fun m =>
+    (decide (name = Var.name m) && blockMinted m body && e.2 m, m + 1)
+  stmt_breakTo _ := fun m => (true, m)
+  stmt_continueTo _ := fun m => (true, m)
+  stmt_exprStmt value := fun m => (value.2 m, m)
+  objectentry_property _ value := value.2
+  objectentry_spread value := value.2
+
+/-- **The renaming's normal form**: every binder of `x` is the printer's name for its level, the
+scope starting at length `m`. -/
+def minted (m : Nat) (x : Expr) : Bool := (cata_expr mintedAlg x).2 m
+
+
+-- ======================================================================== part 2: the laws
+import Effect4.Codegen.Rename
+import Effect4.Laws.Codegen.ReadLeaf
+import Effect4.Laws.Auto.Inversion
+
+/-!
+# Laws.Codegen.Rename — a text in the printer's names renames to itself
+
+Concept 5, `exact-codecs`: the named normaliser of the reader's exactness (`Rename.expr`,
+`Codegen/Rename.lean`) fixes every text in its normal form (`Rename.minted`). At the printer's
+scope (`Rename.mint m`) every use resolves to itself: a bound name of the printer's form resolves
+to its own level, and an unbound name is no capture, since every name of the printer's form below
+the scope's length is bound. So only the binders can change, and the normal form says that each
+is the printer's name for its level. A step of `rename_print`, whose consumer is `read_print`.
+
+Reach: every `TypeScript.Expr`, statement and object entry, at every scope length. It states
+nothing of a text outside the normal form, and nothing of what the reader does after.
+-/
+
+set_option autoImplicit false
+
+open Effect4.Laws.Auto (bind_eq_ok map_eq_ok)
+
+namespace Effect4.Codegen.Rename
+
+open Effect4.Program TypeScript
+open Effect4.Program.Authoring (Names)
+
+/-! ## The printer's scope -/
+
+theorem length_mint (m : Nat) : (mint m).length = m := by
+  simp only [mint, List.length_map, List.length_range]
+
+theorem mint_succ (m : Nat) : mint (m + 1) = mint m ++ [Var.name m] := by
+  simp only [mint, List.range_succ, List.map_append, List.map_cons, List.map_nil]
+
+theorem mint_zero : mint 0 = [] := rfl
+
+/-- The printer's names for the levels `m`, `m + 1`, … extend its scope at `m`. -/
+theorem mint_append (m : Nat) : ∀ (k : Nat),
+    mint m ++ (List.range k).map (fun j => Var.name (m + j)) = mint (m + k)
+  | 0 => by simp only [List.range_zero, List.map_nil, List.append_nil, Nat.add_zero]
+  | k + 1 => by
+    rw [List.range_succ, List.map_append, ← List.append_assoc, mint_append m k,
+      ← Nat.add_assoc, mint_succ]
+    rfl
+
+/-- Resolution after one more binder: that binder when it carries the name, the earlier scope's
+answer otherwise. -/
+theorem resolve_go_snoc (x y : String) : ∀ (l : List String) (k : Nat) (acc : Option Nat),
+    Names.resolve.go x (l ++ [y]) k acc =
+      if y = x then some (k + l.length) else Names.resolve.go x l k acc
+  | [], k, acc => by
+    simp only [List.nil_append, Names.resolve.go, List.length_nil, Nat.add_zero]
+  | z :: l, k, acc => by
+    simp only [List.cons_append, Names.resolve.go]
+    rw [resolve_go_snoc x y l (k + 1)]
+    simp only [List.length_cons]
+    split
+    · rw [show k + 1 + l.length = k + (l.length + 1) by omega]
+    · rfl
+
+theorem resolve_snoc (x y : String) (l : List String) :
+    Names.resolve (l ++ [y]) x = if y = x then some l.length else Names.resolve l x := by
+  unfold Names.resolve
+  rw [resolve_go_snoc]
+  simp only [Nat.zero_add]
+
+/-- What resolves in the printer's scope is the printer's name of a level below it. -/
+theorem resolve_mint_some : ∀ {m : Nat} {x : String} {i : Nat},
+    Names.resolve (mint m) x = some i → i < m ∧ x = Var.name i
+  | 0, x, i, h => by
+    simp only [mint_zero, Names.resolve, Names.resolve.go, reduceCtorEq] at h
+  | m + 1, x, i, h => by
+    rw [mint_succ, resolve_snoc, length_mint] at h
+    split at h
+    · rename_i heq
+      cases h
+      exact ⟨Nat.lt_succ_self _, heq.symm⟩
+    · obtain ⟨hi, hx⟩ := resolve_mint_some h
+      exact ⟨Nat.lt_succ_of_lt hi, hx⟩
+
+/-- The printer's name of a level below the scope resolves to that level. -/
+theorem resolve_mint_name : ∀ {m i : Nat}, i < m → Names.resolve (mint m) (Var.name i) = some i
+  | 0, _, h => absurd h (Nat.not_lt_zero _)
+  | m + 1, i, h => by
+    rw [mint_succ, resolve_snoc, length_mint]
+    split
+    · rename_i heq
+      rw [Var.name_inj heq]
+    · rename_i hne
+      have : i ≠ m := fun e => hne (by rw [e])
+      exact resolve_mint_name (by omega)
+
+theorem Var.index?_some {s : String} {k : Nat} (h : Var.index? s = some k) : s = Var.name k := by
+  unfold Var.index? at h
+  split at h
+  · split at h
+    · rename_i heq
+      cases h
+      exact heq
+    · cases h
+  · cases h
+
+/-- In the printer's scope every name is used as written: a bound name is the printer's name of
+its own level, and an unbound one is no capture. -/
+theorem use_mint (m : Nat) (s : String) : use (mint m) s = .ok s := by
+  unfold use
+  cases hr : Names.resolve (mint m) s with
+  | some i =>
+    obtain ⟨_, hs⟩ := resolve_mint_some hr
+    simp only [hs]
+  | none =>
+    cases hk : Var.index? s with
+    | none => simp only [Option.any_none, Bool.false_eq_true, ↓reduceIte]
+    | some k =>
+      have hs := Var.index?_some hk
+      by_cases hlt : k < m
+      · rw [hs, resolve_mint_name hlt] at hr
+        cases hr
+      · simp only [Option.any_some, length_mint, decide_eq_true_eq, hlt, ↓reduceIte]
+
+/-- In the printer's scope a name in a name's place stays as written. -/
+theorem head_mint (m : Nat) (s : String) : head (mint m) s = .ok s := by
+  unfold head
+  cases hr : Names.resolve (mint m) s with
+  | some i =>
+    obtain ⟨_, hs⟩ := resolve_mint_some hr
+    simp only [hs, ↓reduceIte]
+  | none => rfl
+
+/-! ## Binders in the printer's names -/
+
+theorem mem_mint {m : Nat} {x : String} : x ∈ mint m ↔ ∃ i, i < m ∧ Var.name i = x := by
+  simp only [mint, List.mem_map, List.mem_range]
+
+/-- Parameters in the printer's names extend its scope. -/
+theorem mint_append_params : ∀ (m : Nat) (ps : List Parameter), mintedParams m ps = true →
+    mint m ++ ps.map (·.name) = mint (m + ps.length)
+  | m, [], _ => by simp only [List.map_nil, List.append_nil, List.length_nil, Nat.add_zero]
+  | m, p :: ps, h => by
+    simp only [mintedParams, Bool.and_eq_true, decide_eq_true_eq] at h
+    obtain ⟨hp, hps⟩ := h
+    rw [List.map_cons, hp, ← List.singleton_append, ← List.append_assoc, ← mint_succ,
+      mint_append_params (m + 1) ps hps, List.length_cons]
+    congr 1
+    omega
+
+/-- Parameters in the printer's names for the levels from `k` on name no level below `k`. -/
+theorem name_not_mem_params : ∀ (k : Nat) (ps : List Parameter), mintedParams k ps = true →
+    ∀ i, i < k → Var.name i ∉ ps.map (·.name)
+  | _, [], _, _, _ => by simp only [List.map_nil, List.not_mem_nil, not_false_eq_true]
+  | k, p :: ps, h, i, hi => by
+    simp only [mintedParams, Bool.and_eq_true, decide_eq_true_eq] at h
+    obtain ⟨hp, hps⟩ := h
+    rw [List.map_cons, List.mem_cons, not_or]
+    refine ⟨fun e => ?_, name_not_mem_params (k + 1) ps hps i (by omega)⟩
+    rw [hp] at e
+    have := Var.name_inj e
+    omega
+
+/-- Parameters in the printer's names repeat no name. -/
+theorem firstRepeat_params : ∀ (m : Nat) (ps : List Parameter), mintedParams m ps = true →
+    firstRepeat (ps.map (·.name)) = none
+  | _, [], _ => rfl
+  | m, p :: ps, h => by
+    have hrest := h
+    simp only [mintedParams, Bool.and_eq_true, decide_eq_true_eq] at hrest
+    obtain ⟨hp, hps⟩ := hrest
+    have hnot : (ps.map (·.name)).contains p.name = false := by
+      rw [Bool.eq_false_iff]
+      intro hc
+      rw [List.contains_iff_mem, hp] at hc
+      exact name_not_mem_params (m + 1) ps hps m (Nat.lt_succ_self m) hc
+    simp only [List.map_cons, firstRepeat, hnot, Bool.false_eq_true, ↓reduceIte]
+    exact firstRepeat_params (m + 1) ps hps
+
+/-- Parameters in the printer's names are renamed to themselves. -/
+theorem params_of_minted : ∀ (m : Nat) (ps : List Parameter), mintedParams m ps = true →
+    params m ps = ps
+  | _, [], _ => rfl
+  | m, p :: ps, h => by
+    simp only [mintedParams, Bool.and_eq_true, decide_eq_true_eq] at h
+    obtain ⟨hp, hps⟩ := h
+    simp only [params, params_of_minted (m + 1) ps hps, ← hp]
+
+theorem bindParams_of_minted {m : Nat} {ps : List Parameter} (h : mintedParams m ps = true) :
+    bindParams ps = .ok (ps.map (·.name)) := by
+  simp only [bindParams, firstRepeat_params m ps h]
+
+/-- The printer's name for the next level is no name its scope declares. -/
+theorem declare_mint (m start : Nat) : declare (mint m) start (Var.name m) = .ok () := by
+  have hnot : ((mint m).drop start).contains (Var.name m) = false := by
+    rw [Bool.eq_false_iff]
+    intro hc
+    rw [List.contains_iff_mem] at hc
+    obtain ⟨i, hi, heq⟩ := mem_mint.mp (List.mem_of_mem_drop hc)
+    have := Var.name_inj heq
+    omega
+  simp only [declare, hnot, Bool.false_eq_true, ↓reduceIte]
+
+/-! ## The two folds read one identifier -/
+
+/-- The identifier an expression is, when it is a bare one. -/
+def identOf : Expr → Option String
+  | .ident s => some s
+  | _ => none
+
+theorem fst_alg (x : Expr) : (cata_expr alg x).1 = identOf x := by
+  cases x <;> rfl
+
+theorem fst_mintedAlg (x : Expr) : (cata_expr mintedAlg x).1 = identOf x := by
+  cases x <;> rfl
+
+theorem eq_of_identOf {x : Expr} {s : String} (h : identOf x = some s) : x = .ident s := by
+  cases x <;> simp only [identOf, reduceCtorEq, Option.some.injEq] at h
+  subst h
+  rfl
+
+/-- A statement leaves at least the scope it starts at. -/
+theorem le_mintedStmt (s : Stmt) (m : Nat) : m ≤ (cata_stmt mintedAlg s m).2 := by
+  cases s <;> simp only [cata_stmt_constYield, cata_stmt_ret, cata_stmt_yieldDiscard,
+    cata_stmt_letDefinite, cata_stmt_letInit, cata_stmt_assign, cata_stmt_whileTrue,
+    cata_stmt_switch, cata_stmt_ifElse, cata_stmt_labelled, cata_stmt_scopedGen,
+    cata_stmt_scopedGenMasked, cata_stmt_breakTo, cata_stmt_continueTo, cata_stmt_exprStmt,
+    mintedAlg] <;> omega
+
+/-- A callee in normal form renames to itself: a bare identifier is a name, which the printer's
+scope leaves as written; any other callee by the recursion (`ih`). -/
+theorem callee_of_minted (step : String) (m : Nat) (fn : Expr)
+    (hfn : (cata_expr mintedAlg fn).1.isSome = true ∨ (cata_expr mintedAlg fn).2 m = true)
+    (ih : (cata_expr mintedAlg fn).2 m = true → (cata_expr alg fn).2 (mint m) = .ok fn) :
+    callee step (mint m) (cata_expr alg fn) = .ok fn := by
+  unfold callee
+  cases hi : identOf fn with
+  | some s =>
+    obtain rfl := eq_of_identOf hi
+    show ((head (mint m) s).mapError (·.under step 0)).map Expr.ident = .ok (.ident s)
+    rw [head_mint]
+    rfl
+  | none =>
+    rw [fst_mintedAlg, hi] at hfn
+    have hm : (cata_expr mintedAlg fn).2 m = true := by
+      rcases hfn with h | h
+      · cases h
+      · exact h
+    simp only [fst_alg, hi, ih hm, Except.mapError]
+
+/-- The scope a call's arguments are renamed at is the printer's scope of the level the normal
+form reads them at. -/
+theorem argScope_mint (o : Option String) (m : Nat) :
+    (if closes o then [] else mint m) = mint (if closes o then 0 else m) := by
+  split <;> rfl
+
+/-! ## The renaming's fields, unfolded -/
+
+section Fields
+
+variable (names : List String)
+
+theorem alg_ident (s : String) : (alg.expr_ident s).2 names = (use names s).map .ident := rfl
+
+theorem alg_call (fn : Carrier .expr) (args : List (Carrier .expr)) :
+    (alg.expr_call fn args).2 names =
+      (callee "call" names fn >>= fun hd =>
+        items "call" (if closes fn.1 then [] else names) 1 args >>= fun as =>
+          .ok (.call hd as)) := rfl
+
+theorem alg_object (fs : List (String × Carrier .expr)) :
+    (alg.expr_object fs).2 names = (fields "object" names 0 fs).map .object := rfl
+
+theorem alg_objectML (fs : List (String × Carrier .expr)) :
+    (alg.expr_objectML fs).2 names = (fields "objectML" names 0 fs).map .objectML := rfl
+
+theorem alg_objectQuoted (fs : List (String × Carrier .expr)) :
+    (alg.expr_objectQuoted fs).2 names =
+      (fields "objectQuoted" names 0 fs).map .objectQuoted := rfl
+
+theorem alg_objectQuotedML (fs : List (String × Carrier .expr)) :
+    (alg.expr_objectQuotedML fs).2 names =
+      (fields "objectQuotedML" names 0 fs).map .objectQuotedML := rfl
+
+theorem alg_objectFromEntries (fs : List (String × Carrier .expr)) :
+    (alg.expr_objectFromEntries fs).2 names =
+      (fields "objectFromEntries" names 0 fs).map .objectFromEntries := rfl
+
+theorem alg_arr (xs : List (Carrier .expr)) :
+    (alg.expr_arr xs).2 names = (items "arr" names 0 xs).map .arr := rfl
+
+theorem alg_arrow (ty : Option TypeRef) (b : Carrier .expr) :
+    (alg.expr_arrow ty b).2 names = ((b.2 names).mapError (·.under "arrow" 0)).map (.arrow ty) :=
+  rfl
+
+theorem alg_generic (fn : Carrier .expr) (types : List TypeRef) :
+    (alg.expr_generic fn types).2 names = (callee "generic" names fn).map (.generic · types) :=
+  rfl
+
+theorem alg_lambda (ps : List Parameter) (b : Carrier .expr) (ty : Option TypeRef) :
+    (alg.expr_lambda ps b ty).2 names =
+      (bindParams ps >>= fun bound =>
+        (b.2 (names ++ bound)).mapError (·.under "lambda" 0) >>= fun b' =>
+          .ok (.lambda (params names.length ps) b' ty)) := rfl
+
+theorem alg_method (target : Carrier .expr) (name : String) (args : List (Carrier .expr)) :
+    (alg.expr_method target name args).2 names =
+      ((target.2 names).mapError (·.under "method" 0) >>= fun t =>
+        items "method" names 1 args >>= fun as => .ok (.method t name as)) := rfl
+
+theorem alg_member (target : Carrier .expr) (name : String) :
+    (alg.expr_member target name).2 names =
+      ((target.2 names).mapError (·.under "member" 0)).map (.member · name) := rfl
+
+theorem alg_generator (body : List (Carrier .stmt)) :
+    (alg.expr_generator body).2 names =
+      (block "generator" names.length names 0 body).map .generator := rfl
+
+theorem alg_cond (t a b : Carrier .expr) :
+    (alg.expr_cond t a b).2 names =
+      ((t.2 names).mapError (·.under "cond" 0) >>= fun t' =>
+        (a.2 names).mapError (·.under "cond" 1) >>= fun a' =>
+          (b.2 names).mapError (·.under "cond" 2) >>= fun b' => .ok (.cond t' a' b')) := rfl
+
+theorem alg_arrowBlock (ps : List Parameter) (body : List (Carrier .stmt))
+    (ty : Option TypeRef) :
+    (alg.expr_arrowBlock ps body ty).2 names =
+      (bindParams ps >>= fun bound =>
+        block "arrowBlock" names.length (names ++ bound) 0 body >>= fun b =>
+          .ok (.arrowBlock (params names.length ps) b ty)) := rfl
+
+theorem alg_index (target key : Carrier .expr) :
+    (alg.expr_index target key).2 names =
+      ((target.2 names).mapError (·.under "index" 0) >>= fun t =>
+        (key.2 names).mapError (·.under "index" 1) >>= fun k => .ok (.index t k)) := rfl
+
+theorem alg_new (c : Carrier .expr) (args : List (Carrier .expr)) :
+    (alg.expr_new c args).2 names =
+      (callee "new" names c >>= fun c' =>
+        items "new" names 1 args >>= fun as => .ok (.new c' as)) := rfl
+
+theorem alg_objectWith (keys : KeyForm) (es : List (Carrier .objectentry)) :
+    (alg.expr_objectWith keys es).2 names = (entries names 0 es).map (.objectWith keys) := rfl
+
+variable (start : Nat)
+
+theorem alg_constYield (name : String) (value : Carrier .expr) (ty : Option TypeRef) :
+    alg.stmt_constYield name value ty names start =
+      (declare names start name >>= fun _ =>
+        (value.2 names).mapError (·.under "constYield" 0) >>= fun v =>
+          .ok (.constYield (Var.name names.length) v ty, names ++ [name])) := rfl
+
+theorem alg_ret (value : Carrier .expr) :
+    alg.stmt_ret value names start =
+      ((value.2 names).mapError (·.under "ret" 0) >>= fun v => .ok (.ret v, names)) := rfl
+
+theorem alg_yieldDiscard (value : Carrier .expr) :
+    alg.stmt_yieldDiscard value names start =
+      ((value.2 names).mapError (·.under "yieldDiscard" 0) >>= fun v =>
+        .ok (.yieldDiscard v, names)) := rfl
+
+theorem alg_letDefinite (name : String) (ty : TypeRef) :
+    alg.stmt_letDefinite name ty names start =
+      (declare names start name >>= fun _ =>
+        .ok (.letDefinite (Var.name names.length) ty, names ++ [name])) := rfl
+
+theorem alg_letInit (name : String) (value : Carrier .expr) (ty : Option TypeRef) :
+    alg.stmt_letInit name value ty names start =
+      (declare names start name >>= fun _ =>
+        (value.2 names).mapError (·.under "letInit" 0) >>= fun v =>
+          .ok (.letInit (Var.name names.length) v ty, names ++ [name])) := rfl
+
+theorem alg_assign (name : String) (value : Carrier .expr) :
+    alg.stmt_assign name value names start =
+      (use names name >>= fun target =>
+        (value.2 names).mapError (·.under "assign" 0) >>= fun v =>
+          .ok (.assign target v, names)) := rfl
+
+theorem alg_whileTrue (label : Option String) (body : List (Carrier .stmt)) :
+    alg.stmt_whileTrue label body names start =
+      (block "whileTrue" names.length names 0 body >>= fun b =>
+        .ok (.whileTrue label b, names)) := rfl
+
+theorem alg_switch (scrutinee : Carrier .expr) (cs : List (Nat × List (Carrier .stmt))) :
+    alg.stmt_switch scrutinee cs names start =
+      ((scrutinee.2 names).mapError (·.under "switch" 0) >>= fun s =>
+        cases names 1 cs >>= fun c => .ok (.switch s c, names)) := rfl
+
+theorem alg_ifElse (test : Carrier .expr) (yes no : List (Carrier .stmt)) :
+    alg.stmt_ifElse test yes no names start =
+      ((test.2 names).mapError (·.under "ifElse" 0) >>= fun t =>
+        block "then" names.length names 0 yes >>= fun a =>
+          block "else" names.length names 0 no >>= fun b => .ok (.ifElse t a b, names)) := rfl
+
+theorem alg_labelled (label : String) (body : List (Carrier .stmt)) :
+    alg.stmt_labelled label body names start =
+      (block "labelled" names.length names 0 body >>= fun b =>
+        .ok (.labelled label b, names)) := rfl
+
+theorem alg_scopedGen (name : String) (body : List (Carrier .stmt)) (onExit : Carrier .expr) :
+    alg.stmt_scopedGen name body onExit names start =
+      (declare names start name >>= fun _ =>
+        block "scopedGen" names.length names 0 body >>= fun b =>
+          (onExit.2 names).mapError (·.under "onExit" 0) >>= fun e =>
+            .ok (.scopedGen (Var.name names.length) b e, names ++ [name])) := rfl
+
+theorem alg_scopedGenMasked (name : String) (body : List (Carrier .stmt))
+    (onExit : Carrier .expr) :
+    alg.stmt_scopedGenMasked name body onExit names start =
+      (declare names start name >>= fun _ =>
+        block "scopedGenMasked" names.length names 0 body >>= fun b =>
+          (onExit.2 names).mapError (·.under "onExit" 0) >>= fun e =>
+            .ok (.scopedGenMasked (Var.name names.length) b e, names ++ [name])) := rfl
+
+theorem alg_exprStmt (value : Carrier .expr) :
+    alg.stmt_exprStmt value names start =
+      ((value.2 names).mapError (·.under "exprStmt" 0) >>= fun v =>
+        .ok (.exprStmt v, names)) := rfl
+
+end Fields
+
+theorem mapError_ok {ε ε' α : Type} (f : ε → ε') (a : α) :
+    (Except.ok a : Except ε α).mapError f = .ok a := rfl
+
+mutual
+  /-- **A text in the printer's names renames to itself.** -/
+  theorem expr_fixed : ∀ (x : Expr) (m : Nat), (cata_expr mintedAlg x).2 m = true →
+      (cata_expr alg x).2 (mint m) = .ok x
+    | .ident s, m, _ => by
+      rw [cata_expr_ident, alg_ident, use_mint]
+      rfl
+    | .str _, _, _ => rfl
+    | .int _, _, _ => rfl
+    | .float64Bits _, _, _ => rfl
+    | .bool _, _, _ => rfl
+    | .jsNull, _, _ => rfl
+    | .call fn args, m, h => by
+      rw [cata_expr_call] at h ⊢
+      have h0 : (((cata_expr mintedAlg fn).1.isSome || (cata_expr mintedAlg fn).2 m) &&
+          (args.map (cata_expr mintedAlg)).all
+            (·.2 (if closes (cata_expr mintedAlg fn).1 then 0 else m))) = true := h
+      simp only [Bool.and_eq_true, Bool.or_eq_true] at h0
+      obtain ⟨hfn, hargs⟩ := h0
+      rw [fst_mintedAlg] at hargs
+      rw [alg_call, callee_of_minted "call" m fn hfn (expr_fixed fn m), ok_bind, fst_alg,
+        argScope_mint, items_fixed args "call" _ 1 hargs, ok_bind]
+    | .object fs, m, h => by
+      rw [cata_expr_object] at h ⊢
+      rw [alg_object, fields_fixed fs "object" m 0 h]
+      rfl
+    | .objectML fs, m, h => by
+      rw [cata_expr_objectML] at h ⊢
+      rw [alg_objectML, fields_fixed fs "objectML" m 0 h]
+      rfl
+    | .objectQuoted fs, m, h => by
+      rw [cata_expr_objectQuoted] at h ⊢
+      rw [alg_objectQuoted, fields_fixed fs "objectQuoted" m 0 h]
+      rfl
+    | .objectQuotedML fs, m, h => by
+      rw [cata_expr_objectQuotedML] at h ⊢
+      rw [alg_objectQuotedML, fields_fixed fs "objectQuotedML" m 0 h]
+      rfl
+    | .objectFromEntries fs, m, h => by
+      rw [cata_expr_objectFromEntries] at h ⊢
+      rw [alg_objectFromEntries, fields_fixed fs "objectFromEntries" m 0 h]
+      rfl
+    | .arr xs, m, h => by
+      rw [cata_expr_arr] at h ⊢
+      rw [alg_arr, items_fixed xs "arr" m 0 h]
+      rfl
+    | .arrow ty b, m, h => by
+      rw [cata_expr_arrow, alg_arrow, expr_fixed b m h]
+      rfl
+    | .generic fn types, m, h => by
+      have h0 : ((cata_expr mintedAlg fn).1.isSome || (cata_expr mintedAlg fn).2 m) = true := h
+      simp only [Bool.or_eq_true] at h0
+      rw [cata_expr_generic, alg_generic, callee_of_minted "generic" m fn h0 (expr_fixed fn m)]
+      rfl
+    | .lambda ps b ty, m, h => by
+      have h0 : (mintedParams m ps && (cata_expr mintedAlg b).2 (m + ps.length)) = true := h
+      simp only [Bool.and_eq_true] at h0
+      obtain ⟨hps, hb⟩ := h0
+      rw [cata_expr_lambda (a2 := ty), alg_lambda, bindParams_of_minted hps, ok_bind,
+        mint_append_params m ps hps, expr_fixed b (m + ps.length) hb, mapError_ok, ok_bind,
+        length_mint, params_of_minted m ps hps]
+    | .method target name args, m, h => by
+      rw [cata_expr_method] at h ⊢
+      have h0 : ((cata_expr mintedAlg target).2 m &&
+          (args.map (cata_expr mintedAlg)).all (·.2 m)) = true := h
+      simp only [Bool.and_eq_true] at h0
+      rw [alg_method, expr_fixed target m h0.1, mapError_ok, ok_bind,
+        items_fixed args "method" m 1 h0.2, ok_bind]
+    | .member target name, m, h => by
+      rw [cata_expr_member, alg_member, expr_fixed target m h]
+      rfl
+    | .generator body, m, h => by
+      rw [cata_expr_generator] at h ⊢
+      have h0 : blockMinted m (body.map (cata_stmt mintedAlg)) = true := h
+      rw [alg_generator, length_mint, block_fixed body "generator" m m 0 (Nat.le_refl m) h0]
+      rfl
+    | .cond t a b, m, h => by
+      have h0 : ((cata_expr mintedAlg t).2 m && (cata_expr mintedAlg a).2 m &&
+          (cata_expr mintedAlg b).2 m) = true := h
+      simp only [Bool.and_eq_true] at h0
+      rw [cata_expr_cond, alg_cond, expr_fixed t m h0.1.1, mapError_ok, ok_bind,
+        expr_fixed a m h0.1.2, mapError_ok, ok_bind, expr_fixed b m h0.2, mapError_ok, ok_bind]
+    | .arrowBlock ps body ty, m, h => by
+      rw [cata_expr_arrowBlock (a2 := ty)] at h ⊢
+      have h0 : (mintedParams m ps &&
+          blockMinted (m + ps.length) (body.map (cata_stmt mintedAlg))) = true := h
+      simp only [Bool.and_eq_true] at h0
+      obtain ⟨hps, hb⟩ := h0
+      rw [alg_arrowBlock, bindParams_of_minted hps, ok_bind, mint_append_params m ps hps,
+        length_mint, block_fixed body "arrowBlock" m (m + ps.length) 0 (Nat.le_add_right m _) hb,
+        ok_bind, params_of_minted m ps hps]
+    | .index target key, m, h => by
+      have h0 : ((cata_expr mintedAlg target).2 m && (cata_expr mintedAlg key).2 m) = true := h
+      simp only [Bool.and_eq_true] at h0
+      rw [cata_expr_index, alg_index, expr_fixed target m h0.1, mapError_ok, ok_bind,
+        expr_fixed key m h0.2, mapError_ok, ok_bind]
+    | .new c args, m, h => by
+      rw [cata_expr_new] at h ⊢
+      have h0 : (((cata_expr mintedAlg c).1.isSome || (cata_expr mintedAlg c).2 m) &&
+          (args.map (cata_expr mintedAlg)).all (·.2 m)) = true := h
+      simp only [Bool.and_eq_true, Bool.or_eq_true] at h0
+      rw [alg_new, callee_of_minted "new" m c h0.1 (expr_fixed c m), ok_bind,
+        items_fixed args "new" m 1 h0.2, ok_bind]
+    | .objectWith keys es, m, h => by
+      rw [cata_expr_objectWith] at h ⊢
+      have h0 : (es.map (cata_objectentry mintedAlg)).all (· m) = true := h
+      rw [alg_objectWith, entries_fixed es m 0 h0]
+      rfl
+
+  /-- The items of a list in normal form rename to themselves. -/
+  theorem items_fixed : ∀ (xs : List Expr) (step : String) (m j : Nat),
+      (xs.map (cata_expr mintedAlg)).all (·.2 m) = true →
+      items step (mint m) j (xs.map (cata_expr alg)) = .ok xs
+    | [], _, _, _, _ => rfl
+    | x :: xs, step, m, j, h => by
+      simp only [List.map_cons, List.all_cons, Bool.and_eq_true] at h
+      rw [List.map_cons, items, expr_fixed x m h.1, mapError_ok, ok_bind,
+        items_fixed xs step m (j + 1) h.2, ok_bind]
+
+  /-- The fields of an object in normal form rename to themselves. -/
+  theorem fields_fixed : ∀ (fs : List (String × Expr)) (step : String) (m j : Nat),
+      (fs.map (TypeScript.prodMapSnd (cata_expr mintedAlg))).all (·.2.2 m) = true →
+      fields step (mint m) j (fs.map (TypeScript.prodMapSnd (cata_expr alg))) = .ok fs
+    | [], _, _, _, _ => rfl
+    | (key, x) :: fs, step, m, j, h => by
+      simp only [List.map_cons, TypeScript.prodMapSnd_mk, List.all_cons, Bool.and_eq_true] at h
+      rw [List.map_cons, TypeScript.prodMapSnd_mk, fields, expr_fixed x m h.1, mapError_ok,
+        ok_bind, fields_fixed fs step m (j + 1) h.2, ok_bind]
+
+  /-- An object entry in normal form renames to itself. -/
+  theorem entry_fixed : ∀ (e : ObjectEntry) (m : Nat), cata_objectentry mintedAlg e m = true →
+      cata_objectentry alg e (mint m) = .ok e
+    | .property name value, m, h => by
+      rw [cata_objectentry_property]
+      show (((cata_expr alg value).2 (mint m)).mapError (ReadFailure.under "property" 0)).map
+        (ObjectEntry.property name) = .ok (.property name value)
+      rw [expr_fixed value m h]
+      rfl
+    | .spread value, m, h => by
+      rw [cata_objectentry_spread]
+      show (((cata_expr alg value).2 (mint m)).mapError (ReadFailure.under "spread" 0)).map
+        ObjectEntry.spread = .ok (.spread value)
+      rw [expr_fixed value m h]
+      rfl
+
+  /-- The entries of an object in normal form rename to themselves. -/
+  theorem entries_fixed : ∀ (es : List ObjectEntry) (m j : Nat),
+      (es.map (cata_objectentry mintedAlg)).all (· m) = true →
+      entries (mint m) j (es.map (cata_objectentry alg)) = .ok es
+    | [], _, _, _ => rfl
+    | e :: es, m, j, h => by
+      simp only [List.map_cons, List.all_cons, Bool.and_eq_true] at h
+      rw [List.map_cons, entries, entry_fixed e m h.1, mapError_ok, ok_bind,
+        entries_fixed es m (j + 1) h.2, ok_bind]
+
+  /-- A statement in normal form renames to itself, and leaves the printer's scope of the level
+  the normal form gives after it. -/
+  theorem stmt_fixed : ∀ (s : Stmt) (m start : Nat), start ≤ m →
+      (cata_stmt mintedAlg s m).1 = true →
+      cata_stmt alg s (mint m) start = .ok (s, mint (cata_stmt mintedAlg s m).2)
+    | .constYield name value ty, m, start, _, h => by
+      have h0 : (decide (name = Var.name m) && (cata_expr mintedAlg value).2 m) = true := h
+      simp only [Bool.and_eq_true, decide_eq_true_eq] at h0
+      obtain ⟨rfl, hv⟩ := h0
+      rw [cata_stmt_constYield (a2 := ty), alg_constYield, declare_mint, ok_bind, expr_fixed value m hv,
+        mapError_ok, ok_bind, length_mint, ← mint_succ]
+      rfl
+    | .ret value, m, start, _, h => by
+      rw [cata_stmt_ret, alg_ret, expr_fixed value m h, mapError_ok, ok_bind]
+      rfl
+    | .yieldDiscard value, m, start, _, h => by
+      rw [cata_stmt_yieldDiscard, alg_yieldDiscard, expr_fixed value m h, mapError_ok, ok_bind]
+      rfl
+    | .letDefinite name ty, m, start, _, h => by
+      have h0 : decide (name = Var.name m) = true := h
+      simp only [decide_eq_true_eq] at h0
+      subst h0
+      rw [cata_stmt_letDefinite, alg_letDefinite, declare_mint, ok_bind, length_mint,
+        ← mint_succ]
+      rfl
+    | .letInit name value ty, m, start, _, h => by
+      have h0 : (decide (name = Var.name m) && (cata_expr mintedAlg value).2 m) = true := h
+      simp only [Bool.and_eq_true, decide_eq_true_eq] at h0
+      obtain ⟨rfl, hv⟩ := h0
+      rw [cata_stmt_letInit (a2 := ty), alg_letInit, declare_mint, ok_bind, expr_fixed value m hv,
+        mapError_ok, ok_bind, length_mint, ← mint_succ]
+      rfl
+    | .assign name value, m, start, _, h => by
+      rw [cata_stmt_assign, alg_assign, use_mint, ok_bind, expr_fixed value m h, mapError_ok,
+        ok_bind]
+      rfl
+    | .whileTrue label body, m, start, _, h => by
+      rw [cata_stmt_whileTrue] at h ⊢
+      have h0 : blockMinted m (body.map (cata_stmt mintedAlg)) = true := h
+      rw [alg_whileTrue, length_mint, block_fixed body "whileTrue" m m 0 (Nat.le_refl m) h0,
+        ok_bind]
+      rfl
+    | .switch scrutinee cs, m, start, _, h => by
+      rw [cata_stmt_switch] at h ⊢
+      have h0 : ((cata_expr mintedAlg scrutinee).2 m &&
+          (cs.map (TypeScript.prodMapSnd (List.map (cata_stmt mintedAlg)))).all
+            (blockMinted m ·.2)) = true := h
+      simp only [Bool.and_eq_true] at h0
+      rw [alg_switch, expr_fixed scrutinee m h0.1, mapError_ok, ok_bind,
+        cases_fixed cs m 1 h0.2, ok_bind]
+      rfl
+    | .ifElse test yes no, m, start, _, h => by
+      rw [cata_stmt_ifElse] at h ⊢
+      have h0 : ((cata_expr mintedAlg test).2 m &&
+          blockMinted m (yes.map (cata_stmt mintedAlg)) &&
+          blockMinted m (no.map (cata_stmt mintedAlg))) = true := h
+      simp only [Bool.and_eq_true] at h0
+      rw [alg_ifElse, length_mint, expr_fixed test m h0.1.1, mapError_ok, ok_bind,
+        block_fixed yes "then" m m 0 (Nat.le_refl m) h0.1.2, ok_bind,
+        block_fixed no "else" m m 0 (Nat.le_refl m) h0.2, ok_bind]
+      rfl
+    | .labelled label body, m, start, _, h => by
+      rw [cata_stmt_labelled] at h ⊢
+      have h0 : blockMinted m (body.map (cata_stmt mintedAlg)) = true := h
+      rw [alg_labelled, length_mint, block_fixed body "labelled" m m 0 (Nat.le_refl m) h0,
+        ok_bind]
+      rfl
+    | .scopedGen name body onExit, m, start, _, h => by
+      rw [cata_stmt_scopedGen] at h ⊢
+      have h0 : (decide (name = Var.name m) && blockMinted m (body.map (cata_stmt mintedAlg)) &&
+          (cata_expr mintedAlg onExit).2 m) = true := h
+      simp only [Bool.and_eq_true, decide_eq_true_eq] at h0
+      obtain ⟨⟨rfl, hb⟩, he⟩ := h0
+      rw [alg_scopedGen, declare_mint, ok_bind, length_mint,
+        block_fixed body "scopedGen" m m 0 (Nat.le_refl m) hb, ok_bind,
+        expr_fixed onExit m he, mapError_ok, ok_bind, ← mint_succ]
+      rfl
+    | .scopedGenMasked name body onExit, m, start, _, h => by
+      rw [cata_stmt_scopedGenMasked] at h ⊢
+      have h0 : (decide (name = Var.name m) && blockMinted m (body.map (cata_stmt mintedAlg)) &&
+          (cata_expr mintedAlg onExit).2 m) = true := h
+      simp only [Bool.and_eq_true, decide_eq_true_eq] at h0
+      obtain ⟨⟨rfl, hb⟩, he⟩ := h0
+      rw [alg_scopedGenMasked, declare_mint, ok_bind, length_mint,
+        block_fixed body "scopedGenMasked" m m 0 (Nat.le_refl m) hb, ok_bind,
+        expr_fixed onExit m he, mapError_ok, ok_bind, ← mint_succ]
+      rfl
+    | .breakTo _, _, _, _, _ => rfl
+    | .continueTo _, _, _, _, _ => rfl
+    | .exprStmt value, m, start, _, h => by
+      rw [cata_stmt_exprStmt, alg_exprStmt, expr_fixed value m h, mapError_ok, ok_bind]
+      rfl
+
+  /-- A block in normal form renames to itself. -/
+  theorem block_fixed : ∀ (ss : List Stmt) (step : String) (start m j : Nat), start ≤ m →
+      blockMinted m (ss.map (cata_stmt mintedAlg)) = true →
+      block step start (mint m) j (ss.map (cata_stmt alg)) = .ok ss
+    | [], _, _, _, _, _, _ => rfl
+    | s :: ss, step, start, m, j, hs, h => by
+      have h0 : ((cata_stmt mintedAlg s m).1 &&
+          blockMinted (cata_stmt mintedAlg s m).2 (ss.map (cata_stmt mintedAlg))) = true := h
+      simp only [Bool.and_eq_true] at h0
+      rw [List.map_cons, block, stmt_fixed s m start hs h0.1, mapError_ok, ok_bind]
+      show (block step start (mint (cata_stmt mintedAlg s m).2) (j + 1)
+          (ss.map (cata_stmt alg)) >>= fun ss' => Except.ok (s :: ss')) = .ok (s :: ss)
+      rw [block_fixed ss step start (cata_stmt mintedAlg s m).2 (j + 1)
+          (Nat.le_trans hs (le_mintedStmt s m)) h0.2, ok_bind]
+
+  /-- The cases of a switch in normal form rename to themselves. -/
+  theorem cases_fixed : ∀ (cs : List (Nat × List Stmt)) (m j : Nat),
+      (cs.map (TypeScript.prodMapSnd (List.map (cata_stmt mintedAlg)))).all
+        (blockMinted m ·.2) = true →
+      cases (mint m) j (cs.map (TypeScript.prodMapSnd (List.map (cata_stmt alg)))) = .ok cs
+    | [], _, _, _ => rfl
+    | (tag, body) :: rest, m, j, h => by
+      simp only [List.map_cons, TypeScript.prodMapSnd_mk, List.all_cons, Bool.and_eq_true] at h
+      rw [List.map_cons, TypeScript.prodMapSnd_mk, cases, length_mint,
+        block_fixed body "case" m m 0 (Nat.le_refl m) h.1, mapError_ok, ok_bind,
+        cases_fixed rest m (j + 1) h.2, ok_bind]
+end
+
+/-- **A text in the printer's names renames to itself** at the printer's scope: the normal form
+of the reader's named normaliser (`Rename.expr`). A step of `rename_print`, whose consumer is
+`read_print`. -/
+theorem expr_of_minted {m : Nat} {x : Expr} (h : minted m x = true) :
+    Rename.expr (mint m) x = .ok x :=
+  expr_fixed x m h
+
+end Effect4.Codegen.Rename
