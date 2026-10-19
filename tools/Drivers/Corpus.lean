@@ -20,10 +20,10 @@ generator over every `Eff` constructor the printer accepts), `count` of them at 
 Beside each `.ts`, `<name>.json` is the program *the printer kept* — `Api.roundTrip`, Lean's
 own reader after its printer — in the program's one public JSON, the tagged print with each list
 an array (`Tools.Styles.programJson`), whose bytes `ts/eff/json.gen.ts`'s `toJson` writes too.
-For a `readable` program that is the program itself (`Effect4.Program.roundTrip_eq`); otherwise it is the
-program the reader gives back for the same bytes: the `daemon` flag of a scoped fork and the
-request of a `unit`-request row are what the printer drops, and no reader of the bytes can
-recover them. A reader in any language is therefore checked by reading the `.ts` and comparing
+For a `readable` program that is the program itself (`Effect4.Program.roundTrip_eq`); otherwise
+it is the program the reader gives back for the same bytes: the `daemon` flag of a scoped fork
+and the request of a `unit`-request row are what the printer drops, and no reader of the bytes
+can recover them. A reader in any language is therefore checked by reading the `.ts` and comparing
 bytes with the `.json`, which is a differential against Lean's reader. `<dir>/index.tsv` has
 one `name`, `wellTyped`, `readable`, `chars` row per program written; a program the printer
 or Lean's reader refuses is counted and not written. The reader is the table reader

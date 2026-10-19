@@ -164,7 +164,8 @@ def probes : List (String × Eff NativeOp) :=
 (`NatJson.render`), then a newline. It is what the tool reads and what `ts/eff`'s `toJson` writes
 (decisions row 418, D2), so the corpus oracles of both drivers are written by it. -/
 def programJson (p : Eff NativeOp) : ByteArray :=
-  let text := NatJson.render ((Store.Canonical.shape (Eff NativeOp)).printTree (Store.Canonical.toVal p))
+  let tree := (Store.Canonical.shape (Eff NativeOp)).printTree (Store.Canonical.toVal p)
+  let text := NatJson.render tree
   ⟨((text ++ [10]).map Nat.toUInt8).toArray⟩
 
 def write (dir : System.FilePath) (name : String) (c : Case) (expr : Expr)
