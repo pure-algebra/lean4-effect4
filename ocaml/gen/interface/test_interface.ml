@@ -37,22 +37,28 @@ let () =
     | _ -> false);
   let prelude = get (infer [ "empty" ] [ "memo" ] (Some Sys.argv.(2))) in
   assert (contains prelude "val helper : memo -> memo");
-  (* I6: a facade over the fixture keeps the type its root names and drops the one no root
-     names; with every type kept, the dropped one is back. *)
+  (* I6: a facade over the fixture keeps the types its roots name and drops those no root
+     names; with every type kept, the dropped ones are back. A recursive group whose first
+     member is dropped opens at its first kept member, never with `and`. *)
   let facade types =
     Lcnf_interface.generate
       ~types
       ~cmt:Sys.argv.(3)
-      ~roots:[ "helper" ]
+      ~roots:[ "helper"; "make_kept" ]
       ~abstract_types:[]
       ~prelude:None
   in
   let reachable = get (facade Lcnf_interface.Reachable) in
   assert (contains reachable "type memo");
   assert (contains reachable "val helper : memo -> memo");
+  assert (contains reachable "type kept_after");
+  assert (not (contains reachable "and kept_after"));
+  assert (not (contains reachable "dropped"));
   assert (not (contains reachable "public_alias"));
   assert (not (contains reachable "val empty"));
-  assert (contains (get (facade Lcnf_interface.All)) "public_alias");
+  let all = get (facade Lcnf_interface.All) in
+  assert (contains all "public_alias");
+  assert (contains all "and kept_after");
   print_endline
     "Interface roots, sealing, final ascriptions, refusals and facade types pass."
 ;;

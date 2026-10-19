@@ -1296,6 +1296,8 @@ and fold_cause_refusal = { cause_path : int list; term : fold_term_refusal; }
 and tuple_typing_reason =
     TupleTypingReason_nonTuple of Eff_types.Ty.t
   | TupleTypingReason_outOfBounds of int
+and shade = Shade_light | Shade_dark of int
+and pt = { x : int; y : int; }
 and admitted_program = Eff_types.NativeOp.t typed_program
 and fiber_id = int
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) dispatcher =
@@ -1354,3 +1356,57 @@ val test_dogfood_scenario_todo_typed_model :
   (int * (int * (string * bool)) list) host
 val test_dogfood_scenario_todo_typed_broken :
   (int * (int * (string * bool)) list) host
+val test_codegen_constructor_lane_int_of_nat : int -> int
+val test_codegen_constructor_lane_int_neg_succ : int -> int
+val test_codegen_constructor_lane_int_match : int -> int
+val test_codegen_constructor_lane_int_match_zero : int -> bool
+val test_codegen_constructor_lane_nat_succ : int -> int
+val test_codegen_constructor_lane_nat_zero : int
+val test_codegen_constructor_lane_nat_match : int -> int
+val test_codegen_constructor_lane_arr_mk : int list -> int Lcnf_array.t
+val test_codegen_constructor_lane_arr_to_list : int Lcnf_array.t -> int list
+val test_codegen_constructor_lane_arr_match : int Lcnf_array.t -> int
+val test_codegen_constructor_lane_ba_mk :
+  int Lcnf_array.t -> int Lcnf_array.t
+val test_codegen_constructor_lane_ba_data :
+  int Lcnf_array.t -> int Lcnf_array.t
+val test_codegen_constructor_lane_ba_match :
+  int Lcnf_array.t -> int Lcnf_array.t
+val test_codegen_constructor_lane_str_bytes : string -> int Lcnf_array.t
+val test_codegen_constructor_lane_str_match : string -> int Lcnf_array.t
+val test_codegen_constructor_lane_str_of_bytes :
+  int Lcnf_array.t -> 'a -> string
+val test_codegen_constructor_lane_char_of_nat : int -> int
+val test_codegen_constructor_lane_char_val : int -> int
+val test_codegen_constructor_lane_char_match : int -> int
+val test_codegen_constructor_lane_u8_of_bit_vec : int -> int
+val test_codegen_constructor_lane_u8_match : int -> int
+val test_codegen_constructor_lane_u16_of_bit_vec : int -> int
+val test_codegen_constructor_lane_u16_match : int -> int
+val test_codegen_constructor_lane_u32_of_bit_vec : int -> int
+val test_codegen_constructor_lane_u32_match : int -> int
+val test_codegen_constructor_lane_u64_of_bit_vec : int -> int
+val test_codegen_constructor_lane_u64_match : int -> int
+val test_codegen_constructor_lane_bv_match : int -> int
+val test_codegen_constructor_lane_fin_mk : int -> 'a -> int
+val test_codegen_constructor_lane_fin_match : int -> int
+val test_codegen_constructor_lane_sub_mk : int -> 'a -> int
+val test_codegen_constructor_lane_sub_match : int -> int
+val test_codegen_constructor_lane_sub_val : int -> int
+val test_codegen_constructor_lane_opt_match : int option -> int
+val test_codegen_constructor_lane_list_match : int list -> int
+val test_codegen_constructor_lane_prod_match : int * string -> int
+val test_codegen_constructor_lane_except_match : (int, string) result -> int
+val test_codegen_constructor_lane_except_mk : bool -> (int, string) result
+val test_codegen_constructor_lane_unit_match : unit -> int
+val test_codegen_constructor_lane_shade_match : shade -> int
+val test_codegen_constructor_lane_pt_mk : int -> int -> pt
+val test_codegen_constructor_lane_pt_y : pt -> int
+val test_codegen_constructor_lane_map_find :
+  int -> (int * int) list -> int -> int option
+val test_codegen_constructor_lane_map_buckets :
+  int -> (int * int) list -> (int * int) list list
+val test_codegen_constructor_lane_map_retained :
+  int -> (int * int) list -> int -> int -> int option * int option
+val test_codegen_constructor_lane_map_siblings :
+  int -> (int * int) list -> int -> int option * (int option * int option)

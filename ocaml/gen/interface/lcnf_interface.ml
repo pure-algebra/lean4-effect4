@@ -130,6 +130,34 @@ let declaration_types declaration =
   !found
 ;;
 
+(* The items [keep] admits, in order. A recursive type group stays one group: when its first
+   member goes, its first kept member opens it ([Trec_first]), so the printed interface never
+   starts a group with [and]. *)
+let keep_items keep signature =
+  let rec go kept opened = function
+    | [] -> List.rev kept
+    | (Sig_type (id, declaration, recursion, visibility) as item) :: rest ->
+      (* a group starts at an item that does not continue one *)
+      let opened =
+        match recursion with
+        | Trec_next -> opened
+        | Trec_not | Trec_first -> false
+      in
+      if keep item
+      then (
+        let recursion =
+          match recursion with
+          | Trec_next when not opened -> Trec_first
+          | other -> other
+        in
+        go (Sig_type (id, declaration, recursion, visibility) :: kept) true rest)
+      else go kept opened rest
+    | item :: rest ->
+      if keep item then go (item :: kept) false rest else go kept false rest
+  in
+  go [] false signature
+;;
+
 (* I6: the top-level types that an exported value, a selected package or a kept type's
    declaration names, closed under the declarations; every other item stays as it is. *)
 let reachable ~abstract_types signature =
@@ -160,7 +188,7 @@ let reachable ~abstract_types signature =
       close (name :: kept) (next @ rest)
   in
   let kept = close [] start in
-  List.filter
+  keep_items
     (function
       | Sig_type (id, _, _, _) -> member (Ident.name id) kept
       | _ -> true)
