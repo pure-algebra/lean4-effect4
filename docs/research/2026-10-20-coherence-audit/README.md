@@ -1,7 +1,9 @@
 # The coherence audit: the synthesis
 
 The synthesis of the three-agent audit that the owner asked for on 2026-10-19 (`plan.md` in this
-folder). Head: `93090bfa0` on `refactor/phase1-phase3`.
+folder). Head: `93090bfa0` on `refactor/phase1-phase3`. The entry for this work is now
+`coherence.md` in this folder: it holds the model, rule S and the one plan. This file stays as the
+audit's evidence.
 
 - **Inputs.** `orientation.md`, `plan.md`, the two readings (`lean-core.md`, `compiler-estate.md`),
   the coherence principle (`docs/research/history/coherence-principle.md`), the system map §§4–6
