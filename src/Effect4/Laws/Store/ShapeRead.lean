@@ -297,6 +297,8 @@ exact and the reader takes the natural back (`natOfBinary64_binary64OfNat`). Thi
 `Data/JsonNumber.lean` owed for the profile's domain, and the step that lets the profile's tree
 and the binary64 tree read alike (`ofBinary64_toBinary64`). -/
 
+/-- The highest-bit loop, given fuel enough, adds the natural's `log2`. A step of
+`natOfBinary64_binary64OfNat`, through `highestBit_eq`. -/
 theorem highestBit_go {fuel m acc : Nat} (h : m ≤ fuel) :
     Effect4.Arch.highestBit.go fuel m acc = acc + m.log2 := by
   induction fuel generalizing m acc with
@@ -315,10 +317,15 @@ theorem highestBit_go {fuel m acc : Nat} (h : m ≤ fuel) :
       rw [ih (by omega), Nat.log2_def m, if_pos (by omega)]
       omega
 
+/-- `Arch.highestBit` is `Nat.log2`. A step of `natOfBinary64_binary64OfNat`. -/
 theorem highestBit_eq (n : Nat) : Effect4.Arch.highestBit n = n.log2 := by
   unfold Effect4.Arch.highestBit
   rw [highestBit_go (Nat.le_refl n), Nat.zero_add]
 
+/-- **A natural below 2^53 reads back from its binary64 datum**: the retraction that
+`Data/JsonNumber.lean` owed, on the profile's domain. A step of `json-read-located`. Its consumer
+is `ofBinary64_toBinary64`. -/
+@[semantics "exact-codecs" (requirement := R14)]
 theorem natOfBinary64_binary64OfNat {n : Nat} (h : n < 2 ^ 53) :
     natOfBinary64 (Effect4.Arch.binary64OfNat n) = some n := by
   rcases Nat.eq_zero_or_pos n with h0 | hpos
@@ -387,11 +394,13 @@ inductive Agrees : NatJson → Json → Prop
   | obj {es : List (String × NatJson)} {fs : List (String × Json)} :
       AgreesEntries es fs → Agrees (.obj es) (.obj fs)
 
+/-- `Agrees` over two lists, element by element. -/
 inductive AgreesList : List NatJson → List Json → Prop
   | nil : AgreesList [] []
   | cons {t : NatJson} {j : Json} {ts : List NatJson} {js : List Json} :
       Agrees t j → AgreesList ts js → AgreesList (t :: ts) (j :: js)
 
+/-- `Agrees` over two objects' entries, entry by entry, with the same keys in the same order. -/
 inductive AgreesEntries : List (String × NatJson) → List (String × Json) → Prop
   | nil : AgreesEntries [] []
   | cons (k : String) {t : NatJson} {j : Json} {es : List (String × NatJson)}
@@ -400,6 +409,8 @@ inductive AgreesEntries : List (String × NatJson) → List (String × Json) →
 end
 
 mutual
+/-- A profile tree agrees with its binary64 image. A step of `json-read-located`. Its consumer is
+`ShapeDoc.readLocated_exact`, the native face's exactness. -/
 theorem agrees_toBinary64 : ∀ t : NatJson, Agrees t t.toBinary64
   | .null => .null
   | .bool b => .bool b
@@ -408,9 +419,11 @@ theorem agrees_toBinary64 : ∀ t : NatJson, Agrees t t.toBinary64
   | .str s => .str s
   | .arr ts => .arr (agreesList_toBinary64 ts)
   | .obj es => .obj (agreesEntries_toBinary64 es)
+/-- `agrees_toBinary64` over a list. -/
 theorem agreesList_toBinary64 : ∀ ts : List NatJson, AgreesList ts (NatJson.toBinary64List ts)
   | [] => .nil
   | t :: ts => .cons (agrees_toBinary64 t) (agreesList_toBinary64 ts)
+/-- `agrees_toBinary64` over an object's entries. -/
 theorem agreesEntries_toBinary64 :
     ∀ es : List (String × NatJson), AgreesEntries es (NatJson.toBinary64Entries es)
   | [] => .nil
@@ -418,6 +431,8 @@ theorem agreesEntries_toBinary64 :
 end
 
 mutual
+/-- A binary64 tree agrees with its profile tree. A step of `json-read-located`. Its consumer is
+`Canonical.ofJsonAnyOrder_exact`, the binary64 face's exactness. -/
 theorem agrees_ofBinary64 : ∀ j : Json, Agrees (NatJson.ofBinary64 j) j
   | .null => .null
   | .bool b => .bool b
@@ -440,15 +455,19 @@ theorem agrees_ofBinary64 : ∀ j : Json, Agrees (NatJson.ofBinary64 j) j
   | .str s => .str s
   | .arr js => .arr (agreesList_ofBinary64 js)
   | .obj fs => .obj (agreesEntries_ofBinary64 fs)
+/-- `agrees_ofBinary64` over a list. -/
 theorem agreesList_ofBinary64 : ∀ js : List Json, AgreesList (NatJson.ofBinary64List js) js
   | [] => .nil
   | j :: js => .cons (agrees_ofBinary64 j) (agreesList_ofBinary64 js)
+/-- `agrees_ofBinary64` over an object's entries. -/
 theorem agreesEntries_ofBinary64 :
     ∀ fs : List (String × Json), AgreesEntries (NatJson.ofBinary64Entries fs) fs
   | [] => .nil
   | (k, j) :: fs => .cons k (agrees_ofBinary64 j) (agreesEntries_ofBinary64 fs)
 end
 
+/-- Agreeing objects have as many entries. A step of `readAt_exact`: the normaliser compares an
+object's arity with its shape's. -/
 theorem AgreesEntries.length_eq :
     ∀ {es : List (String × NatJson)} {fs : List (String × Json)},
       AgreesEntries es fs → es.length = fs.length
@@ -458,6 +477,8 @@ theorem AgreesEntries.length_eq :
     | cons k _ hrest =>
       simp only [List.length_cons, AgreesEntries.length_eq hrest]
 
+/-- An entry the profile's object holds under a key, the agreeing binary64 object holds too, and
+the two agree. A step of `readAt_exact` (fields, and a case object's tag). -/
 theorem AgreesEntries.entryOf_some {n : String} :
     ∀ {es : List (String × NatJson)} {fs : List (String × Json)} {t : NatJson},
       AgreesEntries es fs → NatJson.entryOf n es = some t → ∃ j, entryOf n fs = some j ∧ Agrees t j
@@ -476,6 +497,8 @@ theorem AgreesEntries.entryOf_some {n : String} :
         rw [if_neg hk]
         exact AgreesEntries.entryOf_some hrest he
 
+/-- A list family's cases, as `listParts?` finds them: `nil` and `cons`, with distinct tags. A
+step of `readSpine_exact`, through `printIn_nil` and `printIn_cons`. -/
 theorem listParts?_eq {cases : List (String × Nat × List (String × Shape))} {t0 t1 : Nat}
     {item tail : Shape} (h : listParts? cases = some (t0, t1, item, tail)) :
     cases = [("nil", t0, []), ("cons", t1, [("head", item), ("tail", tail)])] ∧ t0 ≠ t1 := by
@@ -490,6 +513,7 @@ theorem listParts?_eq {cases : List (String × Nat × List (String × Shape))} {
     · cases h
   · cases h
 
+/-- A list family's `nil` prints as its case object. A step of `readSpine_exact`. -/
 theorem printIn_nil {defs : List (String × Shape)} {s : Shape} {name : String}
     {cases : List (String × Nat × List (String × Shape))} {t0 t1 : Nat} {item tail : Shape}
     (hs : headShape defs s = .sum name cases) (hp : listParts? cases = some (t0, t1, item, tail)) :
@@ -499,6 +523,8 @@ theorem printIn_nil {defs : List (String × Shape)} {s : Shape} {name : String}
   simp only [printIn, hs, caseAt, ↓reduceIte, allNullary, nilObject]
   rfl
 
+/-- A list family's `cons` prints as its case object, head and tail under their shapes. A step of
+`readSpine_exact`. -/
 theorem printIn_cons {defs : List (String × Shape)} {s : Shape} {name : String}
     {cases : List (String × Nat × List (String × Shape))} {t0 t1 : Nat} {item tail : Shape}
     (hs : headShape defs s = .sum name cases) (hp : listParts? cases = some (t0, t1, item, tail))
@@ -509,7 +535,6 @@ theorem printIn_cons {defs : List (String × Shape)} {s : Shape} {name : String}
   subst hc
   simp only [printIn, hs, caseAt, if_neg hne, ↓reduceIte, allNullary, printFields]
   rfl
-
 
 
 /-! ## Exactness of the profile's reader -/
