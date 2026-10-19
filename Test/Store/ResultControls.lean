@@ -114,7 +114,7 @@ def resultSpec : Digest := specOf (Answered Unit)
   (.dangling zeroDigest)
 #guard (⟨.value, []⟩ : ShapeDoc).accepts (.ctor 713 [.nat 2, .bytes [0, 255]])
 -- The raw shape has no generic JSON inverse: the reader refuses rather than guess.
-#guard readIn [] 100 .value (.str "a") = none
+#guard readIn [] [] .value (.str "a") = none
 
 /-! ## Incidental references and varying output -/
 

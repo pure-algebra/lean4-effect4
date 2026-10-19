@@ -924,7 +924,6 @@ and json_reason =
   | JsonReason_naturalOutsideProfile of int
   | JsonReason_carrierValue
   | JsonReason_unsupportedProfile
-  | JsonReason_budget
 and listing = {
   name : string;
   description : string;

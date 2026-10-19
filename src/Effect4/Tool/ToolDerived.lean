@@ -8293,8 +8293,7 @@ def shapeDoc : ShapeDoc :=
       ("unknownCase", 3, [("name", (shape _root_.String).root)]),
       ("naturalOutsideProfile", 4, [("limit", (shape _root_.Nat).root)]),
       ("carrierValue", 5, []),
-      ("unsupportedProfile", 6, []),
-      ("budget", 7, [])],
+      ("unsupportedProfile", 6, [])],
    (shape _root_.Effect4.Store.Shape).defs ++ (shape _root_.String).defs ++
      (shape _root_.Nat).defs⟩
 
@@ -8306,7 +8305,6 @@ def toVal : _root_.Effect4.Store.JsonReason → Val
   | .naturalOutsideProfile a0 => .ctor 4 [Canonical.toVal a0]
   | .carrierValue => .ctor 5 []
   | .unsupportedProfile => .ctor 6 []
-  | .budget => .ctor 7 []
 
 def ofVal : Val → Option (_root_.Effect4.Store.JsonReason)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Store.Shape) v0).map .expected
@@ -8316,7 +8314,6 @@ def ofVal : Val → Option (_root_.Effect4.Store.JsonReason)
   | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .naturalOutsideProfile
   | .ctor 5 [] => some .carrierValue
   | .ctor 6 [] => some .unsupportedProfile
-  | .ctor 7 [] => some .budget
   | _ => none
 
 /-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
@@ -8346,7 +8343,6 @@ theorem ofVal_toVal (a : _root_.Effect4.Store.JsonReason) : ofVal (toVal a) = so
   | «naturalOutsideProfile» a0 => simp only [toVal, ofVal_arm4, Canonical.ofVal_toVal, Option.map_some]
   | «carrierValue» => rfl
   | «unsupportedProfile» => rfl
-  | «budget» => rfl
 
 theorem lift_T_95_root_95__46_Effect4_46_Store_46_Shape (x : _root_.Effect4.Store.Shape) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Store.Shape).root (Canonical.toVal x) = true :=
@@ -8382,8 +8378,6 @@ theorem fits (a : _root_.Effect4.Store.JsonReason) : shapeDoc.accepts (toVal a) 
     exact accepts_sum _ _ _ 5 "carrierValue" [] [] rfl (acceptsFields_nil _)
   | «unsupportedProfile» =>
     exact accepts_sum _ _ _ 6 "unsupportedProfile" [] [] rfl (acceptsFields_nil _)
-  | «budget» =>
-    exact accepts_sum _ _ _ 7 "budget" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Store.JsonReason) :=
   ⟨shapeDoc, toVal, guarded toVal ofVal,

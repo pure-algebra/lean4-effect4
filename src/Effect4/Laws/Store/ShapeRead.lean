@@ -15,13 +15,17 @@ induction beside the normaliser), the validity of every refusal's site (`readAt_
 agreement of the profile's tree with its binary64 image within the profile
 (`ofBinary64_toBinary64`, over `natOfBinary64_binary64OfNat`).
 
+No reader here has a budget. Each recurses on the JSON value's size, then on the definitions not
+yet unfolded since the last node, then on the shape's size (`optionLayer?_lt`). So each law below
+holds of the reader's whole answer, and no refusal stands for a spent budget.
+
 ## Placement
 
 Concept `exact-codecs`; property: a read paired with a write is exact when whatever reads is the
 write of what it reads. Requirement R14 (program as data): the schema form an agent writes.
 
 - **`json-read-exact`** (claim, role compatibility; pointer `Canonical.ofJson_exact`). Reach:
-  every shape document and every JSON value, at every budget of option layers. Not established:
+  every shape document and every JSON value. Not established:
   the round trip, which holds only where every natural is at most 2^53 and no option holds a
   shape that prints `null`; the bytes, which the canonical codec owns (`Canonical.decode_exact`).
   Consumer: the session tool, whose requests may carry a program as JSON.
@@ -35,12 +39,12 @@ write of what it reads. Requirement R14 (program as data): the schema form an ag
 - **`json-read-located`** (proposed claim, role compatibility; its pointer is
   `CodecProfile.profileLocated_exact`, `Laws/Tool/CodecProfile.lean`). The steps here:
   `readAt_exact` and `ShapeDoc.readLocated_exact` (exactness modulo `ShapeDoc.order`, for every
-  tree and every agreeing binary64 tree, at every budget); `Canonical.ofJsonAnyOrder_exact`
+  tree and every agreeing binary64 tree); `Canonical.ofJsonAnyOrder_exact`
   (re-proved through them: the any-order reader is now the located reader's projection);
   `readAt_site` and `ShapeDoc.readLocated_site` (every refusal names a value of the input, or a
   field missing from an object of it; Codex's `readLocated_site` with the amended relation);
-  `ShapeDoc.readLocated_erases` (the projection, by definition). Reach: every shape document,
-  every profile tree and every budget. Not established: the round trip; that the old two-pass
+  `ShapeDoc.readLocated_erases` (the projection, by definition). Reach: every shape document
+  and every profile tree. Not established: the round trip; that the old two-pass
   reader (`ShapeDoc.order`, then `readIn`) accepts exactly what the located reader accepts, which
   the batteries check on finite inputs; that the reported reason is the input's only fault.
   Consumers: the tool's JSON profile and the native shell.
@@ -142,14 +146,31 @@ theorem tagOfName_exact {name : String} {cases : List (String × Nat × List (St
     · cases h2
   · cases h2
 
+/-- **A layer reads the item of the shape's head**: where `optionLayer?` answers, the head is the
+option of the item it answers. A step of `readIn_exact`, `readAt_exact` and `orderIn_option`. -/
+theorem optionLayer?_head {defs : List (String × Shape)} {s item : Shape}
+    {seen seen' : List String} (h : optionLayer? defs s seen = some (item, seen')) :
+    headShape defs s = .option item := by
+  unfold optionLayer? at h
+  split at h
+  · rename_i item' hs
+    split at h
+    · split at h
+      · cases h
+      · cases h
+        exact hs
+    · cases h
+      exact hs
+  · cases h
+
 mutual
-/-- **Whatever reads is the value's print**, under the same shape, at every budget. The pointer's
-step of `json-read-exact`. Its consumer is `ShapeDoc.read_exact`. -/
+/-- **Whatever reads is the value's print**, under the same shape. The pointer's step of
+`json-read-exact`. Its consumer is `ShapeDoc.read_exact`. -/
 @[semantics "exact-codecs" (requirement := R14)]
 theorem readIn_exact {defs : List (String × Shape)} :
-    ∀ {n : Nat} {s : Shape} {j : Json} {v : Val}, readIn defs n s j = some v → printIn defs s v = j
-  | 0, _, _, _, h => by cases h
-  | n + 1, s, j, v, h => by
+    ∀ {seen : List String} {s : Shape} {j : Json} {v : Val},
+      readIn defs seen s j = some v → printIn defs s v = j
+  | seen, s, j, v, h => by
     unfold readIn at h
     split at h
     next hs =>
@@ -158,11 +179,14 @@ theorem readIn_exact {defs : List (String × Shape)} :
     next hs =>
       cases h
       rfl
-    next item j' hs _ =>
-      obtain ⟨a, ha, rfl⟩ := Option.map_eq_some_iff.mp h
-      have hp := readIn_exact ha
-      simp only [printIn, hs]
-      exact hp
+    next j' _ hs _ =>
+      split at h
+      next item seen' hl =>
+        obtain ⟨a, ha, rfl⟩ := Option.map_eq_some_iff.mp h
+        have hp := readIn_exact ha
+        simp only [printIn, optionLayer?_head hl]
+        exact hp
+      next => cases h
     next b hs =>
       cases h
       rfl
@@ -223,37 +247,49 @@ theorem readIn_exact {defs : List (String × Shape)} :
         simp only [printIn, hs, hkind, canonicalHex?_exact hd]
       next => cases h2
     next => cases h
+termination_by seen s j => (sizeOf j, unseenDefs defs seen, sizeOf s)
+decreasing_by
+  all_goals subst_vars
+  · exact Prod.Lex.right _ (optionLayer?_lt ‹_›)
+  all_goals
+    apply Prod.Lex.left
+    simp only [Json.arr.sizeOf_spec, Json.obj.sizeOf_spec, List.cons.sizeOf_spec,
+      Prod.mk.sizeOf_spec]
+    omega
 
 /-- The elements read are printed as the list read. A step of `readIn_exact`. -/
 @[semantics "exact-codecs" (requirement := R14)]
 theorem readList_exact {defs : List (String × Shape)} :
-    ∀ {n : Nat} {item : Shape} {js : List Json} {xs : List Val},
-      readList defs n item js = some xs → printList defs item xs = js
-  | 0, _, _, _, h => by cases h
-  | _ + 1, _, [], _, h => by
+    ∀ {item : Shape} {js : List Json} {xs : List Val},
+      readList defs item js = some xs → printList defs item xs = js
+  | _, [], _, h => by
     unfold readList at h
     cases h
     rfl
-  | n + 1, item, j :: js, xs, h => by
+  | item, j :: js, xs, h => by
     unfold readList at h
     obtain ⟨x, hx, h2⟩ := Option.bind_eq_some_iff.mp h
     obtain ⟨xs', hxs, rfl⟩ := Option.map_eq_some_iff.mp h2
     have hp := readIn_exact hx
     have hps := readList_exact hxs
     simp only [printList, hp, hps]
+termination_by _ js => (sizeOf js, 0, 0)
+decreasing_by
+  all_goals
+    apply Prod.Lex.left
+    simp only [List.cons.sizeOf_spec]
+    omega
 
 /-- The fields read are printed as the entries read. A step of `readIn_exact`. -/
 @[semantics "exact-codecs" (requirement := R14)]
 theorem readFields_exact {defs : List (String × Shape)} :
-    ∀ {n : Nat} {fields : List (String × Shape)} {entries : List (String × Json)}
-      {args : List Val}, readFields defs n fields entries = some args →
-      printFields defs fields args = entries
-  | 0, _, _, _, h => by cases h
-  | _ + 1, [], [], _, h => by
+    ∀ {fields : List (String × Shape)} {entries : List (String × Json)} {args : List Val},
+      readFields defs fields entries = some args → printFields defs fields args = entries
+  | [], [], _, h => by
     unfold readFields at h
     cases h
     rfl
-  | n + 1, (k, s) :: fields, (k', j) :: entries, args, h => by
+  | (k, s) :: fields, (k', j) :: entries, args, h => by
     unfold readFields at h
     split at h
     next hk =>
@@ -263,12 +299,18 @@ theorem readFields_exact {defs : List (String × Shape)} :
       have hps := readFields_exact hxs
       simp only [printFields, hp, hps, hk]
     next => cases h
-  | _ + 1, [], _ :: _, _, h => by
+  | [], _ :: _, _, h => by
     unfold readFields at h
     cases h
-  | _ + 1, _ :: _, [], _, h => by
+  | _ :: _, [], _, h => by
     unfold readFields at h
     cases h
+termination_by _ entries => (sizeOf entries, 0, 0)
+decreasing_by
+  all_goals
+    apply Prod.Lex.left
+    simp only [List.cons.sizeOf_spec, Prod.mk.sizeOf_spec]
+    omega
 end
 
 
@@ -558,16 +600,13 @@ theorem except_map_ok {ε α β : Type} {e : Except ε α} {f : α → β} {b : 
 /-- The fields read are as many as the shape's. A step of `readFieldsAt_exact`. -/
 theorem readFieldsAt_length {defs : List (String × Shape)} {es : List (String × NatJson)}
     {p : List JsonStep} :
-    ∀ {fuel : Nat} {fields : List (String × Shape)} {xs : List Val},
-      readFieldsAt defs fuel fields es p = .ok xs → xs.length = fields.length
-  | _, [], _, h => by
+    ∀ {fields : List (String × Shape)} {xs : List Val},
+      readFieldsAt defs fields es p = .ok xs → xs.length = fields.length
+  | [], _, h => by
     unfold readFieldsAt at h
     cases h
     rfl
-  | 0, _ :: _, _, h => by
-    unfold readFieldsAt at h
-    cases h
-  | fuel + 1, (n, s) :: fields, xs, h => by
+  | (n, s) :: fields, xs, h => by
     unfold readFieldsAt at h
     split at h
     · obtain ⟨x, -, h2⟩ := except_bind_ok h
@@ -584,13 +623,42 @@ theorem printFields_length {defs : List (String × Shape)} :
     simp only [List.length_cons, Nat.add_right_cancel_iff] at h
     simp only [printFields, List.length_cons, printFields_length h]
 
-/-- Under an option, a value that is not `null` is ordered under the item. -/
-theorem orderIn_option {defs : List (String × Shape)} {fuel : Nat} {s item : Shape} {j : Json}
-    (hs : headShape defs s = .option item) (hj : j ≠ .null) :
-    orderIn defs (fuel + 1) s j = orderIn defs fuel item j := by
+/-- Under an option, a value that is not `null` is ordered under the item, past one layer. A step
+of `readAt_exact`. -/
+theorem orderIn_option {defs : List (String × Shape)} {seen seen' : List String}
+    {s item : Shape} {j : Json} (hl : optionLayer? defs s seen = some (item, seen'))
+    (hj : j ≠ .null) : orderIn defs seen s j = orderIn defs seen' item j := by
+  rw [orderIn.eq_def]
   cases j with
   | null => exact absurd rfl hj
-  | _ => simp only [orderIn, hs]
+  | _ =>
+    simp only [optionLayer?_head hl]
+    split
+    next item'' seen'' hl' =>
+      rw [hl] at hl'
+      cases hl'
+      rfl
+    next hl' =>
+      rw [hl] at hl'
+      cases hl'
+
+/-- The shape's fields are ordered one by one, each at the first entry with its name. A step of
+`readFieldsAt_exact`. -/
+theorem orderFields_cons {defs : List (String × Shape)} {n : String} {s : Shape}
+    {fields : List (String × Shape)} {entries : List (String × Json)} {j : Json}
+    (hj : entryOf n entries = some j) :
+    orderFields defs ((n, s) :: fields) entries =
+      (orderFields defs fields entries).map ((n, orderIn defs [] s j) :: ·) := by
+  rw [orderFields.eq_def]
+  dsimp only
+  split
+  next j' hj' =>
+    rw [hj] at hj'
+    cases hj'
+    rfl
+  next hj' =>
+    rw [hj] at hj'
+    cases hj'
 
 /-- A tree that agrees with `null` is `null`. -/
 theorem Agrees.null_right {t : NatJson} (h : Agrees t .null) : t = .null := by
@@ -600,32 +668,34 @@ theorem Agrees.null_right {t : NatJson} (h : Agrees t .null) : t = .null := by
 
 mutual
 /-- **Whatever the profile's reader reads is the value whose print is its input, normalised**:
-for a binary64 tree that agrees with the input, the normaliser's output is the print, at every
-budget. The pointer's step of `json-read-located`. Its consumer is `ShapeDoc.readLocated_exact`. -/
+for a binary64 tree that agrees with the input, the normaliser's output is the print. The
+pointer's step of `json-read-located`. Its consumer is `ShapeDoc.readLocated_exact`. -/
 @[semantics "exact-codecs" (requirement := R14)]
 theorem readAt_exact {defs : List (String × Shape)} :
-    ∀ {fuel : Nat} {s : Shape} {t : NatJson} {j : Json} {p : List JsonStep} {v : Val},
-      Agrees t j → readAt defs fuel s t p = .ok v → orderIn defs fuel s j = printIn defs s v
-  | 0, _, _, _, _, _, _, h => by
-    unfold readAt at h
-    cases h
-  | fuel + 1, s, t, j, p, v, hA, h => by
+    ∀ {seen : List String} {s : Shape} {t : NatJson} {j : Json} {p : List JsonStep} {v : Val},
+      Agrees t j → readAt defs seen s t p = .ok v → orderIn defs seen s j = printIn defs s v
+  | seen, s, t, j, p, v, hA, h => by
     unfold readAt at h
     split at h
-    next _ _ item hs =>
+    next _ _ _ hs =>
       cases h
       cases hA
-      simp only [orderIn, hs, printIn]
-    next t' _ _ item hs hnull =>
-      obtain ⟨x, hx, rfl⟩ := except_map_ok h
-      have hj : j ≠ .null := fun hj => hnull (Agrees.null_right (hj ▸ hA))
-      rw [orderIn_option hs hj, readAt_exact hA hx]
-      simp only [printIn, hs]
+      rw [orderIn.eq_def]
+      simp only [hs, printIn]
+    next t' _ _ _ hs hnull =>
+      split at h
+      next item seen' hl =>
+        obtain ⟨x, hx, rfl⟩ := except_map_ok h
+        have hj : j ≠ .null := fun hj => hnull (Agrees.null_right (hj ▸ hA))
+        rw [orderIn_option hl hj, readAt_exact hA hx]
+        simp only [printIn, optionLayer?_head hl]
+      next => cases h
     next _ _ item ts hs =>
       obtain ⟨xs, hxs, rfl⟩ := except_map_ok h
       cases hA with
       | arr hts =>
-        simp only [orderIn, hs, printIn, readItems_exact hts hxs]
+        rw [orderIn.eq_def]
+        simp only [hs, printIn, readItems_exact hts hxs]
     next _ _ f g a b hs =>
       obtain ⟨x, hx, h2⟩ := except_bind_ok h
       obtain ⟨y, hy, rfl⟩ := except_map_ok h2
@@ -636,13 +706,15 @@ theorem readAt_exact {defs : List (String × Shape)} :
           cases hts' with
           | cons hb hnil =>
             cases hnil
-            simp only [orderIn, hs, printIn, readAt_exact ha hx, readAt_exact hb hy]
+            rw [orderIn.eq_def]
+            simp only [hs, printIn, readAt_exact ha hx, readAt_exact hb hy]
     next _ _ name cases ts hs =>
       split at h
       next t0 t1 item tail hp =>
         cases hA with
         | arr hts =>
-          simp only [orderIn, hs, hp]
+          rw [orderIn.eq_def]
+          simp only [hs, hp]
           exact readSpine_exact hs hp hts h
       next => cases h
     next _ _ name fields entries hs =>
@@ -662,7 +734,8 @@ theorem readAt_exact {defs : List (String × Shape)} :
             | @obj _ fs hes =>
               have hl : (printFields defs fields xs).length = fs.length := by
                 rw [printFields_length (readFieldsAt_length hxs), hlen, AgreesEntries.length_eq hes]
-              simp only [orderIn, hs, readFieldsAt_exact hes hxs]
+              rw [orderIn.eq_def]
+              simp only [hs, readFieldsAt_exact hes hxs]
               rw [if_pos hl]
               simp only [printIn, hs]
           next => cases h2
@@ -693,7 +766,8 @@ theorem readAt_exact {defs : List (String × Shape)} :
                     have hl : (printFields defs fields xs).length + 1 = fs.length := by
                       rw [printFields_length (readFieldsAt_length hxs), hlen,
                         AgreesEntries.length_eq hes]
-                    simp only [orderIn, hs, hjt, hname, readFieldsAt_exact hes hxs]
+                    rw [orderIn.eq_def]
+                    simp only [hs, hjt, hname, readFieldsAt_exact hes hxs]
                     rw [if_pos hl]
                     simp only [printIn, hs, tagOfName_exact hname, hnull, Bool.false_eq_true,
                       ↓reduceIte]
@@ -704,36 +778,42 @@ theorem readAt_exact {defs : List (String × Shape)} :
     next _ _ hs =>
       cases h
       cases hA
-      simp only [orderIn, hs, printIn]
+      rw [orderIn.eq_def]
+      simp only [hs, printIn]
     next _ _ b hs =>
       cases h
       cases hA
-      simp only [orderIn, hs, printIn]
+      rw [orderIn.eq_def]
+      simp only [hs, printIn]
     next _ _ n hs =>
       split at h
       next =>
         cases h
         cases hA
-        simp only [orderIn, hs, printIn, Effect4.Arch.Json.ofNat]
+        rw [orderIn.eq_def]
+        simp only [hs, printIn, Effect4.Arch.Json.ofNat]
       next => cases h
     next => cases h
     next _ _ x hs =>
       cases h
       cases hA
-      simp only [orderIn, hs, printIn]
+      rw [orderIn.eq_def]
+      simp only [hs, printIn]
     next _ _ hx hs =>
       split at h
       next d hd =>
         cases h
         cases hA
-        simp only [orderIn, hs, printIn, canonicalHex?_exact hd]
+        rw [orderIn.eq_def]
+        simp only [hs, printIn, canonicalHex?_exact hd]
       next => cases h
     next _ _ hx hs =>
       split at h
       next d hd =>
         cases h
         cases hA
-        simp only [orderIn, hs, printIn, canonicalHex?_exact hd]
+        rw [orderIn.eq_def]
+        simp only [hs, printIn, canonicalHex?_exact hd]
       next => cases h
     next _ _ name cases hs =>
       split at h
@@ -742,7 +822,8 @@ theorem readAt_exact {defs : List (String × Shape)} :
         next tag htag =>
           cases h
           cases hA
-          simp only [orderIn, hs, printIn, tagOfName_exact htag, hall, ↓reduceIte]
+          rw [orderIn.eq_def]
+          simp only [hs, printIn, tagOfName_exact htag, hall, ↓reduceIte]
         next => cases h
         next => cases h
       next => cases h
@@ -751,7 +832,8 @@ theorem readAt_exact {defs : List (String × Shape)} :
       next d hd =>
         cases h
         cases hA
-        simp only [orderIn, hs, printIn, canonicalHex?_exact hd]
+        rw [orderIn.eq_def]
+        simp only [hs, printIn, canonicalHex?_exact hd]
       next => cases h
     next _ _ kn hx hs =>
       split at h
@@ -776,77 +858,87 @@ theorem readAt_exact {defs : List (String × Shape)} :
                     unfold kindJson
                     rw [hk']
                     exact congrArg Json.str hname'
-                  simp only [orderIn, hs, printIn, hkj, canonicalHex?_exact hd]
+                  rw [orderIn.eq_def]
+                  simp only [hs, printIn, hkj, canonicalHex?_exact hd]
           next => cases h
         next => cases h
       next => cases h
     next => cases h
+termination_by seen s t => (sizeOf t, unseenDefs defs seen, sizeOf s)
+decreasing_by
+  all_goals subst_vars
+  · exact Prod.Lex.right _ (optionLayer?_lt ‹_›)
+  all_goals
+    apply Prod.Lex.left
+    simp only [NatJson.arr.sizeOf_spec, NatJson.obj.sizeOf_spec, List.cons.sizeOf_spec]
+    omega
 
 /-- The elements read are printed as the list ordered. A step of `readAt_exact`. -/
 theorem readItems_exact {defs : List (String × Shape)} :
-    ∀ {fuel : Nat} {item : Shape} {ts : List NatJson} {js : List Json} {p : List JsonStep}
+    ∀ {item : Shape} {ts : List NatJson} {js : List Json} {p : List JsonStep}
       {i : Nat} {xs : List Val},
-      AgreesList ts js → readItems defs fuel item ts p i = .ok xs →
-        orderList defs fuel item js = printList defs item xs
-  | fuel, _, [], _, _, _, _, hA, h => by
+      AgreesList ts js → readItems defs item ts p i = .ok xs →
+        orderList defs item js = printList defs item xs
+  | _, [], _, _, _, _, hA, h => by
     cases hA
     unfold readItems at h
     cases h
-    cases fuel <;> rfl
-  | 0, _, _ :: _, _, _, _, _, _, h => by
-    unfold readItems at h
-    cases h
-  | fuel + 1, item, t :: ts, _, p, i, _, hA, h => by
+    simp only [orderList, printList]
+  | item, t :: ts, _, p, i, _, hA, h => by
     cases hA with
     | cons ht hts =>
       unfold readItems at h
       obtain ⟨x, hx, h2⟩ := except_bind_ok h
       obtain ⟨xs, hxs, rfl⟩ := except_map_ok h2
       simp only [orderList, printList, readAt_exact ht hx, readItems_exact hts hxs]
+termination_by _ ts => (sizeOf ts, 0, 0)
+decreasing_by
+  all_goals
+    apply Prod.Lex.left
+    simp only [List.cons.sizeOf_spec]
+    omega
 
 /-- The fields read are the entries ordered. A step of `readAt_exact`. -/
 theorem readFieldsAt_exact {defs : List (String × Shape)} {es : List (String × NatJson)}
     {fs : List (String × Json)} {p : List JsonStep} :
-    ∀ {fuel : Nat} {fields : List (String × Shape)} {xs : List Val},
-      AgreesEntries es fs → readFieldsAt defs fuel fields es p = .ok xs →
-        orderFields defs fuel fields fs = some (printFields defs fields xs)
-  | fuel, [], _, _, h => by
+    ∀ {fields : List (String × Shape)} {xs : List Val},
+      AgreesEntries es fs → readFieldsAt defs fields es p = .ok xs →
+        orderFields defs fields fs = some (printFields defs fields xs)
+  | [], _, _, h => by
     unfold readFieldsAt at h
     cases h
-    cases fuel <;> rfl
-  | 0, _ :: _, _, _, h => by
-    unfold readFieldsAt at h
-    cases h
-  | fuel + 1, (n, s) :: fields, _, hA, h => by
+    simp only [orderFields, printFields]
+  | (n, s) :: fields, _, hA, h => by
     unfold readFieldsAt at h
     split at h
     next t ht =>
       obtain ⟨x, hx, h2⟩ := except_bind_ok h
       obtain ⟨xs, hxs, rfl⟩ := except_map_ok h2
       obtain ⟨j, hj, hag⟩ := AgreesEntries.entryOf_some hA ht
-      simp only [orderFields, hj, readFieldsAt_exact hA hxs, readAt_exact hag hx, Option.map_some,
-        printFields]
+      rw [orderFields_cons hj]
+      simp only [readFieldsAt_exact hA hxs, readAt_exact hag hx, Option.map_some, printFields]
     next => cases h
+termination_by fields => (sizeOf es, 0, fields.length)
+decreasing_by
+  · exact Prod.Lex.left _ _ (NatJson.sizeOf_entryOf_lt ‹_›)
+  · exact Prod.Lex.right _ (Prod.Lex.right _ (Nat.lt_succ_self _))
 
 /-- A list family's array is printed as the normaliser writes its cells. A step of
 `readAt_exact`. -/
 theorem readSpine_exact {defs : List (String × Shape)} :
-    ∀ {fuel t0 t1 : Nat} {item tail s : Shape} {name : String}
+    ∀ {t0 t1 : Nat} {item tail s : Shape} {name : String}
       {cases : List (String × Nat × List (String × Shape))} {ts : List NatJson} {js : List Json}
       {p : List JsonStep} {i : Nat} {v : Val},
       headShape defs s = .sum name cases → listParts? cases = some (t0, t1, item, tail) →
-        AgreesList ts js → readSpine defs fuel t0 t1 item tail ts p i = .ok v →
-          orderSpine defs fuel item tail js = printIn defs s v
-  | fuel, _, _, _, _, _, _, _, [], _, _, _, _, hs, hp, hA, h => by
+        AgreesList ts js → readSpine defs t0 t1 item tail ts p i = .ok v →
+          orderSpine defs item tail js = printIn defs s v
+  | _, _, _, _, _, _, _, [], _, _, _, _, hs, hp, hA, h => by
     cases hA
     unfold readSpine at h
     cases h
     rw [printIn_nil hs hp]
-    cases fuel <;> rfl
-  | 0, _, _, _, _, _, _, _, _ :: _, _, _, _, _, _, _, _, h => by
-    unfold readSpine at h
-    cases h
-  | fuel + 1, _, _, item, tail, _, _, _, t :: ts, _, p, i, _, hs, hp, hA, h => by
+    simp only [orderSpine]
+  | _, _, item, tail, _, _, _, t :: ts, _, p, i, _, hs, hp, hA, h => by
     cases hA with
     | cons ht hts =>
       unfold readSpine at h
@@ -861,43 +953,12 @@ theorem readSpine_exact {defs : List (String × Shape)} :
             readSpine_exact htail hp' hts hrest]
         next => cases hrest
       next => cases hrest
-end
-
-
-mutual
-/-- Agreeing trees have as many nodes, so the reader's budget and the normaliser's are one.
-A step of `ShapeDoc.readLocated_exact`. -/
-theorem Agrees.nodes_eq : ∀ {t : NatJson} {j : Json}, Agrees t j → t.nodes = jsonNodes j
-  | .null, _, h => by cases h; rfl
-  | .bool _, _, h => by cases h; rfl
-  | .nat _, _, h => by cases h; rfl
-  | .numeral _, _, h => by cases h; rfl
-  | .str _, _, h => by cases h; rfl
-  | .arr _, _, h => by
-    cases h with
-    | arr h' => simp only [NatJson.nodes, jsonNodes, AgreesList.nodes_eq h']
-  | .obj _, _, h => by
-    cases h with
-    | obj h' => simp only [NatJson.nodes, jsonNodes, AgreesEntries.nodes_eq h']
-
-/-- `Agrees.nodes_eq` over a list. -/
-theorem AgreesList.nodes_eq :
-    ∀ {ts : List NatJson} {js : List Json}, AgreesList ts js → NatJson.nodesList ts = listNodes js
-  | [], _, h => by cases h; rfl
-  | _ :: _, _, h => by
-    cases h with
-    | cons ht hts =>
-      simp only [NatJson.nodesList, listNodes, Agrees.nodes_eq ht, AgreesList.nodes_eq hts]
-
-/-- `Agrees.nodes_eq` over an object's entries. -/
-theorem AgreesEntries.nodes_eq :
-    ∀ {es : List (String × NatJson)} {fs : List (String × Json)},
-      AgreesEntries es fs → NatJson.nodesEntries es = entryNodes fs
-  | [], _, h => by cases h; rfl
-  | _ :: _, _, h => by
-    cases h with
-    | cons _ ht hes =>
-      simp only [NatJson.nodesEntries, entryNodes, Agrees.nodes_eq ht, AgreesEntries.nodes_eq hes]
+termination_by _ _ _ _ _ _ _ ts => (sizeOf ts, 0, 0)
+decreasing_by
+  all_goals
+    apply Prod.Lex.left
+    simp only [List.cons.sizeOf_spec]
+    omega
 end
 
 /-- **A value tree the profile's reader reads is the one whose print is any agreeing binary64
@@ -906,9 +967,8 @@ and `Canonical.ofJsonAnyOrder_exact`. -/
 @[semantics "exact-codecs" (requirement := R14)]
 theorem ShapeDoc.readLocated_exact_of {doc : ShapeDoc} {t : NatJson} {j : Json} {v : Val}
     (hA : Agrees t j) (h : doc.readLocated t = .ok v) : doc.print v = doc.order j := by
-  unfold ShapeDoc.readLocated treeBudget at h
-  unfold ShapeDoc.print ShapeDoc.order readBudget
-  rw [← Agrees.nodes_eq hA]
+  unfold ShapeDoc.readLocated at h
+  unfold ShapeDoc.print ShapeDoc.order
   exact (readAt_exact hA h).symm
 
 /-- **Whatever the profile's reader reads from a tree is the value whose print is the tree's
@@ -1072,17 +1132,18 @@ field missing from an object it holds. The pointer's step of `json-read-located`
 property. Its consumer is `ShapeDoc.readLocated_site`. -/
 @[semantics "exact-codecs" (requirement := R14)]
 theorem readAt_site {defs : List (String × Shape)} {t₀ : NatJson} :
-    ∀ {fuel : Nat} {s : Shape} {t : NatJson} {p : List JsonStep} {r : JsonRefusal},
-      t₀.at? p = some t → readAt defs fuel s t p = .error r → JsonSite.Valid t₀ r.site
-  | 0, _, _, _, _, hp, h => by
-    unfold readAt at h
-    cases h
-    exact ⟨_, hp⟩
-  | fuel + 1, s, t, p, r, hp, h => by
+    ∀ {seen : List String} {s : Shape} {t : NatJson} {p : List JsonStep} {r : JsonRefusal},
+      t₀.at? p = some t → readAt defs seen s t p = .error r → JsonSite.Valid t₀ r.site
+  | seen, s, t, p, r, hp, h => by
     unfold readAt at h
     split at h
     next => cases h
-    next t' _ _ item hs hnull => exact readAt_site hp (except_map_error h)
+    next t' _ _ _ hs hnull =>
+      split at h
+      next item seen' hl => exact readAt_site hp (except_map_error h)
+      next =>
+        cases h
+        exact ⟨_, hp⟩
     next _ _ item ts hs => exact readItems_site hp List.drop_zero (except_map_error h)
     next _ _ f g a b hs =>
       rcases except_bind_error h with h1 | ⟨x, -, h2⟩
@@ -1197,42 +1258,48 @@ theorem readAt_site {defs : List (String × Shape)} {t₀ : NatJson} :
     next =>
       cases h
       exact ⟨_, hp⟩
+termination_by seen s t => (sizeOf t, unseenDefs defs seen, sizeOf s)
+decreasing_by
+  all_goals subst_vars
+  · exact Prod.Lex.right _ (optionLayer?_lt ‹_›)
+  all_goals
+    apply Prod.Lex.left
+    simp only [NatJson.arr.sizeOf_spec, NatJson.obj.sizeOf_spec, List.cons.sizeOf_spec]
+    omega
 
 /-- A list's refusals name sites of the input; an element keeps its index. A step of
 `readAt_site`. -/
 theorem readItems_site {defs : List (String × Shape)} {t₀ : NatJson} {ts₀ : List NatJson}
     {p : List JsonStep} :
-    ∀ {fuel : Nat} {item : Shape} {ts : List NatJson} {i : Nat} {r : JsonRefusal},
+    ∀ {item : Shape} {ts : List NatJson} {i : Nat} {r : JsonRefusal},
       t₀.at? p = some (.arr ts₀) → ts₀.drop i = ts →
-        readItems defs fuel item ts p i = .error r → JsonSite.Valid t₀ r.site
-  | _, _, [], _, _, _, _, h => by
+        readItems defs item ts p i = .error r → JsonSite.Valid t₀ r.site
+  | _, [], _, _, _, _, h => by
     unfold readItems at h
     cases h
-  | 0, _, _ :: _, _, _, hp, hd, h => by
-    unfold readItems at h
-    cases h
-    exact ⟨_, NatJson.at?_index hp (drop_eq_cons hd).1⟩
-  | fuel + 1, item, t :: ts, i, r, hp, hd, h => by
+  | item, t :: ts, i, r, hp, hd, h => by
     unfold readItems at h
     rcases except_bind_error h with h1 | ⟨x, -, h2⟩
     · exact readAt_site (NatJson.at?_index hp (drop_eq_cons hd).1) h1
     · exact readItems_site hp (drop_eq_cons hd).2 (except_map_error h2)
+termination_by _ ts => (sizeOf ts, 0, 0)
+decreasing_by
+  all_goals
+    apply Prod.Lex.left
+    simp only [List.cons.sizeOf_spec]
+    omega
 
 /-- A structure's or a case's refusals name sites of the input: a field's value, or the object
 that lacks a field. A step of `readAt_site`. -/
 theorem readFieldsAt_site {defs : List (String × Shape)} {t₀ : NatJson}
     {entries : List (String × NatJson)} {p : List JsonStep} :
-    ∀ {fuel : Nat} {fields : List (String × Shape)} {r : JsonRefusal},
-      t₀.at? p = some (.obj entries) → readFieldsAt defs fuel fields entries p = .error r →
+    ∀ {fields : List (String × Shape)} {r : JsonRefusal},
+      t₀.at? p = some (.obj entries) → readFieldsAt defs fields entries p = .error r →
         JsonSite.Valid t₀ r.site
-  | _, [], _, _, h => by
+  | [], _, _, h => by
     unfold readFieldsAt at h
     cases h
-  | 0, _ :: _, _, hp, h => by
-    unfold readFieldsAt at h
-    cases h
-    exact ⟨_, hp⟩
-  | fuel + 1, (n, s) :: fields, r, hp, h => by
+  | (n, s) :: fields, r, hp, h => by
     unfold readFieldsAt at h
     split at h
     next t ht =>
@@ -1242,22 +1309,22 @@ theorem readFieldsAt_site {defs : List (String × Shape)} {t₀ : NatJson}
     next ht =>
       cases h
       exact ⟨entries, hp, ht⟩
+termination_by fields => (sizeOf entries, 0, fields.length)
+decreasing_by
+  · exact Prod.Lex.left _ _ (NatJson.sizeOf_entryOf_lt ‹_›)
+  · exact Prod.Lex.right _ (Prod.Lex.right _ (Nat.lt_succ_self _))
 
 /-- A list family's array's refusals name sites of the input; an element keeps its index. A step
 of `readAt_site`. -/
 theorem readSpine_site {defs : List (String × Shape)} {t₀ : NatJson} {ts₀ : List NatJson}
     {p : List JsonStep} :
-    ∀ {fuel t0 t1 : Nat} {item tail : Shape} {ts : List NatJson} {i : Nat} {r : JsonRefusal},
+    ∀ {t0 t1 : Nat} {item tail : Shape} {ts : List NatJson} {i : Nat} {r : JsonRefusal},
       t₀.at? p = some (.arr ts₀) → ts₀.drop i = ts →
-        readSpine defs fuel t0 t1 item tail ts p i = .error r → JsonSite.Valid t₀ r.site
-  | _, _, _, _, _, [], _, _, _, _, h => by
+        readSpine defs t0 t1 item tail ts p i = .error r → JsonSite.Valid t₀ r.site
+  | _, _, _, _, [], _, _, _, _, h => by
     unfold readSpine at h
     cases h
-  | 0, _, _, _, _, _ :: _, _, _, hp, hd, h => by
-    unfold readSpine at h
-    cases h
-    exact ⟨_, NatJson.at?_index hp (drop_eq_cons hd).1⟩
-  | fuel + 1, _, _, item, tail, t :: ts, i, r, hp, hd, h => by
+  | _, _, item, tail, t :: ts, i, r, hp, hd, h => by
     unfold readSpine at h
     rcases except_bind_error h with h1 | ⟨x, -, h2⟩
     · exact readAt_site (NatJson.at?_index hp (drop_eq_cons hd).1) h1
@@ -1272,6 +1339,12 @@ theorem readSpine_site {defs : List (String × Shape)} {t₀ : NatJson} {ts₀ :
       next =>
         cases h3
         exact ⟨_, hp⟩
+termination_by _ _ _ _ ts => (sizeOf ts, 0, 0)
+decreasing_by
+  all_goals
+    apply Prod.Lex.left
+    simp only [List.cons.sizeOf_spec]
+    omega
 end
 
 /-- **Every refusal of the profile's reader names a site of its input** (Codex's `readLocated_site`,

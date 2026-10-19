@@ -123,24 +123,6 @@ def at? (t : NatJson) : List JsonStep → Option NatJson
     | .arr elements => elements[i]?.bind fun t' => at? t' rest
     | _ => none
 
-mutual
-/-- The nodes of a value: the readers' budget. -/
-def nodes : NatJson → Nat
-  | .arr ts => 1 + nodesList ts
-  | .obj entries => 1 + nodesEntries entries
-  | _ => 1
-
-/-- The nodes of a list of values. -/
-def nodesList : List NatJson → Nat
-  | [] => 0
-  | t :: ts => nodes t + nodesList ts
-
-/-- The nodes of an object's entries. -/
-def nodesEntries : List (String × NatJson) → Nat
-  | [] => 0
-  | (_, t) :: entries => nodes t + nodesEntries entries
-end
-
 /-! ## The compact text, as bytes -/
 
 /-- The UTF-8 bytes of a string, as numbers: the lowered route has no `UInt8` arithmetic. -/

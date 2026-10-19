@@ -722,7 +722,6 @@ and json_reason =
   | JsonReason_naturalOutsideProfile of int
   | JsonReason_carrierValue
   | JsonReason_unsupportedProfile
-  | JsonReason_budget
 and listing = {
   name : string;
   description : string;
@@ -63329,22 +63328,17 @@ let store_tool_gen_t_95_root_95__46_effect4_46_store_46_json_reason_c_shape_doc 
   let _x_42 = 6 in
   let _x_43 = _x_42, _x_9 in
   let _x_44 = _x_41, _x_43 in
-  let _x_45 = "budget" in
-  let _x_46 = 7 in
-  let _x_47 = _x_46, _x_9 in
-  let _x_48 = _x_45, _x_47 in
-  let _x_49 = _x_48 :: _x_9 in
-  let _x_50 = _x_44 :: _x_49 in
-  let _x_51 = _x_40 :: _x_50 in
-  let _x_52 = _x_36 :: _x_51 in
-  let _x_53 = _x_28 :: _x_52 in
-  let _x_54 = _x_24 :: _x_53 in
-  let _x_55 = _x_20 :: _x_54 in
-  let _x_56 = _x_12 :: _x_55 in
-  let _x_57 = Shape_sum (_x_1, _x_56) in
-  let _x_58 = _x_7 @ _x_9 in
-  let _x_59 = _x_58 @ _x_9 in
-  ({ root = _x_57; defs = _x_59 } : shape_doc)
+  let _x_45 = _x_44 :: _x_9 in
+  let _x_46 = _x_40 :: _x_45 in
+  let _x_47 = _x_36 :: _x_46 in
+  let _x_48 = _x_28 :: _x_47 in
+  let _x_49 = _x_24 :: _x_48 in
+  let _x_50 = _x_20 :: _x_49 in
+  let _x_51 = _x_12 :: _x_50 in
+  let _x_52 = Shape_sum (_x_1, _x_51) in
+  let _x_53 = _x_7 @ _x_9 in
+  let _x_54 = _x_53 @ _x_9 in
+  ({ root = _x_52; defs = _x_54 } : shape_doc)
 
 
 
@@ -63743,9 +63737,6 @@ let store_tool_gen_t_95_root_95__46_effect4_46_store_46_json_reason_c_to_val (x_
     | JsonReason_unsupportedProfile -> (let _x_35 = 6 in
       let _x_36 = [] in
       Val.Ctor (_x_35, _x_36))
-    | JsonReason_budget -> (let _x_38 = 7 in
-      let _x_39 = [] in
-      Val.Ctor (_x_38, _x_39))
 
 
 
@@ -64087,13 +64078,13 @@ let tool_method_descriptor (k : method_key) : method_descriptor =
 
 
 
-(* LCNF mono: List.elem._at_.TypeScript.targetIdentifier.spec_0 (a : String) (x.1 : List String) : Bool *)
+(* LCNF mono: List.elem._at_.Effect4.Store.unseenDefs.spec_0 (a : String) (x.1 : List String) : Bool *)
 
-let rec list_elem_at_type_script_target_identifier_spec_0 (a : string) (x_1 : string list) : bool =
+let rec list_elem_at_store_unseen_defs_spec_0 (a : string) (x_1 : string list) : bool =
   match x_1 with
     | [] -> false
     | head_3 :: tail_4 -> (let _x_5 = a = head_3 in
-      if _x_5 then _x_5 else list_elem_at_type_script_target_identifier_spec_0 a tail_4)
+      if _x_5 then _x_5 else list_elem_at_store_unseen_defs_spec_0 a tail_4)
 
 
 
@@ -64109,7 +64100,7 @@ let rec tool_methods_names_in (tools : string list) (x_1 : shape) : string list 
       let _x_9 = tool_methods_names_in tools snd_7 in
       _x_8 @ _x_9)
     | Shape_struct (_, fields_12) -> tool_methods_names_fields tools fields_12
-    | Shape_sum (name_14, cases_15) -> (let _x_16 = list_elem_at_type_script_target_identifier_spec_0 name_14 tools in
+    | Shape_sum (name_14, cases_15) -> (let _x_16 = list_elem_at_store_unseen_defs_spec_0 name_14 tools in
       if _x_16 then [] else tool_methods_names_cases tools cases_15)
     | Shape_named name_19 -> (let _x_20 = [] in
       name_19 :: _x_20)
@@ -64302,7 +64293,7 @@ and tool_methods_nested (tools : string list) (x_1 : shape) : (string * shape) l
       let _x_14 = tool_methods_nested_fields tools fields_12 in
       _x_13 :: _x_14)
     | Shape_sum (name_16, cases_17) -> (let _x_18 = name_16, x_1 in
-      let _x_19 = list_elem_at_type_script_target_identifier_spec_0 name_16 tools in
+      let _x_19 = list_elem_at_store_unseen_defs_spec_0 name_16 tools in
       if _x_19 then (let _x_22 = [] in
         _x_18 :: _x_22) else (let _x_20 = tool_methods_nested_cases tools cases_17 in
         _x_18 :: _x_20))
@@ -64417,7 +64408,7 @@ let rec tool_methods_under_cases (x_1 : (string * (int * (string * shape) list))
 let tool_methods_inside (tools : string list) (x_1 : shape) : (string * shape) list =
   match (x_1 : shape) with
     | Shape_struct (_, fields_3) -> tool_methods_under_fields fields_3
-    | Shape_sum (name_5, cases_6) -> (let _x_7 = list_elem_at_type_script_target_identifier_spec_0 name_5 tools in
+    | Shape_sum (name_5, cases_6) -> (let _x_7 = list_elem_at_store_unseen_defs_spec_0 name_5 tools in
       if _x_7 then [] else tool_methods_under_cases cases_6)
     | _ -> tool_methods_under x_1
 
@@ -64798,12 +64789,12 @@ let rec tool_methods_schema_in (p : plan) (x_1 : shape) : string =
       let _x_114 = _x_97 :: _x_113 in
       tool_methods_object_ _x_114)
     | Shape_struct (name_116, fields_117) -> (match (p : plan) with
-        | { shared = shared; _ } -> (let _x_118 = list_elem_at_type_script_target_identifier_spec_0 name_116 shared in
+        | { shared = shared; _ } -> (let _x_118 = list_elem_at_store_unseen_defs_spec_0 name_116 shared in
           if _x_118 then tool_methods_ref name_116 else (let _x_119 = tool_methods_schema_fields p fields_117 in
             tool_methods_object_schema _x_119)))
     | Shape_sum (name_122, cases_123) -> (let[@local always] _jp_124 = fun _y_125 -> match (p : plan) with
-        | { shared = shared_1; tools = tools } -> (let _x_126 = list_elem_at_type_script_target_identifier_spec_0 name_122 shared_1 in
-          if _x_126 then tool_methods_ref name_122 else (let _x_127 = list_elem_at_type_script_target_identifier_spec_0 name_122 tools in
+        | { shared = shared_1; tools = tools } -> (let _x_126 = list_elem_at_store_unseen_defs_spec_0 name_122 shared_1 in
+          if _x_126 then tool_methods_ref name_122 else (let _x_127 = list_elem_at_store_unseen_defs_spec_0 name_122 tools in
             if _x_127 then (let _x_157 = "type" in
               let _x_158 = "object" in
               let _x_159 = tool_methods_quote _x_158 in
@@ -65033,7 +65024,7 @@ let rec list_filter_tr_loop_at_tool_methods_definitions_of_spec_8 (shared : stri
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, _ -> (let _x_6 = list_elem_at_type_script_target_identifier_spec_0 fst_1 shared in
+        | fst_1, _ -> (let _x_6 = list_elem_at_store_unseen_defs_spec_0 fst_1 shared in
           if _x_6 then (let _x_8 = head_4 :: a_2 in
             list_filter_tr_loop_at_tool_methods_definitions_of_spec_8 shared tail_5 _x_8) else list_filter_tr_loop_at_tool_methods_definitions_of_spec_8 shared tail_5 a_2))
 
@@ -65325,48 +65316,6 @@ let tool_native_describe : describe =
 
 
 
-(* LCNF mono: Effect4.NatJson.nodes (x.1 : Effect4.NatJson) : Nat
-   Effect4.NatJson.nodesList (x.1 : List Effect4.NatJson) : Nat
-   Effect4.NatJson.nodesEntries (x.1 : List (Prod String Effect4.NatJson)) : Nat *)
-
-let rec nat_json_nodes (x_1 : nat_json) : int =
-  match (x_1 : nat_json) with
-    | NatJson_arr elements_2 -> (let _x_3 = 1 in
-      let _x_4 = nat_json_nodes_list elements_2 in
-      _x_3 + _x_4)
-    | NatJson_obj entries_6 -> (let _x_7 = 1 in
-      let _x_8 = nat_json_nodes_entries entries_6 in
-      _x_7 + _x_8)
-    | _ -> 1
-
-and nat_json_nodes_list (x_1 : nat_json list) : int =
-  match x_1 with
-    | [] -> 0
-    | head_3 :: tail_4 -> (let _x_5 = nat_json_nodes head_3 in
-      let _x_6 = nat_json_nodes_list tail_4 in
-      _x_5 + _x_6)
-
-and nat_json_nodes_entries (x_1 : (string * nat_json) list) : int =
-  match x_1 with
-    | [] -> 0
-    | head_3 :: tail_4 -> (match head_3 with
-        | _, snd_6 -> (let _x_7 = nat_json_nodes snd_6 in
-          let _x_8 = nat_json_nodes_entries tail_4 in
-          _x_7 + _x_8))
-
-
-
-(* LCNF mono: Effect4.Store.treeBudget (t : Effect4.NatJson) : Nat *)
-
-let store_tree_budget (t : nat_json) : int =
-  let _x_1 = 8 in
-  let _x_2 = nat_json_nodes t in
-  let _x_3 = Lcnf_nat.mul _x_1 _x_2 in
-  let _x_4 = 64 in
-  _x_3 + _x_4
-
-
-
 (* LCNF mono: Effect4.Data.Ascii.bytesOf (text : String) : List UInt8 *)
 
 let data_ascii_bytes_of (text : string) : int list =
@@ -65508,6 +65457,22 @@ let store_canonical_hex_opt (h : string) : int list option =
     | Some val__5 -> (let _x_6 = store_hex_string val__5 in
       let _x_7 = _x_6 = h in
       if _x_7 then _x_4 else None)
+
+
+
+(* LCNF mono: Effect4.Store.optionLayer? (defs : List (Prod String Effect4.Store.Shape)) (s : Effect4.Store.Shape) (seen : List String) : Option (Prod Effect4.Store.Shape (List String)) *)
+
+let store_option_layer_opt (defs : (string * shape) list) (s : shape) (seen : string list) : (shape * string list) option =
+  let _x_1 = store_head_shape defs s in
+  match (_x_1 : shape) with
+    | Shape_option item_2 -> (match (s : shape) with
+        | Shape_named name_3 -> (let _x_4 = list_elem_at_store_unseen_defs_spec_0 name_3 seen in
+          if _x_4 then None else (let _x_5 = name_3 :: seen in
+            let _x_6 = item_2, _x_5 in
+            Some _x_6))
+        | _ -> (let _x_9 = item_2, seen in
+          Some _x_9))
+    | _ -> None
 
 
 
@@ -65840,346 +65805,325 @@ let store_kind_name_opt (b : int) : string option =
 
 
 
-(* LCNF mono: Effect4.Store.readAt (defs : List (Prod String Effect4.Store.Shape)) (x.1 : Nat) (x.2 : Effect4.Store.Shape) (x.3 : Effect4.NatJson) (x.4 : List Effect4.JsonStep) : Except (Effect4.Located Effect4.JsonSite Effect4.Store.JsonReason) Effect4.Store.Val
-   Effect4.Store.readItems (defs : List (Prod String Effect4.Store.Shape)) (x.1 : Nat) (x.2 : Effect4.Store.Shape) (x.3 : List Effect4.NatJson) (x.4 : List Effect4.JsonStep) (x.5 : Nat) : Except (Effect4.Located Effect4.JsonSite Effect4.Store.JsonReason) (List Effect4.Store.Val)
-   Effect4.Store.readSpine (defs : List (Prod String Effect4.Store.Shape)) (x.1 : Nat) (x.2 : Nat) (x.3 : Nat) (x.4 : Effect4.Store.Shape) (x.5 : Effect4.Store.Shape) (x.6 : List Effect4.NatJson) (x.7 : List Effect4.JsonStep) (x.8 : Nat) : Except (Effect4.Located Effect4.JsonSite Effect4.Store.JsonReason) Effect4.Store.Val
-   Effect4.Store.readFieldsAt (defs : List (Prod String Effect4.Store.Shape)) (x.1 : Nat) (x.2 : List (Prod String Effect4.Store.Shape)) (x.3 : List (Prod String Effect4.NatJson)) (x.4 : List Effect4.JsonStep) : Except (Effect4.Located Effect4.JsonSite Effect4.Store.JsonReason) (List Effect4.Store.Val) *)
+(* LCNF mono: Effect4.Store.readAt (defs : List (Prod String Effect4.Store.Shape)) (seen : List String) (s : Effect4.Store.Shape) (t : Effect4.NatJson) (p : List Effect4.JsonStep) : Except (Effect4.Located Effect4.JsonSite Effect4.Store.JsonReason) Effect4.Store.Val
+   Effect4.Store.readItems (defs : List (Prod String Effect4.Store.Shape)) (item : Effect4.Store.Shape) (x.1 : List Effect4.NatJson) (x.2 : List Effect4.JsonStep) (x.3 : Nat) : Except (Effect4.Located Effect4.JsonSite Effect4.Store.JsonReason) (List Effect4.Store.Val)
+   Effect4.Store.readSpine (defs : List (Prod String Effect4.Store.Shape)) (x.1 : Nat) (x.2 : Nat) (x.3 : Effect4.Store.Shape) (x.4 : Effect4.Store.Shape) (x.5 : List Effect4.NatJson) (x.6 : List Effect4.JsonStep) (x.7 : Nat) : Except (Effect4.Located Effect4.JsonSite Effect4.Store.JsonReason) Effect4.Store.Val
+   Effect4.Store.readFieldsAt (defs : List (Prod String Effect4.Store.Shape)) (x.1 : List (Prod String Effect4.Store.Shape)) (x.2 : List (Prod String Effect4.NatJson)) (x.3 : List Effect4.JsonStep) : Except (Effect4.Located Effect4.JsonSite Effect4.Store.JsonReason) (List Effect4.Store.Val) *)
 
-let rec store_read_at (defs : (string * shape) list) (x_1 : int) (x_2 : shape) (x_3 : nat_json) (x_4 : json_step list) : (Val.t, (json_site, json_reason) located) result =
-  let[@local always] _jp_5 = fun h -> let _x_6 = store_canonical_hex_opt h in
-  match _x_6 with
-    | None -> (let _x_7 = JsonSite_value x_4 in
-      let _x_8 = JsonReason_expected x_2 in
-      let _x_9 = ({ site = _x_7; reason = _x_8 } : (_, _) located) in
-      Error _x_9)
-    | Some val__11 -> (let _x_12 = Val.Bytes val__11 in
-      Ok _x_12) in
-  let[@local always] _jp_14 = fun () -> let _x_15 = JsonSite_value x_4 in
-  let _x_16 = JsonReason_expected x_2 in
-  let _x_17 = ({ site = _x_15; reason = _x_16 } : (_, _) located) in
-  Error _x_17 in
-  let zero = 0 in
-  let is_zero = x_1 = zero in
-  if is_zero then (let _x_19 = JsonSite_value x_4 in
-    let _x_20 = JsonReason_budget in
-    let _x_21 = ({ site = _x_19; reason = _x_20 } : (_, _) located) in
-    Error _x_21) else (let one = 1 in
-    let n_23 = max 0 (x_1 - one) in
-    let _x_24 = store_head_shape defs x_2 in
-    match (_x_24 : shape) with
-      | Shape_option item_25 -> (match (x_3 : nat_json) with
-          | NatJson_null -> (let _x_26 = Val.None in
-            Ok _x_26)
-          | _ -> (let _x_28 = store_read_at defs n_23 item_25 x_3 x_4 in
-            match _x_28 with
-              | Error _ -> _x_28
-              | Ok a_30 -> (let _x_31 = Val.Some a_30 in
-                Ok _x_31)))
-      | Shape_list item_33 -> (match (x_3 : nat_json) with
-          | NatJson_arr elements_34 -> (let _x_35 = store_read_items defs n_23 item_33 elements_34 x_4 zero in
-            match _x_35 with
-              | Error a_36 -> Error a_36
-              | Ok a_38 -> (let _x_39 = Val.List a_38 in
-                Ok _x_39))
-          | _ -> _jp_14 ())
-      | Shape_pair (fst_41, snd_42) -> (match (x_3 : nat_json) with
-          | NatJson_arr elements_43 -> (match elements_43 with
-              | head_44 :: tail_45 -> (match tail_45 with
-                  | head_46 :: tail_47 -> (match tail_47 with
-                      | [] -> (let _x_48 = JsonStep_index zero in
-                        let _x_49 = [] in
-                        let _x_50 = _x_48 :: _x_49 in
-                        let _x_51 = x_4 @ _x_50 in
-                        let _x_52 = store_read_at defs n_23 fst_41 head_44 _x_51 in
-                        match _x_52 with
-                          | Error _ -> _x_52
-                          | Ok a_54 -> (let _x_55 = JsonStep_index one in
-                            let _x_56 = _x_55 :: _x_49 in
-                            let _x_57 = x_4 @ _x_56 in
-                            let _x_58 = store_read_at defs n_23 snd_42 head_46 _x_57 in
-                            match _x_58 with
-                              | Error _ -> _x_58
-                              | Ok a_60 -> (let _x_61 = Val.Pair (a_54, a_60) in
-                                Ok _x_61)))
-                      | _ -> _jp_14 ())
-                  | _ -> _jp_14 ())
-              | _ -> _jp_14 ())
-          | _ -> _jp_14 ())
-      | Shape_sum (_, cases_64) -> (match (x_3 : nat_json) with
-          | NatJson_arr elements_65 -> (let _x_66 = store_list_parts_opt cases_64 in
-            match _x_66 with
-              | None -> (let _x_67 = JsonSite_value x_4 in
-                let _x_68 = JsonReason_expected x_2 in
-                let _x_69 = ({ site = _x_67; reason = _x_68 } : (_, _) located) in
-                Error _x_69)
-              | Some val__71 -> (match val__71 with
-                  | fst_72, snd_73 -> (match snd_73 with
-                      | fst_74, snd_75 -> (match snd_75 with
-                          | fst_76, snd_77 -> store_read_spine defs n_23 fst_72 fst_74 fst_76 snd_77 elements_65 x_4 zero))))
-          | NatJson_obj entries_79 -> (let _x_80 = list_all_at_store_all_nullary_spec_0 cases_64 in
-            if _x_80 then (let _x_117 = JsonSite_value x_4 in
-              let _x_118 = JsonReason_expected x_2 in
-              let _x_119 = ({ site = _x_117; reason = _x_118 } : (_, _) located) in
-              Error _x_119) else (let _x_81 = "_tag" in
-              let _x_82 = nat_json_entry_of _x_81 entries_79 in
-              match _x_82 with
-                | None -> (let _x_83 = JsonSite_missing (x_4, _x_81) in
-                  let _x_84 = JsonReason_expected x_2 in
-                  let _x_85 = ({ site = _x_83; reason = _x_84 } : (_, _) located) in
-                  Error _x_85)
-                | Some val__87 -> (match (val__87 : nat_json) with
-                    | NatJson_str value_88 -> (let _x_89 = store_tag_of_name value_88 cases_64 in
-                      match _x_89 with
-                        | None -> (let _x_90 = JsonSite_value x_4 in
-                          let _x_91 = JsonReason_unknownCase value_88 in
-                          let _x_92 = ({ site = _x_90; reason = _x_91 } : (_, _) located) in
-                          Error _x_92)
-                        | Some val__94 -> (match val__94 with
-                            | fst_95, snd_96 -> (let _x_97 = store_repeated_key entries_79 in
-                              match _x_97 with
-                                | None -> (let _x_98 = store_read_fields_at defs n_23 snd_96 entries_79 x_4 in
-                                  match _x_98 with
-                                    | Error a_99 -> Error a_99
-                                    | Ok a_101 -> (let _x_102 = true in
-                                      store_close_object x_2 snd_96 _x_102 fst_95 entries_79 x_4 a_101))
-                                | Some val__104 -> (let _x_105 = JsonSite_value x_4 in
-                                  let _x_106 = JsonReason_duplicateField val__104 in
-                                  let _x_107 = ({ site = _x_105; reason = _x_106 } : (_, _) located) in
-                                  Error _x_107))))
-                    | _ -> (let _x_109 = JsonStep_key _x_81 in
-                      let _x_110 = [] in
-                      let _x_111 = _x_109 :: _x_110 in
-                      let _x_112 = x_4 @ _x_111 in
-                      let _x_113 = JsonSite_value _x_112 in
-                      let _x_114 = JsonReason_expected x_2 in
-                      let _x_115 = ({ site = _x_113; reason = _x_114 } : (_, _) located) in
-                      Error _x_115))))
-          | NatJson_str value_121 -> (let _x_122 = list_all_at_store_all_nullary_spec_0 cases_64 in
-            if _x_122 then (let _x_127 = store_tag_of_name value_121 cases_64 in
-              match _x_127 with
-                | None -> (let _x_128 = JsonSite_value x_4 in
-                  let _x_129 = JsonReason_unknownCase value_121 in
-                  let _x_130 = ({ site = _x_128; reason = _x_129 } : (_, _) located) in
-                  Error _x_130)
-                | Some val__132 -> (match val__132 with
-                    | fst_133, snd_134 -> (match snd_134 with
-                        | [] -> (let _x_135 = [] in
-                          let _x_136 = Val.Ctor (fst_133, _x_135) in
-                          Ok _x_136)
-                        | _ :: _ -> (let _x_140 = JsonSite_value x_4 in
-                          let _x_141 = JsonReason_expected x_2 in
-                          let _x_142 = ({ site = _x_140; reason = _x_141 } : (_, _) located) in
-                          Error _x_142)))) else (let _x_123 = JsonSite_value x_4 in
-              let _x_124 = JsonReason_expected x_2 in
-              let _x_125 = ({ site = _x_123; reason = _x_124 } : (_, _) located) in
-              Error _x_125))
-          | _ -> _jp_14 ())
-      | Shape_struct (_, fields_145) -> (match (x_3 : nat_json) with
-          | NatJson_obj entries_146 -> (let _x_147 = store_repeated_key entries_146 in
-            match _x_147 with
-              | None -> (let _x_148 = store_read_fields_at defs n_23 fields_145 entries_146 x_4 in
-                match _x_148 with
-                  | Error a_149 -> Error a_149
-                  | Ok a_151 -> store_close_object x_2 fields_145 is_zero zero entries_146 x_4 a_151)
-              | Some val__153 -> (let _x_154 = JsonSite_value x_4 in
-                let _x_155 = JsonReason_duplicateField val__153 in
-                let _x_156 = ({ site = _x_154; reason = _x_155 } : (_, _) located) in
-                Error _x_156))
-          | _ -> _jp_14 ())
-      | Shape_unit -> (match (x_3 : nat_json) with
-          | NatJson_null -> (let _x_158 = Val.Unit in
-            Ok _x_158)
-          | _ -> _jp_14 ())
-      | Shape_bool -> (match (x_3 : nat_json) with
-          | NatJson_bool value_160 -> (let _x_161 = Val.Bool value_160 in
-            Ok _x_161)
-          | _ -> _jp_14 ())
-      | Shape_nat -> (match (x_3 : nat_json) with
-          | NatJson_nat value_163 -> (let _x_164 = 9007199254740991 in
-            let _x_165 = value_163 <= _x_164 in
-            if _x_165 then (let _x_170 = Val.Nat value_163 in
-              Ok _x_170) else (let _x_166 = JsonSite_value x_4 in
-              let _x_167 = JsonReason_naturalOutsideProfile _x_164 in
-              let _x_168 = ({ site = _x_166; reason = _x_167 } : (_, _) located) in
-              Error _x_168))
-          | NatJson_numeral text_172 -> (let _x_173 = JsonSite_value x_4 in
-            let[@local always] _jp_174 = fun _y_175 -> let _x_176 = ({ site = _x_173; reason = _y_175 } : (_, _) located) in
-            Error _x_176 in
-            let _x_178 = nat_json_all_digits text_172 in
-            if _x_178 then (let _x_180 = 9007199254740991 in
-              let _x_181 = JsonReason_naturalOutsideProfile _x_180 in
-              _jp_174 _x_181) else (let _x_179 = JsonReason_expected x_2 in
-              _jp_174 _x_179))
-          | _ -> _jp_14 ())
-      | Shape_string -> (match (x_3 : nat_json) with
-          | NatJson_str value_182 -> (let _x_183 = Val.Str value_182 in
-            Ok _x_183)
-          | _ -> _jp_14 ())
-      | Shape_bytes -> (match (x_3 : nat_json) with
-          | NatJson_str value_185 -> _jp_5 value_185
-          | _ -> _jp_14 ())
-      | Shape_digest -> (match (x_3 : nat_json) with
-          | NatJson_str value_186 -> _jp_5 value_186
-          | _ -> _jp_14 ())
-      | Shape_ref kind_187 -> (match (x_3 : nat_json) with
-          | NatJson_str value_188 -> (let _x_189 = store_canonical_hex_opt value_188 in
-            match _x_189 with
-              | None -> (let _x_190 = JsonSite_value x_4 in
-                let _x_191 = JsonReason_expected x_2 in
-                let _x_192 = ({ site = _x_190; reason = _x_191 } : (_, _) located) in
-                Error _x_192)
-              | Some val__194 -> (let _x_195 = store_kind_byte kind_187 in
-                let _x_196 = Val.Ref (_x_195, val__194) in
-                Ok _x_196))
-          | _ -> _jp_14 ())
-      | Shape_anyRef -> (match (x_3 : nat_json) with
-          | NatJson_obj entries_198 -> (match entries_198 with
-              | head_199 :: tail_200 -> (match head_199 with
-                  | fst_201, snd_202 -> (let _x_203 = "kind" in
-                    let _x_204 = fst_201 = _x_203 in
-                    if _x_204 then (match (snd_202 : nat_json) with
-                        | NatJson_str value_205 -> (match tail_200 with
-                            | head_206 :: tail_207 -> (match head_206 with
-                                | fst_208, snd_209 -> (let _x_210 = "address" in
-                                  let _x_211 = fst_208 = _x_210 in
-                                  if _x_211 then (match (snd_209 : nat_json) with
-                                      | NatJson_str value_212 -> (match tail_207 with
-                                          | [] -> (let _x_213 = store_kind_of_name_opt value_205 in
-                                            match _x_213 with
-                                              | None -> (let _x_214 = JsonSite_value x_4 in
-                                                let _x_215 = JsonReason_expected x_2 in
-                                                let _x_216 = ({ site = _x_214; reason = _x_215 } : (_, _) located) in
-                                                Error _x_216)
-                                              | Some val__218 -> (let _x_219 = fun _b1 _b2 -> _b1 = _b2 in
-                                                let _x_220 = store_kind_byte val__218 in
-                                                let _x_221 = store_kind_name_opt _x_220 in
-                                                let _x_222 = Some value_205 in
-                                                let _x_223 = option_inst_decidable_eq _x_219 _x_221 _x_222 in
-                                                if _x_223 then (let _x_228 = store_canonical_hex_opt value_212 in
-                                                  match _x_228 with
-                                                    | None -> (let _x_229 = JsonSite_value x_4 in
-                                                      let _x_230 = JsonReason_expected x_2 in
-                                                      let _x_231 = ({ site = _x_229; reason = _x_230 } : (_, _) located) in
-                                                      Error _x_231)
-                                                    | Some val__233 -> (let _x_234 = Val.Ref (_x_220, val__233) in
-                                                      Ok _x_234)) else (let _x_224 = JsonSite_value x_4 in
-                                                  let _x_225 = JsonReason_expected x_2 in
-                                                  let _x_226 = ({ site = _x_224; reason = _x_225 } : (_, _) located) in
-                                                  Error _x_226)))
-                                          | _ -> _jp_14 ())
-                                      | _ -> _jp_14 ()) else _jp_14 ()))
-                            | _ -> _jp_14 ())
-                        | _ -> _jp_14 ()) else _jp_14 ()))
-              | _ -> _jp_14 ())
-          | _ -> _jp_14 ())
-      | _ -> _jp_14 ())
+let rec store_read_at (defs : (string * shape) list) (seen : string list) (s : shape) (t : nat_json) (p : json_step list) : (Val.t, (json_site, json_reason) located) result =
+  let[@local always] _jp_1 = fun h -> let _x_2 = store_canonical_hex_opt h in
+  match _x_2 with
+    | None -> (let _x_3 = JsonSite_value p in
+      let _x_4 = JsonReason_expected s in
+      let _x_5 = ({ site = _x_3; reason = _x_4 } : (_, _) located) in
+      Error _x_5)
+    | Some val__7 -> (let _x_8 = Val.Bytes val__7 in
+      Ok _x_8) in
+  let[@local always] _jp_10 = fun () -> let _x_11 = JsonSite_value p in
+  let _x_12 = JsonReason_expected s in
+  let _x_13 = ({ site = _x_11; reason = _x_12 } : (_, _) located) in
+  Error _x_13 in
+  let _x_15 = store_head_shape defs s in
+  match (_x_15 : shape) with
+    | Shape_option _ -> (match (t : nat_json) with
+        | NatJson_null -> (let _x_17 = Val.None in
+          Ok _x_17)
+        | _ -> (let _x_19 = store_option_layer_opt defs s seen in
+          match _x_19 with
+            | None -> (let _x_20 = JsonSite_value p in
+              let _x_21 = JsonReason_expected s in
+              let _x_22 = ({ site = _x_20; reason = _x_21 } : (_, _) located) in
+              Error _x_22)
+            | Some val__24 -> (match val__24 with
+                | fst_25, snd_26 -> (let _x_27 = store_read_at defs snd_26 fst_25 t p in
+                  match _x_27 with
+                    | Error _ -> _x_27
+                    | Ok a_29 -> (let _x_30 = Val.Some a_29 in
+                      Ok _x_30)))))
+    | Shape_list item_32 -> (match (t : nat_json) with
+        | NatJson_arr elements_33 -> (let _x_34 = 0 in
+          let _x_35 = store_read_items defs item_32 elements_33 p _x_34 in
+          match _x_35 with
+            | Error a_36 -> Error a_36
+            | Ok a_38 -> (let _x_39 = Val.List a_38 in
+              Ok _x_39))
+        | _ -> _jp_10 ())
+    | Shape_pair (fst_41, snd_42) -> (match (t : nat_json) with
+        | NatJson_arr elements_43 -> (match elements_43 with
+            | head_44 :: tail_45 -> (match tail_45 with
+                | head_46 :: tail_47 -> (match tail_47 with
+                    | [] -> (let _x_48 = [] in
+                      let _x_49 = 0 in
+                      let _x_50 = JsonStep_index _x_49 in
+                      let _x_51 = _x_50 :: _x_48 in
+                      let _x_52 = p @ _x_51 in
+                      let _x_53 = store_read_at defs _x_48 fst_41 head_44 _x_52 in
+                      match _x_53 with
+                        | Error _ -> _x_53
+                        | Ok a_55 -> (let _x_56 = 1 in
+                          let _x_57 = JsonStep_index _x_56 in
+                          let _x_58 = _x_57 :: _x_48 in
+                          let _x_59 = p @ _x_58 in
+                          let _x_60 = store_read_at defs _x_48 snd_42 head_46 _x_59 in
+                          match _x_60 with
+                            | Error _ -> _x_60
+                            | Ok a_62 -> (let _x_63 = Val.Pair (a_55, a_62) in
+                              Ok _x_63)))
+                    | _ -> _jp_10 ())
+                | _ -> _jp_10 ())
+            | _ -> _jp_10 ())
+        | _ -> _jp_10 ())
+    | Shape_sum (_, cases_66) -> (match (t : nat_json) with
+        | NatJson_arr elements_67 -> (let _x_68 = store_list_parts_opt cases_66 in
+          match _x_68 with
+            | None -> (let _x_69 = JsonSite_value p in
+              let _x_70 = JsonReason_expected s in
+              let _x_71 = ({ site = _x_69; reason = _x_70 } : (_, _) located) in
+              Error _x_71)
+            | Some val__73 -> (match val__73 with
+                | fst_74, snd_75 -> (match snd_75 with
+                    | fst_76, snd_77 -> (match snd_77 with
+                        | fst_78, snd_79 -> (let _x_80 = 0 in
+                          store_read_spine defs fst_74 fst_76 fst_78 snd_79 elements_67 p _x_80)))))
+        | NatJson_obj entries_82 -> (let _x_83 = list_all_at_store_all_nullary_spec_0 cases_66 in
+          if _x_83 then (let _x_120 = JsonSite_value p in
+            let _x_121 = JsonReason_expected s in
+            let _x_122 = ({ site = _x_120; reason = _x_121 } : (_, _) located) in
+            Error _x_122) else (let _x_84 = "_tag" in
+            let _x_85 = nat_json_entry_of _x_84 entries_82 in
+            match _x_85 with
+              | None -> (let _x_86 = JsonSite_missing (p, _x_84) in
+                let _x_87 = JsonReason_expected s in
+                let _x_88 = ({ site = _x_86; reason = _x_87 } : (_, _) located) in
+                Error _x_88)
+              | Some val__90 -> (match (val__90 : nat_json) with
+                  | NatJson_str value_91 -> (let _x_92 = store_tag_of_name value_91 cases_66 in
+                    match _x_92 with
+                      | None -> (let _x_93 = JsonSite_value p in
+                        let _x_94 = JsonReason_unknownCase value_91 in
+                        let _x_95 = ({ site = _x_93; reason = _x_94 } : (_, _) located) in
+                        Error _x_95)
+                      | Some val__97 -> (match val__97 with
+                          | fst_98, snd_99 -> (let _x_100 = store_repeated_key entries_82 in
+                            match _x_100 with
+                              | None -> (let _x_101 = store_read_fields_at defs snd_99 entries_82 p in
+                                match _x_101 with
+                                  | Error a_102 -> Error a_102
+                                  | Ok a_104 -> (let _x_105 = true in
+                                    store_close_object s snd_99 _x_105 fst_98 entries_82 p a_104))
+                              | Some val__107 -> (let _x_108 = JsonSite_value p in
+                                let _x_109 = JsonReason_duplicateField val__107 in
+                                let _x_110 = ({ site = _x_108; reason = _x_109 } : (_, _) located) in
+                                Error _x_110))))
+                  | _ -> (let _x_112 = JsonStep_key _x_84 in
+                    let _x_113 = [] in
+                    let _x_114 = _x_112 :: _x_113 in
+                    let _x_115 = p @ _x_114 in
+                    let _x_116 = JsonSite_value _x_115 in
+                    let _x_117 = JsonReason_expected s in
+                    let _x_118 = ({ site = _x_116; reason = _x_117 } : (_, _) located) in
+                    Error _x_118))))
+        | NatJson_str value_124 -> (let _x_125 = list_all_at_store_all_nullary_spec_0 cases_66 in
+          if _x_125 then (let _x_130 = store_tag_of_name value_124 cases_66 in
+            match _x_130 with
+              | None -> (let _x_131 = JsonSite_value p in
+                let _x_132 = JsonReason_unknownCase value_124 in
+                let _x_133 = ({ site = _x_131; reason = _x_132 } : (_, _) located) in
+                Error _x_133)
+              | Some val__135 -> (match val__135 with
+                  | fst_136, snd_137 -> (match snd_137 with
+                      | [] -> (let _x_138 = [] in
+                        let _x_139 = Val.Ctor (fst_136, _x_138) in
+                        Ok _x_139)
+                      | _ :: _ -> (let _x_143 = JsonSite_value p in
+                        let _x_144 = JsonReason_expected s in
+                        let _x_145 = ({ site = _x_143; reason = _x_144 } : (_, _) located) in
+                        Error _x_145)))) else (let _x_126 = JsonSite_value p in
+            let _x_127 = JsonReason_expected s in
+            let _x_128 = ({ site = _x_126; reason = _x_127 } : (_, _) located) in
+            Error _x_128))
+        | _ -> _jp_10 ())
+    | Shape_struct (_, fields_148) -> (match (t : nat_json) with
+        | NatJson_obj entries_149 -> (let _x_150 = store_repeated_key entries_149 in
+          match _x_150 with
+            | None -> (let _x_151 = store_read_fields_at defs fields_148 entries_149 p in
+              match _x_151 with
+                | Error a_152 -> Error a_152
+                | Ok a_154 -> (let _x_155 = false in
+                  let _x_156 = 0 in
+                  store_close_object s fields_148 _x_155 _x_156 entries_149 p a_154))
+            | Some val__158 -> (let _x_159 = JsonSite_value p in
+              let _x_160 = JsonReason_duplicateField val__158 in
+              let _x_161 = ({ site = _x_159; reason = _x_160 } : (_, _) located) in
+              Error _x_161))
+        | _ -> _jp_10 ())
+    | Shape_unit -> (match (t : nat_json) with
+        | NatJson_null -> (let _x_163 = Val.Unit in
+          Ok _x_163)
+        | _ -> _jp_10 ())
+    | Shape_bool -> (match (t : nat_json) with
+        | NatJson_bool value_165 -> (let _x_166 = Val.Bool value_165 in
+          Ok _x_166)
+        | _ -> _jp_10 ())
+    | Shape_nat -> (match (t : nat_json) with
+        | NatJson_nat value_168 -> (let _x_169 = 9007199254740991 in
+          let _x_170 = value_168 <= _x_169 in
+          if _x_170 then (let _x_175 = Val.Nat value_168 in
+            Ok _x_175) else (let _x_171 = JsonSite_value p in
+            let _x_172 = JsonReason_naturalOutsideProfile _x_169 in
+            let _x_173 = ({ site = _x_171; reason = _x_172 } : (_, _) located) in
+            Error _x_173))
+        | NatJson_numeral text_177 -> (let _x_178 = JsonSite_value p in
+          let[@local always] _jp_179 = fun _y_180 -> let _x_181 = ({ site = _x_178; reason = _y_180 } : (_, _) located) in
+          Error _x_181 in
+          let _x_183 = nat_json_all_digits text_177 in
+          if _x_183 then (let _x_185 = 9007199254740991 in
+            let _x_186 = JsonReason_naturalOutsideProfile _x_185 in
+            _jp_179 _x_186) else (let _x_184 = JsonReason_expected s in
+            _jp_179 _x_184))
+        | _ -> _jp_10 ())
+    | Shape_string -> (match (t : nat_json) with
+        | NatJson_str value_187 -> (let _x_188 = Val.Str value_187 in
+          Ok _x_188)
+        | _ -> _jp_10 ())
+    | Shape_bytes -> (match (t : nat_json) with
+        | NatJson_str value_190 -> _jp_1 value_190
+        | _ -> _jp_10 ())
+    | Shape_digest -> (match (t : nat_json) with
+        | NatJson_str value_191 -> _jp_1 value_191
+        | _ -> _jp_10 ())
+    | Shape_ref kind_192 -> (match (t : nat_json) with
+        | NatJson_str value_193 -> (let _x_194 = store_canonical_hex_opt value_193 in
+          match _x_194 with
+            | None -> (let _x_195 = JsonSite_value p in
+              let _x_196 = JsonReason_expected s in
+              let _x_197 = ({ site = _x_195; reason = _x_196 } : (_, _) located) in
+              Error _x_197)
+            | Some val__199 -> (let _x_200 = store_kind_byte kind_192 in
+              let _x_201 = Val.Ref (_x_200, val__199) in
+              Ok _x_201))
+        | _ -> _jp_10 ())
+    | Shape_anyRef -> (match (t : nat_json) with
+        | NatJson_obj entries_203 -> (match entries_203 with
+            | head_204 :: tail_205 -> (match head_204 with
+                | fst_206, snd_207 -> (let _x_208 = "kind" in
+                  let _x_209 = fst_206 = _x_208 in
+                  if _x_209 then (match (snd_207 : nat_json) with
+                      | NatJson_str value_210 -> (match tail_205 with
+                          | head_211 :: tail_212 -> (match head_211 with
+                              | fst_213, snd_214 -> (let _x_215 = "address" in
+                                let _x_216 = fst_213 = _x_215 in
+                                if _x_216 then (match (snd_214 : nat_json) with
+                                    | NatJson_str value_217 -> (match tail_212 with
+                                        | [] -> (let _x_218 = store_kind_of_name_opt value_210 in
+                                          match _x_218 with
+                                            | None -> (let _x_219 = JsonSite_value p in
+                                              let _x_220 = JsonReason_expected s in
+                                              let _x_221 = ({ site = _x_219; reason = _x_220 } : (_, _) located) in
+                                              Error _x_221)
+                                            | Some val__223 -> (let _x_224 = fun _b1 _b2 -> _b1 = _b2 in
+                                              let _x_225 = store_kind_byte val__223 in
+                                              let _x_226 = store_kind_name_opt _x_225 in
+                                              let _x_227 = Some value_210 in
+                                              let _x_228 = option_inst_decidable_eq _x_224 _x_226 _x_227 in
+                                              if _x_228 then (let _x_233 = store_canonical_hex_opt value_217 in
+                                                match _x_233 with
+                                                  | None -> (let _x_234 = JsonSite_value p in
+                                                    let _x_235 = JsonReason_expected s in
+                                                    let _x_236 = ({ site = _x_234; reason = _x_235 } : (_, _) located) in
+                                                    Error _x_236)
+                                                  | Some val__238 -> (let _x_239 = Val.Ref (_x_225, val__238) in
+                                                    Ok _x_239)) else (let _x_229 = JsonSite_value p in
+                                                let _x_230 = JsonReason_expected s in
+                                                let _x_231 = ({ site = _x_229; reason = _x_230 } : (_, _) located) in
+                                                Error _x_231)))
+                                        | _ -> _jp_10 ())
+                                    | _ -> _jp_10 ()) else _jp_10 ()))
+                          | _ -> _jp_10 ())
+                      | _ -> _jp_10 ()) else _jp_10 ()))
+            | _ -> _jp_10 ())
+        | _ -> _jp_10 ())
+    | _ -> _jp_10 ()
 
-and store_read_items (defs : (string * shape) list) (x_1 : int) (x_2 : shape) (x_3 : nat_json list) (x_4 : json_step list) (x_5 : int) : (Val.t list, (json_site, json_reason) located) result =
-  match x_3 with
-    | [] -> (let _x_6 = [] in
-      Ok _x_6)
-    | head_8 :: tail_9 -> (let zero = 0 in
-      let is_zero = x_1 = zero in
-      if is_zero then (let _x_10 = JsonStep_index x_5 in
-        let _x_11 = [] in
-        let _x_12 = _x_10 :: _x_11 in
-        let _x_13 = x_4 @ _x_12 in
-        let _x_14 = JsonSite_value _x_13 in
-        let _x_15 = JsonReason_budget in
-        let _x_16 = ({ site = _x_14; reason = _x_15 } : (_, _) located) in
-        Error _x_16) else (let one = 1 in
-        let n_18 = max 0 (x_1 - one) in
-        let _x_19 = JsonStep_index x_5 in
-        let _x_20 = [] in
-        let _x_21 = _x_19 :: _x_20 in
-        let _x_22 = x_4 @ _x_21 in
-        let _x_23 = store_read_at defs n_18 x_2 head_8 _x_22 in
-        match _x_23 with
-          | Error a_24 -> Error a_24
-          | Ok a_26 -> (let _x_27 = x_5 + one in
-            let _x_28 = store_read_items defs n_18 x_2 tail_9 x_4 _x_27 in
-            match _x_28 with
-              | Error _ -> _x_28
-              | Ok a_30 -> (let _x_31 = a_26 :: a_30 in
-                Ok _x_31))))
+and store_read_items (defs : (string * shape) list) (item : shape) (x_1 : nat_json list) (x_2 : json_step list) (x_3 : int) : (Val.t list, (json_site, json_reason) located) result =
+  match x_1 with
+    | [] -> (let _x_4 = [] in
+      Ok _x_4)
+    | head_6 :: tail_7 -> (let _x_8 = [] in
+      let _x_9 = JsonStep_index x_3 in
+      let _x_10 = _x_9 :: _x_8 in
+      let _x_11 = x_2 @ _x_10 in
+      let _x_12 = store_read_at defs _x_8 item head_6 _x_11 in
+      match _x_12 with
+        | Error a_13 -> Error a_13
+        | Ok a_15 -> (let _x_16 = 1 in
+          let _x_17 = x_3 + _x_16 in
+          let _x_18 = store_read_items defs item tail_7 x_2 _x_17 in
+          match _x_18 with
+            | Error _ -> _x_18
+            | Ok a_20 -> (let _x_21 = a_15 :: a_20 in
+              Ok _x_21)))
 
-and store_read_spine (defs : (string * shape) list) (x_1 : int) (x_2 : int) (x_3 : int) (x_4 : shape) (x_5 : shape) (x_6 : nat_json list) (x_7 : json_step list) (x_8 : int) : (Val.t, (json_site, json_reason) located) result =
-  match x_6 with
-    | [] -> (let _x_9 = [] in
-      let _x_10 = Val.Ctor (x_2, _x_9) in
-      Ok _x_10)
-    | head_12 :: tail_13 -> (let zero = 0 in
-      let is_zero = x_1 = zero in
-      if is_zero then (let _x_14 = JsonStep_index x_8 in
-        let _x_15 = [] in
-        let _x_16 = _x_14 :: _x_15 in
-        let _x_17 = x_7 @ _x_16 in
-        let _x_18 = JsonSite_value _x_17 in
-        let _x_19 = JsonReason_budget in
-        let _x_20 = ({ site = _x_18; reason = _x_19 } : (_, _) located) in
-        Error _x_20) else (let one = 1 in
-        let n_22 = max 0 (x_1 - one) in
-        let _x_23 = JsonStep_index x_8 in
-        let _x_24 = [] in
-        let _x_25 = _x_23 :: _x_24 in
-        let _x_26 = x_7 @ _x_25 in
-        let _x_27 = store_read_at defs n_22 x_4 head_12 _x_26 in
-        match _x_27 with
-          | Error _ -> _x_27
-          | Ok a_29 -> (let _x_30 = store_head_shape defs x_5 in
-            match (_x_30 : shape) with
-              | Shape_sum (_, cases_32) -> (let _x_33 = store_list_parts_opt cases_32 in
-                match _x_33 with
-                  | None -> (let _x_34 = JsonSite_value x_7 in
-                    let _x_35 = JsonReason_expected x_5 in
-                    let _x_36 = ({ site = _x_34; reason = _x_35 } : (_, _) located) in
-                    Error _x_36)
-                  | Some val__38 -> (match val__38 with
-                      | fst_39, snd_40 -> (match snd_40 with
-                          | fst_41, snd_42 -> (match snd_42 with
-                              | fst_43, snd_44 -> (let _x_45 = x_8 + one in
-                                let _x_46 = store_read_spine defs n_22 fst_39 fst_41 fst_43 snd_44 tail_13 x_7 _x_45 in
-                                match _x_46 with
-                                  | Error _ -> _x_46
-                                  | Ok a_48 -> (let _x_49 = a_48 :: _x_24 in
-                                    let _x_50 = a_29 :: _x_49 in
-                                    let _x_51 = Val.Ctor (x_3, _x_50) in
-                                    Ok _x_51))))))
-              | _ -> (let _x_53 = JsonSite_value x_7 in
-                let _x_54 = JsonReason_expected x_5 in
-                let _x_55 = ({ site = _x_53; reason = _x_54 } : (_, _) located) in
-                Error _x_55))))
+and store_read_spine (defs : (string * shape) list) (x_1 : int) (x_2 : int) (x_3 : shape) (x_4 : shape) (x_5 : nat_json list) (x_6 : json_step list) (x_7 : int) : (Val.t, (json_site, json_reason) located) result =
+  match x_5 with
+    | [] -> (let _x_8 = [] in
+      let _x_9 = Val.Ctor (x_1, _x_8) in
+      Ok _x_9)
+    | head_11 :: tail_12 -> (let _x_13 = [] in
+      let _x_14 = JsonStep_index x_7 in
+      let _x_15 = _x_14 :: _x_13 in
+      let _x_16 = x_6 @ _x_15 in
+      let _x_17 = store_read_at defs _x_13 x_3 head_11 _x_16 in
+      match _x_17 with
+        | Error _ -> _x_17
+        | Ok a_19 -> (let _x_20 = store_head_shape defs x_4 in
+          match (_x_20 : shape) with
+            | Shape_sum (_, cases_22) -> (let _x_23 = store_list_parts_opt cases_22 in
+              match _x_23 with
+                | None -> (let _x_24 = JsonSite_value x_6 in
+                  let _x_25 = JsonReason_expected x_4 in
+                  let _x_26 = ({ site = _x_24; reason = _x_25 } : (_, _) located) in
+                  Error _x_26)
+                | Some val__28 -> (match val__28 with
+                    | fst_29, snd_30 -> (match snd_30 with
+                        | fst_31, snd_32 -> (match snd_32 with
+                            | fst_33, snd_34 -> (let _x_35 = 1 in
+                              let _x_36 = x_7 + _x_35 in
+                              let _x_37 = store_read_spine defs fst_29 fst_31 fst_33 snd_34 tail_12 x_6 _x_36 in
+                              match _x_37 with
+                                | Error _ -> _x_37
+                                | Ok a_39 -> (let _x_40 = a_39 :: _x_13 in
+                                  let _x_41 = a_19 :: _x_40 in
+                                  let _x_42 = Val.Ctor (x_2, _x_41) in
+                                  Ok _x_42))))))
+            | _ -> (let _x_44 = JsonSite_value x_6 in
+              let _x_45 = JsonReason_expected x_4 in
+              let _x_46 = ({ site = _x_44; reason = _x_45 } : (_, _) located) in
+              Error _x_46)))
 
-and store_read_fields_at (defs : (string * shape) list) (x_1 : int) (x_2 : (string * shape) list) (x_3 : (string * nat_json) list) (x_4 : json_step list) : (Val.t list, (json_site, json_reason) located) result =
-  match x_2 with
-    | [] -> (let _x_5 = [] in
-      Ok _x_5)
-    | head_7 :: tail_8 -> (let zero = 0 in
-      let is_zero = x_1 = zero in
-      if is_zero then (let _x_9 = JsonSite_value x_4 in
-        let _x_10 = JsonReason_budget in
-        let _x_11 = ({ site = _x_9; reason = _x_10 } : (_, _) located) in
-        Error _x_11) else (match head_7 with
-          | fst_13, snd_14 -> (let _x_15 = nat_json_entry_of fst_13 x_3 in
-            match _x_15 with
-              | None -> (let _x_16 = JsonSite_missing (x_4, fst_13) in
-                let _x_17 = JsonReason_expected snd_14 in
-                let _x_18 = ({ site = _x_16; reason = _x_17 } : (_, _) located) in
-                Error _x_18)
-              | Some val__20 -> (let one = 1 in
-                let n_21 = max 0 (x_1 - one) in
-                let _x_22 = JsonStep_key fst_13 in
-                let _x_23 = [] in
-                let _x_24 = _x_22 :: _x_23 in
-                let _x_25 = x_4 @ _x_24 in
-                let _x_26 = store_read_at defs n_21 snd_14 val__20 _x_25 in
-                match _x_26 with
-                  | Error a_27 -> Error a_27
-                  | Ok a_29 -> (let _x_30 = store_read_fields_at defs n_21 tail_8 x_3 x_4 in
-                    match _x_30 with
-                      | Error _ -> _x_30
-                      | Ok a_32 -> (let _x_33 = a_29 :: a_32 in
-                        Ok _x_33))))))
+and store_read_fields_at (defs : (string * shape) list) (x_1 : (string * shape) list) (x_2 : (string * nat_json) list) (x_3 : json_step list) : (Val.t list, (json_site, json_reason) located) result =
+  match x_1 with
+    | [] -> (let _x_4 = [] in
+      Ok _x_4)
+    | head_6 :: tail_7 -> (match head_6 with
+        | fst_8, snd_9 -> (let _x_10 = nat_json_entry_of fst_8 x_2 in
+          match _x_10 with
+            | None -> (let _x_11 = JsonSite_missing (x_3, fst_8) in
+              let _x_12 = JsonReason_expected snd_9 in
+              let _x_13 = ({ site = _x_11; reason = _x_12 } : (_, _) located) in
+              Error _x_13)
+            | Some val__15 -> (let _x_16 = [] in
+              let _x_17 = JsonStep_key fst_8 in
+              let _x_18 = _x_17 :: _x_16 in
+              let _x_19 = x_3 @ _x_18 in
+              let _x_20 = store_read_at defs _x_16 snd_9 val__15 _x_19 in
+              match _x_20 with
+                | Error a_21 -> Error a_21
+                | Ok a_23 -> (let _x_24 = store_read_fields_at defs tail_7 x_2 x_3 in
+                  match _x_24 with
+                    | Error _ -> _x_24
+                    | Ok a_26 -> (let _x_27 = a_23 :: a_26 in
+                      Ok _x_27)))))
 
 
 
@@ -66187,9 +66131,8 @@ and store_read_fields_at (defs : (string * shape) list) (x_1 : int) (x_2 : (stri
 
 let store_shape_doc_read_located (doc : shape_doc) (t : nat_json) : (Val.t, (json_site, json_reason) located) result =
   match (doc : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_1 = store_tree_budget t in
-      let _x_2 = [] in
-      store_read_at defs _x_1 root t _x_2)
+    | { root = root; defs = defs } -> (let _x_1 = [] in
+      store_read_at defs _x_1 root t _x_1)
 
 
 

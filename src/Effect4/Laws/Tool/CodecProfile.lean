@@ -18,7 +18,7 @@ JSON profile, and exactness of its reader modulo a named normaliser. Requirement
   the tree's binary64 image, normalised by `ShapeDoc.order`; every refusal names a site of the
   input (`profileLocated_site`); the located reader erases to the codec's reader
   (`profileLocated_erases`), and a guarded write reads back through it (`write_readLocated`).
-  Reach: the explicit JSON profile at every budget; the binary64 face through
+  Reach: the explicit JSON profile, with no budget; the binary64 face through
   `NatJson.ofBinary64`, the native face directly. Not established: the round trip of an arbitrary
   value that fits a shape, which needs the write guard; textual JSON identity; that a refusal's
   reason is the only one the input has. Consumers: the tool's wire (`Tool.Wire`), the native shell
