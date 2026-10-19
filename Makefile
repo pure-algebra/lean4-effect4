@@ -188,7 +188,7 @@ LCNF_OUT := ocaml/eff/eff_types.ml ocaml/eff/eff_types.mli ocaml/gen/api_gen.ml 
   ocaml/engine/test/todo/todo_gen.mli ocaml/engine/test/ctors/ctors_gen.ml \
   ocaml/engine/test/ctors/ctors_gen.mli ocaml/engine/test/modeled/modeled_gen.ml \
   ocaml/engine/test/modeled/modeled_gen.mli ocaml/engine/test/rocq/rocq_gen.ml \
-  ocaml/engine/test/rocq/rocq_gen.mli ocaml/gen/closure-rocq_gen.tsv ocaml/gen/facade/effect4.ml \
+  ocaml/engine/test/rocq/rocq_gen.mli ocaml/gen/facade/effect4.ml \
   ocaml/gen/facade/effect4.mli ocaml/gen/public-names.tsv
 LCNF_KEY = $(PY) scripts/gate-cache.py key gen-lcnf --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(LCNF_SOURCES) --lean OCaml5.Tools.LcnfGen --lean-recipe ocaml/gen/roots.json --outputs $(LCNF_OUT)
 $(CHK)/gen-lcnf.key: FORCE $(GEN)/derived

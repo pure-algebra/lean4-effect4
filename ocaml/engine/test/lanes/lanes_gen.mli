@@ -1432,3 +1432,5 @@ val test_codegen_modeled_lane_decode_item : Eff_types.Val.t -> item option
 val test_codegen_modeled_lane_round_trip :
   Eff_types.Val.t -> Eff_types.Val.t option
 val test_codegen_modeled_lane_sample_vals : Eff_types.Val.t list
+val run_tree_in_rocq : Eff_types.NativeOp.t Eff_types.Eff.t -> bool
+val run_tree_plain : Eff_types.NativeOp.t Eff_types.Eff.t -> bool

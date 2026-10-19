@@ -320,7 +320,8 @@
       "import": [
         "Test.Dogfood.Scenario.Todo.HostRun",
         "Test.Codegen.ConstructorLane",
-        "Test.Codegen.ModeledLane"
+        "Test.Codegen.ModeledLane",
+        "Effect4.Laws.Run.Tree"
       ],
       "cap": 2000,
       "types": [],
@@ -403,23 +404,14 @@
             "Test.Codegen.ModeledLane.roundTrip",
             "Test.Codegen.ModeledLane.sampleVals"
           ]
+        },
+        {
+          "out": "ocaml/engine/test/rocq/rocq_gen.ml",
+          "linkage": [
+            "Effect4.Run.Tree.InRocq",
+            "Effect4.Run.Tree.Plain"
+          ]
         }
-      ],
-      "open": {
-        "module": "Eff_types",
-        "artefact": "ocaml/eff/eff_types.ml"
-      }
-    },
-    {
-      "out": "ocaml/engine/test/rocq/rocq_gen.ml",
-      "import": [
-        "Effect4.Laws.Run.Tree"
-      ],
-      "cap": 200,
-      "types": [],
-      "linkage": [
-        "Effect4.Run.Tree.InRocq",
-        "Effect4.Run.Tree.Plain"
       ],
       "open": {
         "module": "Eff_types",
