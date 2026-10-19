@@ -229,6 +229,17 @@ in 6.3 s cold; the dev profile spends 428.9 s CPU (probe 2, `probes/jsoo`). Size
 **E5. Checked program literals** (`[%eff.program …]`). Land probe 2's rewriter, with its vocabulary
 read from F1's generated adapters, never a hand table. Size S. After F1. It needs decision 2.
 
+**E6. Exact naturals in the generated code** (added 2026-10-19; the estate plan's slice 2.2b,
+part 2). The estate plan (`docs/research/2026-10-17-ocaml-estate-review/plan.md`, D-2) recommended
+`Nat` and `Int` as Zarith's `Z.t`. Three steps landed. The clock and the profile's arithmetic are
+exact over Zarith (`effect4_clock`). Every builtin row has a receipt (2.2a, `619ddffe4`), and every
+crossing refuses by name (2.2b part 1, `749daaa77`). The switch itself did not land. Inside the generated
+code, `Nat.add` is still OCaml's `+`, which wraps at 2^62, and `Nat.mul` saturates at `max_int`.
+`UInt64` is `int`, so a bit pattern at 2^62 or above has no carrier. The switch is one commit.
+It moves the `Nat` row, about 45 builtin rows, 23 natural fields, the translator's literals and
+every hand consumer. This plan of 2026-10-18 did not carry the slice over, so no wave held it.
+Size M. It needs decision 12.
+
 ### 4.6 The exchange (lane X)
 
 **X1.** S6b, the native exchange over the disk store
@@ -317,6 +328,7 @@ Each has a recommendation. Only the first is needed before wave 1.
 | 9 | One wire field name per idea (`Val.nat`'s `n`, `Change.fill`'s `q`); shape digests change | yes | A4 |
 | 10 | MCP 2026-07-28 beside 2025-06-18 | yes, after X1 | X2 |
 | 11 | Delete the Ref instance if C4's evidence holds | yes | C4 |
+| 12 | Naturals in the generated code: exact over Zarith everywhere (the estate plan's D-2), or Zarith only where a native use needs values above 2^62 (decisions row 108, open) | exact everywhere: then row 391 trusts the lowering with no numeric domain | E6 |
 
 ## 8. What this plan does not establish
 

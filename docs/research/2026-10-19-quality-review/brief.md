@@ -40,16 +40,24 @@ The hand-written OCaml is 221 files and 51,694 lines; its libraries, without tes
 reaches it. Each angle below names the question, our first measurement, and where to start. The
 measurements are leads, not findings: confirm or refute each one.
 
-**A1. The numeric exactness of the lowering.** Lean's naturals are unbounded and OCaml's `int`
-has 63 bits. `Builtins.lean` has 128 rows: 43 are exact only on a domain and 6 are approximate.
-`Nat.add` lowers to `+`, whose row says "OCaml `+` wraps at 2^62 without a trap". `UInt64` is
-`int` too, "not exact above 2^62". Row 391 trusts the lowering, but only inside these domains. Find
-a path from an outside input to an operation outside its domain. The inputs are wire bytes, a JSON
-request, a tape answer, a host reply and a stored node. Bounds exist at the ingress points: `E4_clock.check_nat`,
-the JSON profile's limit of 2^53 - 1 and `Eff_frame`'s `max_int`. Is every path through one of them?
-Look hardest at digests, hashes and identities that Lean computes over `UInt64`, or over `Nat`
-modulo 2^64. Examples are `Canonical.digest` and the closure's catalogue identity. A finding gives
-the input, Lean's answer and the OCaml answer.
+**A1. The naturals' last step, and the 64-bit words.** This is known and tracked, not new: read
+the plan's E6 and decision 12 first. The clock and the profile's arithmetic are exact over Zarith
+(`effect4_clock`). Every builtin row has a receipt (slice 2.2a), and every crossing refuses by name
+(slice 2.2b part 1). The switch of `Nat` and `Int` to `Z.t` in the generated code (2.2b part 2) did
+not land. So 43 of `Builtins.lean`'s 128 rows are exact only on a domain, and 6 are approximate.
+`Nat.add` is OCaml's `+`, which wraps at 2^62, and `Nat.mul` saturates at `max_int`. Three
+questions:
+- **Reachability.** With the crossings in place, can an outside input drive a raw `Nat` row past
+  its domain inside the generated code? The inputs are wire bytes, a JSON request, a tape answer, a
+  host reply and a stored node. `Eff_frame` admits naturals up to `max_int`, so two of them can
+  reach `Nat.add`. A finding gives the input, Lean's answer and the OCaml answer.
+- **The words.** `UInt64` is `int`, and its rows say a bit pattern at 2^62 or above has no carrier.
+  A float's bit pattern is at 2^62 or above whenever the float is negative or at least 2.0. Does
+  `Store.Val.float` reach the lowered code, and does such a float compare, encode or digest
+  wrongly there?
+- **The switch's size.** Count what E6 touches today, by command: the rows, the fields, the
+  literals and the hand consumers. Measure the allocated words of `bench_todo` before and after on a
+  scratch branch, if the switch builds in your worktree.
 
 **A2. Untrusted input refuses; it never raises, hangs or overflows the stack.** Every decoder must
 answer a refusal:
