@@ -16,8 +16,8 @@ profile refuses an unsupported shape at the shape's root, and a value tree the c
 the input's root. `read`, on the binary64 tree, is its projection: the same refusal, under the
 codec's own alphabet (`Refusal.unreadable`).
 
-Placement proposal: exact-codecs, R8/R12; claims codec-profile-retains-value and
-json-read-located (`Laws/Tool/CodecProfile.lean`), compatibility.
+Placement: exact-codecs, R8; claims codec-profile-retains-value and json-read-located
+(`Laws/Tool/CodecProfile.lean`), compatibility.
 Reach: canonical carriers admitted by this explicit JSON profile and the per-value write guard.
 Exclusions: raw-text identity, binary codecs, native parsing, and whole-program admission.
 Consumer: the generated Tool and Check JSON drivers, and the native shell (`Tool/Native.lean`).

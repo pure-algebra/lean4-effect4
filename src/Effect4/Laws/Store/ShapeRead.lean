@@ -22,7 +22,10 @@ holds of the reader's whole answer, and no refusal stands for a spent budget.
 ## Placement
 
 Concept `exact-codecs`; property: a read paired with a write is exact when whatever reads is the
-write of what it reads. Requirement R14 (program as data): the schema form an agent writes.
+write of what it reads. Requirement R8 (runs and faces as named connections,
+`docs/core/system-map.md` §8): the JSON face of a carrier reads inside its profile as the
+reference's value, and refuses outside it at a place. R14 is the sketch checker's, which reads
+no JSON.
 
 - **`json-read-exact`** (claim, role compatibility; pointer `Canonical.ofJson_exact`). Reach:
   every shape document and every JSON value. Not established:
@@ -62,7 +65,7 @@ open Effect4 (Json Float64 NatJson JsonStep JsonSite Located)
 
 /-- A natural read from a binary64 datum spells that datum. A step of `json-read-exact`. Its
 consumer is `readIn_exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem natOfBinary64_exact {bits : UInt64} {n : Nat} (h : natOfBinary64 bits = some n) :
     Effect4.Arch.binary64OfNat n = bits := by
   unfold natOfBinary64 at h
@@ -105,7 +108,7 @@ theorem natCandidate_lt {bits : UInt64} (h : bits.toNat < Effect4.Arch.binary64I
 datum the read accepts is a number a binary64 host reads as that natural, never `+Infinity` or a
 negative number whose bits the write happens to give back (2^2048 and `-1.0`). A step of
 `json-read-exact`. Its consumer is `Tools.JsonBridge.ofLeanJson_num`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem natOfBinary64_finite {bits : UInt64} {n : Nat} (h : natOfBinary64 bits = some n) :
     bits.toNat < Effect4.Arch.binary64Infinity ∧ n < 2 ^ 1024 := by
   unfold natOfBinary64 at h
@@ -117,7 +120,7 @@ theorem natOfBinary64_finite {bits : UInt64} {n : Nat} (h : natOfBinary64 bits =
 
 /-- Bytes read from hex are spelled by that hex. A step of `json-read-exact`. Its consumer is
 `readIn_exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem canonicalHex?_exact {h : String} {d : Bytes} (hd : canonicalHex? h = some d) :
     hexString d = h := by
   unfold canonicalHex? at hd
@@ -130,7 +133,7 @@ theorem canonicalHex?_exact {h : String} {d : Bytes} (hd : canonicalHex? h = som
 
 /-- A tag read from a case name prints as that name. A step of `json-read-exact`. Its consumer
 is `readIn_exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem tagOfName_exact {name : String} {cases : List (String × Nat × List (String × Shape))}
     {tag : Nat} {fields : List (String × Shape)} (h : tagOfName name cases = some (tag, fields)) :
     caseAt tag cases = some (name, fields) := by
@@ -166,7 +169,7 @@ theorem optionLayer?_head {defs : List (String × Shape)} {s item : Shape}
 mutual
 /-- **Whatever reads is the value's print**, under the same shape. The pointer's step of
 `json-read-exact`. Its consumer is `ShapeDoc.read_exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem readIn_exact {defs : List (String × Shape)} :
     ∀ {seen : List String} {s : Shape} {j : Json} {v : Val},
       readIn defs seen s j = some v → printIn defs s v = j
@@ -258,7 +261,7 @@ decreasing_by
     omega
 
 /-- The elements read are printed as the list read. A step of `readIn_exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem readList_exact {defs : List (String × Shape)} :
     ∀ {item : Shape} {js : List Json} {xs : List Val},
       readList defs item js = some xs → printList defs item xs = js
@@ -281,7 +284,7 @@ decreasing_by
     omega
 
 /-- The fields read are printed as the entries read. A step of `readIn_exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem readFields_exact {defs : List (String × Shape)} :
     ∀ {fields : List (String × Shape)} {entries : List (String × Json)} {args : List Val},
       readFields defs fields entries = some args → printFields defs fields args = entries
@@ -316,14 +319,14 @@ end
 
 /-- **A document's reading is exact.** A step of `json-read-exact`. Its consumer is
 `Canonical.ofJson_exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem ShapeDoc.read_exact {doc : ShapeDoc} {j : Json} {v : Val} (h : doc.read j = some v) :
     doc.print v = j :=
   readIn_exact h
 
 /-- **A carrier read from JSON is the carrier whose canonical print that JSON is.** The pointer
 of `json-read-exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem Canonical.ofJson_exact {α : Type} [Canonical α] {j : Json} {a : α}
     (h : Canonical.ofJson j = some a) : Canonical.print a = j := by
   unfold Canonical.ofJson at h
@@ -367,7 +370,7 @@ theorem highestBit_eq (n : Nat) : Effect4.Arch.highestBit n = n.log2 := by
 /-- **A natural below 2^53 reads back from its binary64 datum**: the retraction that
 `Data/JsonNumber.lean` owed, on the profile's domain. A step of `json-read-located`. Its consumer
 is `ofBinary64_toBinary64`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem natOfBinary64_binary64OfNat {n : Nat} (h : n < 2 ^ 53) :
     natOfBinary64 (Effect4.Arch.binary64OfNat n) = some n := by
   rcases Nat.eq_zero_or_pos n with h0 | hpos
@@ -670,7 +673,7 @@ mutual
 /-- **Whatever the profile's reader reads is the value whose print is its input, normalised**:
 for a binary64 tree that agrees with the input, the normaliser's output is the print. The
 pointer's step of `json-read-located`. Its consumer is `ShapeDoc.readLocated_exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem readAt_exact {defs : List (String × Shape)} :
     ∀ {seen : List String} {s : Shape} {t : NatJson} {j : Json} {p : List JsonStep} {v : Val},
       Agrees t j → readAt defs seen s t p = .ok v → orderIn defs seen s j = printIn defs s v
@@ -964,7 +967,7 @@ end
 /-- **A value tree the profile's reader reads is the one whose print is any agreeing binary64
 tree, normalised.** A step of `json-read-located`. Its consumers are `ShapeDoc.readLocated_exact`
 and `Canonical.ofJsonAnyOrder_exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem ShapeDoc.readLocated_exact_of {doc : ShapeDoc} {t : NatJson} {j : Json} {v : Val}
     (hA : Agrees t j) (h : doc.readLocated t = .ok v) : doc.print v = doc.order j := by
   unfold ShapeDoc.readLocated at h
@@ -974,7 +977,7 @@ theorem ShapeDoc.readLocated_exact_of {doc : ShapeDoc} {t : NatJson} {j : Json} 
 /-- **Whatever the profile's reader reads from a tree is the value whose print is the tree's
 binary64 image, normalised by `ShapeDoc.order`.** Exactness of the native face. A step of
 `json-read-located`. Its consumer is `Canonical.readLocated_exact`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem ShapeDoc.readLocated_exact {doc : ShapeDoc} {t : NatJson} {v : Val}
     (h : doc.readLocated t = .ok v) : doc.print v = doc.order t.toBinary64 :=
   ShapeDoc.readLocated_exact_of (agrees_toBinary64 t) h
@@ -982,7 +985,7 @@ theorem ShapeDoc.readLocated_exact {doc : ShapeDoc} {t : NatJson} {v : Val}
 /-- **A carrier read from the profile's tree is the carrier whose canonical print is the tree's
 binary64 image, normalised.** A step of `json-read-located`. Its consumer is
 `CodecProfile.profileLocated_exact` (`Laws/Tool/CodecProfile.lean`). -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem Canonical.readLocated_exact {α : Type} [Canonical α] {t : NatJson} {a : α}
     (h : Canonical.readLocated t = .ok a) :
     Canonical.print a = (Canonical.shape α).order t.toBinary64 := by
@@ -1002,7 +1005,7 @@ order and writes each list given as an array as its cases. The reader is the pro
 reader on the binary64 tree's profile tree (`NatJson.ofBinary64`). A step of `json-read-exact`.
 Its consumer: the session tool's JSON profile (`Tool.CodecProfile`), which reads a request
 through it and prints through `Canonical.printArrays`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem Canonical.ofJsonAnyOrder_exact {α : Type} [Canonical α] {j : Json} {a : α}
     (h : Canonical.ofJsonAnyOrder j = some a) :
     Canonical.print a = (Canonical.shape α).order j := by
@@ -1028,7 +1031,7 @@ theorem Canonical.ofJsonAnyOrder_exact {α : Type} [Canonical α] {j : Json} {a 
 the `Option` reader. The old `Option` readers are projections of the located one (Codex's R4.1),
 so this law holds by definition, and it is the bridge their callers rewrite by. A step of
 `json-read-located`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem ShapeDoc.readLocated_erases (doc : ShapeDoc) (t : NatJson) :
     (doc.readLocated t).toOption = doc.readAny t := rfl
 
@@ -1130,7 +1133,7 @@ mutual
 /-- **Every refusal of the profile's reader names a site of its input**: a value it holds, or a
 field missing from an object it holds. The pointer's step of `json-read-located`'s diagnostic
 property. Its consumer is `ShapeDoc.readLocated_site`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem readAt_site {defs : List (String × Shape)} {t₀ : NatJson} :
     ∀ {seen : List String} {s : Shape} {t : NatJson} {p : List JsonStep} {r : JsonRefusal},
       t₀.at? p = some t → readAt defs seen s t p = .error r → JsonSite.Valid t₀ r.site
@@ -1350,14 +1353,14 @@ end
 /-- **Every refusal of the profile's reader names a site of its input** (Codex's `readLocated_site`,
 with the amended relation: a missing field names its present parent). The pointer's step of
 `json-read-located`'s diagnostic property. Its consumer is `CodecProfile.profileLocated_site`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem ShapeDoc.readLocated_site {doc : ShapeDoc} {t : NatJson} {r : JsonRefusal}
     (h : doc.readLocated t = .error r) : JsonSite.Valid t r.site :=
   readAt_site (t₀ := t) (p := []) rfl h
 
 /-- A carrier's refusals name sites of its input: the value tree's, or the root, where the carrier
 refuses a tree that fits. A step of `CodecProfile.profileLocated_site`. -/
-@[semantics "exact-codecs" (requirement := R14)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem Canonical.readLocated_site {α : Type} [Canonical α] {t : NatJson} {r : JsonRefusal}
     (h : Canonical.readLocated (α := α) t = .error r) : JsonSite.Valid t r.site := by
   unfold Canonical.readLocated at h
@@ -1400,8 +1403,8 @@ end
 mutual
 /-- **A profile tree within the profile is the profile tree of its binary64 image.** The step of
 `CodecProfile.read_toBinary64` (`Laws/Tool/CodecProfile.lean`): the two faces read alike within
-the profile. Concept `exact-codecs`, requirement R14. -/
-@[semantics "exact-codecs" (requirement := R14)]
+the profile. Concept `exact-codecs`, requirement R8. -/
+@[semantics "exact-codecs" (requirement := R8)]
 theorem ofBinary64_toBinary64 : ∀ {t : NatJson}, t.within = true → NatJson.ofBinary64 t.toBinary64 = t
   | .null, _ => rfl
   | .bool _, _ => rfl

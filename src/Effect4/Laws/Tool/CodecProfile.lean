@@ -7,7 +7,10 @@ import Effect4.Laws.Auto.Semantics
 ## Placement
 
 Concept `exact-codecs` (`docs/core/semantics.md` §2.5): write/read retraction on an admitted
-JSON profile, and exactness of its reader modulo a named normaliser. Requirements R8, R12, R14.
+JSON profile, and exactness of its reader modulo a named normaliser. Requirement R8 (runs and
+faces as named connections, `docs/core/system-map.md` §8): inside the profile the JSON face reads
+the reference's value, and outside it the face refuses, at a place. R12 is the frontiers', and
+R14 the sketch checker's; neither reads JSON.
 
 - **`codec-profile-retains-value`** (claim, role compatibility; pointer `write_read`): a
   successful guarded write reads back as the original carrier. Reach: every Canonical carrier and
@@ -33,7 +36,7 @@ open Effect4.Store
 
 /-- **A successful guarded write reads back as the original carrier.** The pointer of
 `codec-profile-retains-value`. -/
-@[semantics "exact-codecs" (requirement := R12)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem write_read {α : Type} [Canonical α] (value : α) (json : Effect4.Json)
     (h : write value = .ok json) : read json = .ok value := by
   unfold write at h
@@ -65,7 +68,7 @@ theorem write_read {α : Type} [Canonical α] (value : α) (json : Effect4.Json)
 and why it refuses gives `read`'s answer. `read` is the located reader's projection, so this holds
 by definition and is the bridge `write_readLocated` transports by. A step of
 `json-read-located`. -/
-@[semantics "exact-codecs" (requirement := R12)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem profileLocated_erases {α : Type} [Canonical α] (j : Json) :
     (readLocated (α := α) (NatJson.ofBinary64 j)).toOption = (read (α := α) j).toOption := by
   unfold read
@@ -73,7 +76,7 @@ theorem profileLocated_erases {α : Type} [Canonical α] (j : Json) :
 
 /-- **Whatever the profile reads is the carrier whose canonical print is the input's binary64
 image, normalised.** The pointer of `json-read-located`. -/
-@[semantics "exact-codecs" (requirement := R12)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem profileLocated_exact {α : Type} [Canonical α] {t : NatJson} {a : α}
     (h : readLocated t = .ok a) : Canonical.print a = (Canonical.shape α).order t.toBinary64 := by
   unfold readLocated at h
@@ -83,7 +86,7 @@ theorem profileLocated_exact {α : Type} [Canonical α] {t : NatJson} {a : α}
 
 /-- **A guarded write reads back through the located reader**, transported from `write_read`
 through `read`, the located reader's projection. A step of `json-read-located`. -/
-@[semantics "exact-codecs" (requirement := R12)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem write_readLocated {α : Type} [Canonical α] {a : α} {j : Json} (h : write a = .ok j) :
     readLocated (NatJson.ofBinary64 j) = .ok a := by
   have hr := write_read a j h
@@ -100,7 +103,7 @@ theorem write_readLocated {α : Type} [Canonical α] {a : α} {j : Json} (h : wr
 /-- **Every refusal of the profile names a site of its input**: a value it holds, a field missing
 from an object it holds, the root where the carrier refuses, or the shape's root where the profile
 refuses the shape. The diagnostic property of `json-read-located`. -/
-@[semantics "exact-codecs" (requirement := R12)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem profileLocated_site {α : Type} [Canonical α] {t : NatJson} {r : JsonRefusal}
     (h : readLocated (α := α) t = .error r) : JsonSite.Valid t r.site := by
   unfold readLocated at h
@@ -112,7 +115,7 @@ theorem profileLocated_site {α : Type} [Canonical α] {t : NatJson} {r : JsonRe
 /-- **Within the profile, the two faces read a tree alike**: the binary64 face reads the tree's
 binary64 image as the native face reads the tree. A step of `json-read-located`; it replaces the
 comment-only caveat K1 of the deleted `kit_json.ml`. -/
-@[semantics "exact-codecs" (requirement := R12)]
+@[semantics "exact-codecs" (requirement := R8)]
 theorem read_toBinary64 {α : Type} [Canonical α] {t : NatJson} (h : t.within = true) :
     read (α := α) t.toBinary64 = (readLocated t).mapError .unreadable := by
   unfold read
