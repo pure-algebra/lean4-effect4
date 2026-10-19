@@ -4,7 +4,8 @@
      1. the grammar constants and the small byte helpers
      2. `source`: "read n bytes at (seg, off)", implemented twice — over mmaps (the reader)
         and over a file descriptor (the writer's own recovery scan)
-     3. `step_at`: one record, from a source; every scan in this file is a loop over it
+     3. one record: `record_span` parses its header (PK10), for `step_at` and the reader's
+        `read_full`; every scan in this file is a loop over `step_at`
      4. the reader
      5. the writer: the lock, staging, flush/sync, rotation, recovery, truncation *)
 
@@ -218,6 +219,33 @@ type step =
   | S_next_seg of seg
   | S_stop of scan_stop
 
+(* PK10: the one parse of a record's header, for `read_full` and `step_at`, each of which says
+   its fault in its own vocabulary.  A record at [off] spans [record_overhead + len] bytes, and
+   it fits a file of [size] bytes when [len <= size - off - record_overhead]: a subtraction,
+   which cannot wrap once [0 <= off <= size], so a stored length near max_int is refused
+   before anything adds it to an offset or allocates it.  The answer carries the 41 header
+   bytes it read, which hold the digest and open the CRC. *)
+type header_fault =
+  | Short
+  | Bad_tag of int
+  | Over_limit
+
+let record_span src ~seg ~off ~size : (int * string, header_fault) result =
+  if off < 0 || off > size || size - off < record_overhead
+  then Error Short
+  else (
+    match src.src_read seg off record_header_length with
+    | None -> Error Short
+    | Some h ->
+      if h.[0] <> record_tag
+      then Error (Bad_tag (Char.code h.[0]))
+      else (
+        match E4_be.read_be64 h 1 with
+        | None -> Error Over_limit
+        | Some len ->
+          if len > size - off - record_overhead then Error Short else Ok (len, h)))
+;;
+
 (* The size a source reports is cached (a stat per record would cost more than the whole
    scan); when a bound is about to end the walk we refresh once and retry.  That is what
    makes a scan of a file the writer is still growing correct. *)
@@ -244,41 +272,30 @@ let rec step_at ?(retried = false) src ~verify seg off =
         match src.src_refresh seg with
         | Some n when n > size -> step_at ~retried:true src ~verify seg off
         | _ -> S_next_seg (seg + 1))
-    else if off + record_overhead > size
-    then short ()
     else (
-      match src.src_read seg off record_header_length with
-      | None -> short ()
-      | Some h ->
-        if h.[0] <> record_tag
-        then S_stop (Bad_tag { seg; off; byte = Char.code h.[0] })
+      match record_span src ~seg ~off ~size with
+      | Error Short -> short ()
+      | Error (Bad_tag byte) -> S_stop (Bad_tag { seg; off; byte })
+      | Error Over_limit -> S_stop (Host_limit { seg; off })
+      | Ok (len, h) ->
+        let addr = E4_addr.Addr.of_digest (String.sub h 9 32) in
+        let next = seg, off + record_overhead + len in
+        if not verify
+        then S_record ({ r_addr = addr; r_len = len; r_bytes = None }, next)
         else (
-          match E4_be.read_be64 h 1 with
-          | None -> S_stop (Host_limit { seg; off })
-          | Some len ->
-            let total = record_overhead + len in
-            if off + total > size
-            then short ()
-            else (
-              let addr = E4_addr.Addr.of_digest (String.sub h 9 32) in
-              let next = seg, off + total in
-              if not verify
-              then S_record ({ r_addr = addr; r_len = len; r_bytes = None }, next)
-              else (
-                match src.src_read seg (off + record_header_length) (len + 4) with
-                | None -> short ()
-                | Some tail ->
-                  let body = String.sub tail 0 len in
-                  let want = record_crc ~header:h ~node_bytes:body in
-                  (match E4_crc.read_be32 tail len with
-                   | None -> short ()
-                   | Some stored ->
-                     if stored <> want
-                     then S_stop (Bad_crc { seg; off })
-                     else if E4_sha256.digest body <> E4_addr.Addr.bytes addr
-                     then S_stop (Bad_digest { seg; off })
-                     else
-                       S_record ({ r_addr = addr; r_len = len; r_bytes = Some body }, next))))))
+          match src.src_read seg (off + record_header_length) (len + 4) with
+          | None -> short ()
+          | Some tail ->
+            let body = String.sub tail 0 len in
+            let want = record_crc ~header:h ~node_bytes:body in
+            (match E4_crc.read_be32 tail len with
+             | None -> short ()
+             | Some stored ->
+               if stored <> want
+               then S_stop (Bad_crc { seg; off })
+               else if E4_sha256.digest body <> E4_addr.Addr.bytes addr
+               then S_stop (Bad_digest { seg; off })
+               else S_record ({ r_addr = addr; r_len = len; r_bytes = Some body }, next))))
 ;;
 
 (* Where the next segment's records begin, or the verdict that ends the walk. *)
@@ -397,7 +414,8 @@ let reader_source rd =
       (match rs.rs_map with
        | None -> None
        | Some m ->
-         if o < 0 || n < 0 || o + n > rs.rs_len
+         (* PK10's check: the range is in the mapping by subtraction, before the allocation *)
+         if o < 0 || n < 0 || o > rs.rs_len || n > rs.rs_len - o
          then None
          else (
            let b = Bytes.create n in
@@ -497,7 +515,7 @@ let read_full src ~verify seg off =
   | None -> Error (No_segment seg)
   | Some size0 ->
     let size =
-      if off + record_overhead > size0
+      if off > size0 - record_overhead
       then (
         match src.src_refresh seg with
         | Some n -> n
@@ -506,60 +524,46 @@ let read_full src ~verify seg off =
     in
     if off < 0 || off >= size
     then Error (Past_end { seg; off; size })
-    else if off + record_overhead > size
-    then Error (Truncated { seg; off })
     else (
-      match src.src_read seg off record_header_length with
-      | None -> Error (Truncated { seg; off })
-      | Some h ->
-        if h.[0] <> record_tag
-        then Error (Not_a_record { seg; off; byte = Char.code h.[0] })
-        else (
-          match E4_be.read_be64 h 1 with
-          | None -> Error (Over_host_limit { seg; off })
-          | Some len ->
-            if off + record_overhead + len > size
-            then Error (Truncated { seg; off })
-            else (
-              match src.src_read seg (off + record_header_length) (len + 4) with
-              | None -> Error (Truncated { seg; off })
-              | Some tail ->
-                let body = String.sub tail 0 len in
-                let want = record_crc ~header:h ~node_bytes:body in
-                (match E4_crc.read_be32 tail len with
-                 | None -> Error (Truncated { seg; off })
-                 | Some stored ->
-                   if stored <> want
-                   then
-                     Error
-                       (Crc_mismatch
-                          { seg; off; crc_recorded = stored; crc_computed = want })
-                   else (
-                     let recorded = String.sub h 9 32 in
-                     if verify
-                     then (
-                       let computed = E4_sha256.digest body in
-                       if computed <> recorded
-                       then
-                         Error
-                           (Digest_mismatch
-                              { seg
-                              ; off
-                              ; dig_recorded = recorded
-                              ; dig_computed = computed
-                              })
-                       else
-                         Ok
-                           { r_addr = E4_addr.Addr.of_digest recorded
-                           ; r_len = len
-                           ; r_bytes = Some body
-                           })
-                     else
-                       Ok
-                         { r_addr = E4_addr.Addr.of_digest recorded
-                         ; r_len = len
-                         ; r_bytes = Some body
-                         })))))
+      match record_span src ~seg ~off ~size with
+      | Error Short -> Error (Truncated { seg; off })
+      | Error (Bad_tag byte) -> Error (Not_a_record { seg; off; byte })
+      | Error Over_limit -> Error (Over_host_limit { seg; off })
+      | Ok (len, h) ->
+        (match src.src_read seg (off + record_header_length) (len + 4) with
+         | None -> Error (Truncated { seg; off })
+         | Some tail ->
+           let body = String.sub tail 0 len in
+           let want = record_crc ~header:h ~node_bytes:body in
+           (match E4_crc.read_be32 tail len with
+            | None -> Error (Truncated { seg; off })
+            | Some stored ->
+              if stored <> want
+              then
+                Error
+                  (Crc_mismatch { seg; off; crc_recorded = stored; crc_computed = want })
+              else (
+                let recorded = String.sub h 9 32 in
+                if verify
+                then (
+                  let computed = E4_sha256.digest body in
+                  if computed <> recorded
+                  then
+                    Error
+                      (Digest_mismatch
+                         { seg; off; dig_recorded = recorded; dig_computed = computed })
+                  else
+                    Ok
+                      { r_addr = E4_addr.Addr.of_digest recorded
+                      ; r_len = len
+                      ; r_bytes = Some body
+                      })
+                else
+                  Ok
+                    { r_addr = E4_addr.Addr.of_digest recorded
+                    ; r_len = len
+                    ; r_bytes = Some body
+                    }))))
 ;;
 
 let read rd ~seg ~off = read_full (reader_source rd) ~verify:true seg off

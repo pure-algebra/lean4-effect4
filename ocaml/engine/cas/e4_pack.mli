@@ -68,6 +68,13 @@
        inside a sealed segment (an interior bad head, or [truncate:false] over damage) cannot
        grow: the file system refuses its next write (EACCES; a superuser bypasses the bits).
                                                         by construction; tested (Z10..Z13)
+   PK10 One parse of a record's header serves `read`, `read_at`, `read_header`, `blit_at` and
+       every scan: the tag, then the be64 length, then the length against the bytes left, as
+       `len <= size - off - 45`.  The subtraction cannot wrap once `0 <= off <= size`, so a
+       stored length the file cannot hold, near max_int included, is `Truncated` (a read) or
+       `Short` (a scan) at the record's own offset, before anything adds it to an offset or
+       allocates it.  A read from a segment's mapping checks its range the same way.
+                                                        by construction; tested (L1, L2)
 
    Deviations from docs/research/2026-09-08-engine-a2-persistence.md §1.2 (lane P1, 2026-09-08):
    D1  §1.2's `scan` both "reads the 41-byte header and seeks past node_bytes" (PK4) and can

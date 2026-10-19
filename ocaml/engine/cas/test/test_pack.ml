@@ -27,6 +27,9 @@
          (PK9): a segment the durable end has passed is 0444, and recovery never truncates
          one.
      T*  `truncate_to` refuses below `pack_end`, and the host-limit refusal (PK5).
+     L*  a stored length near max_int (Codex's quality review, A2.1): every reading door and the
+         writer's recovery refuse it with no exception and no negative position, and the
+         restored bytes read again.
 
    Everything runs in a fresh directory under the system's temporary directory (TMPDIR; made by
    E4_check.temp_dir), removed at the end.  Exit code 0 iff every check passed. *)
@@ -987,6 +990,88 @@ let test_truncate_to () =
   rm_rf d
 ;;
 
+(* ============================================================ L: lengths near max_int *)
+
+(* Codex's quality review, A2.1 (docs/research/2026-10-19-quality-review/codex-review/README.md,
+   probes/a2/pack_boundary.ml): one valid record whose be64 length field is replaced by max_int
+   and by max_int minus 4, 16, 64 and 100.  Each length fits the host domain (PK5) and names far
+   more bytes than the file holds, so the record is Short at its own offset for every door: no
+   door raises, none allocates the claimed length, and no position goes negative. *)
+let test_length_bounds () =
+  print_endline "-- L: a stored length near max_int (A2.1)";
+  let d = fresh_dir () in
+  let t = E4_pack.open_ ~dir:d ~seg_max:4096 in
+  let body = "abc" in
+  let s, o = E4_pack.append t ~digest:(digest_of body) ~node_bytes:body in
+  E4_pack.sync t;
+  E4_pack.close t;
+  let path = E4_pack.seg_path ~dir:d s in
+  let valid = read_file path in
+  let answer f =
+    match f () with
+    | v -> Ok v
+    | exception e -> Error (Printexc.to_string e)
+  in
+  let doors () =
+    let rd = E4_pack.open_reader ~dir:d in
+    let scan verify () =
+      List.of_seq (E4_pack.scan_seq ~verify rd ~from:(s, E4_pack.head_length))
+    in
+    let r =
+      ( answer (fun () -> E4_pack.read rd ~seg:s ~off:o)
+      , answer (fun () -> E4_pack.read_at rd ~seg:s ~off:o)
+      , answer (fun () -> E4_pack.read_header rd ~seg:s ~off:o)
+      , answer (fun () -> E4_pack.blit_at rd ~seg:s ~off:o (Bytes.create 64) 0)
+      , answer (scan false)
+      , answer (scan true) )
+    in
+    E4_pack.close_reader rd;
+    r
+  in
+  let recovery () =
+    answer (fun () ->
+      let w = E4_pack.open_at ~truncate:false ~dir:d ~seg_max:4096 () in
+      let r = E4_pack.recovery w in
+      E4_pack.close w;
+      r.E4_pack.stop, r.E4_pack.records)
+  in
+  let short = E4_pack.Short { seg = s; off = o } in
+  List.iter
+    (fun delta ->
+       let b = Bytes.of_string valid in
+       Bytes.blit_string (E4_be.be64 (max_int - delta)) 0 b (o + 1) 8;
+       write_file path (Bytes.to_string b);
+       let read, read_at, header, blit, scan, scan_verify = doors () in
+       let name = Printf.sprintf "L1 length max_int - %d" delta in
+       check
+         (name ^ ": read refuses it as Truncated at the record, with no exception")
+         (read = Ok (Error (E4_pack.Truncated { seg = s; off = o })));
+       check
+         (name ^ ": read_at, read_header and blit_at answer no record")
+         (read_at = Ok None && header = Ok None && blit = Ok (-1));
+       check
+         (name ^ ": both scans deliver nothing and stop Short at the record's own offset")
+         (scan = Ok [ E4_pack.Stopped short ]
+          && scan_verify = Ok [ E4_pack.Stopped short ]);
+       check
+         (name ^ ": the writer's recovery stops Short there, with no exception")
+         (recovery () = Ok (short, 0)))
+    [ 0; 4; 16; 64; 100 ];
+  write_file path valid;
+  let read, _, _, _, scan, _ = doors () in
+  check
+    "L2 the restored bytes read again, and the scan ends at Eof after the one record"
+    ((match read with
+      | Ok (Ok { E4_pack.r_bytes = Some x; _ }) -> x = body
+      | _ -> false)
+     &&
+     match scan with
+     | Ok [ E4_pack.Scanned ((s', o'), _); E4_pack.Stopped E4_pack.Eof ] ->
+       s' = s && o' = o
+     | _ -> false);
+  rm_rf d
+;;
+
 (* ============================================================ P: a property sweep *)
 
 let test_property_sweep () =
@@ -1048,6 +1133,7 @@ let () =
   test_single_writer ();
   test_rotation ();
   test_truncate_to ();
+  test_length_bounds ();
   test_property_sweep ();
   rm_rf root;
   E4_check.finish ()
