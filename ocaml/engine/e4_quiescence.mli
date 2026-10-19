@@ -15,6 +15,10 @@ val create : unit -> t
     counts. Q1. *)
 val enter : t -> unit
 
+(** One accepted piece of work and [f ()], in one critical section: a reader of the count never
+    sees the entry without [f]'s effect. The scheduler's send stamps itself this way. Q4. *)
+val enter_with : t -> (unit -> 'a) -> 'a
+
 (** One applied piece of work; wakes {!wait_zero} on reaching zero. Q1, Q2.
     @raise Invalid_argument if nothing is outstanding — a leave without an enter is a bug,
     not a silent underflow. *)

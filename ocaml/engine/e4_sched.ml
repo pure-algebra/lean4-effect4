@@ -236,13 +236,16 @@ type ('m, 'd) t =
 (* ---- the stamped, counted push (M5, Q1, R1) ---- *)
 
 (* The sequence number and the quiescence entry are taken under the mailbox lock, only if
-   the push is accepted. Returns the sequence number. *)
+   the push is accepted, and in one quiescence critical section (Q4): two sends to two
+   mailboxes then stamp in the order they enter, as one atomic send each. Returns the
+   sequence number. *)
 let enqueue t ?fire mailbox decision =
   let seq = ref (-1) in
   match
     E4_mailbox.push_with mailbox (fun () ->
-      E4_quiescence.enter t.quiescence;
-      let s = Atomic.fetch_and_add t.seq 1 + 1 in
+      let s =
+        E4_quiescence.enter_with t.quiescence (fun () -> Atomic.fetch_and_add t.seq 1 + 1)
+      in
       seq := s;
       { seq = s; decision; fire })
   with

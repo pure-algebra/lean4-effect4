@@ -6,7 +6,8 @@
    inbox is empty and no step is in flight — nothing anywhere is pending.
    Depends on: nothing in the library (Unix for the timed wait).
 
-   Copied from git:14e6835:ocaml/link/e4_quiescence.ml (as it stood at 7d53312); changes: none.
+   Copied from git:14e6835:ocaml/link/e4_quiescence.ml (as it stood at 7d53312); changes:
+   `enter_with` (Q4), 2026-10-18.
 
    Properties:
      Q1  `outstanding` = enters - leaves, and `leave` below zero raises: a leave without
@@ -18,6 +19,10 @@
      Q3  `wait_zero_for ~seconds` returns `true` under the same condition, `false` at the
          deadline. It polls (the standard library's `Condition` has no timed wait).
          [by construction; tested: quiescence-timeout]
+     Q4  `enter_with t f` enters and runs `f` in one critical section, so no reader of the
+         count sees the entry without what `f` did. The scheduler's send takes its stamp
+         this way, so stamps follow the order of entries across mailboxes. [by
+         construction; tested: stm_admit P1, ocaml/engine/test/stm]
 
    The `Unix.gettimeofday` of `wait_zero_for` is a HOST deadline and is legitimate exactly
    while it is never an input to a decision (design §1.2.1, survey trap #8): a parked run
@@ -44,6 +49,13 @@ let enter t =
   Mutex.protect t.mu (fun () ->
     t.outstanding <- t.outstanding + 1;
     t.entered <- t.entered + 1)
+;;
+
+let enter_with t f =
+  Mutex.protect t.mu (fun () ->
+    t.outstanding <- t.outstanding + 1;
+    t.entered <- t.entered + 1;
+    f ())
 ;;
 
 let leave t =
