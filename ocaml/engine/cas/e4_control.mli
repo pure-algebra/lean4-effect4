@@ -7,7 +7,11 @@
     Version 2 accepts exact UTF-8 names through 65535 encoded bytes.
     The wire bounds encoded root generations below 2^62; arithmetic uses Z.t.
     Root bytes: u16 name-byte count; name bytes; u8 policy; u8 target kind;
-    32 digest bytes; be64 generation. The fixed payload and checksum stay unchanged. *)
+    32 digest bytes; be64 generation. The fixed payload and checksum stay unchanged.
+    CF4: [commit] replaces the file whole through E4_file (tmp, sync, rename, directory
+    sync); a crash leaves the old file or the new one, and a failed step raises
+    Unix.Unix_error, so the caller's commit fails (decisions row 417 (3)), by construction;
+    tested by test_disk. *)
 type root_policy = E4_root_policy.t =
   | Swap
   | Journal

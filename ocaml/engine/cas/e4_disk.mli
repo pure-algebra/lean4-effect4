@@ -2,6 +2,8 @@
     Properties: open returns faults as values; every raw node passes byte reading then
     shared admission; images contain ordered bytes and the exact root table/boundary;
     transactions preflight before writing; retained images hold no mutable handles.
+    A failed file or directory sync is a failed commit: [commit] answers it as an I/O fault
+    and closes the writer (decisions row 417 (3)); tested by test_disk.
     Finite comparison and kill tests establish only their observed command lists. *)
 type t
 

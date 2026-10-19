@@ -406,28 +406,13 @@ let write_all (fd : Unix.file_descr) (s : string) : unit =
   go 0
 ;;
 
-(* CF4: tmp, fsync, rename, fsync the directory.  A crash leaves the old file or the new one. *)
+(* CF4: the file is replaced whole through E4_file (F2): tmp, sync, rename, then the
+   directory's sync.  A crash leaves the old file or the new one.  A failed step raises (F1):
+   a control file that did not become durable is a failed commit (decisions row 417 (3), which
+   ends the best-effort directory sync this file once had, its deviation D7). *)
 let commit ~path (p : payload) : unit =
   let bytes = encode p in
-  let tmp = tmp_path ~path in
-  let fd = Unix.openfile tmp [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o644 in
-  Fun.protect
-    ~finally:(fun () ->
-      try Unix.close fd with
-      | Unix.Unix_error _ -> ())
-    (fun () ->
-       write_all fd bytes;
-       Unix.fsync fd);
-  Unix.rename tmp path;
-  (* D7: best effort — a platform that cannot open a directory for fsync still has the
-     rename, which is the atomic step. *)
-  match Unix.openfile (Filename.dirname path) [ Unix.O_RDONLY ] 0 with
-  | dfd ->
-    (try Unix.fsync dfd with
-     | Unix.Unix_error _ -> ());
-    (try Unix.close dfd with
-     | Unix.Unix_error _ -> ())
-  | exception Unix.Unix_error _ -> ()
+  E4_file.replace ~path ~perm:0o644 (fun fd -> write_all fd bytes)
 ;;
 
 let write = commit

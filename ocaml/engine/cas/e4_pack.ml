@@ -49,15 +49,6 @@ let write_all fd s =
   go 0
 ;;
 
-let fsync_dir path =
-  match Unix.openfile path [ Unix.O_RDONLY ] 0 with
-  | fd ->
-    (try Unix.fsync fd with
-     | Unix.Unix_error _ -> ());
-    Unix.close fd
-  | exception Unix.Unix_error _ -> ()
-;;
-
 let mkdir_p path =
   let rec go p =
     if p <> "" && p <> "/" && p <> "." && not (Sys.file_exists p)
@@ -726,13 +717,21 @@ let writable path =
   | exception Unix.Unix_error _ -> false
 ;;
 
+(* The head is written and synced, and so is the directory that names the new file
+   (E4_file F1): a failed step raises, and the descriptor goes with it. *)
 let create_segment ~dir s =
   let path = seg_path ~dir s in
   let fd = Unix.openfile path [ Unix.O_RDWR; Unix.O_CREAT; Unix.O_TRUNC ] 0o600 in
-  write_all fd (head_bytes s);
-  Unix.fsync fd;
-  fsync_dir (pack_subdir dir);
-  fd
+  match
+    write_all fd (head_bytes s);
+    Unix.fsync fd;
+    E4_file.sync_dir (pack_subdir dir)
+  with
+  | () -> fd
+  | exception failure ->
+    (try Unix.close fd with
+     | Unix.Unix_error _ -> ());
+    raise failure
 ;;
 
 let open_at ?lock ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
@@ -777,6 +776,8 @@ let open_at ?lock ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
     ; w_recovery = r
     }
   in
+  (* the descriptor recovery's truncation opens, closed if a later step fails *)
+  let cut_fd = ref None in
   try
     match list_segments dir with
     | [] ->
@@ -867,6 +868,7 @@ let open_at ?lock ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
       then (
         (* PK3: the torn tail becomes the file's end, and every later segment goes. *)
         let fd = Unix.openfile (seg_path ~dir cseg) [ Unix.O_RDWR ] 0o600 in
+        cut_fd := Some fd;
         (match file_size (seg_path ~dir cseg) with
          | Some sz when sz > coff ->
            Unix.LargeFile.ftruncate fd (Int64.of_int coff);
@@ -882,7 +884,7 @@ let open_at ?lock ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
                 | Sys_error _ -> ());
                did_truncate := true))
           segs;
-        if !did_truncate then fsync_dir (pack_subdir dir));
+        if !did_truncate then E4_file.sync_dir (pack_subdir dir));
       (* PK9: every segment below the writer's is sealed; the durable end has passed it. *)
       List.iter
         (fun s ->
@@ -902,6 +904,11 @@ let open_at ?lock ?from ?(verify = true) ?(truncate = true) ~dir ~seg_max () =
         !fds
   with
   | failure ->
+    Option.iter
+      (fun fd ->
+         try Unix.close fd with
+         | Unix.Unix_error _ -> ())
+      !cut_fd;
     E4_lock.release lock;
     raise failure
 ;;
@@ -1025,6 +1032,12 @@ let truncate_to t ~seg ~off =
   let fd = fd_for t seg in
   Unix.LargeFile.ftruncate fd (Int64.of_int off);
   Unix.fsync fd;
+  (* the segment's end is now [off]: the watermarks say so before a later step can fail *)
+  t.w_cur_seg <- seg;
+  t.w_cur_end <- off;
+  t.w_written <- seg, off;
+  t.w_durable <- seg, off;
+  t.w_dirty <- [];
   let removed = ref false in
   List.iter
     (fun s ->
@@ -1040,12 +1053,7 @@ let truncate_to t ~seg ~off =
           | Sys_error _ -> ());
          removed := true))
     (list_segments t.w_dir);
-  if !removed then fsync_dir (pack_subdir t.w_dir);
-  t.w_cur_seg <- seg;
-  t.w_cur_end <- off;
-  t.w_written <- seg, off;
-  t.w_durable <- seg, off;
-  t.w_dirty <- []
+  if !removed then E4_file.sync_dir (pack_subdir t.w_dir)
 ;;
 
 let close t =

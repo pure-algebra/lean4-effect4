@@ -255,8 +255,10 @@ val of_pack
 
 (* ---- the file: save, load, and the discard-and-rebuild rule (IX6) ---- *)
 
-(** tmp + rename + fsync of the file and of its directory; the file is published read-only
-    (IX9). *)
+(** Replaces the snapshot through E4_file: tmp, sync, rename, then the directory's sync; the
+    file is published read-only (IX9).  A failed step raises Unix.Unix_error (E4_file F1).
+    The index is a cache, so its one caller in the store, E4_cas.close, catches that failure:
+    a snapshot that did not land costs the next open a rebuild (L-IDX-0). *)
 val save : path:string -> t -> covers:seg * off -> unit
 
 type load_verdict =

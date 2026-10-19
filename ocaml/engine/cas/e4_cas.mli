@@ -65,8 +65,10 @@
                                                          tested (X5; stm_disk K1, K2)
    CS5  Durability is per COMMIT, not per put: `put` stages, `commit` performs ONE write(2)
        and ONE fsync(2) per touched pack segment and then one tmp+rename+fsync of the control
-       file — the group commit and the watermark advance are one durable step.
-                                                                     by construction; benched
+       file and of its directory — the group commit and the watermark advance are one durable
+       step.  A failed write or sync, of a file or of a directory, raises Unix.Unix_error: the
+       commit failed (decisions row 417 (3)), and E4_disk answers it as a fault and closes the
+       writer.                                          by construction; benched; tested (test_disk)
    CS6 / L-CAS-8  Recovery: on open, the records past the control file's `pack_end` are
        re-scanned and re-admitted in write order; the scan stops at the first record that
        fails CRC, digest or admission.  A torn or corrupt record is truncated away by the pack
@@ -269,7 +271,11 @@ val open_ro : dir:string -> ro
 (** The writer's own read view (D4): it sees the records staged since the last commit. *)
 val read_only : t -> ro
 
+(** Saves the index snapshot and closes the pack and the view.  The snapshot is the one
+    durable step here that is best effort: the index is a cache (L-IDX-0), so a failed save is
+    caught and the next open rebuilds it. *)
 val close : t -> unit
+
 val close_ro : ro -> unit
 
 (** Re-read the control file and index whatever another writer has committed since (X5). *)

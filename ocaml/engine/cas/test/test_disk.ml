@@ -1,6 +1,7 @@
 (* Properties: a snapshot freezes nodes, roots and the durable boundary through later writes;
    a refused transaction rolls back whole; receipts carry full heads; read handles share one
-   writer. The retained red control shows the old mutable read view aliasing its writer.
+   writer; a failed directory sync refuses the commit and closes the writer. The retained red
+   control shows the old mutable read view aliasing its writer.
    These are finite host checks, not a filesystem theorem. *)
 open Effect4_engine_cas
 open Disk_test_support
@@ -142,6 +143,50 @@ let test_shared_handles () =
   remove directory
 ;;
 
+(* Decisions row 417 (3), Codex's A3.3: a failed directory sync is a failed commit.  The store
+   directory loses its read permission, so the control file's directory sync cannot open it,
+   while the tmp file and the rename still succeed.  The commit is refused as an I/O fault and the
+   uncertain writer is closed; a reopen runs checked recovery.  The superuser ignores permission
+   bits, so the case needs an ordinary user. *)
+let test_directory_sync () =
+  if Unix.geteuid () = 0
+  then print_endline "SKIP directory sync: the superuser ignores permission bits"
+  else (
+    let directory = temp () in
+    let mode = (Unix.stat directory).Unix.st_perm in
+    let disk = open_ directory in
+    ignore (get (E4_disk.commit disk initial));
+    let first = snapshot disk in
+    Unix.chmod directory 0o300;
+    let answer = E4_disk.commit disk (transaction [ b ] []) in
+    Unix.chmod directory mode;
+    require
+      (match answer with
+       | Error (E4_cas.Host_refused (E4_admission.Fault (E4_fault.Io _))) -> true
+       | _ -> false)
+      "a failed directory sync was acknowledged";
+    require
+      (match E4_disk.commit disk (transaction [] []) with
+       | Error (E4_cas.Host_refused (E4_admission.Fault (E4_fault.Store "writer closed")))
+         -> true
+       | _ -> false)
+      "the uncertain writer stayed open";
+    let reopened = open_ directory in
+    let after = snapshot reopened in
+    require
+      (List.for_all
+         (fun (address, bytes) ->
+            Option.equal String.equal (E4_disk.get_bytes after address) (Some bytes))
+         (E4_disk.nodes first)
+       &&
+       match root after "docs/a", root first "docs/a" with
+       | Some later, Some earlier -> E4_control.head_equal later.head earlier.head
+       | _ -> false)
+      "checked recovery lost what the first commit acknowledged";
+    E4_disk.close reopened;
+    remove directory)
+;;
+
 let test_old_snapshot_red () =
   let directory = temp () in
   let child = Unix.fork () in
@@ -163,6 +208,7 @@ let () =
   test_snapshot_atomic ();
   test_heads ();
   test_shared_handles ();
+  test_directory_sync ();
   test_old_snapshot_red ();
   print_endline "disk snapshots, rollback, receipts, heads and retained alias red passed"
 ;;

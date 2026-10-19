@@ -57,9 +57,10 @@
        admission of those records into a store is lane P4's; this module yields them.
                                                         by construction; tested (X1..X4)
    PK8 Rotation: a record that would push a non-empty segment past `seg_max` starts a new
-       segment, whose 27-byte head is part of the same staged batch.  A record larger than
-       `seg_max - 27` gets a segment to itself and exceeds `seg_max`; the alternative is
-       refusing a node the store admits.                 by construction; tested (Z1, Z2)
+       segment.  Its 27-byte head is written and synced at once, and so is the directory that
+       names it (E4_file); a failed step raises and the writer stays in the old segment.  A
+       record larger than `seg_max - 27` gets a segment to itself and exceeds `seg_max`; the
+       alternative is refusing a node the store admits.  by construction; tested (Z1, Z2)
    PK9 Sealing: a segment the durable end has passed is sealed, read-only (0444).  `sync`
        seals the writer's segments below `pack_end` once its fsyncs are done, and `open_`
        seals every segment below the writer's.  A sealed segment holds only fsynced bytes,
@@ -152,7 +153,8 @@ val open_ : dir:string -> seg_max:int -> t
     `pack_end` (default: the head of the last segment, D4).  [verify] (default true) makes
     recovery check the CRC and re-hash every record from [from].  [truncate] (default true)
     discards the torn tail: the failing record's offset becomes the file's length and every
-    later segment is unlinked (PK3, crash family X1).  With [truncate:false] the bytes stay
+    later segment is unlinked, and the directory is synced through E4_file (PK3, crash
+    family X1); a failed step raises.  With [truncate:false] the bytes stay
     on disk and the next commit overwrites them.  A failing record inside a sealed segment is
     never truncated: [truncate] refuses it with `Bad_pack` (PK9). *)
 val open_at
@@ -189,10 +191,10 @@ val staged_count : t -> int
 (** ONE write(2) per touched segment, no fsync.  Advances [written_upto], not [pack_end]. *)
 val flush : t -> unit
 
-(** [flush] then ONE fsync(2) per segment written since the last sync, plus one directory
-    fsync if a segment file was created.  Advances [pack_end], then seals every segment the
-    new [pack_end] has passed (PK9).  A no-op when nothing has been staged or written since
-    the last sync. *)
+(** [flush] then ONE fsync(2) per segment written since the last sync (a new segment's
+    directory was synced when the segment was made, PK8).  Advances [pack_end], then seals
+    every segment the new [pack_end] has passed (PK9).  A no-op when nothing has been staged
+    or written since the last sync.  A failed write or sync raises Unix.Unix_error. *)
 val sync : t -> unit
 
 (** §1.2's name for [sync]. *)

@@ -494,7 +494,7 @@ let test_file b =
   let saved =
     match E4_index.save ~path ix ~covers:b.b_end with
     | () -> true
-    | exception Sys_error _ -> false
+    | exception (Sys_error _ | Unix.Unix_error _) -> false
   in
   check
     "F12 a read-only tmp left by a stopped save does not block the next save"

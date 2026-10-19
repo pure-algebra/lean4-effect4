@@ -417,39 +417,23 @@ let read_array ic (a : ia) slots crc =
   !crc
 ;;
 
-let fsync_dir dir =
-  match Unix.openfile dir [ Unix.O_RDONLY ] 0o600 with
-  | fd ->
-    (try Unix.fsync fd with
-     | Unix.Unix_error _ -> ());
-    Unix.close fd
-  | exception Unix.Unix_error _ -> ()
-;;
-
+(* The snapshot is replaced whole through E4_file (F2), and IX9 publishes it read-only: the
+   tmp is created 0444, and the next save replaces it by rename.  A failed step raises (F1);
+   the index is a cache, so its one caller, E4_cas.close, catches the failure (L-IDX-0). *)
 let save ~path t ~covers =
   let cseg, coff = covers in
-  let dir = Filename.dirname path in
-  (try Unix.mkdir dir 0o755 with
-   | Unix.Unix_error _ -> ());
-  let tmp = path ^ ".tmp" in
-  (* a tmp left by a save that stopped after its chmod is read-only, so it goes first *)
-  (try Sys.remove tmp with
-   | Sys_error _ -> ());
-  let oc = open_out_bin tmp in
-  let head = magic ^ version ^ be64 cseg ^ be64 coff ^ be64 t.n_slots ^ be64 t.n in
-  output_string oc head;
-  output_string oc (E4_crc.be32 (E4_crc.string head));
-  let crc = write_array oc t.keys t.n_slots E4_crc.init in
-  let crc = write_array oc t.vals t.n_slots crc in
-  output_string oc (E4_crc.be32 crc);
-  flush oc;
-  (try Unix.fsync (Unix.descr_of_out_channel oc) with
-   | Unix.Unix_error _ -> ());
-  close_out oc;
-  (* IX9: the snapshot is published read-only; the next save replaces it by rename *)
-  Unix.chmod tmp 0o444;
-  Sys.rename tmp path;
-  fsync_dir dir
+  (try Unix.mkdir (Filename.dirname path) 0o755 with
+   | Unix.Unix_error (Unix.EEXIST, _, _) -> ());
+  E4_file.replace ~path ~perm:0o444 (fun fd ->
+    let oc = Unix.out_channel_of_descr fd in
+    let head = magic ^ version ^ be64 cseg ^ be64 coff ^ be64 t.n_slots ^ be64 t.n in
+    output_string oc head;
+    output_string oc (E4_crc.be32 (E4_crc.string head));
+    let crc = write_array oc t.keys t.n_slots E4_crc.init in
+    let crc = write_array oc t.vals t.n_slots crc in
+    output_string oc (E4_crc.be32 crc);
+    (* the channel only buffers: E4_file syncs and closes the descriptor under it *)
+    flush oc)
 ;;
 
 type load_verdict =

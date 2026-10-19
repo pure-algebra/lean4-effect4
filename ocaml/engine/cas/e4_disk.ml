@@ -4,7 +4,9 @@
    writer's own, admitted by its commit under the pack lock, so a commit costs its transaction and
    a read costs its node (re-hashed against its address). Bytes changed by another process while
    the lock is held are outside this model; reopening checks them.
-   A host failure closes the uncertain writer; reopening performs checked recovery.
+   A host failure closes the uncertain writer; reopening performs checked recovery. A failed
+   file or directory sync is such a failure (decisions row 417 (3), E4_file F1); one map,
+   fault_of_exn, turns each host failure into its fault.
    Historical root ancestry and generation provenance are not reconstructed. *)
 type t =
   { writer : E4_cas.t
@@ -28,17 +30,27 @@ let close disk =
     E4_cas.close disk.writer)
 ;;
 
+(* The one map from a host failure to its fault (decisions row 417 (3)).  An I/O failure, a
+   failed file or directory sync among them (E4_file F1), is [Io]; a store this binary cannot
+   open or grow is [Store].  Any other exception is not a host answer, and it propagates. *)
+let fault_of_exn = function
+  | Sys_error reason -> Some (E4_fault.Io reason)
+  | E4_cas.Store_error reason -> Some (E4_fault.Store reason)
+  | Unix.Unix_error (error, call, argument) ->
+    Some (E4_fault.Io (call ^ " " ^ argument ^ ": " ^ Unix.error_message error))
+  | _ -> None
+;;
+
 let image disk =
   if disk.closed
   then Error (E4_admission.Fault (E4_fault.Store "writer closed"))
   else (
-    try E4_cas.checked_image (E4_cas.read_only disk.writer) with
-    | Sys_error reason -> Error (E4_admission.Fault (E4_fault.Io reason))
-    | E4_cas.Store_error reason -> Error (E4_admission.Fault (E4_fault.Store reason))
-    | Unix.Unix_error (error, call, argument) ->
-      Error
-        (E4_admission.Fault
-           (E4_fault.Io (call ^ " " ^ argument ^ ": " ^ Unix.error_message error))))
+    match E4_cas.checked_image (E4_cas.read_only disk.writer) with
+    | answer -> answer
+    | exception failure ->
+      (match fault_of_exn failure with
+       | Some fault -> Error (E4_admission.Fault fault)
+       | None -> raise failure))
 ;;
 
 let open_ ~dir options =
@@ -72,19 +84,15 @@ let read disk address =
   if disk.closed
   then Error (E4_admission.Fault (E4_fault.Store "writer closed"))
   else (
-    try
-      match E4_cas.get_bytes (E4_cas.read_only disk.writer) address with
-      | None -> Ok None
-      | Some bytes when String.equal (E4_sha256.digest bytes) (E4_addr.Addr.bytes address)
-        -> Ok (Some bytes)
-      | Some _ -> Error (E4_admission.Fault (E4_fault.Corrupt address))
-    with
-    | Sys_error reason -> Error (E4_admission.Fault (E4_fault.Io reason))
-    | E4_cas.Store_error reason -> Error (E4_admission.Fault (E4_fault.Store reason))
-    | Unix.Unix_error (error, call, argument) ->
-      Error
-        (E4_admission.Fault
-           (E4_fault.Io (call ^ " " ^ argument ^ ": " ^ Unix.error_message error))))
+    match E4_cas.get_bytes (E4_cas.read_only disk.writer) address with
+    | None -> Ok None
+    | Some bytes when String.equal (E4_sha256.digest bytes) (E4_addr.Addr.bytes address)
+      -> Ok (Some bytes)
+    | Some _ -> Error (E4_admission.Fault (E4_fault.Corrupt address))
+    | exception failure ->
+      (match fault_of_exn failure with
+       | Some fault -> Error (E4_admission.Fault fault)
+       | None -> raise failure))
 ;;
 
 let commit ?hook disk transaction =
@@ -95,12 +103,11 @@ let commit ?hook disk transaction =
       close disk;
       Error (E4_cas.Host_refused why)
     in
-    try E4_cas.commit_transaction ?hook disk.writer transaction with
-    | Invalid_argument reason -> fail (E4_admission.Capacity reason)
-    | Sys_error reason -> fail (E4_admission.Fault (E4_fault.Io reason))
-    | E4_cas.Store_error reason -> fail (E4_admission.Fault (E4_fault.Store reason))
-    | Unix.Unix_error (error, call, argument) ->
-      fail
-        (E4_admission.Fault
-           (E4_fault.Io (call ^ " " ^ argument ^ ": " ^ Unix.error_message error))))
+    match E4_cas.commit_transaction ?hook disk.writer transaction with
+    | answer -> answer
+    | exception Invalid_argument reason -> fail (E4_admission.Capacity reason)
+    | exception failure ->
+      (match fault_of_exn failure with
+       | Some fault -> fail (E4_admission.Fault fault)
+       | None -> raise failure))
 ;;
