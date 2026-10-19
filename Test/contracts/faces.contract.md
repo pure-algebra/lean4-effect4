@@ -26,7 +26,7 @@ holds it, and where the battery is.
 | 4 | the foreign recognizer `ck` | `ts/eff/ingest/ck.ts` over the TypeScript compiler API: an island recognizer of a sub-language of rc.112 | tested (agreement with face 5; equality with Lean where an oracle exists) | `ts/eff/ingest/ck.ts`; `ts/eff/ingest/test/foreign.test.ts`, `gate.test.ts`, `refusals.test.ts` |
 | 5 | the foreign recognizer `oxc` | `ts/eff/ingest/oxc.ts` over oxc 0.147.0, sharing **no** recognition code with face 4 | tested (the same) | `ts/eff/ingest/oxc.ts`; the same batteries |
 | 6 | the canonical wire | the byte encoding of a program, in three implementations: `Effect4.Program.Wire`, `ts/eff/wire.gen.ts`, `ocaml/eff/eff_wire.ml` | proved (`decode_encode`, `decode_exact`, `encode_injective`), reproduced (goldens), tested | `src/Effect4/Store/Domain/ProgramWire.lean` (namespace `Effect4.Program.Wire`; moved at `05417cc6` from `git:f7d22703:src/Effect4/Program/Wire.lean`); `ocaml/goldens/eff`; `ts/eff/test/wire.test.ts`, `ocaml/eff/test/test_lean_wire.ml`, `prop_wire.ml` |
-| 7 | the JSON projection | the same program as JSON, in three implementations: `OCaml5.Eff.effV.json`, `ts/eff/json.gen.ts`, `ocaml/eff/eff_json.ml` | reproduced (byte comparison against the Lean-cut oracle), tested | `src/OCaml5/Eff/Goldens.lean`; `ts/eff/json.gen.ts`; `ocaml/eff/test/test_eff.ml` |
+| 7 | the JSON projection | the same program as JSON, in three implementations: `OCaml5.Eff.effV.json`, `ts/eff/json.gen.ts`, `git:85f83463f644e47e7519f3092ea4f27db8697f96:ocaml/eff/eff_json.ml` | reproduced (byte comparison against the Lean-cut oracle), tested | `src/OCaml5/Eff/Goldens.lean`; `ts/eff/json.gen.ts`; `ocaml/eff/test/test_eff.ml` |
 | 8 | the executed image on rc.112 | the truth harness: the printed module *run* under the pinned host, its exit and observable schedule compared with the Lean machine's | tested (a bounded differential over a frozen corpus), reproduced (the gate regenerates the modules, the result and the tapes and compares bytes), stamped | `harness/truth/`; `scripts/check-truth.py`; the `#guard`s of `harness/truth/Truth.lean` |
 | 9 | the OCaml conformance face | `ocaml/eff`: generated families, wire and JSON implementations; core typing verdicts retained as goldens, with no independent OCaml type checker | reproduced (goldens), tested (`dune-tests`) | `ocaml/eff/`; `make check-ocaml` (which took over `git:c67ff096:scripts/check-ocaml.sh`'s `dune-tests` at `b2f6aef1`); `src/OCaml5/Tools/EffGen.lean` |
 
@@ -873,3 +873,36 @@ The codegen refactor's CR-8 lands DI-88's first step. Face 3 answers in face 2's
 - **Evidence.** *Proved*: the laws above, under `[propext, Quot.sound]`. *Tested*: the reader's
   unit tests and `make check-ts`. *Reproduced*: `ts/eff/templates.gen.ts` and
   `src/Effect4/Api/RefusalsDerived.lean` by `make check-gen`.
+
+## Amendment, 2026-10-18: the OCaml estate's JSON is Lean's, lowered; face 7 has two implementations (wave 2, C6)
+
+Wave 2's C6 (merge `526c236a0`, `docs/research/2026-10-18-slices/receipt-w2-json.md`) deleted
+`git:85f83463f644e47e7519f3092ea4f27db8697f96:ocaml/eff/eff_json.ml`, the output of `EffGen`'s
+JSON arm. It also deleted the kit's hand twins
+`git:94593523dba7931a985985e7f15c8f77e799161b:ocaml/eff/eff_json_text.ml` and
+`git:94593523dba7931a985985e7f15c8f77e799161b:ocaml/engine/kit/kit_json.ml`. The owner approved
+this amendment on 2026-10-18.
+
+- **Face 7, amended: two implementations.** They are `OCaml5.Eff.effV.json`, which cuts
+  `ocaml/eff/goldens/<name>.json`, and `ts/eff/json.gen.ts`, which reads that spelling. Their
+  evidence is unchanged. *Reproduced*: the goldens, by `make check-gen`. *Tested*: `ts/eff`'s
+  tests. The OCaml byte comparison against the goldens is retired with `eff_json.ml`.
+- **Face 9, amended.** `ocaml/eff` holds the generated families and the wire, and no JSON
+  implementation.
+- **§5's JSON bullet, amended.** The OCaml estate prints and reads a program as JSON through
+  Lean's printer and located reader, lowered: `ShapeDoc.printTree` and `ShapeDoc.readLocated`
+  (`src/Effect4/Store/Domain/ShapeJson.lean`). In `Api_gen` they are
+  `store_shape_doc_print_tree` and `store_shape_doc_read_located`.
+- **The two spellings differ.** The lowered printer writes the canonical carriers' spelling
+  (`{"_tag":"succeed","value":…}`), the tool wire's. Face 7 writes `V`'s spelling
+  (`["succeed",["lit",["nat",42]]]`). The lowered pair is not a face 7 implementation.
+- **Evidence for the OCaml estate's JSON.** *Proved*, for the Lean definitions:
+  `ShapeDoc.readLocated_exact`, `ShapeDoc.readLocated_erases`, `ShapeDoc.readLocated_site`
+  (`src/Effect4/Laws/Store/ShapeRead.lean`), and `profileLocated_exact` and `write_readLocated`
+  (`src/Effect4/Laws/Tool/CodecProfile.lean`), under `[propext, Quot.sound]`. Decisions row 391
+  trusts the lowering. *Tested*: `ocaml/eff/test/test_eff.ml`'s `json_reads_back` checks each
+  golden program. Its print reads back to it, or is refused for a natural above the profile's
+  limit. The kit's 408 corpus prints are byte-identical to the deleted printer's.
+- **Not established.** No theorem relates `V`'s spelling to the canonical spelling. So a program
+  has two JSON spellings, each with one owner: `OCaml5.Eff.effV.json` and `Canonical.print`.
+  Choosing one spelling would remove the other owner, and that choice is open.

@@ -14,7 +14,7 @@ import { toJson } from "./json.gen.ts"          // (eff: Eff) => string
 **Which JSON goes where.** The tool reads the node that `readTypeScript` returns as a sketch's
 `program`, inside an `open` request (`Effect4.Tool.Action.open_`, read by `tools/Drivers/Session.lean`). That is `JSON.stringify(eff)`: each object a case
 with its `_tag`, each list an array, as `eff.gen.ts` types it. `toJson` writes a second form,
-the golden exchange with OCaml (`ocaml/eff/eff_json.ml`), whose lists are positional
+the golden exchange with OCaml (`git:85f83463f644e47e7519f3092ea4f27db8697f96:ocaml/eff/eff_json.ml`), whose lists are positional
 `["cons", head, tail]`; the session refuses it. Hand an agent's program to the session as the
 node's JSON.
 
@@ -43,7 +43,7 @@ numbers, so its domain is wider than this host representation.
 | --- | --- | --- |
 | `read.ts` | hand | the printed-image reader above |
 | `eff.gen.ts` | `tools/Drivers/TsGen.lean` | one Schema per family of the Eff IR and its typing (24 families: `Eff`, `Term`, `NativeOp`, `Ty`, `Row`, …), read off the Lean environment: names verbatim, constructors in declaration order; `decodeEff`, `isEff` |
-| `json.gen.ts` | `tools/Drivers/TsGen.lean` | one JSON writer per family, the bytes `OCaml5.Eff.Goldens` writes and `ocaml/eff/eff_json.ml` prints; `toJson` |
+| `json.gen.ts` | `tools/Drivers/TsGen.lean` | one JSON writer per family, the bytes `OCaml5.Eff.Goldens` writes and `git:85f83463f644e47e7519f3092ea4f27db8697f96:ocaml/eff/eff_json.ml` prints; `toJson` |
 | `profile.gen.ts` | `tools/Drivers/TsGen.lean` | the image profile as one JSON payload decoded at import through the schemas above: the address, the 50 reserved heads, and one entry per native operation, `{ op: NativeOp, row: Row }`; a stamp over the payload bytes is recomputed at import |
 | `taxonomy.gen.ts` | `tools/Drivers/TsGen.lean` | 23 refusal codes, their spectra, detail templates and active/reserved status; stamped at import |
 | `names.gen.ts` | `tools/Drivers/TsGen.lean` | the names a module file's reader refuses: the 26 members of an rc.112 service key, which an accessor would shadow (`serviceKeyMembers`), and the ambient values a binding name may not take (`Codegen.Names.reservedExtra`); stamped at import |
