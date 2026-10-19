@@ -26,8 +26,8 @@
         chain-of-refMake run at n = 2000, with chunking on and off, printing the per-checkpoint
         delta and the cumulative store bytes of both.
 
-   Writes only under $E4_CHECKPOINT_TMP (default: the system temp directory) and removes what
-   it made.
+   Writes only under the system's temporary directory (TMPDIR; made by E4_check.temp_dir) and
+   removes what it made.
 
    Run: cd ocaml && dune build @engine/cas/runtest --force *)
 
@@ -44,55 +44,16 @@ let open_writer ~dir opts =
   | Error why -> failwith ("open writer: " ^ E4_cas.admission_word why)
 ;;
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n%!" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check
 let note fmt = Printf.printf fmt
 
 (* ============================================================ the sandbox *)
 
-let root_dir =
-  let base =
-    try Sys.getenv "E4_CHECKPOINT_TMP" with
-    | Not_found -> Filename.get_temp_dir_name ()
-  in
-  let d =
-    Filename.concat
-      base
-      (Printf.sprintf "e4ckpt-%d-%d" (Unix.getpid ()) (int_of_float (Unix.time ())))
-  in
-  (try Unix.mkdir base 0o755 with
-   | Unix.Unix_error _ -> ());
-  Unix.mkdir d 0o755;
-  d
-;;
-
-let counter = ref 0
-
-let fresh_dir () =
-  incr counter;
-  let d = Filename.concat root_dir (Printf.sprintf "s%03d" !counter) in
-  Unix.mkdir d 0o755;
-  d
-;;
-
-let rec rm_rf p =
-  match Unix.lstat p with
-  | exception Unix.Unix_error _ -> ()
-  | { Unix.st_kind = Unix.S_DIR; _ } ->
-    Array.iter (fun n -> rm_rf (Filename.concat p n)) (Sys.readdir p);
-    (try Unix.rmdir p with
-     | Unix.Unix_error _ -> ())
-  | _ ->
-    (try Sys.remove p with
-     | Sys_error _ -> ())
-;;
+(* The test's scratch root, a fresh directory under the system's temporary directory
+   (E4_check.temp_dir); each store gets a fresh directory below it. *)
+let root_dir = E4_check.temp_dir "e4ckpt-"
+let fresh_dir () = E4_check.temp_dir ~under:root_dir "s"
+let rm_rf = E4_check.remove_tree
 
 (* ============================================================ frames, by hand *)
 
@@ -1486,9 +1447,7 @@ let () =
   Printf.printf "  sandbox: %s\n%!" root_dir;
   let run name f =
     try f () with
-    | e ->
-      incr failures;
-      Printf.printf "FAIL %s -- %s\n%!" name (Printexc.to_string e)
+    | e -> check (name ^ " -- " ^ Printexc.to_string e) false
   in
   run "chunker" chunker;
   run "manifest" manifest;
@@ -1503,10 +1462,5 @@ let () =
   run "sharing" sharing;
   rm_rf root_dir;
   print_endline "";
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  Printf.printf "   %d checks\n" !checks;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;

@@ -28,18 +28,12 @@
          one.
      T*  `truncate_to` refuses below `pack_end`, and the host-limit refusal (PK5).
 
-   Everything runs in a fresh directory under $E4_PACK_TMP (default: the system temp dir),
-   removed at the end.  Exit code 0 iff every check passed. *)
+   Everything runs in a fresh directory under the system's temporary directory (TMPDIR; made by
+   E4_check.temp_dir), removed at the end.  Exit code 0 iff every check passed. *)
 
 open Effect4_engine_cas
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s  %s\n%!" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check ~gap:Two
 let note fmt = Printf.printf ("NOTE  " ^^ fmt ^^ "\n%!")
 
 (* A fixed linear congruential generator: the run is reproducible. *)
@@ -55,42 +49,11 @@ let rand_bytes n = String.init n (fun _ -> Char.chr (rand 256))
 
 (* ============================================================ the sandbox *)
 
-let root =
-  let base =
-    try Sys.getenv "E4_PACK_TMP" with
-    | Not_found -> Filename.get_temp_dir_name ()
-  in
-  let d =
-    Filename.concat
-      base
-      (Printf.sprintf "e4pack-%d-%d" (Unix.getpid ()) (int_of_float (Unix.time ())))
-  in
-  (try Unix.mkdir base 0o755 with
-   | Unix.Unix_error _ -> ());
-  Unix.mkdir d 0o755;
-  d
-;;
-
-let counter = ref 0
-
-let fresh_dir () =
-  incr counter;
-  let d = Filename.concat root (Printf.sprintf "s%03d" !counter) in
-  Unix.mkdir d 0o755;
-  d
-;;
-
-let rec rm_rf p =
-  match Unix.lstat p with
-  | exception Unix.Unix_error _ -> ()
-  | { Unix.st_kind = Unix.S_DIR; _ } ->
-    Array.iter (fun n -> rm_rf (Filename.concat p n)) (Sys.readdir p);
-    (try Unix.rmdir p with
-     | Unix.Unix_error _ -> ())
-  | _ ->
-    (try Sys.remove p with
-     | Sys_error _ -> ())
-;;
+(* The test's scratch root, a fresh directory under the system's temporary directory
+   (E4_check.temp_dir); each store gets a fresh directory below it. *)
+let root = E4_check.temp_dir "e4pack-"
+let fresh_dir () = E4_check.temp_dir ~under:root "s"
+let rm_rf = E4_check.remove_tree
 
 let read_file path =
   let ic = open_in_bin path in
@@ -1087,9 +1050,5 @@ let () =
   test_truncate_to ();
   test_property_sweep ();
   rm_rf root;
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

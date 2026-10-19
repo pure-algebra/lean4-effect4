@@ -39,15 +39,7 @@
 
 open Effect4_engine
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check
 let note s = Printf.printf "  NOTE %s\n" s
 
 (* ==================================================================== the third engine *)
@@ -652,8 +644,5 @@ let () =
     (tot (fun t -> t.t_profile_refusals))
     (tot (fun t -> t.t_errors))
     (snd tg +. snd tt +. snd tl);
-  if !failures = 0
-  then Printf.printf "== ALL PASS: 0 failure(s) == (%d checks)\n" !checks
-  else Printf.printf "== FAILED: %d failure(s) in %d checks ==\n" !failures !checks;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;

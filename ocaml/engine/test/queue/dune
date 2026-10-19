@@ -12,4 +12,4 @@
  (modules test_queue)
  (deps
   (glob_files *.txt))
- (libraries effect4_engine effect4_eff effect4_gen e4_gen_instance))
+ (libraries e4_check effect4_engine effect4_eff effect4_gen e4_gen_instance))

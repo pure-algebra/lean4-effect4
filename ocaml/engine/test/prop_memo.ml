@@ -37,13 +37,7 @@ module _ : LAYERS = E4_memo_list
 module M = E4_memo
 module L = E4_memo_list
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [by construction: %s]\n" name why
 
 (* Java's 48-bit LCG (multiplier 25214903917, increment 11): its constants fit a 63-bit
@@ -354,9 +348,5 @@ let () =
     "MM6 the order difference is unobservable"
     "entryAt, updateEntry and deleteEntry are all BY KEY; no run-path reader iterates \
      entries (MemoWorld.entryAt (src/Effect4/Machine/Stores.lean))";
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

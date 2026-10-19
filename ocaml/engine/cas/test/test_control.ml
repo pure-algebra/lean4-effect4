@@ -5,30 +5,14 @@
 
 open Effect4_engine_cas
 
-let failures = ref 0
 let skips = ref 0
-
-let check name ok =
-  Printf.printf "%s  %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check ~gap:Two
 let note fmt = Printf.printf ("NOTE  " ^^ fmt ^^ "\n")
 
 (* ============================================================ scratch files *)
 
-let scratch_dir =
-  lazy
-    (let base =
-       try Sys.getenv "TMPDIR" with
-       | Not_found -> "/tmp"
-     in
-     let d = Filename.concat base (Printf.sprintf "e4-p3-control-%d" (Unix.getpid ())) in
-     (try Unix.mkdir d 0o700 with
-      | Unix.Unix_error _ -> ());
-     d)
-;;
-
+(* The test's scratch directory, under the system's temporary directory (E4_check.temp_dir). *)
+let scratch_dir = lazy (E4_check.temp_dir "e4-p3-control-")
 let scratch name = Filename.concat (Lazy.force scratch_dir) name
 
 let write_bytes path s =
@@ -51,13 +35,7 @@ let remove_if path =
     | Sys_error _ -> ())
 ;;
 
-let cleanup_scratch () =
-  let d = Lazy.force scratch_dir in
-  (try Array.iter (fun f -> remove_if (Filename.concat d f)) (Sys.readdir d) with
-   | Sys_error _ -> ());
-  try Unix.rmdir d with
-  | Unix.Unix_error _ -> ()
-;;
+let cleanup_scratch () = E4_check.remove_tree (Lazy.force scratch_dir)
 
 (* ============================================================ payload fixtures *)
 
@@ -1052,9 +1030,5 @@ let () =
   test_goldens ();
   cleanup_scratch ();
   if !skips > 0 then Printf.printf "== %d skipped ==\n" !skips;
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

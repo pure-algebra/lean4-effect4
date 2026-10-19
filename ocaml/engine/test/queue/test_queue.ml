@@ -39,14 +39,7 @@
 
 open Effect4_engine
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
+let check = E4_check.check
 
 (* ================================================================ the fixture's text *)
 
@@ -247,6 +240,5 @@ let () =
            (d.program <> r.program)
        | None -> check ("defs " ^ d.name ^ ": Q5 the inline run exists") false)
     defs;
-  Printf.printf "test_queue: %d checks, %d failures\n" !checks !failures;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;

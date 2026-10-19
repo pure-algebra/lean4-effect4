@@ -41,13 +41,7 @@ module _ : FIBERS = E4_fibers_view
 
 [@@@warning "+32"]
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [%s]\n" name why
 
 (* Java's 48-bit LCG, as every other property suite in this directory. *)
@@ -450,9 +444,5 @@ let () =
   argue
     "FV9 completed is O(1), set O(log n) (+O(C) when an exit changes), map O(N)"
     "by construction; the engine numbers are in the lane G3 receipt";
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

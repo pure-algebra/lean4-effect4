@@ -9,7 +9,7 @@
 (test
  (name test_host)
  (modules test_host)
- (libraries effect4_engine threads.posix))
+ (libraries e4_check effect4_engine threads.posix))
 
 ; lane Q1 — the dispatcher.
 ;   test_buckets  E4_buckets over BOTH carriers, the 100 000-op differential against
@@ -22,7 +22,7 @@
 (test
  (name test_buckets)
  (modules test_buckets dispatcher_ref)
- (libraries effect4_engine unix))
+ (libraries e4_check effect4_engine unix))
 
 ; lane C — the persistent state carriers, each against the Lean carrier written out in the
 ; test (its List operations) on a fixed-LCG operation sequence.
@@ -37,17 +37,17 @@
 (test
  (name prop_table)
  (modules prop_table)
- (libraries effect4_engine))
+ (libraries e4_check effect4_engine))
 
 (test
  (name prop_trace)
  (modules prop_trace)
- (libraries effect4_engine))
+ (libraries e4_check effect4_engine))
 
 (test
  (name prop_memo)
  (modules prop_memo)
- (libraries effect4_engine e4_reference))
+ (libraries e4_check effect4_engine e4_reference))
 
 (executable
  (name bench_carriers)
@@ -67,7 +67,7 @@
 (test
  (name test_sched)
  (modules test_sched)
- (libraries effect4_engine unix threads.posix))
+ (libraries e4_check effect4_engine unix threads.posix))
 
 ; lane D — the drive loop: the generated engine's instance against the generated machine, and
 ; the first numbers. The program type is one (ocaml/eff/eff_types.ml, the LCNF route's), so no
@@ -82,6 +82,7 @@
  (name test_engine)
  (modules test_engine)
  (libraries
+  e4_check
   effect4_engine
   effect4_eff
   effect4_gen
@@ -98,7 +99,7 @@
 (test
  (name test_serve)
  (modules test_serve)
- (libraries effect4_engine effect4_eff effect4_clock))
+ (libraries e4_check effect4_engine effect4_eff effect4_clock))
 
 ; lane X — the differential over every corpus, two engines.
 ;   test_diff   `Corpora` (the 37 byte goldens, the truth corpus's Lean-cut wire goldens,
@@ -150,6 +151,7 @@
  (name test_diff)
  (modules test_diff)
  (libraries
+  e4_check
   effect4_engine
   effect4_eff
   effect4_gen
@@ -174,12 +176,12 @@
 (test
  (name test_log)
  (modules test_log)
- (libraries effect4_engine))
+ (libraries e4_check effect4_engine))
 
 (test
  (name test_query)
  (modules test_query)
- (libraries effect4_engine effect4_eff e4_reference))
+ (libraries e4_check effect4_engine effect4_eff e4_reference))
 
 (executable
  (name bench_query)
@@ -196,7 +198,7 @@
 (test
  (name test_replay_steps)
  (modules test_replay_steps)
- (libraries effect4_engine effect4_eff))
+ (libraries e4_check effect4_engine effect4_eff))
 
 ;   bench_trace  lane W item 2: `E4_trace` over `Lcnf_array` — the viewer's walk (nth_opt at
 ;                every index of a 6 003-row trace), emit throughput, and to_list.  An
@@ -219,7 +221,7 @@
 (test
  (name prop_point)
  (modules prop_point)
- (libraries effect4_engine))
+ (libraries e4_check effect4_engine))
 
 ; lane B — the bench matrix: one receipt with every number the effort claimed, re-measured
 ; on the landed engine (docs/research/2026-09-08-engine-bench.md).
@@ -256,7 +258,7 @@
 (test
  (name prop_fibers_view)
  (modules prop_fibers_view)
- (libraries effect4_engine))
+ (libraries e4_check effect4_engine))
 
 (test
  (name test_stable_step)

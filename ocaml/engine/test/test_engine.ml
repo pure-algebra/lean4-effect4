@@ -47,20 +47,8 @@ module En_fast = E4_engine.Fast
    baseline over Lean's own lists. *)
 module En_gen = E4_engine.Make (Api_gen_inst)
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
-let fail_note name why =
-  incr checks;
-  Printf.printf "FAIL %s -- %s\n" name why;
-  incr failures
-;;
+let check = E4_check.check
+let fail_note name why = check (name ^ " -- " ^ why) false
 
 (* The two run-time holes of the seam (lane G receipt N2). *)
 let extern_holes = ref 0
@@ -886,10 +874,5 @@ let () =
     (!extern_holes = 0);
   bench ();
   print_endline "";
-  Printf.printf
-    "== %s: %d failure(s) in %d checks ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures
-    !checks;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

@@ -39,14 +39,7 @@
 
 open Effect4_engine
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
+let check = E4_check.check
 
 (* ================================================================ the fixture's text *)
 
@@ -309,6 +302,5 @@ let () =
           (fast.root <> Some b.exit_text && slow.root <> Some b.exit_text)
       | _ -> check "S4 the first run decodes" false)
    | _ -> check "S4 three runs to compare" false);
-  Printf.printf "test_semaphore: %d checks, %d failures\n" !checks !failures;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;

@@ -13,4 +13,4 @@
  (modules test_scenarios)
  (deps
   (glob_files *.txt))
- (libraries effect4_engine effect4_eff))
+ (libraries e4_check effect4_engine effect4_eff))

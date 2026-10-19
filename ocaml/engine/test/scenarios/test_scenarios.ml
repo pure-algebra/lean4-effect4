@@ -53,14 +53,7 @@
 open Effect4_engine
 open Eff_types
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
+let check = E4_check.check
 
 (* ================================================================ the fixture's text *)
 
@@ -489,6 +482,5 @@ let () =
          runs)
     files;
   Printf.printf "%d positions compared on the engine's instance\n" !positions;
-  Printf.printf "%d checks, %d failures\n" !checks !failures;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;

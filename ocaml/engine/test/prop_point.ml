@@ -56,13 +56,7 @@ module _ : PENV = E4_env
 module P = E4_ppath
 module V = E4_env
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [by construction: %s]\n" name why
 
 (* Java's 48-bit LCG, as in lane C's property tests: the constants fit a 63-bit OCaml int
@@ -379,9 +373,5 @@ let () =
   pe5 ();
   pe6 ();
   pe7 ();
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;

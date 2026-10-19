@@ -89,13 +89,7 @@ module L = struct
   ;;
 end
 
-let failures = ref 0
-
-let check name ok =
-  Printf.printf "%s %s\n" (if ok then "PASS" else "FAIL") name;
-  if not ok then incr failures
-;;
-
+let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [by construction: %s]\n" name why
 
 (* ------------------------------------------------------------------ the LCG.
@@ -449,9 +443,5 @@ let () =
     "'a t is a record of an int and an immutable list or Map; no mutable field anywhere";
   r6 ();
   tl2 ();
-  Printf.printf
-    "== %s: %d failure(s) ==\n"
-    (if !failures = 0 then "ALL PASS" else "FAILED")
-    !failures;
-  exit (if !failures = 0 then 0 else 1)
+  E4_check.finish ()
 ;;

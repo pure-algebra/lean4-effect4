@@ -47,18 +47,7 @@
 open Eff_types
 module E4_engine = Effect4_engine.E4_engine
 
-let failures = ref 0
-let checks = ref 0
-
-let check name ok =
-  incr checks;
-  if ok
-  then Printf.printf "PASS %s\n" name
-  else (
-    incr failures;
-    Printf.printf "FAIL %s\n" name)
-;;
-
+let check = E4_check.check
 let nat n = Term.Lit (Lit.Nat n)
 let add a b = Term.App ("add", Terms.Cons (a, Terms.Cons (b, Terms.Nil)))
 
@@ -384,6 +373,5 @@ module Stuck_fast = Stuck_checks (E4_engine.Fast)
 let () =
   Fast.run ();
   Stuck_fast.run ();
-  Printf.printf "%d checks, %d failures\n" !checks !failures;
-  if !failures > 0 then exit 1
+  E4_check.finish ()
 ;;
