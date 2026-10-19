@@ -16,7 +16,8 @@ directory made the open truncate a committed segment (`4d69afc18`).
 
 - Base: `fb3a1daa0`. During the seat the coordinator committed `0bf9c986d` and `bea584f1b`,
   research notes only. My first commit sits on `bea584f1b`.
-- Head: the commit that adds this receipt, on top of `9b0386c1e`.
+- Head: the last commit that touches this receipt. The coordinator's `43d45df6f`, research
+  notes only, landed between `9b0386c1e` and the receipt.
 - Evidence kind: finite runs on this Mac (Darwin 25.2, user 501), host-only. Nothing here is
   proved, and no power-loss experiment was run.
 
@@ -208,6 +209,12 @@ with today's equality rule would refuse O2's healthy stores in one more place.
 - `E4_wal.segment_files` reads a failed `Sys.readdir` as no segments, the shape `4d69afc18`
   fixed in the pack. `open_` would then create segment 0 with `O_APPEND`, and an existing segment
   would gain a second head.
+- Data for the note's §5 condition, from the benches above, on this host only:
+  - a one-node `E4_disk` commit costs 0.27 ms (`bench_commit`, the mean of the last 100);
+  - a one-row log commit costs 0.021 ms (`bench_wal`, 256 B rows, batch 1);
+  - a 512-row log commit costs 0.67 ms (`bench_wal`, 256 B rows, batch 512).
+- Both fsync once per commit, and I assume macOS `fsync` does not flush the drive's cache. These
+  figures measure no run's journal rate, and `bench_commit` tries no multi-node transaction.
 
 **O4. Smaller items.**
 - `E4_cas.open_rw` keeps its own exception map, a second owner of the `Io` and `Store` arms.
