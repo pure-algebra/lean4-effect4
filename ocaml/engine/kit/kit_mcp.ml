@@ -398,5 +398,5 @@ let message server value =
 let line server input =
   match parse input with
   | Error why -> Some (J.to_string (failure `Null (-32700) why))
-  | Ok value -> Option.map J.to_string (message server value)
+  | Ok value -> Option.map (fun reply -> J.to_string reply) (message server value)
 ;;
