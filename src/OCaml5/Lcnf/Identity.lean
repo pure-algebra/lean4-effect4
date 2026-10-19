@@ -12,13 +12,15 @@ a node only when all five agree.
 | `lean` | the mono declaration the code is translated from; a specialisation is its own declaration (`f._at_.g.spec_N`) | the manifest's `lean` column |
 | `code` | that declaration's code, `DeclHash`'s hash of the whole mono `Decl` | the manifest's `declHash` column |
 | `profile` | the target profile: the carrier implementation the code is lowered against, `flat` or an extern table with its prelude | the manifest's identity line |
-| `owner` | the type owner: the unit that declares the types the code names, beside the program types' owner every unit opens | the manifest's identity line |
+| `owner` | the type owner: the unit that declares the types the code names, beside the program types' owner every unit opens; for a walk compiled in two scopes, the closure unit, whose names the tests unit keeps | the manifest's identity line |
 | `catalogue` | the builtin catalogue (`OCaml5.Lcnf.Builtins`): each row's constant and its OCaml form, hashed | the manifest's identity line |
 
-`OCaml5.Lcnf.Gen` writes one unit per recipe artifact by one walk of all its consumers' roots
-(`Export`'s consumers, the walk's phases), so the consumers of one unit share every node they
-reach, and its five parts agree by construction. It writes the unit's three shared parts as the
-first line of the unit's closure manifest (`identityLine`). `compareUnits` reads two manifests and
+`OCaml5.Lcnf.Gen` makes each recipe artifact by one walk of its own roots and then all its
+consumers' roots (`Export`'s consumers, the walk's phases), so the consumers share every node
+they reach, and its five parts agree by construction. The walk may be compiled in two scopes
+(`Gen`'s `--closure` and `--tests`): the closure unit and a tests unit that includes it, with one
+naming of every type. The manifest's first line states the shared parts (`identityLine`), with
+the closure unit as the type owner, and its `unit` column says which unit compiles each row. `compareUnits` reads two manifests and
 says, for each declaration both hold, whether the two rows are one node and otherwise which part
 differs first: what a merge of the two units would have to change. `lake exe lcnfgen --identity`
 prints that comparison.

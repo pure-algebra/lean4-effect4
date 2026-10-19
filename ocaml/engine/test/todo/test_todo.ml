@@ -105,7 +105,7 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
          ( ( List.map
                (fun (c : H.call) ->
                   ({ Todo_gen.row = c.row; request = c.request; completion = c.answer }
-                   : Todo_gen.call))
+                   : Todo_gen.tools_run_checks_call))
                s.calls
            , E.root_exit_of s.engine )
          , lane ))
@@ -385,7 +385,7 @@ let () =
                         ; request = c.request
                         ; completion = c.answer
                         }
-                        : Todo_gen.call))
+                        : Todo_gen.tools_run_checks_call))
                     calls
                 , exit )
               , st ))

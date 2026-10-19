@@ -26,13 +26,16 @@ option is a `public` root, and `--linkage`, `--internal` and `--coverage` take t
 classes, comma-joined. The interface exports the public and linkage roots. `--consumer <out>
 <roots>`, repeatable, adds a consumer: the artifact's closure takes the consumer's roots in a
 later phase of its one walk, its interface exports them, and the run writes the consumer's
-facade at `<out>` (`OCaml5.Lcnf.Gen`).
+facade at `<out>` (`OCaml5.Lcnf.Gen`). `--closure <path>` compiles the walk's own nodes at
+`<path>` and makes `--out` a facade over it, whose interface keeps the exported roots and seals
+the packages; `--tests <path>` compiles the nodes only the consumers reach in a unit that includes
+the closure, and the consumers' interfaces are that unit's.
 
 With `--identity <manifest> …` it reads closure manifests and prints, for each pair, how many
 declarations both hold, how many of them are one node, and which part of the identity makes the
 rest two nodes (`OCaml5.Lcnf.Identity`). It writes nothing.
 
-    lake exe lcnfgen --identity ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-lanes_gen.tsv
+    lake exe lcnfgen --identity ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv
 
 ## The seam (`--externs`, `--prelude`)
 

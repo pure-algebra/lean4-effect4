@@ -14,7 +14,7 @@ a total function of the syntax alone. Two properties follow, and they are the wh
 * **Equal syntax gives equal bytes.** `render` is a `Module → String`; there is no configuration,
   no environment, no ordering by a hash, and no wall clock. Two runs of the same generator on the
   same day and on different machines produce the same file, which is what makes a byte diff
-  against a committed artefact meaningful.
+  against a committed artifact meaningful.
 * **Fixed layout.** Where a line break goes is a property of the *form*, not of a width budget:
   a record or variant with `wideAt` or more members is one member per line, everything else is
   one line, and nested expressions are indented by their `ind` depth. There is no reflowing pass,
@@ -336,7 +336,7 @@ def render (m : Module) : String :=
 /-! ## Checks
 
 The rendering is checked by `#guard` here on the shapes whose bytes are pinned, by the
-regeneration of the LCNF group (no byte of a committed artefact moves), and by `ocamlopt` in
+regeneration of the LCNF group (no byte of a committed artifact moves), and by `ocamlopt` in
 `make check-ocaml`. Only the last can say the text is *OCaml*; the first two say it is the text
 this file is supposed to produce. -/
 

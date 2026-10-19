@@ -44,16 +44,14 @@ goldens stay as the typing's expected output.
 
 `make check-ocaml` from the repository root runs everything below together with the engine
 and seam checks, and writes the printed corpus the engine differential reads. By hand, from
-inside `ocaml/eff` (its own project root, so its `_build` does not contend with the
-`ocaml/` workspace):
+the estate's one dune project, `ocaml/`:
 
 ```
 eval $(opam env --switch=effect4 --set-switch)
-cd ocaml/eff && dune build --root . && dune test --root .
+cd ocaml && dune build eff && dune test eff
 ```
 
-or `cd ocaml && dune build eff && dune test eff` from the workspace root. On Windows the
-same through WSL: `wsl -e bash ocaml/eff/tools/test.sh`.
+On Windows the same through WSL: `wsl -e bash ocaml/eff/tools/test.sh`.
 
 ## Regenerating
 

@@ -26,7 +26,18 @@ An artifact may serve several consumers (`--consumer`, the recipe's `consumers`)
 one walk of every consumer's roots, one phase per consumer in the recipe's order, and each
 consumer gets a facade, a unit of its own that includes the artifact
 (`include Lanes_gen`) and whose inferred interface keeps that consumer's roots and the types they
-name. The test lanes are the consumers of one artifact, `ocaml/engine/test/lanes/lanes_gen.ml`.
+name.
+
+**Scopes (D1).** With `--closure`, the walk's own nodes (those the artifact's own roots reach,
+the walk's first phase) are compiled once, in the closure unit, and `--out` is a facade over it
+(`include Closure_gen`) whose interface keeps the artifact's public and linkage roots and seals
+its packages. With `--tests`, the nodes only the consumers' roots reach are compiled in a second
+unit that includes the closure, and the consumers' facades include that unit. One walk names
+every type once: the closure's types first, as the artifact alone names them, then the tests
+unit's types, which take no name of the closure's. So each declaration is lowered and compiled
+once. The test lanes are the consumers of the api artifact: the closure is
+`ocaml/gen/closure_gen.ml`, a package-private library of `effect4_gen`, and the tests unit is
+`ocaml/engine/test/lanes/lanes_gen.ml`, which nothing installs.
 
 **Depends on.** `OCaml5.Lcnf.Translate`, `OCaml5.Lcnf.Types`, `OCaml5.Lcnf.Externs`, `OCaml5.Ml`,
 `OCaml5.Lcnf.Index` and `OCaml5.Lcnf.Census` (the mono index and the construct census of the manifest),
@@ -58,6 +69,14 @@ names' manifest and the facade), `OCaml5.Lcnf.Identity` (the manifest's identity
   (`Identity.identityLine`) — *by construction*. Each consumer's facade includes the artifact and
   exports that consumer's roots alone — *tested* by the lanes' dune tests and by
   `Ml.checkModule` on the facade.
+* **Each node is compiled once (scopes).** With `--closure` and `--tests`, the closure unit
+  emits the walk's first phase and the tests unit the later phases, so no declaration is emitted
+  twice; a name both units would bind is refused, since the tests unit includes the closure; the
+  tests unit declares no type the closure declares, and a type the closure holds as a placeholder
+  that a tests node constructs or destructs is refused; the manifest's `unit` column names where
+  each declaration is compiled — *by construction*; *tested* by `Ml.checkModule` on each unit,
+  `ocamlopt` before publication and the install lane's red controls, which keep the closure
+  unbound outside `ocaml/`.
 -/
 
 namespace OCaml5.Lcnf.Gen
@@ -109,10 +128,18 @@ structure Args where
   /-- `--consumer <out> <roots>`, repeatable: a consumer's facade, written at `out`, and the
   `linkage` roots it re-exports from this artifact, comma-joined. -/
   consumers : Array (String × Array Name) := #[]
+  /-- `--closure <path>`: the unit that compiles the walk's own nodes; `--out` is then a facade
+  over it, whose interface keeps the artifact's exported roots and seals its packages. -/
+  closure : Option String := none
+  /-- `--tests <path>`: the unit that compiles the nodes only the consumers' roots reach. It
+  includes the closure unit, and the consumers' facades include it. -/
+  tests : Option String := none
 
 /-- The arguments of one artifact's command. Every word that is no option is a root. -/
 def Args.parse : List String → Args → Args
   | "--out" :: p :: rest, a => Args.parse rest { a with out := p }
+  | "--closure" :: p :: rest, a => Args.parse rest { a with closure := some p }
+  | "--tests" :: p :: rest, a => Args.parse rest { a with tests := some p }
   | "--consumer" :: p :: ns :: rest, a =>
     Args.parse rest { a with consumers := a.consumers.push (p, ((ns.splitOn ",").map String.toName).toArray) }
   | "--types" :: ts :: rest, a =>
@@ -147,9 +174,15 @@ def Args.consumerRoots (a : Args) : Array Name :=
   a.consumers.foldl (fun acc (_, ns) => ns.foldl (fun acc n => if acc.contains n then acc else acc.push n) acc) #[]
 
 /-- The roots an artifact's interface exports: the `public` roots, then the `linkage` roots, then
-its consumers' roots, which their facades re-export. -/
+its consumers' roots, which their facades re-export. With a tests unit (`--tests`) the consumers'
+roots are that unit's, so `--out`'s interface exports the first two alone. -/
 def Args.exported (a : Args) : Array Name :=
-  a.roots ++ a.linkage ++ a.consumerRoots.filter (fun n => !(a.roots ++ a.linkage).contains n)
+  if a.tests.isSome then a.roots ++ a.linkage
+  else a.roots ++ a.linkage ++ a.consumerRoots.filter (fun n => !(a.roots ++ a.linkage).contains n)
+
+/-- Every root of the artifact, each once: those `--out`'s interface exports, then its consumers'. -/
+def Args.allRoots (a : Args) : Array Name :=
+  a.exported ++ a.consumerRoots.filter (fun n => !a.exported.contains n)
 
 /-- The artifact's own roots, in the order the closure walk starts from them: `public`, `linkage`,
 `internal`, then `coverage` (`Export.ExportClass.all`). Its consumers' roots follow in phases. -/
@@ -165,7 +198,8 @@ def Args.hasRoots (a : Args) : Bool := !a.translated.isEmpty || !a.consumers.isE
 def commandOf (argv : List String) : String :=
   "lake exe lcnfgen " ++ " ".intercalate argv
 
-/-- One recipe entry's argv, in the recipe's fixed order: `--out`, one `--import` per module,
+/-- One recipe entry's argv, in the recipe's fixed order: `--out`, the scopes' units
+(`--closure`, `--tests`, when the entry names them), one `--import` per module,
 `--cap`, `--types` (comma-joined, when any), `--modules` (when the entry is the program types'
 owner, `"modules": true`), `--externs`, `--prelude`, `--open` and `--open-types` (when the entry
 opens another artifact's module), the public face (`--facade`, `--public-manifest` and
@@ -202,12 +236,13 @@ def argvOf (plan : Export.CheckedPlan) (face : List String) (typesOf : String �
     | .error _ => pure []
     | .ok spec => do
       let m ← spec.getObjValAs? String "module"
-      let from_ ← spec.getObjValAs? String "artefact"
+      let from_ ← spec.getObjValAs? String "artifact"
       let some ts := typesOf from_
-        | throw s!"{out} opens the module of {from_}, which is no artefact of the recipe"
+        | throw s!"{out} opens the module of {from_}, which is no artifact of the recipe"
       pure ["--open", m, "--open-types", ",".intercalate ts]
   let modules := (entry.getObjValAs? Bool "modules").toOption.getD false
-  return ["--out", out] ++ imports.flatMap (fun m => ["--import", m]) ++ ["--cap", toString cap]
+  return ["--out", out] ++ flag "closure" ++ flag "tests"
+    ++ imports.flatMap (fun m => ["--import", m]) ++ ["--cap", toString cap]
     ++ (if types.isEmpty then [] else ["--types", ",".intercalate types])
     ++ (if modules then ["--modules"] else [])
     ++ (if nominalRoots.isEmpty then [] else ["--nominal-roots", ",".intercalate nominalRoots])
@@ -241,7 +276,7 @@ def recipeArgvs (recipe : Json) : Except String (Array (List String)) := do
         throw s!"the facade {out} is no module {plan.plan.facadeModule}"
       pure ["--facade", out, "--public-manifest", manifest, "--public-version", toString version]
     | _, _, _ => pure []
-  let entries ← recipe.getObjValAs? (Array Json) "artefacts"
+  let entries ← recipe.getObjValAs? (Array Json) "artifacts"
   let typesOf (out : String) : Option (List String) :=
     entries.findSome? fun e =>
       if (e.getObjValAs? String "out").toOption == some out then
@@ -252,7 +287,7 @@ def recipeArgvs (recipe : Json) : Except String (Array (List String)) := do
 /-- The `--out` paths of the recipe's artifacts, whose closure manifests are data in
 `GENERATED_PATHS` at `ocaml/gen/closure-<stem>.tsv` (decisions row 70). -/
 def recipeOutsOf (recipe : Json) : List String :=
-  match recipe.getObjVal? "artefacts" with
+  match recipe.getObjVal? "artifacts" with
   | .ok (.arr rows) => rows.toList.filterMap fun r => (r.getObjValAs? String "out").toOption
   | _ => []
 
@@ -295,10 +330,11 @@ def reachedBy (ds : Array Translated) (groups : List (String × Array Name)) :
 /-- One row of the closure manifest: the Lean constant, the OCaml name it became, whether the
 emitted binding is recursive, the twenty-six mono-LCNF construct counts of its body
 (`constructs`, in that order), `DeclHash`'s hash of the whole `Decl` (the identity of the *code*,
-stable across runs of one build), its user-facing name, whether the artifact's interface
-exports it as a root (`exported`: a `public`, `linkage` or consumer's root), and the consumers
-that reach it (`reachedBy`), comma-joined. The manifest's first line states what every row of the
-unit shares (`Identity.identityLine`): the type owner, the target profile and the catalogue.
+stable across runs of one build), its user-facing name, whether it is a root of the artifact
+(`roots`: a `public`, `linkage` or consumer's root), the consumers that reach it (`reachedBy`),
+comma-joined, and the unit that compiles it (the closure unit, or the tests unit for a node only
+the consumers reach). The manifest's first line states what every row of the walk shares
+(`Identity.identityLine`): the type owner, the target profile and the catalogue.
 
 The mono declaration is read the way `translateClosure` reads it, out of `monoExt`'s module
 entries (`persistedMonoIndex`), never through `getMonoDecl?`: the module system's
@@ -306,15 +342,16 @@ export filter makes the two disagree (`tools/Conform/Lcnf/Validity.lean`, the se
 `monoExt`'s local state). A declaration the closure translated and the index cannot find is
 fatal, not a blank row. -/
 private def manifestRow (env : Environment) (mono : MonoIndex)
-    (exported : Array Name) (t : Translated) (consumers : List String) : MetaM String := do
+    (roots : Array Name) (t : Translated) (consumers : List String) (unit : String) :
+    MetaM String := do
   let some d := mono.findIn? env t.leanName
     | throwError s!"closure manifest: no mono declaration for {t.leanName}"
   let census := Census.ofDecl {} d
   return "\t".intercalate
     ([toString t.leanName, t.ocamlName, toString t.recursive]
       ++ constructs.map (fun k => toString (census.get k))
-      ++ [toString (hash d), toString t.userName, toString (exported.contains t.userName),
-          ",".intercalate consumers])
+      ++ [toString (hash d), toString t.userName, toString (roots.contains t.userName),
+          ",".intercalate consumers, unit])
 
 /-- A public root's original type after proof and type parameters erase. Unlike mono types,
 this type keeps the package names that an OCaml interface makes abstract. An unspelled binder
@@ -406,6 +443,14 @@ def run (argv : List String) (recipeOuts : List String)
   let args := Args.parse argv {}
   if args.out.isEmpty || args.imports.isEmpty then
     throwError "LcnfGen: `--out <path>` and at least one `--import <module>` are required"
+  -- the scopes: the tests unit includes the closure unit and holds the consumers' nodes, and a
+  -- functor (`--externs`) or the types' owner (`--modules`) keeps one unit
+  if args.tests.isSome && args.closure.isNone then
+    throwError "LcnfGen: `--tests` includes the closure unit, so it needs `--closure`"
+  if args.tests.isSome && args.consumers.isEmpty then
+    throwError "LcnfGen: `--tests` holds the nodes only consumers reach, so it needs a `--consumer`"
+  if args.closure.isSome && (args.externs.isSome || args.modules) then
+    throwError "LcnfGen: `--closure` splits a flat artifact; `--externs` and `--modules` keep one unit"
   for root in args.nominalRoots do
     unless args.exported.contains root do
       throwError s!"nominal root {root}: it is not an exported root (public or linkage)"
@@ -448,15 +493,32 @@ def run (argv : List String) (recipeOuts : List String)
   let t1 ← IO.monoNanosNow
   let mut closure := closure0
   let (_, nominalRefs) ← nominalRootTypes ex tn args.nominalRoots
-  let mut gen ← generate (closure.realTypes ++ args.types ++ args.abstractTypes ++ nominalRefs) closure.mentioned tn ex provided
+  -- The emission scopes (`--tests`): the walk's own nodes, its first phase, and the nodes only the
+  -- consumers reach, its later phases. The closure's types are named as the artifact alone names
+  -- them. The tests unit's types come after, with every closure type provided, so a tests type
+  -- that takes a closure type's name is a collision, renamed as any other.
+  let ownCount (c : Closure) : Nat := if args.tests.isSome then c.ownCount else c.decls.size
+  let scopes (c : Closure) (tn : TypeNames) : MetaM (Generated × Generated) := do
+    let (ownReal, ownNamed) := typesOfDecls (c.decls.extract 0 (ownCount c))
+    let own ← generate (ownReal ++ args.types ++ args.abstractTypes ++ nominalRefs) ownNamed tn ex provided
+    if args.tests.isNone then return (own, {})
+    let (testReal, testNamed) := typesOfDecls (c.decls.extract (ownCount c) c.decls.size)
+    let declared := own.entries.foldl (fun s (n, _, _) => s.insert n) provided
+    return (own, ← generate testReal testNamed tn ex declared)
+  let (gen0, testGen0) ← scopes closure tn
+  let mut gen := gen0
+  let mut testGen := testGen0
   let t2 ← IO.monoNanosNow
   let mut renamed : Array (String × Name × Name) := #[]
   for _ in [:4] do
-    if gen.collisions.isEmpty then break
-    renamed := renamed ++ gen.collisions
-    for (_, _, n) in gen.collisions do tn := { tn with renamed := tn.renamed.insert n (fullTypeName n) }
+    let collisions := gen.collisions ++ testGen.collisions
+    if collisions.isEmpty then break
+    renamed := renamed ++ collisions
+    for (_, _, n) in collisions do tn := { tn with renamed := tn.renamed.insert n (fullTypeName n) }
     closure ← retranslate closure tn ex
-    gen ← generate (closure.realTypes ++ args.types ++ args.abstractTypes ++ nominalRefs) closure.mentioned tn ex provided
+    let (g, tg) ← scopes closure tn
+    gen := g
+    testGen := tg
   -- the owner: every type of its closure at its owner, one module each, as an opening artifact
   -- reads them (`generateInFull`)
   if args.modules then
@@ -467,9 +529,19 @@ def run (argv : List String) (recipeOuts : List String)
   let header := "GENERATED by OCaml5.Lcnf (src/OCaml5/Lcnf/*.lean) from the mono-phase LCNF "
     ++ "of " ++ ", ".intercalate (args.imports.toList.map toString)
     ++ ", Lean " ++ Lean.versionString ++ ". Do not edit. Regenerate with:\n   " ++ commandOf argv
-  let emitted ← match emit closure.decls with
+  let own := closure.decls.extract 0 (ownCount closure)
+  let tests := closure.decls.extract (ownCount closure) closure.decls.size
+  let emitted ← match emit own with
     | .ok items => pure items
     | .error message => throwError message
+  let testEmitted ← match emit tests with
+    | .ok items => pure items
+    | .error message => throwError message
+  -- one OCaml name per node across the scopes: the tests unit includes the closure, so a name
+  -- that both bound would shadow the closure's node there
+  if let .error message := emissionGroups closure.decls then
+    throwError s!"the closure and the tests unit: {message}"
+
   -- An artifact whose closure needs no type of its own (every type is the opened module's)
   -- declares no group: an empty `type` item is no OCaml. The owner declares one module per type.
   let typeItems : List Ml.Decl := if args.modules then gen.items tn else [gen.item, .blank]
@@ -495,8 +567,27 @@ def run (argv : List String) (recipeOuts : List String)
     else
       [.floatingAttrD "warning \"-27-30-32\"", .blank] ++ opened ++
       carrierSignatures ++ [.blank, .moduleD "Make" carrierParams body]
-  let modName := (System.FilePath.mk args.out).fileStem.getD "lcnf_gen"
-  let m : Ml.Module := { name := modName, header := some header, items := items }
+  -- the closure unit: `--closure` when the artifact names one, else `--out` itself
+  let closurePath := args.closure.getD args.out
+  let stem (path : String) : String := (System.FilePath.mk path).fileStem.getD "lcnf_gen"
+  let m : Ml.Module := { name := stem closurePath, header := some header, items := items }
+  let closureUnit := Export.unitOf closurePath
+  -- the facade over the closure (`--out`, with `--closure`) and the tests unit (`--tests`)
+  let facadeHeader := "GENERATED by OCaml5.Lcnf (src/OCaml5/Lcnf/Gen.lean): the facade over "
+    ++ closureUnit ++ ", the artifact's one compiled closure. Its interface keeps the artifact's "
+    ++ "public and linkage roots and seals its packages (ocaml/gen/roots.json). Do not edit. "
+    ++ "Regenerate with:\n   " ++ commandOf argv
+  let outModule : Option Ml.Module := args.closure.map fun _ =>
+    { name := stem args.out, header := some facadeHeader, items := [.includeD closureUnit] }
+  let testsHeader := "GENERATED by OCaml5.Lcnf (src/OCaml5/Lcnf/*.lean) from the mono-phase LCNF "
+    ++ "of " ++ ", ".intercalate (args.imports.toList.map toString)
+    ++ ", Lean " ++ Lean.versionString ++ ": the nodes only the consumers' roots reach, over "
+    ++ closureUnit ++ ", which it includes. Do not edit. Regenerate with:\n   " ++ commandOf argv
+  let testsModule : Option Ml.Module := args.tests.map fun path =>
+    { name := stem path, header := some testsHeader,
+      items := [.floatingAttrD "warning \"-27-30-32\"", .blank] ++ opened
+        ++ [.includeD closureUnit, .blank]
+        ++ (if testGen.decls.isEmpty then [] else [testGen.item, .blank]) ++ testEmitted }
   let t4 ← IO.monoNanosNow
   -- The closure as DATA (tooling plan 4.1): one manifest per artifact, all of them in
   -- `ocaml/gen/`, named after the artifact's own stem, so a declaration entering or leaving the
@@ -507,11 +598,12 @@ def run (argv : List String) (recipeOuts : List String)
   let monoIndex := persistedMonoIndex env
   let manifestPath := manifestPathFor args.out recipeOuts
   let unitModule := Export.unitOf args.out
+  let testsUnit := args.tests.map Export.unitOf
   let identity : Identity.UnitKey :=
-    { unit := unitModule, profile := Identity.profileOf args.externs args.prelude,
+    { unit := closureUnit, profile := Identity.profileOf args.externs args.prelude,
       catalogue := Identity.catalogue }
   let manifestHeader := "\t".intercalate
-    (["lean", "ocaml", "recursive"] ++ constructs ++ ["declHash", "user", "root", "consumers"])
+    (["lean", "ocaml", "recursive"] ++ constructs ++ ["declHash", "user", "root", "consumers", "unit"])
   -- who reaches each declaration: the artifact's interface, the public facade, each consumer
   let groups : List (String × Array Name) :=
     [(unitModule, args.exported)]
@@ -521,8 +613,11 @@ def run (argv : List String) (recipeOuts : List String)
       ++ args.consumers.toList.map fun (f, ns) => (Export.unitOf f, ns)
   let reached := reachedBy closure.decls groups
   let mut manifestRows : Array String := #[]
+  let mut index := 0
   for t in closure.decls, cs in reached do
-    manifestRows := manifestRows.push (← manifestRow env monoIndex args.exported t cs)
+    let compiledIn := if index < ownCount closure then closureUnit else testsUnit.getD closureUnit
+    manifestRows := manifestRows.push (← manifestRow env monoIndex args.allRoots t cs compiledIn)
+    index := index + 1
   let manifestText := String.intercalate "\n"
     (Identity.identityLine identity :: manifestHeader :: manifestRows.toList) ++ "\n"
   IO.println s!"closure: {closure.decls.size} of --cap {args.cap} \
@@ -539,8 +634,11 @@ def run (argv : List String) (recipeOuts : List String)
   IO.println s!"types as placeholders: {gen.placeholders}"
   IO.println s!"requested but not inductive: {gen.notInductive}"
   IO.println s!"field types not spelled: {gen.unknown}"
+  if let some u := testsUnit then
+    IO.println s!"{u}'s types in full: {testGen.full}; as abbreviations: {testGen.aliases}; \
+      as placeholders: {testGen.placeholders}"
   IO.println s!"type-name collisions renamed to their full path: {renamed}"
-  IO.println s!"type-name collisions left unresolved: {gen.collisions}"
+  IO.println s!"type-name collisions left unresolved: {gen.collisions ++ testGen.collisions}"
   -- A non-empty frontier means the artifact calls a declaration the cap stopped at: the
   -- emitted file names a function it does not define, and only `ocamlc` would say so. The
   -- headroom is printed above, so raising the artifact's `cap` in `ocaml/gen/roots.json` is
@@ -551,10 +649,16 @@ def run (argv : List String) (recipeOuts : List String)
     throwError s!"missing mono declarations (fatal): {closure.missing}"
   unless closure.problems.isEmpty do
     throwError s!"todos remaining in closure (fatal): {closure.problems}"
-  unless gen.collisions.isEmpty do
-    throwError s!"unresolved type-name collisions (fatal): {gen.collisions}"
-  unless gen.unknown.isEmpty do
-    throwError s!"unspelled field types (fatal): {gen.unknown}"
+  unless (gen.collisions ++ testGen.collisions).isEmpty do
+    throwError s!"unresolved type-name collisions (fatal): {gen.collisions ++ testGen.collisions}"
+  unless (gen.unknown ++ testGen.unknown).isEmpty do
+    throwError s!"unspelled field types (fatal): {gen.unknown ++ testGen.unknown}"
+  -- A type the closure declares as a placeholder cannot be declared again in full by the tests
+  -- unit, which includes the closure: a tests node that constructs or destructs one is refused.
+  let shallow := (typesOfDecls tests).1.filter gen.placeholders.contains
+  unless shallow.isEmpty do
+    throwError s!"the tests unit constructs or destructs types its closure declares as \
+      placeholders (fatal): {shallow}; request them in the artifact's `types`"
   -- The module's own well-formedness, FATAL (tooling plan 4.3), for every artifact. The opened
   -- unit's interface is its types, as its own artifact declares them: the `open` reads as a
   -- scope, and the value names past it are checked.
@@ -621,9 +725,50 @@ def run (argv : List String) (recipeOuts : List String)
     let some translated := closure.decls.find? (·.userName == root)
       | throwError s!"exported root {root}: no translated binding"
     rootNames := rootNames.push translated.ocamlName
-  let interfaceData := Json.mkObj [
+  -- With `--closure`, `--out`'s interface is read off the closure's typed tree (`from`), so its
+  -- types are the closure's declarations, not aliases of them, and a sealed package seals.
+  let interfaceData := Json.mkObj ([
     ("roots", toJson rootNames),
     ("abstract", toJson (args.abstractTypes.map (typeNameIn tn)))]
+    ++ (match args.closure with | some path => [("from", Json.str path)] | none => []))
+  -- The closure's own interface holds what its two scopes call: `--out`'s roots, the consumers'
+  -- roots it compiles, and every node of it that a tests node names. Its types are all exported
+  -- and none sealed, so the tests unit builds the records the facade seals.
+  let ownNames : Std.HashSet String := own.foldl (fun s t => s.insert t.ocamlName) {}
+  let mut testRefs : Array String := #[]
+  for t in tests do
+    for n in t.freeRefs ++ t.callees.map globalName do
+      if ownNames.contains n && !testRefs.contains n then testRefs := testRefs.push n
+  let mut closureRoots : Array String := rootNames
+  for root in args.consumerRoots do
+    if let some translated := own.find? (·.userName == root) then
+      unless closureRoots.contains translated.ocamlName do
+        closureRoots := closureRoots.push translated.ocamlName
+  for n in testRefs do
+    unless closureRoots.contains n do closureRoots := closureRoots.push n
+  let closureData := Json.mkObj [("roots", toJson closureRoots), ("abstract", toJson ([] : List String))]
+  let closureInterface : Ml.Interface :=
+    { name := closureUnit, types := gen.decls.toList, values := closureRoots.toList }
+  -- The tests unit's interface keeps every consumer's root and every type it can name.
+  let mut testsRoots : Array String := #[]
+  for root in args.consumerRoots do
+    let some translated := closure.decls.find? (·.userName == root)
+      | throwError s!"consumer root {root}: no translated binding"
+    unless testsRoots.contains translated.ocamlName do testsRoots := testsRoots.push translated.ocamlName
+  let testsData := Json.mkObj [("roots", toJson testsRoots), ("abstract", toJson ([] : List String))]
+  -- The facade over the closure and the tests unit, each FATAL as the closure is: the facade
+  -- includes the closure; the tests unit opens the program types' owner and includes the closure,
+  -- so a type it declared again would be a duplicate, and each closure node it names must be one
+  -- the closure exports.
+  for scopeModule in outModule.toList ++ testsModule.toList do
+    let diags := Ml.checkModule scopeModule (units ++ [closureInterface])
+    unless diags.isEmpty do
+      throwError s!"Ml.checkModule of {scopeModule.name} (fatal): {diags.length} diagnostic(s)\n  " ++
+        "\n  ".intercalate (diags.map Ml.Diag.toLine)
+  if let some u := testsUnit then
+    IO.println s!"scopes: {own.size} declarations compiled in {closureUnit}, {tests.size} in {u}; \
+      {closureUnit}'s interface exports {closureRoots.size} values, {testRefs.size} of them for \
+      the nodes of {u}; Ml.checkModule: PASS"
   -- The public face (R6.2), built and checked before anything is written: the manifest of every
   -- public name, append-only against the committed one, and the facade module over it.
   let face ← match args.facade, args.publicManifest with
@@ -674,10 +819,16 @@ def run (argv : List String) (recipeOuts : List String)
     | none, none => pure none
     | _, _ => throwError "LcnfGen: `--facade` and `--public-manifest` come together"
   -- Each consumer's facade (R6.1, step 3), built and checked before anything is written: a unit
-  -- that includes this artifact, whose inferred interface keeps the consumer's roots and the types
-  -- they name (`"types": "reachable"`). It is a view of the one closure, never a copy of it.
+  -- that includes the unit that compiles its nodes (the tests unit, else the closure), whose
+  -- inferred interface keeps the consumer's roots and the types they name
+  -- (`"types": "reachable"`). It is a view of the one closure, never a copy of it.
+  let baseUnit := testsUnit.getD closureUnit
   let unitInterface : Ml.Interface :=
-    { name := unitModule, types := gen.decls.toList, values := closure.decls.toList.map (·.ocamlName) }
+    if testsUnit.isSome then
+      { name := baseUnit, types := gen.decls.toList ++ testGen.decls.toList,
+        values := closureRoots.toList ++ tests.toList.map (·.ocamlName) }
+    else
+      { name := baseUnit, types := gen.decls.toList, values := closure.decls.toList.map (·.ocamlName) }
   let mut facades : Array (String × String × Json) := #[]
   for (facadeOut, roots) in args.consumers do
     let consumer := Export.unitOf facadeOut
@@ -687,10 +838,10 @@ def run (argv : List String) (recipeOuts : List String)
         | throwError s!"consumer {consumer}: root {root}: no translated binding"
       names := names.push translated.ocamlName
     let comment := "GENERATED by OCaml5.Lcnf (src/OCaml5/Lcnf/Gen.lean): the facade of the consumer "
-      ++ consumer ++ " over " ++ unitModule ++ ", the one closure of its consumers. Its interface "
+      ++ consumer ++ " over " ++ baseUnit ++ ", which compiles its nodes. Its interface "
       ++ "keeps this consumer's roots (ocaml/gen/roots.json, `consumers`) and the types they name. "
       ++ "Do not edit. Regenerate with:\n   " ++ commandOf argv
-    let fm : Ml.Module := { name := consumer, header := some comment, items := [.includeD unitModule] }
+    let fm : Ml.Module := { name := consumer, header := some comment, items := [.includeD baseUnit] }
     let diags := Ml.checkModule fm [unitInterface]
     unless diags.isEmpty do
       throwError s!"Ml.checkModule of the facade {consumer} (fatal): {diags.length} diagnostic(s)\n  " ++
@@ -701,21 +852,31 @@ def run (argv : List String) (recipeOuts : List String)
   unless args.consumers.isEmpty do
     let facadeUnits := args.consumers.map (Export.unitOf ·.1)
     let sharedCount := (reached.filter fun cs => (cs.filter facadeUnits.contains).length ≥ 2).size
-    IO.println s!"consumers: {args.consumers.size} facades over {unitModule}; \
+    IO.println s!"consumers: {args.consumers.size} facades over {baseUnit}; \
       {sharedCount} of {closure.decls.size} declarations are reached by two consumers or more"
   let t6 ← IO.monoNanosNow
-  let text := Ml.render m
+  -- The units this run writes, each with its interface data: the closure (`--out` itself when
+  -- the artifact names no `--closure`), the facade over it, and the tests unit.
+  let written : List (String × String × Json) :=
+    (match outModule with
+      | some facadeModule =>
+        [(closurePath, Ml.render m, closureData), (args.out, Ml.render facadeModule, interfaceData)]
+      | none => [(args.out, Ml.render m, interfaceData)])
+    ++ (match args.tests, testsModule with
+        | some path, some testsMod => [(path, Ml.render testsMod, testsData)]
+        | _, _ => [])
   -- Staging changes destinations only. Commands and manifests retain their canonical paths.
   let destination (path : String) : System.FilePath :=
     match stage with | none => path | some directory => directory / path
-  if stage.isSome && (System.FilePath.mk args.out).isAbsolute then
+  if stage.isSome && written.any (fun (path, _, _) => (System.FilePath.mk path).isAbsolute) then
     throwError "LcnfGen: a staged artifact requires a relative output path"
-  let output := destination args.out
-  IO.FS.createDirAll (output.parent.getD ".")
-  IO.FS.writeFile output text
-  -- The staged producer reads this build artifact. It is never a committed interface snapshot.
-  if stage.isSome then
-    IO.FS.writeFile (output.toString ++ ".interface.json") (interfaceData.pretty ++ "\n")
+  for (path, text, data) in written do
+    let output := destination path
+    IO.FS.createDirAll (output.parent.getD ".")
+    IO.FS.writeFile output text
+    -- The staged producer reads this build artifact. It is never a committed interface snapshot.
+    if stage.isSome then
+      IO.FS.writeFile (output.toString ++ ".interface.json") (data.pretty ++ "\n")
   -- An artifact with no roots declares types only: it translates nothing, so it has no closure
   -- to record.
   if args.hasRoots then
@@ -740,7 +901,8 @@ def run (argv : List String) (recipeOuts : List String)
     IO.FS.writeFile publicOut publicText
     IO.println s!"wrote {facadePath} and {publicPath}"
   let t7 ← IO.monoNanosNow
-  IO.println s!"wrote {args.out} and {manifestPath}"
+  let writtenPaths := ", ".intercalate (written.map (·.1))
+  IO.println s!"wrote {writtenPaths} and {manifestPath}"
   IO.println s!"time (ms): closure {millis t0 t1}, types {millis t1 t2}, renaming {millis t2 t3}, \
     emission {millis t3 t4}, manifest {millis t4 t5}, checks {millis t5 t6}, \
     rendering {millis t6 t7}"
@@ -751,7 +913,7 @@ def run (argv : List String) (recipeOuts : List String)
 private def recipeWith (publicRoots : String) : Json :=
   (Json.parse ("{\"format\": \"effect4-lcnf-roots-v3\", \"facade\": {\"module\": \"Effect4\", \
     \"out\": \"ocaml/gen/facade/effect4.ml\", \"manifest\": \"ocaml/gen/public-names.tsv\", \
-    \"version\": 0}, \"artefacts\": [{\"out\": \"ocaml/gen/api_gen.ml\", \"import\": [\"Effect4.Api\"], \
+    \"version\": 0}, \"artifacts\": [{\"out\": \"ocaml/gen/api_gen.ml\", \"import\": [\"Effect4.Api\"], \
     \"cap\": 10, \"public\": [" ++ publicRoots ++ "], \"coverage\": [\"Effect4.Machine.drive\"]}]}")).toOption.getD Json.null
 
 -- green: the artifact that holds the public roots carries the public face in its command
@@ -770,7 +932,7 @@ private def recipeWith (publicRoots : String) : Json :=
 
 private def lanesRecipe : Json :=
   (Json.parse ("{\"format\": \"effect4-lcnf-roots-v3\", \"facade\": {\"module\": \"Effect4\"}, \
-    \"artefacts\": [{\"out\": \"t/lanes_gen.ml\", \"import\": [\"Test.A\"], \"cap\": 10, \
+    \"artifacts\": [{\"out\": \"t/lanes_gen.ml\", \"import\": [\"Test.A\"], \"cap\": 10, \
     \"consumers\": [{\"out\": \"t/todo/todo_gen.ml\", \"linkage\": [\"T.serve\", \"S.image\"]}, \
     {\"out\": \"t/modeled/modeled_gen.ml\", \"linkage\": [\"M.encode\", \"S.image\"]}]}]}")).toOption.getD Json.null
 
@@ -788,6 +950,33 @@ private def lanesRecipe : Json :=
       a.translated.isEmpty && a.hasRoots
         && a.phases == #[#[`T.serve, `S.image], #[`S.image, `M.encode]]
         && a.exported == #[`T.serve, `S.image, `M.encode]
+  | .error _ => false
+
+/-! ## Controls of the scopes (D1) -/
+
+private def scopedRecipe : Json :=
+  (Json.parse ("{\"format\": \"effect4-lcnf-roots-v3\", \"facade\": {\"module\": \"Effect4\"}, \
+    \"artifacts\": [{\"out\": \"g/api_gen.ml\", \"closure\": \"g/closure_gen.ml\", \
+    \"tests\": \"t/lanes_gen.ml\", \"import\": [\"Test.A\"], \"cap\": 10, \"linkage\": [\"A.load\"], \
+    \"consumers\": [{\"out\": \"t/todo/todo_gen.ml\", \"linkage\": [\"T.serve\", \"A.load\"]}]}]}")).toOption.getD Json.null
+
+-- the scopes' units follow `--out`; the entry's own linkage root stays its own when the consumer
+-- names it too, so `--out`'s interface exports it, and the consumer's facade re-exports both
+#guard match recipeArgvs scopedRecipe with
+  | .ok argvs => argvs.toList == [["--out", "g/api_gen.ml", "--closure", "g/closure_gen.ml",
+      "--tests", "t/lanes_gen.ml", "--import", "Test.A", "--cap", "10", "--linkage", "A.load",
+      "--consumer", "t/todo/todo_gen.ml", "A.load,T.serve"]]
+  | .error _ => false
+#guard match recipeArgvs scopedRecipe with
+  | .ok argvs => argvs.toList.all fun argv =>
+      let a := Args.parse argv {}
+      a.closure == some "g/closure_gen.ml" && a.tests == some "t/lanes_gen.ml"
+        && a.exported == #[`A.load] && a.allRoots == #[`A.load, `T.serve]
+        && a.phases == #[#[`A.load, `T.serve]]
+  | .error _ => false
+-- without a tests unit, `--out`'s interface exports its consumers' roots too, as before
+#guard match recipeArgvs lanesRecipe with
+  | .ok argvs => argvs.toList.all fun argv => (Args.parse argv {}).exported == (Args.parse argv {}).allRoots
   | .error _ => false
 
 end OCaml5.Lcnf.Gen

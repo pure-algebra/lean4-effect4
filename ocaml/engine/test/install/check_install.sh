@@ -21,8 +21,9 @@
 #
 # Behaviours:
 #   I1 `dune install` fills the prefix with exactly INSTALLED_EXPECTED: one executable, bin/eff,
-#      eight packages, and their nine libraries, the facade effect4_gen.effect4 included, so no
-#      test library installs under any name.                                          tested
+#      eight packages, and their ten libraries, the facade effect4_gen.effect4 and the
+#      package-private closure effect4_gen.__private__.effect4_closure included, so no test
+#      library installs under any name.                                               tested
 #   I2 Each ok fixture builds against the prefix alone and prints its ok.expected. consumer/ok
 #      links the installed kit, then checks and runs consumer/program.json. consumer/ok_facade
 #      names R6.2's frozen paths through the public facade and runs one program.      tested
@@ -32,9 +33,11 @@
 #      effect4_disk_test_support. Eight are the facade's (R6.2): a coverage root named
 #      through the facade and through Api_gen, a linkage root named through the facade, and each
 #      sealed package (Built, Prepared, Checked, the tool Session, Memo) built or updated through
-#      a facade alias. Three are the test lanes' (C5): the lanes' one closure, effect4_lanes,
-#      linked by name; a lane's facade, Todo_gen, named; and a lane's root named through
-#      Api_gen.                                                                        tested
+#      a facade alias. Three are the test lanes' (C5): the lanes' unit, effect4_lanes, linked
+#      by name; a lane's facade, Todo_gen, named; and a lane's root named through Api_gen. Two
+#      are the closure's (D1): a value the closure exports to the lanes, named through its
+#      module Closure_gen, with the facade linked and with the closure linked by its private
+#      name.                                                                           tested
 #   The prefix and the copy share one temporary directory, removed on every exit.
 #   Evidence: host-only, a finite run on this machine's switch; no theorem reaches it.
 set -euo pipefail

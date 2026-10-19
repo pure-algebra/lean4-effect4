@@ -1,13 +1,13 @@
 {
   "format": "effect4-lcnf-roots-v3",
-  "claim": "Hand-written recipe for the LCNF outputs, read by OCaml5.Lcnf.Export as a typed export plan. Each root of an artefact is in exactly one export class. A public root is a public promise: the artefact's interface exports it and the public facade re-exports it at its Lean path. A linkage root is called by hand code outside the artefact (the engine, the kit, a lane's test): the interface exports it and no facade does. An internal root is called only by the artefact's own prelude, and a coverage root is translated so that the route keeps covering its closure; the interface hides both. The plan checker refuses a root in two classes of one artefact, a root public in two artefacts, public roots in two artefacts and an entry key that is neither an option nor a class. The same Lean name in two artefacts is two specialised nodes and may take two classes. The facade object names the public facade: its module, its file (GENERATED with its inferred interface), the committed manifest of every public name, and the manifest's version. The artefact that holds the public roots writes both. The manifest is append-only: at one version every committed path stays; a larger version declares a break. The producer stages every implementation, infers its interface from a fresh OCaml typed tree, and checks their agreement before publishing. The nominal list retains source package names with checked final ascriptions; each nominal root is exported. The abstract list hides whole package representations. An artefact may serve several consumers: each `consumers` entry names a facade file and the linkage roots it re-exports. The artefact is one walk of every consumer's roots, so the consumers share each node they both reach, and each facade includes the artefact and keeps its consumer's roots and the types they name. The four test lanes are the consumers of ocaml/engine/test/lanes/lanes_gen.ml, a test library that nothing installs. The first artefact owns the program types. Later artefacts open that owner. Regenerate with python3 scripts/generate.py --only lcnf.",
+  "claim": "Hand-written recipe for the LCNF outputs, read by OCaml5.Lcnf.Export as a typed export plan. Each root of an artifact is in exactly one export class. A public root is a public promise: the artifact's interface exports it and the public facade re-exports it at its Lean path. A linkage root is called by hand code outside the artifact (the engine, the kit, a lane's test): the interface exports it and no facade does. An internal root is called only by the artifact's own prelude, and a coverage root is translated so that the route keeps covering its closure; the interface hides both. The plan checker refuses a root in two classes of one artifact, a root public in two artifacts, public roots in two artifacts and an entry key that is neither an option nor a class. The same Lean name in two artifacts is two specialised nodes and may take two classes. The facade object names the public facade: its module, its file (GENERATED with its inferred interface), the committed manifest of every public name, and the manifest's version. The artifact that holds the public roots writes both. The manifest is append-only: at one version every committed path stays; a larger version declares a break. The producer stages every implementation, infers its interface from a fresh OCaml typed tree, and checks their agreement before publishing. The nominal list retains source package names with checked final ascriptions; each nominal root is exported. The abstract list hides whole package representations. An artifact may serve several consumers: each `consumers` entry names a facade file and the linkage roots it re-exports. The artifact is one walk of its own roots and then every consumer's roots, so the consumers share each node they reach. An artifact may compile its walk in scopes: `closure` names the unit that compiles every node its own roots reach, and `out` is then a facade over it whose interface keeps the public and linkage roots and seals the abstract packages; `tests` names the unit that compiles every node only the consumers reach, which includes the closure. Each consumer's facade includes the tests unit and keeps its consumer's roots and the types they name. So each node is compiled once. The four test lanes are the consumers of ocaml/gen/api_gen.ml: the closure ocaml/gen/closure_gen.ml is a package-private library of effect4_gen, and the tests unit ocaml/engine/test/lanes/lanes_gen.ml is a test library that nothing installs. The first artifact owns the program types. Later artifacts open that owner. Regenerate with python3 scripts/generate.py --only lcnf.",
   "facade": {
     "module": "Effect4",
     "out": "ocaml/gen/facade/effect4.ml",
     "manifest": "ocaml/gen/public-names.tsv",
     "version": 0
   },
-  "artefacts": [
+  "artifacts": [
     {
       "out": "ocaml/eff/eff_types.ml",
       "import": [
@@ -57,12 +57,18 @@
     },
     {
       "out": "ocaml/gen/api_gen.ml",
+      "closure": "ocaml/gen/closure_gen.ml",
+      "tests": "ocaml/engine/test/lanes/lanes_gen.ml",
       "import": [
         "Effect4.Api",
         "Effect4.Run.Kit",
         "Effect4.Program.Check",
         "Effect4.Run.LiveRecord",
-        "Effect4.Tool.Native"
+        "Effect4.Tool.Native",
+        "Test.Dogfood.Scenario.Todo.HostRun",
+        "Test.Codegen.ConstructorLane",
+        "Test.Codegen.ModeledLane",
+        "Effect4.Laws.Run.Tree"
       ],
       "cap": 4000,
       "types": [
@@ -238,7 +244,7 @@
       ],
       "open": {
         "module": "Eff_types",
-        "artefact": "ocaml/eff/eff_types.ml"
+        "artifact": "ocaml/eff/eff_types.ml"
       },
       "nominal": [
         "Effect4.Program.Check.run",
@@ -269,68 +275,7 @@
         "Effect4.Tool.Native.Session",
         "Effect4.Tool.State",
         "Effect4.Program.Prepared"
-      ]
-    },
-    {
-      "out": "ocaml/engine/api_engine.ml",
-      "import": [
-        "Effect4.Api"
       ],
-      "cap": 2000,
-      "types": [
-        "Effect4.Program.RowShape",
-        "Effect4.Machine.Origin",
-        "Effect4.Machine.ForkRecord",
-        "Effect4.Program.DefDecl",
-        "Effect4.Program.DefRole",
-        "Effect4.Program.ParamDecl"
-      ],
-      "linkage": [
-        "Effect4.Api.run",
-        "Effect4.Api.replay",
-        "Effect4.Machine.emptyCtx",
-        "Effect4.Program.compile",
-        "Effect4.Machine.stores",
-        "Effect4.Program.interpOf",
-        "Effect4.Program.Prepared.make",
-        "Effect4.Program.Prepared.step",
-        "Effect4.Program.Prepared.admit",
-        "Effect4.Api.evaluate",
-        "Effect4.Program.awaits",
-        "Effect4.Machine.reifyExitVal"
-      ],
-      "internal": [
-        "Effect4.Scope.make",
-        "Effect4.Scope.fork"
-      ],
-      "coverage": [
-        "Effect4.Machine.stepDecisionState",
-        "Effect4.Machine.driveState",
-        "Effect4.Machine.settled",
-        "Effect4.Machine.RunFiber.make",
-        "Effect4.Program.Node.child",
-        "Effect4.Program.admit"
-      ],
-      "externs": "ocaml/engine/externs.txt",
-      "prelude": "ocaml/engine/tools/api_engine_prelude.ml",
-      "open": {
-        "module": "Eff_types",
-        "artefact": "ocaml/eff/eff_types.ml"
-      },
-      "abstract": [
-        "Effect4.Program.Prepared"
-      ]
-    },
-    {
-      "out": "ocaml/engine/test/lanes/lanes_gen.ml",
-      "import": [
-        "Test.Dogfood.Scenario.Todo.HostRun",
-        "Test.Codegen.ConstructorLane",
-        "Test.Codegen.ModeledLane",
-        "Effect4.Laws.Run.Tree"
-      ],
-      "cap": 2000,
-      "types": [],
       "consumers": [
         {
           "out": "ocaml/engine/test/todo/todo_gen.ml",
@@ -418,11 +363,57 @@
             "Effect4.Run.Tree.Plain"
           ]
         }
+      ]
+    },
+    {
+      "out": "ocaml/engine/api_engine.ml",
+      "import": [
+        "Effect4.Api"
       ],
+      "cap": 2000,
+      "types": [
+        "Effect4.Program.RowShape",
+        "Effect4.Machine.Origin",
+        "Effect4.Machine.ForkRecord",
+        "Effect4.Program.DefDecl",
+        "Effect4.Program.DefRole",
+        "Effect4.Program.ParamDecl"
+      ],
+      "linkage": [
+        "Effect4.Api.run",
+        "Effect4.Api.replay",
+        "Effect4.Machine.emptyCtx",
+        "Effect4.Program.compile",
+        "Effect4.Machine.stores",
+        "Effect4.Program.interpOf",
+        "Effect4.Program.Prepared.make",
+        "Effect4.Program.Prepared.step",
+        "Effect4.Program.Prepared.admit",
+        "Effect4.Api.evaluate",
+        "Effect4.Program.awaits",
+        "Effect4.Machine.reifyExitVal"
+      ],
+      "internal": [
+        "Effect4.Scope.make",
+        "Effect4.Scope.fork"
+      ],
+      "coverage": [
+        "Effect4.Machine.stepDecisionState",
+        "Effect4.Machine.driveState",
+        "Effect4.Machine.settled",
+        "Effect4.Machine.RunFiber.make",
+        "Effect4.Program.Node.child",
+        "Effect4.Program.admit"
+      ],
+      "externs": "ocaml/engine/externs.txt",
+      "prelude": "ocaml/engine/tools/api_engine_prelude.ml",
       "open": {
         "module": "Eff_types",
-        "artefact": "ocaml/eff/eff_types.ml"
-      }
+        "artifact": "ocaml/eff/eff_types.ml"
+      },
+      "abstract": [
+        "Effect4.Program.Prepared"
+      ]
     }
   ]
 }

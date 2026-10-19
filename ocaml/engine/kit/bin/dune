@@ -1,5 +1,5 @@
 ; eff -- the native kit's command line: a loop over Kit_serve (../kit_serve.ml). It installs with
-; the kit's package (ocaml/engine/dune-project), unstable as the kit is.
+; the kit's package (effect4_kit, ocaml/dune-project), unstable as the kit is.
 
 (executable
  (name eff)

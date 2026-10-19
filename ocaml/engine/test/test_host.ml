@@ -20,7 +20,7 @@
 
    One line per check, `PASS <name>` or `FAIL <name>`;
    the last line is `== ALL PASS: 0 failure(s) ==` and the exit code is 0 iff every check
-   passed. Run: `dune test --root . --force` from ocaml/engine. *)
+   passed. Run: `dune test engine --force` from ocaml/. *)
 
 open Effect4_engine
 

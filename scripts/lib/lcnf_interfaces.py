@@ -10,6 +10,11 @@ L5 The public facade (the recipe's `facade.out`) compiles against the staged art
 L6 Each consumer's facade (an artifact's `consumers`) compiles against its artifact, staged
    just before it, and its interface keeps the consumer's roots and the types they name
    (Lcnf_interface's `reachable`), before any output is published.
+L7 An artifact that names a `closure` unit stages it first. Its `out` unit is a facade over it,
+   whose interface is read off the closure's fresh typed tree (`from` in its interface data),
+   so the facade's types are the closure's declarations and its sealed packages are abstract.
+   An artifact's `tests` unit includes the closure and is staged after the facade, and its
+   consumers' facades after it.
 The interface and regeneration controls exercise these properties.
 """
 from pathlib import Path
@@ -20,12 +25,16 @@ import tempfile
 
 def generate(root, recipe_path, out, checking, run, install):
     recipe = json.loads((root / recipe_path).read_text())
-    artifacts = recipe['artefacts']
+    artifacts = recipe['artifacts']
     destinations = [Path(entry['out']) for entry in artifacts]
     consumers = [[Path(consumer['out']) for consumer in entry.get('consumers', [])]
                  for entry in artifacts]
+    # Each artifact's scopes (L7): its closure unit and its tests unit, when it names them.
+    scopes = [[Path(entry[key]) for key in ('closure', 'tests') if entry.get(key)]
+              for entry in artifacts]
     facade = recipe.get('facade', {}).get('out')
     # The artifacts come first, so `zip(artifacts, destinations)` below pairs each with its own.
+    destinations += [path for paths in scopes for path in paths]
     destinations += [path for paths in consumers for path in paths]
     if facade:
         destinations.append(Path(facade))
@@ -62,9 +71,12 @@ def generate(root, recipe_path, out, checking, run, install):
             shutil.copyfile(source, implementation)
             run([*compiler, '-c', str(implementation), '-o', str(compiled)])
             metadata = json.loads(Path(str(source) + '.interface.json').read_text())
+            # A facade over a closure reads the closure's typed tree, staged before it (L7).
+            typed_tree = (fresh / Path(metadata['from']).name).with_suffix('.cmt') \
+                if metadata.get('from') else implementation.with_suffix('.cmt')
             run(['opam', 'exec', '--switch=effect4', '--',
                  str(root / 'ocaml/_build/default/gen/interface/main.exe'),
-                 str(implementation.with_suffix('.cmt')), str(interface),
+                 str(typed_tree), str(interface),
                  ','.join(metadata['roots']), ','.join(metadata['abstract']), prelude,
                  *(['reachable'] if reachable else [])])
             implementation.with_suffix('.cmi').unlink()
@@ -74,7 +86,14 @@ def generate(root, recipe_path, out, checking, run, install):
 
         for entry, destination, facades in zip(artifacts, destinations, consumers):
             prelude = str(root / entry['prelude']) if entry.get('prelude') else ''
-            infer(stage / destination, prelude, False)
+            if entry.get('closure'):
+                # The closure first, then the facade over it, then the tests unit (L7).
+                infer(stage / entry['closure'], prelude, False)
+                infer(stage / destination, '', False)
+                if entry.get('tests'):
+                    infer(stage / entry['tests'], '', False)
+            else:
+                infer(stage / destination, prelude, False)
             # Each consumer's facade includes the artifact just staged (L6).
             for path in facades:
                 if not (stage / path).is_file():

@@ -85,7 +85,7 @@ let () =
          ( ( List.map
                (fun (c : H.call) ->
                   ({ Todo_gen.row = c.row; request = c.request; completion = c.answer }
-                   : Todo_gen.call))
+                   : Todo_gen.tools_run_checks_call))
                s.calls
            , F.root_exit_of s.engine )
          , lane ))
