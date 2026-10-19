@@ -1298,6 +1298,23 @@ and tuple_typing_reason =
   | TupleTypingReason_outOfBounds of int
 and shade = Shade_light | Shade_dark of int
 and pt = { x : int; y : int; }
+and status = Status_pending | Status_closed of string
+and test_codegen_modeled_lane_todo = {
+  id : int;
+  title : string;
+  done_ : bool;
+}
+and color = Color_red | Color_green | Color_blue
+and item = {
+  name : string;
+  qty : int;
+  tags : string list;
+  note : string option;
+  status : status;
+  todo : test_codegen_modeled_lane_todo;
+  color : color;
+}
+and ('a, 'b) sum = Sum_inl of 'a | Sum_inr of 'b
 and admitted_program = Eff_types.NativeOp.t typed_program
 and fiber_id = int
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) dispatcher =
@@ -1410,3 +1427,8 @@ val test_codegen_constructor_lane_map_retained :
   int -> (int * int) list -> int -> int -> int option * int option
 val test_codegen_constructor_lane_map_siblings :
   int -> (int * int) list -> int -> int option * (int option * int option)
+val test_codegen_modeled_lane_encode_item : item -> Eff_types.Val.t
+val test_codegen_modeled_lane_decode_item : Eff_types.Val.t -> item option
+val test_codegen_modeled_lane_round_trip :
+  Eff_types.Val.t -> Eff_types.Val.t option
+val test_codegen_modeled_lane_sample_vals : Eff_types.Val.t list

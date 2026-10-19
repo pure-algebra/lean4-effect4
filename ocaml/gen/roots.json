@@ -319,7 +319,8 @@
       "out": "ocaml/engine/test/lanes/lanes_gen.ml",
       "import": [
         "Test.Dogfood.Scenario.Todo.HostRun",
-        "Test.Codegen.ConstructorLane"
+        "Test.Codegen.ConstructorLane",
+        "Test.Codegen.ModeledLane"
       ],
       "cap": 2000,
       "types": [],
@@ -393,25 +394,16 @@
             "Test.Codegen.ConstructorLane.mapRetained",
             "Test.Codegen.ConstructorLane.mapSiblings"
           ]
+        },
+        {
+          "out": "ocaml/engine/test/modeled/modeled_gen.ml",
+          "linkage": [
+            "Test.Codegen.ModeledLane.encodeItem",
+            "Test.Codegen.ModeledLane.decodeItem",
+            "Test.Codegen.ModeledLane.roundTrip",
+            "Test.Codegen.ModeledLane.sampleVals"
+          ]
         }
-      ],
-      "open": {
-        "module": "Eff_types",
-        "artefact": "ocaml/eff/eff_types.ml"
-      }
-    },
-    {
-      "out": "ocaml/engine/test/modeled/modeled_gen.ml",
-      "import": [
-        "Test.Codegen.ModeledLane"
-      ],
-      "cap": 800,
-      "types": [],
-      "linkage": [
-        "Test.Codegen.ModeledLane.encodeItem",
-        "Test.Codegen.ModeledLane.decodeItem",
-        "Test.Codegen.ModeledLane.roundTrip",
-        "Test.Codegen.ModeledLane.sampleVals"
       ],
       "open": {
         "module": "Eff_types",
