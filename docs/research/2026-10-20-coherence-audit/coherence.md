@@ -232,7 +232,7 @@ The rest of the repair wave follows the release: R2's A4.1 and A9.1, and R3.
 
 | Id | Question | State | When |
 | --- | --- | --- | --- |
-| D2 | The public JSON's lists | open; recommended: arrays | before release item 3 |
+| D2 | The public JSON's lists | decided 2026-10-19: arrays; `Canonical.print` becomes the array print (probe: `probes/d2/`) | release item 3 |
 | D3 | The native profile after E6 | open; recommended: the profile is a datum the run is checked against at ingress | before release item 9 |
 | S-2 | Is the generated host interface public? | open; recommended: yes | before release item 7 |
 | D1 | The log: harden it, or one commit construction | deferred past the first release (the owner, 2026-10-19) | estate item 5 |

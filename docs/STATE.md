@@ -74,7 +74,6 @@ test, the carriers and E6, the run layer, the store.
 ## What the owner must decide
 
 - **Before the release items** (`coherence.md` §10):
-  - D2, the public JSON's lists, before item 3;
   - S-2, whether the generated host interface is public, before item 7;
   - D3, the native profile, before item 9.
 - **After the release** (row 418 (5)):
