@@ -426,6 +426,9 @@ def registry : Registry where
       ] },
 
     -- 2. residual-program-typing
+    { id := "program-refusal-located", concept := "residual-program-typing", role := .decidability
+      title := "The program's located refusal is absent exactly when the program types: programRefusal names an address and a reason in the typing's own alphabet, and is none if and only if the checker answers a type; nothing of how to repair the place (wave 1, A1; ruling 2: Located only)"
+      pointer := .witness `Effect4.Program.programRefusal_none_iff },
     { id := "seq-typed", concept := "residual-program-typing", role := .compatibility
       title := "The seqR compatibility lemma: denoteR sequences with typed continuations"
       pointer := .witness `Effect4.Program.Typed.seq_typed
@@ -995,8 +998,23 @@ def registry : Registry where
       title := "A session entry's reader answers only its own value tree; no action acceptance or execution truth claim (seams ST4, R13)"
       pointer := .witness `Effect4.Tool.SessionEntry.ofVal_exact },
     { id := "codec-profile-retains-value", concept := "exact-codecs", role := .compatibility
-      title := "A successful guarded JSON write reads back as the original canonical value; no total writing, raw JSON text identity or native parser claim (seams S3b, R12)"
+      title := "A successful guarded JSON write reads back as the original canonical value; no total writing, raw JSON text identity or native parser claim (seams S3b, R8)"
       pointer := .witness `Effect4.Tool.CodecProfile.write_read },
+    { id := "json-read-located", concept := "exact-codecs", role := .compatibility
+      title := "The profile's located JSON reader is exact: a tree it reads as a carrier is that carrier's canonical print, normalised by the shape (ShapeDoc.order); it needs no budget, and dropping a refusal's location gives the unlocated reader (ShapeDoc.readLocated_erases); nothing of JSON text, which json-text-round-trip states (wave 2, A2 and its repair)"
+      pointer := .witness `Effect4.Tool.CodecProfile.profileLocated_exact },
+    { id := "json-refusal-placed", concept := "exact-codecs", role := .compatibility
+      title := "A refusal of the profile's located reader names a place the input or the shape has: a present value, a missing field at a present parent, or a place in the shape (JsonSite); nothing of which repair the place asks for (wave 2, A2)"
+      pointer := .witness `Effect4.Tool.CodecProfile.profileLocated_site },
+    { id := "json-trees-agree", concept := "exact-codecs", role := .compatibility
+      title := "Within the profile, the tree over naturals and the binary64 tree read alike: a tree whose naturals are at most the profile's limit reads as the binary64 tree it converts to; nothing above the limit, which both refuse (wave 2, C6)"
+      pointer := .witness `Effect4.Tool.CodecProfile.read_toBinary64 },
+    { id := "json-text-round-trip", concept := "exact-codecs", role := .compatibility
+      title := "Within the profile, the one JSON text grammar reads back what its renderer writes (NatJson.parse_render); both session drivers read through it; not the converse, that every text it reads is a rendering (wave 2, the grammar for both drivers)"
+      pointer := .witness `Effect4.NatJson.parse_render },
+    { id := "tool-method-descriptor", concept := "exact-codecs", role := .compatibility
+      title := "The tool's method table has one owner: each request's wire name is its key's descriptor name (method_name_agrees), the supported methods are the descriptors' names and versions (supportedMethods_descriptors), and a method's listing carries no output schema, which describe answers as Result (listing_outputSchema, describe_result); the hints destructive, idempotent and open-world are set by hand, with no law (wave 1, R5.1)"
+      pointer := .witness `Effect4.Tool.method_name_agrees },
     { id := "built-admission-exact", concept := "host-session-protocol", role := .compatibility
       title := "Built.ofSketch returns exactly the full program-admission refusal at the application extended by the sketch's hole rows, and Built.ofProgram at the recorded application exactly; no native forgery, host execution, or progress claim (seams S4, R6 and R13)"
       pointer := .witness `Effect4.Api.Built.ofSketch_error_iff },
