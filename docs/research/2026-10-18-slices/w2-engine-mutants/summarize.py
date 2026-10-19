@@ -72,7 +72,7 @@ def main():
     out.write('| Mutant | What it breaks | Caught in A by Ref checks | Caught in A by other checks | '
               'Caught in B (no Ref) |\n')
     out.write('| --- | --- | --- | --- | --- |\n')
-    ref_missed, any_missed, survivors = [], [], []
+    ref_missed, any_missed, survivors, ref_caught, ref_and_free = [], [], [], [], []
     for mid in ids:
         ra, rb = a.get(mid), b.get(mid)
         by_ref = tests_of(ra, is_ref)
@@ -89,13 +89,20 @@ def main():
                 any_missed.append(mid)
         if ra is not None and not caught_a and (rb is None or not caught_b):
             survivors.append(mid)
-        what = WHAT.get(mid, '')
+        # A description may hold a pipe (Y06's |world|), which would split a Markdown cell.
+        what = WHAT.get(mid, '').replace('|', '\\|')
         fmt = lambda s: ', '.join(sorted(s)) if s else '—'
         free -= NOT_REACHED
+        if by_ref:
+            ref_caught.append(mid)
+            if free:
+                ref_and_free.append(mid)
         note = f' (and {", ".join(sorted(unrelated))}, not reached)' if unrelated else ''
         out.write(f'| {mid} | {what} | {fmt(by_ref)} | {fmt(free)} | '
                   f'{fmt(caught_b) if rb else "(not run)"}{note} |\n')
-    out.write(f'\n{len(ids)} mutants.  Caught by a Ref check in A and by nothing in B: '
+    out.write(f'\n{len(ids)} mutants.  Caught by a Ref check in A: {len(ref_caught)}.  '
+              f'Of these, caught by a check without Ref in A too: {len(ref_and_free)}.  '
+              f'Caught by a Ref check in A and by nothing in B: '
               f'{", ".join(ref_missed) or "none"}.  Caught in A and by nothing in B: '
               f'{", ".join(any_missed) or "none"}.  Caught by nothing in either tree: '
               f'{", ".join(survivors) or "none"}.\n')

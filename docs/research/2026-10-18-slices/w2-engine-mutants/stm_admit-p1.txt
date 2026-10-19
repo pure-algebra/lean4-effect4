@@ -1,0 +1,345 @@
+stm_admit's green parallel test P1 ("E4_sched admission, two client domains") failed in three runs of the tree B campaign:
+during T07, T09 and T12 (logs-B/T07.log, T09.log and T12.log; not kept, 230 KB to 330 KB each).
+Those runs fell at 21:05 to 21:09 on 2026-10-18.  Tree A's run had ended at 20:56; other seats' builds ran.
+The load average read at 21:08: 29 (1 min), 31 (5 min), 42 (15 min).
+stm_admit runs a toy engine and reaches no carrier, so no mutant reaches it.  No other run of either campaign lists it as failing.
+
+Load runs, stm_load.py on the worktree's build of stm_admit.exe (21:28 to 21:32):
+  one at a time: 20 runs, none failed;  12 at a time: 60 runs, 1 with P1 failed;  24 at a time: 120 runs, none failed.
+Earlier runs of the same test, from the worktree's build (stm_admit.ml and e4_sched.ml are as at the base):
+  a shell loop, one at a time: 20 runs at 21:07 to 21:09, during the campaign, none exited non-zero;
+  a scratch copy of stm_load.py: one at a time 20 runs at 21:23, none failed; 12 at a time 60 runs,
+  1 with P1 failed; 24 at a time 120 runs, 2 with P1 failed (21:24 to 21:27).
+
+Each counterexample below has one shape.  A send raises the pending count; the other domain then reads that count, or
+sends and takes a stamp; only then does the first send take its own stamp.  No order of atomic sends gives that history.
+The cause is assumed, not tested.  E4_sched.enqueue (ocaml/engine/e4_sched.ml) enters the quiescence count and takes the
+stamp inside its own mailbox's lock; `pending` and `last_seq` read without that lock, and two sends to two machines hold
+two different locks.
+
+
+==== during T07 (logs-B/T07.log)
+Test P1 E4_sched admission, two client domains failed (0 shrink steps):
+
+                        |                
+                      Send 1             
+                      Spawn              
+                     Admit 2             
+                      Spawn              
+                     Pending             
+                      Spawn              
+                      Send 2             
+                     Pending             
+                        |                
+             .---------------------.
+             |                     |                
+          Admit 2               Admit 0             
+          Last_seq               Spawn              
+          Pending                Send 1             
+           Send 2               Last_seq            
+          Admit 0                Send 1             
+          Admit 2               Pending             
+           Spawn                Pending             
+                                 Send 2             
+
+
++++ Messages ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Messages for test P1 E4_sched admission, two client domains:
+
+  Results incompatible with linearized model
+
+                                    |                      
+                         Send 1 : Ok ("unknown")           
+                           Spawn : Ok ("ok 0")             
+                          Admit 2 : Ok ("none")            
+                           Spawn : Ok ("ok 1")             
+                           Pending : Ok ("2")              
+                           Spawn : Ok ("ok 2")             
+                          Send 2 : Ok ("ok 1")             
+                           Pending : Ok ("4")              
+                                    |                      
+                 .------------------------------------.
+                 |                                    |                      
+       Admit 2 : Ok ("none")              Admit 0 : Ok ("priority")          
+        Last_seq : Ok ("1")                  Spawn : Ok ("ok 3")             
+        Pending : Ok ("6")                  Send 1 : Ok ("ok 3")             
+       Send 2 : Ok ("ok 2")                  Last_seq : Ok ("3")             
+       Admit 0 : Ok ("none")                Send 1 : Ok ("ok 4")             
+       Admit 2 : Ok ("none")                 Pending : Ok ("9")              
+        Spawn : Ok ("ok 4")                  Pending : Ok ("9")              
+                                            Send 2 : Ok ("ok 5")             
+
+==== during T09 (logs-B/T09.log)
+Test P1 E4_sched admission, two client domains failed (2 shrink steps):
+
+                        |                
+                      Spawn              
+                     Admit 2             
+                      Send 2             
+                     Admit 2             
+                     Last_seq            
+                      Send 1             
+                     Admit 0             
+                     Admit 1             
+                        |                
+             .---------------------.
+             |                     |                
+          Last_seq               Send 2             
+          Last_seq               Send 0             
+          Admit 2                Spawn              
+           Send 0               Pending             
+           Send 1                Send 1             
+
+
++++ Messages ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Messages for test P1 E4_sched admission, two client domains:
+
+  Results incompatible with linearized model
+
+                                   |                       
+                          Spawn : Ok ("ok 0")              
+                         Admit 2 : Ok ("none")             
+                        Send 2 : Ok ("unknown")            
+                         Admit 2 : Ok ("none")             
+                          Last_seq : Ok ("0")              
+                        Send 1 : Ok ("unknown")            
+                         Admit 0 : Ok ("any")              
+                         Admit 1 : Ok ("none")             
+                                   |                       
+                .------------------------------------.
+                |                                    |                       
+       Last_seq : Ok ("0")                Send 2 : Ok ("unknown")            
+       Last_seq : Ok ("0")                 Send 0 : Ok ("ok 1")              
+      Admit 2 : Ok ("none")                 Spawn : Ok ("ok 1")              
+      Send 0 : Ok ("ok 3")                  Pending : Ok ("4")               
+      Send 1 : Ok ("ok 4")                 Send 1 : Ok ("ok 2")              
+
+==== during T12 (logs-B/T12.log)
+Test P1 E4_sched admission, two client domains failed (0 shrink steps):
+
+                        |                
+                     Admit 1             
+                      Send 2             
+                      Spawn              
+                        |                
+             .---------------------.
+             |                     |                
+          Admit 0                Send 0             
+          Pending                Send 2             
+           Send 1               Admit 0             
+          Last_seq               Send 0             
+           Send 0               Admit 1             
+                                 Send 0             
+
+
++++ Messages ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Messages for test P1 E4_sched admission, two client domains:
+
+  Results incompatible with linearized model
+
+                                    |                      
+                          Admit 1 : Ok ("none")            
+                         Send 2 : Ok ("unknown")           
+                           Spawn : Ok ("ok 0")             
+                                    |                      
+                 .------------------------------------.
+                 |                                    |                      
+     Admit 0 : Ok ("priority")              Send 0 : Ok ("ok 1")             
+        Pending : Ok ("4")                 Send 2 : Ok ("unknown")           
+      Send 1 : Ok ("unknown")             Admit 0 : Ok ("priority")          
+        Last_seq : Ok ("2")                 Send 0 : Ok ("ok 2")             
+       Send 0 : Ok ("ok 4")                 Admit 1 : Ok ("none")            
+                                            Send 0 : Ok ("ok 3")             
+
+==== stm_load.py, 12 at a time, round 3, copy 4
+Test P1 E4_sched admission, two client domains failed (1 shrink steps):
+
+                        |                
+                      Spawn              
+                     Send 0              
+                     Send 1              
+                     Send 0              
+                      Spawn              
+                     Send 0              
+                     Send 0              
+                     Send 2              
+                        |                
+             .---------------------.
+             |                     |                
+          Admit 0               Send 2              
+          Pending               Pending             
+          Send 2                Send 2              
+          Pending               Pending             
+          Admit 0                Spawn              
+                                Send 1              
+                                Send 2              
+
+
++++ Messages ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Messages for test P1 E4_sched admission, two client domains:
+
+  Results incompatible with linearized model
+
+                                   |                       
+                          Spawn : Ok ("ok 0")              
+                         Send 0 : Ok ("ok 1")              
+                        Send 1 : Ok ("unknown")            
+                         Send 0 : Ok ("ok 2")              
+                          Spawn : Ok ("ok 1")              
+                         Send 0 : Ok ("ok 3")              
+                         Send 0 : Ok ("ok 4")              
+                        Send 2 : Ok ("unknown")            
+                                   |                       
+                .------------------------------------.
+                |                                    |                       
+      Admit 0 : Ok ("none")               Send 2 : Ok ("unknown")            
+       Pending : Ok ("8")                   Pending : Ok ("6")               
+      Send 2 : Ok ("ok 5")                Send 2 : Ok ("unknown")            
+       Pending : Ok ("9")                   Pending : Ok ("6")               
+      Admit 0 : Ok ("none")                 Spawn : Ok ("ok 2")              
+                                           Send 1 : Ok ("ok 6")              
+                                           Send 2 : Ok ("ok 7")              
+
+==== the scratch loop, 12 at a time, round 4, copy 5
+Test P1 E4_sched admission, two client domains failed (0 shrink steps):
+
+                        |                
+                      Spawn              
+                     Admit 2             
+                      Send 0             
+                      Send 2             
+                     Admit 2             
+                     Last_seq            
+                      Send 1             
+                     Admit 0             
+                        |                
+             .---------------------.
+             |                     |                
+          Last_seq              Admit 1             
+          Last_seq               Send 2             
+          Admit 2                Send 0             
+           Send 0                Spawn              
+           Send 1               Pending             
+                                 Send 1             
+
+
++++ Messages ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Messages for test P1 E4_sched admission, two client domains:
+
+  Results incompatible with linearized model
+
+                                    |                      
+                           Spawn : Ok ("ok 0")             
+                          Admit 2 : Ok ("none")            
+                          Send 0 : Ok ("ok 1")             
+                         Send 2 : Ok ("unknown")           
+                          Admit 2 : Ok ("none")            
+                           Last_seq : Ok ("1")             
+                         Send 1 : Ok ("unknown")           
+                        Admit 0 : Ok ("priority")          
+                                    |                      
+                 .------------------------------------.
+                 |                                    |                      
+        Last_seq : Ok ("1")                 Admit 1 : Ok ("none")            
+        Last_seq : Ok ("2")                Send 2 : Ok ("unknown")           
+       Admit 2 : Ok ("none")                Send 0 : Ok ("ok 2")             
+       Send 0 : Ok ("ok 4")                  Spawn : Ok ("ok 1")             
+       Send 1 : Ok ("ok 5")                  Pending : Ok ("5")              
+                                            Send 1 : Ok ("ok 3")             
+
+==== the scratch loop, 24 at a time, round 1, copy 0
+Test P1 E4_sched admission, two client domains failed (0 shrink steps):
+
+                        |                
+                      Spawn              
+                     Admit 1             
+                     Last_seq            
+                     Last_seq            
+                      Send 0             
+                      Send 0             
+                        |                
+             .---------------------.
+             |                     |                
+           Spawn                 Send 2             
+           Spawn                 Send 2             
+          Admit 1               Admit 1             
+           Send 2               Admit 2             
+          Pending               Admit 2             
+           Send 0               Pending             
+          Admit 0                Send 0             
+
+
++++ Messages ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Messages for test P1 E4_sched admission, two client domains:
+
+  Results incompatible with linearized model
+
+                                    |                      
+                           Spawn : Ok ("ok 0")             
+                          Admit 1 : Ok ("none")            
+                           Last_seq : Ok ("0")             
+                           Last_seq : Ok ("0")             
+                          Send 0 : Ok ("ok 1")             
+                          Send 0 : Ok ("ok 2")             
+                                    |                      
+                 .------------------------------------.
+                 |                                    |                      
+        Spawn : Ok ("ok 1")                Send 2 : Ok ("unknown")           
+        Spawn : Ok ("ok 2")                Send 2 : Ok ("unknown")           
+       Admit 1 : Ok ("none")              Admit 1 : Ok ("priority")          
+       Send 2 : Ok ("ok 3")                 Admit 2 : Ok ("none")            
+        Pending : Ok ("7")                  Admit 2 : Ok ("none")            
+       Send 0 : Ok ("ok 5")                  Pending : Ok ("4")              
+       Admit 0 : Ok ("none")                Send 0 : Ok ("ok 4")             
+
+==== the scratch loop, 24 at a time, round 1, copy 21
+Test P1 E4_sched admission, two client domains failed (0 shrink steps):
+
+                        |                
+                      Send 2             
+                     Pending             
+                      Spawn              
+                      Send 0             
+                      Spawn              
+                      Send 2             
+                      Send 1             
+                      Send 2             
+                        |                
+             .---------------------.
+             |                     |                
+           Spawn                Last_seq            
+           Send 1               Last_seq            
+          Pending                Send 1             
+           Send 2               Last_seq            
+           Send 1               Last_seq            
+
+
++++ Messages ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Messages for test P1 E4_sched admission, two client domains:
+
+  Results incompatible with linearized model
+
+                                   |                       
+                        Send 2 : Ok ("unknown")            
+                          Pending : Ok ("0")               
+                          Spawn : Ok ("ok 0")              
+                         Send 0 : Ok ("ok 1")              
+                          Spawn : Ok ("ok 1")              
+                        Send 2 : Ok ("unknown")            
+                         Send 1 : Ok ("ok 2")              
+                        Send 2 : Ok ("unknown")            
+                                   |                       
+                .------------------------------------.
+                |                                    |                       
+       Spawn : Ok ("ok 2")                  Last_seq : Ok ("2")              
+      Send 1 : Ok ("ok 3")                  Last_seq : Ok ("2")              
+       Pending : Ok ("7")                  Send 1 : Ok ("ok 5")              
+      Send 2 : Ok ("ok 4")                  Last_seq : Ok ("5")              
+      Send 1 : Ok ("ok 6")                  Last_seq : Ok ("5")              
