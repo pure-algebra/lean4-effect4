@@ -94,6 +94,26 @@ the canonical tagged JSON, one message per line. It needs no design of its own.
 3. OCaml's `provider` becomes `reactor` when S3 lowers `E4_host`. It is not renamed by hand first.
 4. `docs/site/concepts/host-session-protocol.md` gains the picture above.
 
+## What landed, and what waits
+
+The dictionary entries landed first (`5418973ea`). The workspace rename landed next, in Lean, the
+generated OCaml, the kit and the install fixtures, with the facade's version raised to 1. The frame
+was already in `docs/core/semantics.md` concept 9. It reads a host as a comodel, and the protocol
+as Setzer and Hancock's dependent interface.
+
+Four things wait, each for a reason:
+- Three deep-core comments still name the old spelling: `src/Effect4/Store/Domain/Cas.lean`,
+  `src/Effect4/Store/Domain/JsonText.lean` and `src/Effect4/Laws/Store/JsonText.lean`. Editing them
+  rebuilds most of the tree, so they change with the next edit that touches those files.
+- `OCaml5.Lcnf.Naming`'s `#guard` tests the mangling of the name `Effect4.Tool.Native.Session`. It
+  is a name literal, so it stays correct, and it changes with the next edit of the file.
+- The workspace's laws are placed in concept 9, `host-session-protocol`
+  (`src/Effect4/Laws/Tool/Exchange.lean`). They belong with typed editing, the planned eleventh
+  concept. Moving them changes `generated/semantics.md`, which `make gen-semantics` writes when
+  the owner asks.
+- The store's tests name journal roots `session/a` and `session/test` as labels. They test the
+  store, not the workspace, so they stay.
+
 ## What this does not establish
 
 - The comodel and runner reading is the literature's frame for the host, not a theorem in the tree.
