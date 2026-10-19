@@ -8,4 +8,5 @@ field, in `program.json`. Two commands print it:
 
 At `29f55957e` and later: the tagged print with arrays (`ShapeDoc.printTree`) is 485 bytes; the
 tagged print with `cons` cells (`ShapeDoc.print`, under `Canonical.print`) is 558 bytes; face 7's
-positional form (`toJson`, `ts/eff/json.gen.ts`) is 215 bytes.
+positional form (`toJson`, `ts/eff/json.gen.ts`) is 215 bytes. Seat 3a (`e826c8ac1`) moved
+`toJson` to the tagged print, so after it `v.ts` prints the 485-byte form.
