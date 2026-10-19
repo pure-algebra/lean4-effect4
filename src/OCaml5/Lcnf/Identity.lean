@@ -15,7 +15,7 @@ a node only when all five agree.
 | `owner` | the type owner: the unit that declares the types the code names, beside the program types' owner every unit opens | the manifest's identity line |
 | `catalogue` | the builtin catalogue (`OCaml5.Lcnf.Builtins`): each row's constant and its OCaml form, hashed | the manifest's identity line |
 
-`OCaml5.Lcnf.Gen` writes one unit per recipe artefact by one walk of all its consumers' roots
+`OCaml5.Lcnf.Gen` writes one unit per recipe artifact by one walk of all its consumers' roots
 (`Export`'s consumers, the walk's phases), so the consumers of one unit share every node they
 reach, and its five parts agree by construction. It writes the unit's three shared parts as the
 first line of the unit's closure manifest (`identityLine`). `compareUnits` reads two manifests and

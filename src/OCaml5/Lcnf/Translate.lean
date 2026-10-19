@@ -1182,7 +1182,7 @@ carrier-inference rounds stay private; only the final checked closure is returne
 
 `phases` are further root groups, walked in order once the walk from `roots` and every earlier
 phase is done: one walk, one set of translated declarations, and a declaration two phases reach is
-translated once, in the earlier phase. So an artefact's consumers (`OCaml5.Lcnf.Export`) share a
+translated once, in the earlier phase. So an artifact's consumers (`OCaml5.Lcnf.Export`) share a
 node, and the first consumer's declarations come in the order its own walk gives them. -/
 private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
     (ex : Externs := {}) (phases : Array (Array Name) := #[]) :
