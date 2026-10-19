@@ -11,6 +11,13 @@ folder). Head: `93090bfa0` on `refactor/phase1-phase3`.
   no build, no probe and no generator. Sizes come from `wc -l` and `grep` at the head, or from the
   readers' commands (`lean-core.md` §2, `compiler-estate.md` §6). The readers' traversal counts are
   a finite probe of the oleans built on 2026-10-17 and 2026-10-18.
+- **Checked by the coordinator.** At `6256d8ba0` the coordinator re-measured the sizes with
+  `wc -l` and re-read the declarations that the owner's decisions rest on. Two counts differ by
+  one: `ocaml/engine/externs.txt` has 52 rows, and `E4_engine.check_answer` spans 53 lines.
+  Three claims hold as written:
+  - `verifyEdges` (`src/Effect4/Store/Domain/Word.lean`) resolves an edge against the whole store;
+  - `Effect4.Run.driveFrom` keeps the reactor's next state after a refused reply;
+  - `printIn` (`src/Effect4/Store/Domain/Shape.lean`) prints a list family by its cases.
 - **Not covered.** The machine, the program proofs, `ts/`, `harness/`, `rocq/` and `tools/Conform`
   stay out, as `plan.md` §4 rules. `Program.Config` (`src/Effect4/Program/Config.lean`) was read at
   its header only: it models rc.112's provider as a host-side source, outside stored programs. It
