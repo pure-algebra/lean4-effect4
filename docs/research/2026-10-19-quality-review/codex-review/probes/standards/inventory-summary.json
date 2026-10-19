@@ -1,0 +1,101 @@
+{
+  "hand_files": 221,
+  "classes": {
+    "driver": 1,
+    "interface": 62,
+    "library": 60,
+    "test-bench": 96,
+    "tool-or-template": 2
+  },
+  "summary": {
+    "failwith": {
+      "driver": 0,
+      "interface": 1,
+      "library": 1,
+      "test-bench": 82,
+      "tool-or-template": 2
+    },
+    "invalid_arg": {
+      "driver": 0,
+      "interface": 0,
+      "library": 80,
+      "test-bench": 9,
+      "tool-or-template": 0
+    },
+    "Option.get": {
+      "driver": 0,
+      "interface": 0,
+      "library": 2,
+      "test-bench": 5,
+      "tool-or-template": 0
+    },
+    "List.hd": {
+      "driver": 0,
+      "interface": 0,
+      "library": 0,
+      "test-bench": 22,
+      "tool-or-template": 0
+    },
+    "List.nth": {
+      "driver": 0,
+      "interface": 0,
+      "library": 0,
+      "test-bench": 88,
+      "tool-or-template": 0
+    },
+    "mutable": {
+      "driver": 0,
+      "interface": 12,
+      "library": 97,
+      "test-bench": 34,
+      "tool-or-template": 1
+    },
+    "compare": {
+      "driver": 0,
+      "interface": 13,
+      "library": 24,
+      "test-bench": 69,
+      "tool-or-template": 0
+    },
+    "Mutex": {
+      "driver": 0,
+      "interface": 2,
+      "library": 74,
+      "test-bench": 5,
+      "tool-or-template": 0
+    },
+    "Atomic": {
+      "driver": 0,
+      "interface": 1,
+      "library": 30,
+      "test-bench": 28,
+      "tool-or-template": 0
+    },
+    "Domain.spawn": {
+      "driver": 0,
+      "interface": 0,
+      "library": 1,
+      "test-bench": 11,
+      "tool-or-template": 0
+    },
+    "ignore (": {
+      "driver": 0,
+      "interface": 0,
+      "library": 13,
+      "test-bench": 207,
+      "tool-or-template": 0
+    }
+  },
+  "missing_interfaces": [
+    "ocaml/engine/api_engine_inst.ml",
+    "ocaml/engine/kit/kit_serve.ml",
+    "ocaml/gen/interface/fixture.ml",
+    "ocaml/gen/interface/fixture_facade.ml",
+    "ocaml/gen/interface/fixture_prelude.ml",
+    "ocaml/gen/interface/main.ml"
+  ],
+  "manifest_rows": {
+    "closure-api_engine.tsv": 822,
+    "closure-api_gen.tsv": 3253
+  }
+}

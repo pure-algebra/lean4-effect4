@@ -1,0 +1,2 @@
+"[\"succeed\",[\"lit\",[\"nat\",1]]]"
+"{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":1}}}"

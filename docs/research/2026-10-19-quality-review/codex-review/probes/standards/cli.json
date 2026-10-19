@@ -1,0 +1,73 @@
+[
+  {
+    "args": [
+      "check",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/standards/program.json"
+    ],
+    "stdin": null,
+    "exit": 0,
+    "stdout": "{\"status\":\"ok\",\"type\":{\"answer\":{\"_tag\":\"nat\"},\"error\":{\"_tag\":\"never\"},\"requires\":[]},\"text\":\"Effect<number, never>\"}\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "run",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/standards/program.json",
+      "--limit",
+      "-1"
+    ],
+    "stdin": null,
+    "exit": 0,
+    "stdout": "{\"budget\":0,\"status\":\"finished\",\"exit\":{\"_tag\":\"success\",\"value\":{\"_tag\":\"nat\",\"n\":1}},\"via\":\"tree\",\"calls\":[],\"machine\":\"agrees\"}\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "explore",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/standards/program.json",
+      "--budget",
+      "-1"
+    ],
+    "stdin": null,
+    "exit": 2,
+    "stdout": "",
+    "stderr": "Fatal error: exception Invalid_argument(\"Lcnf_array.get_exn: -1 outside [0,128)\")\n"
+  },
+  {
+    "args": [
+      "check",
+      "missing-program"
+    ],
+    "stdin": null,
+    "exit": 2,
+    "stdout": "{\"status\":\"error\",\"message\":\"missing-program: No such file or directory\"}\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "--help"
+    ],
+    "stdin": null,
+    "exit": 2,
+    "stdout": "",
+    "stderr": "usage: eff (check|run|explore) PROGRAM [--rows ROWS] [--tape TAPE] [--limit N] [--frames] [--budget K] [--width N] [--fast]\n       eff serve\n       eff tool\n       eff mcp\n"
+  },
+  {
+    "args": [
+      "serve"
+    ],
+    "stdin": "not-json\n",
+    "exit": 0,
+    "stdout": "{\"status\":\"error\",\"message\":\"JSON text at byte 0: expected a value\"}\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "mcp"
+    ],
+    "stdin": "not-json\n",
+    "exit": 0,
+    "stdout": "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32700,\"message\":\"JSON text at byte 0: expected a value\"}}\n",
+    "stderr": ""
+  }
+]

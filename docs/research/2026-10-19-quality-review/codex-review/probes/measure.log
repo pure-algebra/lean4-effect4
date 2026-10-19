@@ -1,0 +1,59 @@
+== 1. OCaml lines, hand and generated (a GENERATED mark in the first 2,000 bytes)
+hand 56112  generated 106898
+== 2. Hand OCaml that restates a Lean fact (second owners)
+     0  ocaml/engine/kit/kit_json.ml  (carrier JSON, twin of ShapeDoc.print/read: deleted)
+     0  ocaml/eff/eff_json_text.ml  (JSON text renderer: deleted)
+   113  ocaml/engine/kit/kit_author.ml  (authoring wrappers, twin of Effect4.Program.Authoring)
+   162  ocaml/engine/kit/kit_author.mli  (their interface)
+    13  ocaml/engine/test/todo/native_todo.ml  (host module type REPO and its adapter, of the file: 13 of 243 lines)
+   204  ocaml/engine/kit/kit_serve.ml  (the kit commands check/run/explore beside the tool)
+    75  ocaml/engine/{,test/reference/}e4_*_list.ml  (list twins of the engine carriers (Ref instance))
+   567  total
+== 3. Generated units that repeat the one compiled closure
+ocaml/gen/closure_gen.ml: 69991 lines, 3267 top-level definitions
+ocaml/gen/api_gen.ml: 5 lines, 0 top-level definitions, 0 also in closure_gen.ml
+ocaml/engine/test/lanes/lanes_gen.ml: 2655 lines, 213 top-level definitions, 0 also in closure_gen.ml
+ocaml/engine/test/todo/todo_gen.ml: 5 lines, 0 top-level definitions, 0 also in closure_gen.ml
+ocaml/engine/test/modeled/modeled_gen.ml: 5 lines, 0 top-level definitions, 0 also in closure_gen.ml
+ocaml/engine/test/ctors/ctors_gen.ml: 5 lines, 0 top-level definitions, 0 also in closure_gen.ml
+ocaml/engine/test/rocq/rocq_gen.ml: 5 lines, 0 top-level definitions, 0 also in closure_gen.ml
+== 4. Packaging
+dune-project files 1 (the install lane's outside consumer not counted); .opam files 8; public_name stanzas 10
+  ocaml/lcnf/dune:11: (public_name effect4_lcnf)
+  ocaml/gen/dune:32: (public_name effect4_gen)
+  ocaml/gen/facade/dune:11: (public_name effect4_gen.effect4)
+  ocaml/engine/cas/dune:15: (public_name effect4_engine_cas)
+  ocaml/engine/bytes/dune:10: (public_name effect4_bytes)
+  ocaml/engine/dune:13: (public_name effect4_engine)
+  ocaml/engine/kit/bin/dune:6: (public_name eff)
+  ocaml/engine/kit/dune:17: (public_name effect4_kit)
+  ocaml/clock/dune:3: (public_name effect4_clock)
+  ocaml/eff/dune:8: (public_name effect4_eff)
+package-private libraries 1
+  ocaml/gen/dune: effect4_closure
+== 5. Hand library modules with no .mli (rule 5)
+9: gen/join_escape.ml gen/test_checker_native.ml gen/test_native_boundary.ml lcnf/test_array_conversion.ml lcnf/test_lcnf.ml clock/test_clock.ml engine/api_engine_inst.ml engine/e4_engine_intf.ml engine/kit/kit_serve.ml
+== 6. One fact, several owners, in Lean
+the session fixture is one file: Test/fixtures/session/requests.jsonl is gone (C1)
+wire method names: 2
+  src/Effect4/Tool/Protocol.lean: Request.method
+  src/Effect4/Tool/Protocol.lean: supportedMethods
+journal replays with their own append law: 6
+  src/Effect4/Laws/Run.lean: journal_replays
+  src/Effect4/Laws/Api/Live.lean: journal_replays
+  src/Effect4/Laws/Tool/Exchange.lean: load_own
+  src/Effect4/Laws/Tool/Serve.lean: transcript_replays
+  src/Effect4/Program/Typing/SourceDocument.lean: replayState_snoc
+  src/Effect4/Tool/Replay.lean: replayCursor_snoc
+refusal and reason types under src/Effect4: 50
+== 7. Agent-facing facts read from source
+"annotations" in Tool/Methods.lean or kit_mcp.ml: True
+"outputSchema" in Tool/Methods.lean or kit_mcp.ml: True
+CodecProfile.Refusal: | unsupportedProfile | unreadable (why : JsonRefusal) | unprintable
+planned goals in src: 6
+  src/Effect4/Laws/Schema/DocumentJson.lean: ofJson_image
+  src/Effect4/Laws/Program/FinalizerRun.lean: once_placed_outside_census
+  src/Effect4/Laws/Program/CheckAgreement.lean: explain_replays
+  src/Effect4/Laws/Program/SourceDocument.lean: Doc.revert_program
+  src/Effect4/Laws/Run/Tree.lean: ofProgram_eq_denoteRowsB
+  src/Effect4/Laws/Run/Outcome.lean: rows_divergence_adequate

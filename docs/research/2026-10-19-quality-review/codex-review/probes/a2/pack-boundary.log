@@ -1,0 +1,14 @@
+valid read=Ok
+valid scan=Eof
+max_int-0 read=Truncated(seg=0,off=27)
+max_int-0 scan=Short(seg=0,off=-4611686018427387833)
+max_int-4 read EXCEPTION=Invalid_argument("Bytes.create")
+max_int-4 scan=Short(seg=0,off=-4611686018427387837)
+max_int-16 read EXCEPTION=Invalid_argument("Bytes.create")
+max_int-16 scan=Short(seg=0,off=-4611686018427387849)
+max_int-64 read EXCEPTION=Invalid_argument("Bytes.create")
+max_int-64 scan=Short(seg=0,off=-4611686018427387897)
+max_int-100 read=Truncated(seg=0,off=27)
+max_int-100 scan=Short(seg=0,off=27)
+restored read=Ok
+restored scan=Eof

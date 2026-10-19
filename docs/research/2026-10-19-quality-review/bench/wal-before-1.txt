@@ -1,0 +1,25 @@
+bench_wal — A2 §4.5 cells B8 (append, 256 B, batch 512: >= 200 000 rows/s)
+            and B9 (replay from 0, every checksum verified: >= 1 000 000 rows/s)
+
+== /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/e4_wal_bench_41325 ==
+row      batch   rows            rows/s       MB/s    ms/commit
+64       1       200            22937.9       1.40        0.044
+64       64      12800         747835.2      45.64        0.086
+64       512     51200        1643754.9     100.33        0.311
+64       4096    102400       2126032.0     129.76        1.927
+256      1       200            51787.9      12.64        0.019
+256      64      12800         375001.5      91.55        0.171
+256      512     51200         752331.0     183.67        0.681
+256      4096    102400        895878.6     218.72        4.572
+1024     1       200            39675.6      38.75        0.025
+1024     64      12800         203094.0     198.33        0.315
+1024     512     51200         241915.5     236.25        2.116
+1024     4096    102400        193104.4     188.58       21.211
+replay   -       51200        1144518.9          -       44.735
+
+B8  append 256 B, batch 512   >= 200 000 rows/s :   752331.0  MEET  (0.68 ms/commit)
+B8' append 256 B, batch 4096  >= 200 000 rows/s :   895878.6  MEET  (4.57 ms/commit; B6 bounds a commit at 15 ms)
+B9  replay from 0, 51 200 rows >= 1 000 000 rows/s : 1144518.9  MEET
+    (durable append is fsync-bound: rows/s = batch / commit latency, so B8 at batch 512
+     needs a commit under 2.6 ms; this filesystem's fsync is the number that decides it.)
+opam exec --switch=effect4 -- dune exec engine/cas/test/bench_wal.exe  0.87s user 0.17s system 65% cpu 1.582 total

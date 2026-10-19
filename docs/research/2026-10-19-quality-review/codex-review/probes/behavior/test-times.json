@@ -1,0 +1,395 @@
+{
+  "environment": {
+    "TMPDIR": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/behavior/tmp",
+    "E4_LEAN_CORPUS": "/Users/pooks/Dev/lean4-effect4/.lake/corpus",
+    "E4_EFF_GOLDENS": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/eff/goldens",
+    "E4_HEX_GOLDENS": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/goldens/eff",
+    "E4_TRUTH_CORPUS": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/harness/truth/corpus.json"
+  },
+  "rows": [
+    {
+      "test": "clock/test_clock.exe",
+      "seconds": 0.2007908751256764,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/clock"
+    },
+    {
+      "test": "eff/test/prop_wire.exe",
+      "seconds": 0.2295180419459939,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/eff/test"
+    },
+    {
+      "test": "eff/test/test_eff.exe",
+      "seconds": 0.25867466581985354,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/eff/test"
+    },
+    {
+      "test": "eff/test/test_frame.exe",
+      "seconds": 0.16985012497752905,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/eff/test"
+    },
+    {
+      "test": "eff/test/test_lean_wire.exe",
+      "seconds": 0.24531274987384677,
+      "status": 2,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/eff/test"
+    },
+    {
+      "test": "eff/test/test_metadata.exe",
+      "seconds": 0.15449054213240743,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/eff/test"
+    },
+    {
+      "test": "eff/test/test_owner.exe",
+      "seconds": 0.15396400028839707,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/eff/test"
+    },
+    {
+      "test": "eff/test/test_val_frames.exe",
+      "seconds": 0.16178933437913656,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/eff/test"
+    },
+    {
+      "test": "engine/bytes/test/test_math.exe",
+      "seconds": 0.6583402077667415,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/bytes/test"
+    },
+    {
+      "test": "engine/cas/test/test_bytes.exe",
+      "seconds": 0.2367251249961555,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_cache.exe",
+      "seconds": 0.7394157089293003,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_cas.exe",
+      "seconds": 0.35881575010716915,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_checkpoint.exe",
+      "seconds": 2.77167687471956,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_control.exe",
+      "seconds": 0.22180650010704994,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_crash.exe",
+      "seconds": 0.4641091669909656,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_disk.exe",
+      "seconds": 0.32854962488636374,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_disk_boundary.exe",
+      "seconds": 0.25570158334448934,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_disk_damage.exe",
+      "seconds": 0.29489600006490946,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_disk_kill.exe",
+      "seconds": 0.2047639167867601,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_disk_stm.exe",
+      "seconds": 0.8484407500363886,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_index.exe",
+      "seconds": 0.5292707080952823,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_pack.exe",
+      "seconds": 0.2733638333156705,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_shared_facts.exe",
+      "seconds": 0.22306816698983312,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/cas/test/test_wal.exe",
+      "seconds": 0.20435649994760752,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/cas/test"
+    },
+    {
+      "test": "engine/test/check/test_check.exe",
+      "seconds": 0.2746786247007549,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/check"
+    },
+    {
+      "test": "engine/test/ctors/test_ctors.exe",
+      "seconds": 0.22776308422908187,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/ctors"
+    },
+    {
+      "test": "engine/test/kit/test_kit.exe",
+      "seconds": 0.2809982090257108,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/kit"
+    },
+    {
+      "test": "engine/test/kit/test_mcp.exe",
+      "seconds": 0.27430133428424597,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/kit"
+    },
+    {
+      "test": "engine/test/kit/test_shapes.exe",
+      "seconds": 0.37712495820596814,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/kit"
+    },
+    {
+      "test": "engine/test/kit/test_tool.exe",
+      "seconds": 0.26568008260801435,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/kit"
+    },
+    {
+      "test": "engine/test/kit/test_transcript.exe",
+      "seconds": 0.26048795878887177,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/kit"
+    },
+    {
+      "test": "engine/test/mask/test_mask.exe",
+      "seconds": 0.24862233409658074,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/mask"
+    },
+    {
+      "test": "engine/test/modeled/test_modeled.exe",
+      "seconds": 0.2232574592344463,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/modeled"
+    },
+    {
+      "test": "engine/test/pool/test_pool.exe",
+      "seconds": 0.28020091680809855,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/pool"
+    },
+    {
+      "test": "engine/test/prop_fibers_view.exe",
+      "seconds": 1.0066672498360276,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/prop_memo.exe",
+      "seconds": 0.384032417088747,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/prop_point.exe",
+      "seconds": 0.1986247911117971,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/prop_table.exe",
+      "seconds": 0.2814062088727951,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/prop_trace.exe",
+      "seconds": 0.38643591571599245,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/queue/test_queue.exe",
+      "seconds": 0.2915362077765167,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/queue"
+    },
+    {
+      "test": "engine/test/rocq/test_rocq.exe",
+      "seconds": 0.3406780422665179,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/rocq"
+    },
+    {
+      "test": "engine/test/scenarios/test_scenarios.exe",
+      "seconds": 0.23479237500578165,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/scenarios"
+    },
+    {
+      "test": "engine/test/semaphore/test_semaphore.exe",
+      "seconds": 0.30317895812913775,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/semaphore"
+    },
+    {
+      "test": "engine/test/stm/stm_admit.exe",
+      "seconds": 1.0614025830291212,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/stm"
+    },
+    {
+      "test": "engine/test/stm/stm_disk.exe",
+      "seconds": 4.5510720000602305,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/stm"
+    },
+    {
+      "test": "engine/test/stm/stm_inbox.exe",
+      "seconds": 2.141933083999902,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/stm"
+    },
+    {
+      "test": "engine/test/stm/stm_mailbox.exe",
+      "seconds": 2.3175841248594224,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/stm"
+    },
+    {
+      "test": "engine/test/stm/stm_tool.exe",
+      "seconds": 1.409172042272985,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/stm"
+    },
+    {
+      "test": "engine/test/test_buckets.exe",
+      "seconds": 1.1890516667626798,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/test_diff.exe",
+      "seconds": 1.2787340418435633,
+      "status": 1,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/test_engine.exe",
+      "seconds": 1.0367771657183766,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/test_host.exe",
+      "seconds": 0.5452479161322117,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/test_log.exe",
+      "seconds": 0.2236360409297049,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/test_query.exe",
+      "seconds": 0.18560437485575676,
+      "status": 2,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/test_replay_steps.exe",
+      "seconds": 0.22916137473657727,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/test_sched.exe",
+      "seconds": 1.0748407919891179,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/test_serve.exe",
+      "seconds": 0.22942024981603026,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/test_stable_step.exe",
+      "seconds": 0.3413942498154938,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/todo/test_todo.exe",
+      "seconds": 0.28916845796629786,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test/todo"
+    },
+    {
+      "test": "gen/interface/test_interface.exe",
+      "seconds": 0.2679467909038067,
+      "status": 2,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/gen/interface"
+    },
+    {
+      "test": "gen/test_checker_native.exe",
+      "seconds": 0.2212445419281721,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/gen"
+    },
+    {
+      "test": "gen/test_native_boundary.exe",
+      "seconds": 0.22092424985021353,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/gen"
+    },
+    {
+      "test": "lcnf/test_array_conversion.exe",
+      "seconds": 0.23809645790606737,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/lcnf"
+    },
+    {
+      "test": "lcnf/test_lcnf.exe",
+      "seconds": 0.26514599984511733,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/lcnf"
+    }
+  ]
+}

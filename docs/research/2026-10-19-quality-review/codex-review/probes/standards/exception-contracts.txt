@@ -1,0 +1,214 @@
+ocaml/eff/eff_frame.ml
+38: (** One frame of a payload in hand. @raise Invalid_argument for a tag outside a byte, before
+43:     callback runs once; if it raises, the writer is rolled back to before the frame (F9).
+44:     @raise Invalid_argument for a tag outside a byte, before the callback runs. *)
+48:     @raise Invalid_argument on a negative int. *)
+54: (** @raise Invalid_argument on a negative int (F4). *)
+57: (** @raise Invalid_argument on a string that is not valid UTF-8, before any byte (F4). *)
+74:     @raise Invalid_argument for a kind outside a byte. *)
+78:     @raise Invalid_argument for a kind outside a byte or a negative key. *)
+86:     callback swallowed (F8). A value outside the Lean image raises Invalid_argument (F4). *)
+89: (** {!encode} at the default limit, its refusal raised as Invalid_argument (F8). *)
+96: (** Eight bytes at [pos], unchecked: the caller has checked the window. [None] when the top byte
+97:     is at least 0x40, so the length is outside 0 .. 2^62 - 1. *)
+100: (** [(tag, payload_start, payload_end, next)], or [None] for a window that holds no frame. *)
+
+ocaml/engine/bytes/e4_be.ml
+11:    sign of an int, the range of a tag, and the window of `read_be64`.  There is exactly one
+22:        payload reproduces the golden's bytes exactly.                   by construction; tested
+27:    B4  Decoding is length-directed and exact: a length that runs past the limit, a window
+28:        shorter than a header, a negative position and trailing bytes are refusals, never
+36:        message: `be64` and `nat_digits` a negative int, `framed` a tag that is not a byte.
+37:        Eff_frame.emit_be64 has no such check, and Eff_frame.emit_frame raises through
+49:    D3  `read_be64` bounds-checks its window (Eff_frame's reads eight bytes unconditionally
+51:        in-range input the two agree.
+56: (** Eight big-endian bytes.  Raises Invalid_argument on a negative int. *)
+59: (** Eight bytes at pos, or None past the end / below 0 / at or above 2^62 (B5). *)
+62: (** tag :: be64 (length payload) ++ payload.  Raises Invalid_argument unless 0 <= tag <= 255. *)
+72: (** Base-256 big-endian, no leading zero; 0 is "".  Raises Invalid_argument if negative. *)
+
+ocaml/engine/bytes/e4_sha256.ml
+16:        The third input is built in the test out of E4_be frames from
+27:        preallocated int array, and a run of whole blocks is compressed straight out of the
+32:    D1  `finish` raises Invalid_argument if a context is updated or finished twice, rather
+42:     Raises Invalid_argument on an out-of-range window or a finished context. *)
+48:     update after it, raises Invalid_argument. *)
+54: (** One-shot over a window: 32 raw bytes. *)
+57: (** [hex s] is [E4_hex.of_bytes (digest s)]: 64 lowercase hex characters, exactly
+
+ocaml/engine/cas/e4_addr.ml
+17:    AD1 `Addr.t` is exactly 32 bytes; `of_digest` refuses anything else with Invalid_argument
+21:        out, either case in, exactly `Digest.hex` / `Digest.ofHex?` (Digest.hex (src/Effect4/Store/Carrier/Digest.lean),
+41:        non-negative int.  Rather than let the key go negative — A2's index stores keys in a
+42:        `Bigarray.int`, which would carry a negative fine, but `Addr.prefix63`'s type says
+56:   (** Invalid_argument unless the string is exactly 32 bytes (AD1). *)
+67:   (** = E4_hex.digest_of_hex: either case, exactly 64 characters (AD2). *)
+73:   (** The leading 62 bits, as a non-negative int; an index key, never an identity (AD6, D1). *)
+
+ocaml/engine/cas/e4_cas.ml
+36:    CS2 / L-CAS-4  Admission refuses in exactly Lean's order, first refusal wins:
+47:                                `admission_stages` below is where it moves, in one line)
+76:        and `Closed (Word.toStore earlier)`. The result remains faithful and closed.
+120:        makes L-CAS-7 testable), `addresses`, `closed` (`Closed`, Closed (src/Effect4/Store/Domain/Store.lean), as a
+137:        `E4_pack.truncate_to` refuses any offset below the writer's own `pack_end`, which
+142:        "trusted", this lane STOPS: the store opens with everything below the failure,
+144:        raise `Store_error` until an operator acts.  It is unreachable under this module's own
+171:     records); `open_ro` opens one on a store another process is writing (it sees exactly what
+265:     A2 §6.4 measured — bench cell B5's bytes-per-node is a function of exactly that. *)
+459: val closed : ro -> bool
+
+ocaml/engine/cas/e4_chunk.ml
+24:    which made the first probe report content-defined chunking failing exactly as fixed-size
+27:    chunk start costs nothing and why CH6 below holds.  (c) THE MASK IS AT THE TOP OF THE WORD.
+68:        `concat (map (piece s) (cut p s)) = s` exactly.      by construction; tested (P5)
+69:    CH2 Every chunk is at least `min` and at most `max` bytes; the LAST may be shorter, and a
+82:        forgets a byte after `window` < `min` steps, so a candidate position is a function of
+93:        instance of it.  On content with few DISTINCT byte windows — the test uses a filler of
+95:        rolling hash has only that many chances to find a boundary however wide its window is,
+102:        max-forced cuts still dedup.  The consequence is `default`'s note below.       tested
+110:        ceil(log_{groups.avg} n) and is 1 for every image below `single_max` chunks.  `flatten`
+131:        given.  Choosing `Whole` below it is `E4_checkpoint.write`'s decision, which is where
+136:        `reassemble_manifest`, `fold_chunks`, `chunk_node`, `chunk_payload` and `window` (62 —
+144:   ; min : int (** no cut is taken before this many bytes; must be > [window] *)
+149:     default.  The closed form behind it is `c* = sqrt (42 * S / k)` for an image of S bytes
+154:     MEASURED, and a FINDING for the coordinator: `default` is a constant and the closed form
+157:     reduction, inside B7's <= 300 KB and >= 200x.  At a 104 KB machine image the same closed
+167: (** window < min <= avg <= max, avg a power of two and at most 2^30 (the mask must fit above
+168:     the 62-bit word).  Every entry point raises `Invalid_argument` on params this refuses. *)
+171: (** 62: the number of bytes the gear recurrence remembers.  `min > window` is what makes CH6
+173: val window : int
+181: (** The (offset, length) of every chunk, in order, covering the whole string exactly
+231:     (D1).  Staged, not durable: the caller commits.  Raises `Store_error` if the store refuses
+
+ocaml/engine/cas/e4_control.ml
+8:     The wire bounds encoded root generations below 2^62; arithmetic uses Z.t.
+
+ocaml/engine/cas/e4_crc.ml
+26:    C3  Range: every result is in 0 .. 0xFFFFFFFF and never negative; a `crc` argument
+27:        outside that range is Invalid_argument, never a silent wrap.  by construction; tested
+29:        window outside the string with Invalid_argument.                     tested
+53: (** [sub s pos len] is the crc of that window (C4).  Invalid_argument if out of range. *)
+59: (** [update_sub crc s pos len] extends a running crc by that window (C2, C4). *)
+
+ocaml/engine/cas/e4_index.ml
+29:                 `Kind.byte_pos` (src/Effect4/Store/Carrier/Kind.lean) proves every kind byte is at least 1.
+80:        `Deps.of_node` is `E4_node.checked_edges` (the Ref edges, exactly, with no table) plus
+87:        index of 1024 or more would make `vals.(j)` negative -- storable in a `Bigarray.int`, but
+120: (** An alias, so the sub-modules below can name the node index after shadowing `t`. *)
+156: (** [slots] is rounded UP to a power of two, at least [min_slots]. *)
+229: (** The fast probe (D5): one byte at `E4_pack.record_header_length + 1` into the record, out of
+232:     pack, i.e. within 1.7% of the header scan alone (3 393 200).  It is exactly as trusting as the non-verifying scan it runs beside (neither checks a
+280:     why; the scan stop is present exactly when a rebuild ran.  [dir] as in [of_pack]. *)
+300:   (* [find] answers in insertion order; [kinds] lists those with at least one entry, in byte
+
+ocaml/engine/cas/e4_node.ml
+43:    ND7 `edges` is `{kind = Schema; addr = spec} :: refs`; `checked_edges` drops edge 0 exactly
+61:        nat's are (D1); a float frame of exactly eight bytes whose bits pass `Val.floatFrame` (a
+84:        it as `Oversize` first, exactly as `Store.putNode` tests `payload.WF` first.
+90:   ; spec : string (* exactly 32 bytes: edge 0, at kind Schema *)
+123: (** Invalid_argument unless the spec is exactly 32 bytes and the version is a byte. *)
+137: (** The bytes are exactly one well-formed frame tree. *)
+
+ocaml/engine/cas/e4_pack.ml
+33:        `read_at` at a record offset returns exactly those node_bytes or None.
+42:        refuses to go below `pack_end`.                   by construction; tested (T1, T2)
+64:        seals the writer's segments below `pack_end` once its fsyncs are done, and `open_`
+65:        seals every segment below the writer's.  A sealed segment holds only fsynced bytes,
+89:        `Seq.t` of `(offset, record)` in write order ending in exactly one `Stopped verdict`),
+197: (** = [pack_end]: the watermark below which every byte survived an fsync. *)
+210:     Invalid_argument below [pack_end] (PK3) or with bytes staged. *)
+342: (** The same walk as a sequence: the records in write order, then exactly one `Stopped`
+
+ocaml/engine/cas/e4_wal.ml
+70:        domain, raises `Locked`.  A reader
+89:        `Seal` raises `Invalid_argument`: rotation owns it.
+180:     Raises `Locked` if another `t` holds the directory, `Invalid_argument` if
+183:     them.  A torn tail (`Short`, `Bad_crc`, `Bad_row`, `Oversize`) is recovered, not raised. *)
+186: (** `open_` with the job as 64 hexadecimal characters (either case).  Raises
+199:     Raises `Row_too_large`, and `Invalid_argument` on a `Seal` (D2). *)
+227: (** Every index strictly below this is on the disk and fsynced; nothing at or above it is
+235:     from it.  Writer only.  Raises `Invalid_argument` for an index above `next_seq` or below
+241: (** Holds no file handle: a segment is opened, read and closed inside one `replay`, so a
+276:     (LG1, LG2, LG6).  Every row's CRC is verified, including the rows below [from], which are
+
+ocaml/engine/e4_abandon.ml
+24:          raises): `closed @ unfinished` is exactly the multiset of scopes open at entry. An
+37:    wall-clock bound would make which scopes closed depend on host timing, and the report is
+57:   { closed : int list (** scope keys whose finalizers all ran, in close order *)
+79:           scope has no more finalizer work and is now closed -- a [None] costs no fuel,
+86:     @raise Invalid_argument if [budget.finalizer_fuel < 0] or [budget.max_scopes < 0]. *)
+89: (** AB3 as a predicate: [closed @ unfinished] and [at_entry] are the same multiset. *)
+
+ocaml/engine/e4_buckets.ml
+16:      B1  Ascending priorities, each exactly once. `priorities` is strictly increasing.
+19:      B2  FIFO within a bucket. `enqueue` appends at the tail of exactly its own priority's
+29:      B5  Exactly one delivery per enqueue: one `enqueue` adds exactly one element to the next
+32:          tested: buckets-exactly-once]
+47:    argument -- the drain reverses each back list exactly once. Refusal row A3-BUCKETS-DEQUEUE.
+79:     @raise Invalid_argument if [priority] is negative. *)
+100:     @raise Invalid_argument if the priorities are not strictly ascending, or if one is negative
+
+ocaml/engine/e4_logindex.ml
+63: val kind_scope_closed_on_link : int
+112:     @raise Invalid_argument if [entry.index] is not greater than the last added index, or if
+113:       [entry.decision] is below the last added decision -- both would break X2 or the
+142: (** How many decisions appended at least one row, i.e. how many segments {!segment} has. *)
+148: (** The half-open row range [\[log_from, log_upto)] one decision appended
+
+ocaml/engine/e4_mailbox.ml
+27:     @raise Invalid_argument if [bound < 1]. *)
+45:     @raise Invalid_argument if [max < 1]. *)
+
+ocaml/engine/e4_query.ml
+4:      Every entry point below is a PURE FUNCTION of the saved machine, the log and the tape.
+24:                                  machine, so a full walk of n positions costs exactly n
+78:     @raise Invalid_argument if [checkpoint_every < 1]. *)
+122: (** Every scope with a link row and no close row, ascending: the empty `closed at` cells of
+133:     @raise Invalid_argument on an empty [cid] -- it would match every row. *)
+168: (** @raise Invalid_argument outside [0, tape_length]. *)
+181:     @raise Invalid_argument outside [0, tape_length]. *)
+187:     @raise Invalid_argument unless [0 <= from <= upto <= tape_length]. *)
+
+ocaml/engine/e4_quiescence.ml
+23:     @raise Invalid_argument if nothing is outstanding — a leave without an enter is a bug,
+
+ocaml/engine/e4_reply.ml
+18:     @raise Invalid_argument on a second fill; the first value stays in place. *)
+21: (** Block until the cell is filled, then return its value, to every waiter, exactly as
+
+ocaml/engine/e4_ring.ml
+26: (** @raise Invalid_argument if [capacity < 1]. *)
+33:     @raise Invalid_argument if a second domain appends (G1). *)
+
+ocaml/engine/e4_sched.ml
+6:    exactly one owning domain and exactly one worker loop (W1); a machine's engine value is
+22:      W3  The event-loop rule: after every step, each armed owner has exactly one `fire`
+25:      W4  Event rows are handed out exactly once, in trace order: the cursor advances to
+42:      H1  `engine.init` runs exactly once, on the main domain, before any worker domain
+70:          `result`; a violated precondition (a negative fuel, a zero domain count) is an
+89:          is honoured exactly -- `Full n` means the first [n] were accepted -- and the
+149:   ; minor_heap_words : int (** raised well above the 256k default; survey §6 D *)
+185:     @raise Invalid_argument if any of [domains], [mailbox_bound], [ring_capacity], [batch]
+186:     is below 1, or if [spin_budget], [finalizer_fuel] or [checkpoint_every] is negative. *)
+194:     @raise Invalid_argument if [fuel] is negative. *)
+
+ocaml/engine/e4_shutdown.ml
+19:          so with no edges the order is exactly LIFO. A cycle is an `Invalid_argument` at
+35:      SD6 Double-signal safe: a second `run` returns the first report, exactly, and runs
+68:   ; failed : (id * exn) list (** SD3, in the order they raised *)
+81:     polls, exactly as `E4_quiescence.wait_zero_for` does. *)
+87: (** 128 — exited, but a clean-up hook raised. *)
+107:     @raise Invalid_argument if an id in [after] belongs to another registry, or if the
+
+ocaml/engine/e4_trigger.ml
+
+
+ocaml/lcnf/lcnf_array.ml
+14:    V2  Dense: `get t i` is `Some` exactly for `0 <= i < length t`.     tested (test_lcnf)
+22:    V5  `get_exn` and `set_exn` take an index the caller has proved in range, as Lean's `uget`,
+23:        `getInternal` and `uset` do; outside it they raise `Invalid_argument`.
+49: (** Lean's [Array.uget] and [Array.getInternal], whose index is proved in range.
+50:     @raise Invalid_argument outside [0, length). *)
+54:     in range. The answer is a new value; the argument is unchanged (V1, V4).
+55:     @raise Invalid_argument outside [0, length). *)
+58: (** The half-open range, in index order. Clamped to [0, length]; empty when [upto <= from]. *)

@@ -1,0 +1,184 @@
+{
+  "reviewed_head": {
+    "command": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4",
+    "exit": 0,
+    "stdout": "3471cbe35e3f91949170e2147dbe46f75cb795fd\n",
+    "stderr": ""
+  },
+  "worktree_status": {
+    "command": [
+      "git",
+      "status",
+      "--short"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4",
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "main_status": {
+    "command": [
+      "git",
+      "status",
+      "--short"
+    ],
+    "cwd": "/Users/pooks/Dev/lean4-effect4",
+    "exit": 0,
+    "stdout": "?? tools/view/make_videos.py\n",
+    "stderr": ""
+  },
+  "main_lean_source_difference": {
+    "command": [
+      "git",
+      "diff",
+      "3471cbe35",
+      "--",
+      "src/Effect4",
+      "src/OCaml5/Eff/Goldens.lean"
+    ],
+    "cwd": "/Users/pooks/Dev/lean4-effect4",
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "language": {
+    "command": [
+      "python3",
+      "scripts/check-language.py",
+      "--strict",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/README.md"
+    ],
+    "cwd": "/Users/pooks/Dev/lean4-effect4",
+    "exit": 0,
+    "stdout": "PASS check-language: no finding in docs/research/2026-10-19-quality-review/codex-review/README.md; the other documents carry 1950 finding(s) (report: python3 scripts/check-language.py)\n",
+    "stderr": ""
+  },
+  "findings": {
+    "A": [
+      "A1.1",
+      "A2.1",
+      "A3.2",
+      "A4.1",
+      "A3.1",
+      "A3.3",
+      "A5.1",
+      "A3.4",
+      "A5.2",
+      "A7.1",
+      "A7.2",
+      "A9.1"
+    ],
+    "B": [
+      "B5.1",
+      "B1.1",
+      "B4.1",
+      "B3.1",
+      "B3.2",
+      "B2.1"
+    ]
+  },
+  "branch_coverage": {
+    "codex/vessel-dogfood": true,
+    "codex/abstraction-probes": true,
+    "codex/vessel-model": true,
+    "codex/vessel-fmi": true,
+    "codex/vessel-step": true,
+    "codex/probe-canonical-image": true,
+    "probe/sexp-face": true,
+    "claude/laughing-northcutt-cd0311": true,
+    "claude/math-d3": true,
+    "claude/sad-williamson-6d3b65": true,
+    "seat/schema-interop": true,
+    "claude/codec-arm-lemmas": true,
+    "claude/gracious-shamir-5b34bd": true,
+    "codex/probe-pull-dispatch": true,
+    "codex/probe-source-resolution": true
+  },
+  "research_folder_coverage": {
+    "2026-10-15-a1-wip": true,
+    "2026-10-15-codegen-review": true,
+    "2026-10-15-codex-integration": true,
+    "2026-10-15-gate-consolidation": true,
+    "2026-10-15-interop-plan": true,
+    "2026-10-15-lowering-state": true,
+    "2026-10-15-modeled-lowering": true,
+    "2026-10-15-ocaml-interop-explore": true,
+    "2026-10-15-ocaml-seam-probes": true,
+    "2026-10-15-orphan-check": true,
+    "2026-10-15-recursive-types": true,
+    "2026-10-15-remaining-work": true,
+    "2026-10-15-seat-cleanup-wind-down": true,
+    "2026-10-15-type-roundtrip-audit": true,
+    "2026-10-15-workstreams": true,
+    "2026-10-16-c-interop": true,
+    "2026-10-16-itrees": true,
+    "2026-10-16-math-d3": true,
+    "2026-10-16-math-graphs": true,
+    "2026-10-16-modeled-universe": true,
+    "2026-10-16-native-kit": true,
+    "2026-10-16-ocaml-constructors": true,
+    "2026-10-16-ocaml-interop": true,
+    "2026-10-16-schema-interop": true,
+    "2026-10-16-soundness-audit": true,
+    "2026-10-16-tooling-design": true,
+    "2026-10-16-ts-types": true,
+    "2026-10-16-usability-scope": true,
+    "2026-10-17-authoring-and-store": true,
+    "2026-10-17-authoring-gemini": true,
+    "2026-10-17-authoring-model-review": true,
+    "2026-10-17-d3": true,
+    "2026-10-17-ocaml-estate-review": true,
+    "2026-10-17-ocaml-refactor-assessment": true,
+    "2026-10-17-proof-scout": true,
+    "2026-10-17-seams": true,
+    "2026-10-17-seat-rocq-cas": true,
+    "2026-10-17-session-composition": true,
+    "2026-10-18-authoring-probe": true,
+    "2026-10-18-cleanup": true,
+    "2026-10-18-codex-abstractions": true,
+    "2026-10-18-incremental": true,
+    "2026-10-18-mcp-schema-size": true,
+    "2026-10-18-native-exchange": true,
+    "2026-10-18-ocaml-ppx": true,
+    "2026-10-18-ocaml-tooling-probe": true,
+    "2026-10-18-refinements": true,
+    "2026-10-18-slices": true,
+    "2026-10-18-view-backlog": true
+  },
+  "required_evidence": {
+    "a1.log": true,
+    "a1-lean.log": true,
+    "a1-fields.log": true,
+    "a1-size.json": true,
+    "a1-bench-before.log": true,
+    "a2/results.json": true,
+    "a2/controls.log": true,
+    "a2/pack-boundary.log": true,
+    "a2/deep-results.json": true,
+    "b4-json.log": true,
+    "b5/compile.json": true,
+    "standards/injected.log": true,
+    "standards/shutdown-model.log": true,
+    "standards/storage.log": true,
+    "standards/doc.log": true,
+    "behavior/test-analysis.json": true,
+    "behavior/load-tests.json": true,
+    "report-language.log": true
+  },
+  "local_links": [
+    {
+      "link": "probes/standards/report.md#reproduction-and-retained-evidence",
+      "exists": true
+    },
+    {
+      "link": "probes/behavior/report.md",
+      "exists": true
+    }
+  ],
+  "readme_sha256": "ef6c24440481e7767f78da817034c2002c4943d64ff93cc3b1f10e58238c5749"
+}

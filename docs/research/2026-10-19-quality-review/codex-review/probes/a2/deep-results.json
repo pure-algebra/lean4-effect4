@@ -1,0 +1,98 @@
+[
+  {
+    "depth": 1000,
+    "mode": "json",
+    "exit": 0,
+    "stdout": "accepted=true\n",
+    "stderr": "",
+    "seconds": 0.03582124970853329
+  },
+  {
+    "depth": 1000,
+    "mode": "mcp",
+    "exit": 0,
+    "stdout": "reply={\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":\"Expected one JSON-RPC object\"}}\n",
+    "stderr": "",
+    "seconds": 0.0363535420037806
+  },
+  {
+    "depth": 1000,
+    "mode": "wire",
+    "exit": 0,
+    "stdout": "accepted=true\n",
+    "stderr": "",
+    "seconds": 0.03316779155284166
+  },
+  {
+    "depth": 300000,
+    "mode": "json",
+    "exit": 0,
+    "stdout": "accepted=true\n",
+    "stderr": "",
+    "seconds": 0.3966682907193899
+  },
+  {
+    "depth": 300000,
+    "mode": "mcp",
+    "exit": 0,
+    "stdout": "reply={\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":\"Expected one JSON-RPC object\"}}\n",
+    "stderr": "",
+    "seconds": 0.4364686254411936
+  },
+  {
+    "depth": 300000,
+    "mode": "wire",
+    "exit": 0,
+    "stdout": "accepted=true\n",
+    "stderr": "",
+    "seconds": 0.2797226249240339
+  },
+  {
+    "depth": 1000000,
+    "mode": "json",
+    "exit": 0,
+    "stdout": "accepted=true\n",
+    "stderr": "",
+    "seconds": 1.5923881251364946
+  },
+  {
+    "depth": 1000000,
+    "mode": "mcp",
+    "exit": 0,
+    "stdout": "reply={\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":\"Expected one JSON-RPC object\"}}\n",
+    "stderr": "",
+    "seconds": 1.9282750417478383
+  },
+  {
+    "depth": 1000000,
+    "mode": "wire",
+    "exit": 0,
+    "stdout": "accepted=true\n",
+    "stderr": "",
+    "seconds": 8.516902416013181
+  },
+  {
+    "depth": 2000000,
+    "mode": "json",
+    "exit": 0,
+    "stdout": "accepted=true\n",
+    "stderr": "",
+    "seconds": 0.7091894578188658
+  },
+  {
+    "depth": 2000000,
+    "mode": "mcp",
+    "exit": 0,
+    "stdout": "reply={\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":\"Expected one JSON-RPC object\"}}\n",
+    "stderr": "",
+    "seconds": 0.8215208747424185
+  },
+  {
+    "depth": 2000000,
+    "mode": "wire",
+    "exit": 0,
+    "stdout": "accepted=true\n",
+    "stderr": "",
+    "seconds": 1.955556749831885
+  }
+]

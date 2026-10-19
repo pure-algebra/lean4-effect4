@@ -1,0 +1,529 @@
+[
+  {
+    "name": "frame",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "frame"
+    ],
+    "exit": 0,
+    "seconds": 0.026474792044609785,
+    "stdout": "frame cases=2330 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "wire",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "wire"
+    ],
+    "exit": 0,
+    "seconds": 0.0221304171718657,
+    "stdout": "wire cases=2500 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "shape",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "shape"
+    ],
+    "exit": 0,
+    "seconds": 0.023328749928623438,
+    "stdout": "shape cases=2266 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "node",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "node"
+    ],
+    "exit": 0,
+    "seconds": 0.020501125138252974,
+    "stdout": "node cases=2402 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "control",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "control"
+    ],
+    "exit": 0,
+    "seconds": 0.020172541961073875,
+    "stdout": "control cases=2288 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "index",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "index"
+    ],
+    "exit": 0,
+    "seconds": 0.44086070777848363,
+    "stdout": "index cases=3242 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "pack",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "pack"
+    ],
+    "exit": 0,
+    "seconds": 0.20054741576313972,
+    "stdout": "pack cases=2326 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "wal",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "wal"
+    ],
+    "exit": 0,
+    "seconds": 0.20614412520080805,
+    "stdout": "wal cases=2222 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "json",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "json"
+    ],
+    "exit": 0,
+    "seconds": 0.02171091688796878,
+    "stdout": "json cases=2276 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "nat_json",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "nat_json"
+    ],
+    "exit": 0,
+    "seconds": 0.02173362486064434,
+    "stdout": "nat_json cases=2276 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "mcp",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "mcp"
+    ],
+    "exit": 0,
+    "seconds": 0.8675360418856144,
+    "stdout": "mcp cases=2276 exceptions=0 seed=3471,20261019\n",
+    "stderr": ""
+  },
+  {
+    "name": "pack-maxminus0",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "pack",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/pack-maxminus0.bin"
+    ],
+    "exit": 0,
+    "seconds": 0.019826958887279034,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "frame-maxminus0",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "frame",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/frame-maxminus0.bin"
+    ],
+    "exit": 0,
+    "seconds": 0.01889470824971795,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "pack-maxminus1",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "pack",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/pack-maxminus1.bin"
+    ],
+    "exit": 0,
+    "seconds": 0.018754541873931885,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "frame-maxminus1",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "frame",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/frame-maxminus1.bin"
+    ],
+    "exit": 0,
+    "seconds": 0.018742000218480825,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "pack-maxminus4",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "pack",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/pack-maxminus4.bin"
+    ],
+    "exit": 2,
+    "seconds": 0.019018917344510555,
+    "stdout": "EXCEPTION Invalid_argument(\"Bytes.create\")\nRaised by primitive operation at Effect4_engine_cas__E4_pack.reader_source.read in file \"engine/cas/e4_pack.ml\", line 403, characters 19-33\nCalled from Effect4_engine_cas__E4_pack.read_full in file \"engine/cas/e4_pack.ml\", line 524, characters 20-75\nCalled from Fuzz.diskread.(fun) in file \"/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-rev\", line 26, characters 115-163\nCalled from Stdlib__Fun.protect in file \"fun.ml\", line 33, characters 8-15\nRe-raised at Stdlib__Fun.protect in file \"fun.ml\", line 38, characters 6-52\nCalled from Fuzz in file \"/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-rev\", line 60, characters 70-97\n\n",
+    "stderr": ""
+  },
+  {
+    "name": "frame-maxminus4",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "frame",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/frame-maxminus4.bin"
+    ],
+    "exit": 0,
+    "seconds": 0.018801082856953144,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "pack-maxminus16",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "pack",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/pack-maxminus16.bin"
+    ],
+    "exit": 2,
+    "seconds": 0.01888270815834403,
+    "stdout": "EXCEPTION Invalid_argument(\"Bytes.create\")\nRaised by primitive operation at Effect4_engine_cas__E4_pack.reader_source.read in file \"engine/cas/e4_pack.ml\", line 403, characters 19-33\nCalled from Effect4_engine_cas__E4_pack.read_full in file \"engine/cas/e4_pack.ml\", line 524, characters 20-75\nCalled from Fuzz.diskread.(fun) in file \"/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-rev\", line 26, characters 115-163\nCalled from Stdlib__Fun.protect in file \"fun.ml\", line 33, characters 8-15\nRe-raised at Stdlib__Fun.protect in file \"fun.ml\", line 38, characters 6-52\nCalled from Fuzz in file \"/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-rev\", line 60, characters 70-97\n\n",
+    "stderr": ""
+  },
+  {
+    "name": "frame-maxminus16",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "frame",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/frame-maxminus16.bin"
+    ],
+    "exit": 0,
+    "seconds": 0.018690207973122597,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "pack-maxminus64",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "pack",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/pack-maxminus64.bin"
+    ],
+    "exit": 2,
+    "seconds": 0.018775667063891888,
+    "stdout": "EXCEPTION Invalid_argument(\"Bytes.create\")\nRaised by primitive operation at Effect4_engine_cas__E4_pack.reader_source.read in file \"engine/cas/e4_pack.ml\", line 403, characters 19-33\nCalled from Effect4_engine_cas__E4_pack.read_full in file \"engine/cas/e4_pack.ml\", line 524, characters 20-75\nCalled from Fuzz.diskread.(fun) in file \"/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-rev\", line 26, characters 115-163\nCalled from Stdlib__Fun.protect in file \"fun.ml\", line 33, characters 8-15\nRe-raised at Stdlib__Fun.protect in file \"fun.ml\", line 38, characters 6-52\nCalled from Fuzz in file \"/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-rev\", line 60, characters 70-97\n\n",
+    "stderr": ""
+  },
+  {
+    "name": "frame-maxminus64",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "frame",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/frame-maxminus64.bin"
+    ],
+    "exit": 0,
+    "seconds": 0.018709667026996613,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "pack-maxminus100",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "pack",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/pack-maxminus100.bin"
+    ],
+    "exit": 0,
+    "seconds": 0.018614041153341532,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "frame-maxminus100",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "frame",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/frame-maxminus100.bin"
+    ],
+    "exit": 0,
+    "seconds": 0.018534166272729635,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "json-1000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "json",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-1000.json"
+    ],
+    "exit": 0,
+    "seconds": 0.018475333228707314,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "nat_json-1000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "nat_json",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-1000.json"
+    ],
+    "exit": 0,
+    "seconds": 0.01868041604757309,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "mcp-1000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/engine/kit/bin/eff.exe",
+      "mcp"
+    ],
+    "exit": 0,
+    "seconds": 0.031242249999195337,
+    "stdout": "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":\"Expected one JSON-RPC object\"}}\n",
+    "stderr": ""
+  },
+  {
+    "name": "wire-1000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "wire",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-1000.wire"
+    ],
+    "exit": 0,
+    "seconds": 0.01887183403596282,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "json-10000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "json",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-10000.json"
+    ],
+    "exit": 0,
+    "seconds": 0.018984916154295206,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "nat_json-10000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "nat_json",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-10000.json"
+    ],
+    "exit": 0,
+    "seconds": 0.019387209322303534,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "mcp-10000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/engine/kit/bin/eff.exe",
+      "mcp"
+    ],
+    "exit": 0,
+    "seconds": 0.019993667025119066,
+    "stdout": "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":\"Expected one JSON-RPC object\"}}\n",
+    "stderr": ""
+  },
+  {
+    "name": "wire-10000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "wire",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-10000.wire"
+    ],
+    "exit": 0,
+    "seconds": 0.01963216671720147,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "json-50000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "json",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-50000.json"
+    ],
+    "exit": 0,
+    "seconds": 0.022645791061222553,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "nat_json-50000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "nat_json",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-50000.json"
+    ],
+    "exit": 0,
+    "seconds": 0.022790249902755022,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "mcp-50000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/engine/kit/bin/eff.exe",
+      "mcp"
+    ],
+    "exit": 0,
+    "seconds": 0.02586608426645398,
+    "stdout": "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":\"Expected one JSON-RPC object\"}}\n",
+    "stderr": ""
+  },
+  {
+    "name": "wire-50000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "wire",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-50000.wire"
+    ],
+    "exit": 0,
+    "seconds": 0.02497883327305317,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "json-100000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "json",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-100000.json"
+    ],
+    "exit": 0,
+    "seconds": 0.02712979121133685,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "nat_json-100000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "nat_json",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-100000.json"
+    ],
+    "exit": 0,
+    "seconds": 0.028225707821547985,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "mcp-100000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/engine/kit/bin/eff.exe",
+      "mcp"
+    ],
+    "exit": 0,
+    "seconds": 0.037478750105947256,
+    "stdout": "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":\"Expected one JSON-RPC object\"}}\n",
+    "stderr": ""
+  },
+  {
+    "name": "wire-100000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "wire",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-100000.wire"
+    ],
+    "exit": 0,
+    "seconds": 0.03777558309957385,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "json-300000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "json",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-300000.json"
+    ],
+    "exit": 0,
+    "seconds": 0.0473945839330554,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "nat_json-300000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "nat_json",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-300000.json"
+    ],
+    "exit": 0,
+    "seconds": 0.046465625055134296,
+    "stdout": "returned\n",
+    "stderr": ""
+  },
+  {
+    "name": "mcp-300000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/engine/kit/bin/eff.exe",
+      "mcp"
+    ],
+    "exit": 0,
+    "seconds": 0.08794908272102475,
+    "stdout": "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32600,\"message\":\"Expected one JSON-RPC object\"}}\n",
+    "stderr": ""
+  },
+  {
+    "name": "wire-300000",
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/fuzz.exe",
+      "wire",
+      "file",
+      "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/a2/deep-300000.wire"
+    ],
+    "exit": 0,
+    "seconds": 0.12992908293381333,
+    "stdout": "returned\n",
+    "stderr": ""
+  }
+]

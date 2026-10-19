@@ -1,0 +1,52 @@
+[
+  {
+    "path": "src/Effect4/Store/Domain/Word.lean",
+    "declaration": "except_bind_ok",
+    "lines": 5
+  },
+  {
+    "path": "src/Effect4/Store/Domain/JsonText.lean",
+    "declaration": "except_bind_ok",
+    "lines": 5
+  },
+  {
+    "path": "src/Effect4/Store/Domain/JsonText.lean",
+    "declaration": "except_map_ok",
+    "lines": 7
+  },
+  {
+    "path": "src/Effect4/Laws/Store/ShapeRead.lean",
+    "declaration": "except_bind_ok",
+    "lines": 5
+  },
+  {
+    "path": "src/Effect4/Laws/Store/ShapeRead.lean",
+    "declaration": "except_map_ok",
+    "lines": 7
+  },
+  {
+    "path": "src/Effect4/Store/Domain/ShapeRead.lean",
+    "declaration": "unseenDefs",
+    "lines": 2
+  },
+  {
+    "path": "src/Effect4/Store/Domain/ShapeRead.lean",
+    "declaration": "unseenDefs_cons_lt",
+    "lines": 23
+  },
+  {
+    "path": "src/Effect4/Program/TyExpand.lean",
+    "declaration": "unseen",
+    "lines": 2
+  },
+  {
+    "path": "src/Effect4/Program/TyExpand.lean",
+    "declaration": "unseen_lt",
+    "lines": 23
+  },
+  {
+    "path": "src/Effect4/Program/TyExpand.lean",
+    "declaration": "unseen_cons_lt",
+    "lines": 6
+  }
+]

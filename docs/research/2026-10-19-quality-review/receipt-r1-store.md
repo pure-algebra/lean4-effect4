@@ -101,6 +101,7 @@ All dune commands ran as `opam exec --switch=effect4 -- dune …` from `ocaml/`.
 The benches ran three times before the first change and three times after the last. Each figure
 is the mean of the three runs, from `dune exec engine/cas/test/bench_wal.exe` and
 `dune exec engine/cas/test/bench_commit.exe -- 400`.
+The raw output of each run is in `bench/`.
 
 | Bench cell | Before | After | Change |
 | --- | ---: | ---: | ---: |

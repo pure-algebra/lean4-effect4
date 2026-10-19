@@ -1,0 +1,23 @@
+bench_todo: 7 requests, engine Fast, CPU time and words per unit
+1. a drive under E4_host, per host call
+  the lowered reference repository (untyped) (7 calls)                12.76 us        23824 words
+  the lowered typed model, through the derived codecs (7 calls)       11.84 us        23378 words
+  OCaml, frames built by hand (Native_todo.Untyped) (7 calls)         11.62 us        23275 words
+  OCaml, the record (Native_todo.record) (7 calls)                    11.74 us        23379 words
+  OCaml, the pure core behind REPO (7 calls)                          11.85 us        23396 words
+  OCaml, the hash table behind REPO (7 calls)                         11.94 us        23425 words
+2. the stages of each request's first host call, mean over the requests
+  load the program and evaluate the root                               6.09 us        14172 words
+  read the host calls (E4_engine.host_calls)                           0.06 us           69 words
+  answer: the typed reactor over the record (decode, dispatch, encode)       0.06 us          158 words
+  answer: the frames built by hand (Native_todo.Untyped)               0.01 us           55 words
+  the ingress check and the decision (E4_engine.answer_async)          0.14 us          185 words
+  the admission (E4_engine.admits, Lean's checked replay)              1.37 us         1460 words
+  the step to the next host call or the end (E4_engine.step)           3.65 us         7394 words
+3. the derived codec of a to-do
+  encode one to-do, derived (Modeled image)                            0.02 us           71 words
+  encode one to-do, frame built by hand                                0.01 us           36 words
+  decode one to-do, derived                                            0.03 us           61 words
+  encode 100 to-dos, derived                                           2.28 us         6712 words
+  decode 100 to-dos, derived                                           3.98 us         5610 words
+  canonical bytes of 100 to-dos (Eff_val.to_bytes)                    17.99 us         8981 words

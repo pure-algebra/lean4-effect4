@@ -1,0 +1,51 @@
+{
+  "environment": {
+    "TMPDIR": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/behavior/tmp",
+    "E4_LEAN_CORPUS": "/Users/pooks/Dev/lean4-effect4/.lake/corpus",
+    "E4_EFF_GOLDENS": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/eff/goldens/p42.bin",
+    "E4_HEX_GOLDENS": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/goldens/eff/p42.hex",
+    "E4_TRUTH_CORPUS": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/harness/truth/corpus.json"
+  },
+  "rows": [
+    {
+      "test": "eff/test/test_lean_wire.exe",
+      "command": [
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/eff/test/test_lean_wire.exe",
+        "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/goldens/eff"
+      ],
+      "seconds": 0.03413454117253423,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/eff/test"
+    },
+    {
+      "test": "engine/test/test_diff.exe",
+      "command": [
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/engine/test/test_diff.exe"
+      ],
+      "seconds": 1.8625822076573968,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "engine/test/test_query.exe",
+      "command": [
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/engine/test/test_query.exe"
+      ],
+      "seconds": 0.5223391246981919,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/engine/test"
+    },
+    {
+      "test": "gen/interface/test_interface.exe",
+      "command": [
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/gen/interface/test_interface.exe",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/gen/interface/fixture.cmt",
+        "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/gen/interface/fixture_prelude.ml",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/gen/interface/fixture_facade.cmt"
+      ],
+      "seconds": 0.023064750246703625,
+      "status": 0,
+      "cwd": "/Users/pooks/.codex/worktrees/quality-review-3471/lean4-effect4/ocaml/gen/interface"
+    }
+  ]
+}

@@ -1,0 +1,457 @@
+[
+  {
+    "folder": "2026-10-15-a1-wip",
+    "tracked_files": 3,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-a1-wip/README.md",
+      "docs/research/2026-10-15-a1-wip/receipt.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-codegen-review",
+    "tracked_files": 27,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-codegen-review/README.md",
+      "docs/research/2026-10-15-codegen-review/receipt.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-codex-integration",
+    "tracked_files": 34,
+    "authority_citations": [],
+    "notes": []
+  },
+  {
+    "folder": "2026-10-15-gate-consolidation",
+    "tracked_files": 33,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-gate-consolidation/README.md",
+      "docs/research/2026-10-15-gate-consolidation/receipt.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-interop-plan",
+    "tracked_files": 5,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-interop-plan/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-lowering-state",
+    "tracked_files": 5,
+    "authority_citations": [
+      "docs/core/decisions.md",
+      "docs/STATE.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-lowering-state/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-modeled-lowering",
+    "tracked_files": 5,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-15-modeled-lowering/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-ocaml-interop-explore",
+    "tracked_files": 39,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-ocaml-interop-explore/README.md",
+      "docs/research/2026-10-15-ocaml-interop-explore/codex-review-brief.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-ocaml-seam-probes",
+    "tracked_files": 83,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-ocaml-seam-probes/README.md",
+      "docs/research/2026-10-15-ocaml-seam-probes/model.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-orphan-check",
+    "tracked_files": 2,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-15-orphan-check/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-recursive-types",
+    "tracked_files": 13,
+    "authority_citations": [
+      "docs/core/decisions.md",
+      "docs/STATE.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-recursive-types/README.md",
+      "docs/research/2026-10-15-recursive-types/receipt.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-remaining-work",
+    "tracked_files": 9,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-remaining-work/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-seat-cleanup-wind-down",
+    "tracked_files": 43,
+    "authority_citations": [],
+    "notes": []
+  },
+  {
+    "folder": "2026-10-15-type-roundtrip-audit",
+    "tracked_files": 6,
+    "authority_citations": [
+      "docs/core/decisions.md",
+      "docs/STATE.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-type-roundtrip-audit/README.md",
+      "docs/research/2026-10-15-type-roundtrip-audit/receipt.md"
+    ]
+  },
+  {
+    "folder": "2026-10-15-workstreams",
+    "tracked_files": 2,
+    "authority_citations": [
+      "docs/STATE.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-15-workstreams/README.md",
+      "docs/research/2026-10-15-workstreams/codex-brief.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-c-interop",
+    "tracked_files": 11,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-16-c-interop/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-itrees",
+    "tracked_files": 47,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-16-itrees/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-math-d3",
+    "tracked_files": 2,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-16-math-d3/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-math-graphs",
+    "tracked_files": 1,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-16-math-graphs/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-modeled-universe",
+    "tracked_files": 1,
+    "authority_citations": [
+      "docs/core/decisions.md",
+      "docs/STATE.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-16-modeled-universe/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-native-kit",
+    "tracked_files": 1,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-16-native-kit/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-ocaml-constructors",
+    "tracked_files": 1,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-16-ocaml-constructors/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-ocaml-interop",
+    "tracked_files": 13,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-16-ocaml-interop/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-schema-interop",
+    "tracked_files": 1,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-16-schema-interop/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-soundness-audit",
+    "tracked_files": 1,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-16-soundness-audit/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-tooling-design",
+    "tracked_files": 0,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-16-tooling-design/README.md",
+      "docs/research/2026-10-16-tooling-design/notes-estate.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-ts-types",
+    "tracked_files": 1,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-16-ts-types/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-16-usability-scope",
+    "tracked_files": 5,
+    "authority_citations": [
+      "docs/core/decisions.md",
+      "docs/STATE.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-16-usability-scope/README.md",
+      "docs/research/2026-10-16-usability-scope/wiring-receipt.md"
+    ]
+  },
+  {
+    "folder": "2026-10-17-authoring-and-store",
+    "tracked_files": 1,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-17-authoring-and-store/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-17-authoring-gemini",
+    "tracked_files": 2,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-17-authoring-gemini/receipt.md",
+      "docs/research/2026-10-17-authoring-gemini/brief.md"
+    ]
+  },
+  {
+    "folder": "2026-10-17-authoring-model-review",
+    "tracked_files": 55,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-17-authoring-model-review/README.md",
+      "docs/research/2026-10-17-authoring-model-review/additional-points.md"
+    ]
+  },
+  {
+    "folder": "2026-10-17-d3",
+    "tracked_files": 1,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-17-d3/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-17-ocaml-estate-review",
+    "tracked_files": 2,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-17-ocaml-estate-review/README.md",
+      "docs/research/2026-10-17-ocaml-estate-review/implementation-plan.md"
+    ]
+  },
+  {
+    "folder": "2026-10-17-ocaml-refactor-assessment",
+    "tracked_files": 0,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-17-ocaml-refactor-assessment/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-17-proof-scout",
+    "tracked_files": 11,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-17-proof-scout/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-17-seams",
+    "tracked_files": 86,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-17-seams/README.md",
+      "docs/research/2026-10-17-seams/README-v1.md"
+    ]
+  },
+  {
+    "folder": "2026-10-17-seat-rocq-cas",
+    "tracked_files": 2,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-17-seat-rocq-cas/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-17-session-composition",
+    "tracked_files": 4,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-17-session-composition/README.md",
+      "docs/research/2026-10-17-session-composition/codex-review-brief.md"
+    ]
+  },
+  {
+    "folder": "2026-10-18-authoring-probe",
+    "tracked_files": 1,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-18-authoring-probe/README.md",
+      "docs/research/2026-10-18-authoring-probe/brief.md"
+    ]
+  },
+  {
+    "folder": "2026-10-18-cleanup",
+    "tracked_files": 0,
+    "authority_citations": [],
+    "notes": []
+  },
+  {
+    "folder": "2026-10-18-codex-abstractions",
+    "tracked_files": 24,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-18-codex-abstractions/README.md",
+      "docs/research/2026-10-18-codex-abstractions/brief.md"
+    ]
+  },
+  {
+    "folder": "2026-10-18-incremental",
+    "tracked_files": 0,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-18-incremental/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-18-mcp-schema-size",
+    "tracked_files": 2,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-18-mcp-schema-size/receipt.md"
+    ]
+  },
+  {
+    "folder": "2026-10-18-native-exchange",
+    "tracked_files": 1,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-18-native-exchange/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-18-ocaml-ppx",
+    "tracked_files": 7,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-18-ocaml-ppx/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-18-ocaml-tooling-probe",
+    "tracked_files": 1,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-18-ocaml-tooling-probe/README.md",
+      "docs/research/2026-10-18-ocaml-tooling-probe/brief.md"
+    ]
+  },
+  {
+    "folder": "2026-10-18-refinements",
+    "tracked_files": 1,
+    "authority_citations": [],
+    "notes": [
+      "docs/research/2026-10-18-refinements/README.md"
+    ]
+  },
+  {
+    "folder": "2026-10-18-slices",
+    "tracked_files": 97,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-18-slices/README.md",
+      "docs/research/2026-10-18-slices/receipt-estate.md"
+    ]
+  },
+  {
+    "folder": "2026-10-18-view-backlog",
+    "tracked_files": 5,
+    "authority_citations": [
+      "docs/core/decisions.md"
+    ],
+    "notes": [
+      "docs/research/2026-10-18-view-backlog/README.md",
+      "docs/research/2026-10-18-view-backlog/receipt.md"
+    ]
+  }
+]

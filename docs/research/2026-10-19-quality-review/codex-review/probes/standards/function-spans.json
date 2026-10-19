@@ -1,0 +1,8 @@
+{
+  "e4_pack.ml:fsync_dir": 8,
+  "e4_index.ml:fsync_dir": 8,
+  "e4_wal.ml:fsync_dir": 8,
+  "e4_wal.ml:flush_buf": 10,
+  "e4_wal.ml:open_": 57,
+  "e4_control.ml:commit": 22
+}

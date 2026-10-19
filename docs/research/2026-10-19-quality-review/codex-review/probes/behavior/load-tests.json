@@ -1,0 +1,13 @@
+{
+  "command": [
+    "python3",
+    "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-18-slices/w2-engine-mutants/stm_load.py",
+    "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/_build/default/engine/test/stm/stm_admit.exe",
+    "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-19-quality-review/codex-review/probes/behavior/stm-load",
+    "12",
+    "5"
+  ],
+  "status": 0,
+  "seconds": 40.97839858336374,
+  "output": "60 runs, 12 at a time: 0 exited non-zero, 0 with P1 failed (none); 41 s\n"
+}

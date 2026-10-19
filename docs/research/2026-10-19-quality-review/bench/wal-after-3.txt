@@ -1,0 +1,24 @@
+bench_wal — A2 §4.5 cells B8 (append, 256 B, batch 512: >= 200 000 rows/s)
+            and B9 (replay from 0, every checksum verified: >= 1 000 000 rows/s)
+
+== /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/e4_wal_bench_69542 ==
+row      batch   rows            rows/s       MB/s    ms/commit
+64       1       200            50610.0       3.09        0.020
+64       64      12800         853625.9      52.10        0.075
+64       512     51200        2170600.5     132.48        0.236
+64       4096    102400       2442334.5     149.07        1.677
+256      1       200            47619.3      11.63        0.021
+256      64      12800         354363.2      86.51        0.181
+256      512     51200         786892.1     192.11        0.651
+256      4096    102400        866467.6     211.54        4.727
+1024     1       200            36239.0      35.39        0.028
+1024     64      12800         208198.4     203.32        0.307
+1024     512     51200         229370.0     223.99        2.232
+1024     4096    102400        257341.5     251.31       15.917
+replay   -       51200        1106859.0          -       46.257
+
+B8  append 256 B, batch 512   >= 200 000 rows/s :   786892.1  MEET  (0.65 ms/commit)
+B8' append 256 B, batch 4096  >= 200 000 rows/s :   866467.6  MEET  (4.73 ms/commit; B6 bounds a commit at 15 ms)
+B9  replay from 0, 51 200 rows >= 1 000 000 rows/s : 1106859.0  MEET
+    (durable append is fsync-bound: rows/s = batch / commit latency, so B8 at batch 512
+     needs a commit under 2.6 ms; this filesystem's fsync is the number that decides it.)
