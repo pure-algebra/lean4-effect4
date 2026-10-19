@@ -216,7 +216,9 @@ module Json : sig
 
   (** The tree of one JSON text, or why it is none. yojson parses it ([Yojson.Raw], so each
       number keeps its text); a yojson extension (a tuple, a variant, NaN, Infinity) or a string
-      that is not UTF-8 is refused. yojson's acceptance is the text's: it also skips comments. *)
+      that is not UTF-8 is refused. yojson's acceptance is the text's, and it is wider than
+      RFC 8259: it skips comments, takes an unquoted key, and takes a control byte inside a
+      string. A key written twice stays in the tree, and the reader refuses it at its object. *)
   val parse : string -> (t, string) result
 
   (** The tree of a yojson value whose literals are raw, as [parse] makes it. *)

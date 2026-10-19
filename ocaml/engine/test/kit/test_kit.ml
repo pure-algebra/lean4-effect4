@@ -13,9 +13,13 @@
        always true and calls nothing is unsettled at every limit tried; a definition that calls
        itself at once is unsettled too; each frame extends the one before; the budget a run
        settles at is the least one, every frame before it cut, on loops of 0 to 40 rounds.  tested
-   T2  The JSON text parser (yojson) reads RFC 8259 JSON into the profile's tree and refuses the
-       rest; a number that is no natural is a numeral, which Lean's reader refuses at its
-       place.                                                               tested
+   T2  The JSON text parser (yojson) reads RFC 8259 JSON into the profile's tree. A number that
+       is no natural (a sign, a fraction, an exponent, past the int range) is a numeral, which
+       Lean's reader refuses at its place; a key written twice reaches the reader, which refuses
+       it at its object. yojson's text is wider than RFC 8259: it skips comments, takes an
+       unquoted key and takes a control byte inside a string, and the controls pin all three.
+       It refuses a leading zero, trailing text, a bad escape and a lone surrogate, and the
+       tree refuses NaN and yojson's tuples.                                tested
    T3  JSON: a program, a row table and a tape print and read back to themselves. On the
        fixture, Lean's JSON print reads to the program its bytes decode to, and the kit prints
        Lean's JSON, up to the order of an object's keys (Lean's printer sorts them).  tested
@@ -197,7 +201,54 @@ let t2 () =
        -> true
      | _ -> false);
   check "T2 refuses trailing text" (not (ok "[1] 2"));
-  check "T2 refuses a bad escape" (not (ok {|"\q"|}))
+  check "T2 refuses a bad escape" (not (ok {|"\q"|}));
+  check "T2 refuses a leading zero" (not (ok "007"));
+  check "T2 refuses a lone surrogate" (not (ok {|"\ud800"|}));
+  check "T2 refuses NaN" (not (ok "NaN"));
+  check "T2 refuses a yojson tuple" (not (ok "(1, 2)"));
+  (* The numbers the tree does not hold as naturals, each refused by the reader at its place. *)
+  let nat_doc = { G.root = G.Shape_nat; defs = [] } in
+  let reads_as text reason =
+    match Kit.Json.parse text with
+    | Ok j ->
+      (match Kit.Json.read nat_doc j with
+       | Error { G.site = G.JsonSite_value []; reason = r } -> r = reason
+       | _ -> false)
+    | Error _ -> false
+  in
+  check "T2 -0 is a numeral, refused" (reads_as "-0" (G.JsonReason_expected G.Shape_nat));
+  check
+    "T2 1e0 is a numeral, refused"
+    (reads_as "1e0" (G.JsonReason_expected G.Shape_nat));
+  check
+    "T2 a natural past the int range is a numeral, refused as outside the profile"
+    (reads_as "4611686018427387904" (G.JsonReason_naturalOutsideProfile 9007199254740991));
+  check
+    "T2 2^53 reads as a natural, refused as outside the profile"
+    (reads_as "9007199254740992" (G.JsonReason_naturalOutsideProfile 9007199254740991));
+  (* A key written twice is refused at its object, by the reader, not by the text parser. *)
+  let pair_doc =
+    { G.root = G.Shape_struct ("P", [ "a", G.Shape_nat; "b", G.Shape_nat ]); defs = [] }
+  in
+  check
+    "T2 a key written twice is refused at its object"
+    (match Kit.Json.parse {|{"a":1,"b":2,"a":3}|} with
+     | Ok j ->
+       (match Kit.Json.read pair_doc j with
+        | Error { G.site = G.JsonSite_value []; reason = G.JsonReason_duplicateField "a" }
+          -> true
+        | _ -> false)
+     | Error _ -> false);
+  (* Controls: where yojson's text is wider than RFC 8259. A change of parser moves these. *)
+  check
+    "T2 control: a comment is skipped"
+    (Kit.Json.parse "/* c */ 1 // d" = Ok (J.NatJson_nat 1));
+  check
+    "T2 control: an unquoted key is taken"
+    (Kit.Json.parse "{a:1}" = Ok (J.NatJson_obj [ "a", J.NatJson_nat 1 ]));
+  check
+    "T2 control: a control byte inside a string is taken"
+    (Kit.Json.parse "\"a\tb\"" = Ok (J.NatJson_str "a\tb"))
 ;;
 
 let round_trip_program p =

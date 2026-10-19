@@ -17,10 +17,11 @@
        served as if they had not come.                                          tested
    N4  Both drivers carry the same naturals (`CodecProfile.carries`, up to 2^53 - 1): on
        tool-numbers.jsonl (2^53 - 1 answers; 2^53 and a line that parses but does not read refuse
-       as `codec unreadable`) every reply equals Lean's (tool-numbers-replies.jsonl, printed by
-       tools/Drivers/Session.lean). Where one driver's text parser refuses (Lean's at a number
-       binary64 rounds, 2^53 + 1; OCaml's past its int range), the other refuses too: the reason
-       is each parser's own words.                                              tested
+       as `codec unreadable`, at a site) every reply equals Lean's (tool-numbers-replies.jsonl,
+       printed by tools/Drivers/Session.lean). Where Lean's text parser refuses (a number binary64
+       rounds, 2^53 + 1), the native shell refuses too, at the number's site: its tree holds the
+       number, as a natural or as a numeral past the int range, and the reader refuses it as
+       outside the profile.                                                     tested
 
    N5  Drafts with invalid references recheck, kept edits refuse them, and the source entry
        stays at its address. Undo and wider subtree observations agree with Lean controls. tested
