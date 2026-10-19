@@ -24,6 +24,8 @@
    ML6 bindings dedupes by key keeping the FIRST, then sorts by E4_memo.compare_key, so
        it is exactly what the map's `bindings` answers (MM6)               tested *)
 
+module E4_memo = Effect4_engine.E4_memo
+
 type 'a t = (E4_memo.key * 'a) list
 
 (* Written out rather than `=`, so no polymorphic comparison appears in this file. *)

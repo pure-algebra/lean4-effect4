@@ -46,6 +46,8 @@
    D6  {!Of.gen_tape} only names fiber ids and park tokens the machine has shown.
                                                                           by construction *)
 
+module E4_engine = Effect4_engine.E4_engine
+
 (** {1 The tape, as data} *)
 
 type decision =

@@ -1,5 +1,7 @@
 (* E4_diff -- see e4_diff.mli. *)
 
+module E4_engine = Effect4_engine.E4_engine
+
 type decision =
   | Evaluate of int
   | Flush

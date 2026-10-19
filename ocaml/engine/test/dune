@@ -47,12 +47,12 @@
 (test
  (name prop_memo)
  (modules prop_memo)
- (libraries effect4_engine))
+ (libraries effect4_engine e4_reference))
 
 (executable
  (name bench_carriers)
  (modules bench_carriers)
- (libraries effect4_engine unix))
+ (libraries effect4_engine e4_reference unix))
 
 ; lane Q5 — the host scheduler: machines over domains, ordered shutdown, abandon.
 ;   test_sched   E4_sched, E4_shutdown, E4_abandon against a TOY engine (a counter machine
@@ -81,7 +81,13 @@
 (test
  (name test_engine)
  (modules test_engine)
- (libraries effect4_engine effect4_eff effect4_gen e4_gen_instance unix))
+ (libraries
+  effect4_engine
+  effect4_eff
+  effect4_gen
+  e4_gen_instance
+  e4_reference
+  unix))
 
 ; the host boundary — E4_host, the driver over the engine.
 ;   test_serve  E4_host.Make.serve's stops on Fast: a reply refused while applied and
@@ -115,11 +121,17 @@
 ; bench and the tests that compare the engine with it (api_gen_inst.ml's header), unwrapped so
 ; each names `Api_gen_inst`.
 
+; api_gen_inst.ml opens Effect4_engine for E4_memo_list, which now lives in e4_reference
+; (reference/dune), so the open names nothing and warning 33 is off for this one module until
+; the file drops the open (it is the coordinator's and seat 3's file this wave).
+
 (library
  (name e4_gen_instance)
  (wrapped false)
  (modules api_gen_inst)
- (libraries effect4_engine effect4_eff effect4_gen))
+ (flags
+  (:standard -w -33))
+ (libraries effect4_engine effect4_eff effect4_gen e4_reference))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
 
@@ -137,7 +149,12 @@
 (test
  (name test_diff)
  (modules test_diff)
- (libraries effect4_engine effect4_eff effect4_gen e4_gen_instance))
+ (libraries
+  effect4_engine
+  effect4_eff
+  effect4_gen
+  e4_gen_instance
+  e4_reference))
 
 ; lane Q3 — query: the persistent log, its incremental indexes, and the query API.
 ;   test_log     E4_log L1-L5, the public-log codec (E4_logindex.parse_run_event_row) over
@@ -162,12 +179,12 @@
 (test
  (name test_query)
  (modules test_query)
- (libraries effect4_engine effect4_eff))
+ (libraries effect4_engine effect4_eff e4_reference))
 
 (executable
  (name bench_query)
  (modules bench_query)
- (libraries effect4_engine effect4_eff unix))
+ (libraries effect4_engine effect4_eff e4_reference unix))
 
 ; lane W — the two axes of a replay (E4_engine EN4/EN4b), from lane P6's finding F1.
 ;   test_replay_steps  `replay_steps` (the TAPE axis: |tape|+1, position i = replay of the
@@ -219,7 +236,13 @@
 (executable
  (name e4_engine_bench)
  (modules e4_engine_bench)
- (libraries effect4_engine effect4_eff effect4_gen unix e4_gen_instance))
+ (libraries
+  effect4_engine
+  effect4_eff
+  effect4_gen
+  unix
+  e4_gen_instance
+  e4_reference))
 
 ; lane G3 — the fiber table's maintained completed view (docs/research/
 ; 2026-09-08-engine-lane-g3-delivery.md).
