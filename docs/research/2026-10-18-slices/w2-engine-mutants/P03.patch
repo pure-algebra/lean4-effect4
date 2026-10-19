@@ -1,0 +1,13 @@
+P03 e4_ppath.ml: append adds its indices in reverse order
+
+--- a/ocaml/engine/e4_ppath.ml
++++ b/ocaml/engine/e4_ppath.ml
+@@ -20,7 +20,7 @@
+ ;;
+ 
+ let append (child : 'n -> int -> 'n option) (p : 'n t) (l : int list) : 'n t =
+-  List.fold_left (fun q i -> snoc child q i) p l
++  List.fold_left (fun q i -> snoc child q i) p (List.rev l)
+ ;;
+ 
+ let node (_child : 'n -> int -> 'n option) (p : 'n t) : 'n option = p.node

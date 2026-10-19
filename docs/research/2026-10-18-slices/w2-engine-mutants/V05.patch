@@ -1,0 +1,11 @@
+V05 e4_env.ml: to_list answers newest first
+
+--- a/ocaml/engine/e4_env.ml
++++ b/ocaml/engine/e4_env.ml
+@@ -38,5 +38,5 @@
+   else { rev = drop e.rev (e.len - k); len = k }
+ ;;
+ 
+-let to_list (e : 'a t) : 'a list = List.rev e.rev
++let to_list (e : 'a t) : 'a list = e.rev
+ let of_list (l : 'a list) : 'a t = { rev = List.rev l; len = List.length l }

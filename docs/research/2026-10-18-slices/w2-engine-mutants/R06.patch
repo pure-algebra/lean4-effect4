@@ -1,0 +1,13 @@
+R06 e4_trace.ml: length counts one row too many
+
+--- a/ocaml/engine/e4_trace.ml
++++ b/ocaml/engine/e4_trace.ml
+@@ -5,7 +5,7 @@
+ type 'e t = 'e Lcnf_array.t
+ 
+ let empty : 'e t = Lcnf_array.empty
+-let length (t : 'e t) : int = Lcnf_array.length t
++let length (t : 'e t) : int = Lcnf_array.length t + 1
+ let is_empty (t : 'e t) : bool = Lcnf_array.is_empty t
+ 
+ (* TR2 is the `[] ->` arm: the argument itself, physically.  The general arm appends in list

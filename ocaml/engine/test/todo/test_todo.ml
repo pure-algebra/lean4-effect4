@@ -16,8 +16,9 @@
    T3  The same, over the repository that forgets a write.                tested
    T4  Red control: the two hosts' results differ on some request, so T2 and T3 compare values
        that tell the hosts apart.                                          tested
-   T5  The engine (E4_engine.Fast and Ref) runs each request's program at its row table, and its
-       two instances agree after the parked call is answered.             tested
+   T5  The engine (E4_engine.Fast) and the generated machine (Gen, ocaml/gen/api_gen.ml over
+       Lean's lists, as an engine) run each request's program at its row table, and the two
+       instances agree after the parked call is answered.                 tested
    T6  The engine's `admits`, on both instances, answers as Lean's checked replay does
        (`Effect4.Program.admit`, the fixture's `admits` line): a natural refused as the answer of
        each request's first call, and at a stale token.                    tested
@@ -256,7 +257,10 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
 end
 
 module Native_fast = Native_checks (Effect4_engine.E4_engine.Fast)
-module Native_ref = Native_checks (Effect4_engine.E4_engine.Ref)
+
+(* The generated machine as an engine: the second instance. *)
+module Gen = Effect4_engine.E4_engine.Make (Api_gen_inst)
+module Native_gen = Native_checks (Gen)
 
 let () =
   let requests = read_fixture "todo-host.txt" in
@@ -322,7 +326,7 @@ let () =
        let table = built.Todo_gen.app.Todo_gen.rows
        and program = built.Todo_gen.program in
        let module F = Effect4_engine.E4_engine.Fast in
-       let module R = Effect4_engine.E4_engine.Ref in
+       let module R = Gen in
        let f0 = F.run ~table program ~fuel:100000
        and g0 = R.run ~table program ~fuel:100000 in
        let f = F.step f0 (F.answer_async_success 0 0 7) in
@@ -365,7 +369,7 @@ let () =
   (* T8: E4_host drives each request on the engine with the lowered reactors as providers, and
      its result, packaged by the lowered `resultVal`, is Lean's, byte for byte *)
   let module HF = Effect4_engine.E4_host.Make (Effect4_engine.E4_engine.Fast) in
-  let module HR = Effect4_engine.E4_host.Make (Effect4_engine.E4_engine.Ref) in
+  let module HR = Effect4_engine.E4_host.Make (Gen) in
   List.iteri
     (fun i r ->
        let built = built_of r in
@@ -396,9 +400,7 @@ let () =
            let rf =
              result f.calls (Effect4_engine.E4_engine.Fast.root_exit_of f.engine) f.state
            in
-           let rg =
-             result g.calls (Effect4_engine.E4_engine.Ref.root_exit_of g.engine) g.state
-           in
+           let rg = result g.calls (Gen.root_exit_of g.engine) g.state in
            ( (match f.stop, g.stop with
               | HF.Machine HF.Finished, HR.Machine HR.Finished -> true
               | _ -> false)
@@ -438,11 +440,11 @@ let () =
        let built = built_of r in
        let state = repo_of (exactly "the state" Eff_val.decode_exact r.state) in
        Native_fast.run i r built state;
-       Native_ref.run i r built state)
+       Native_gen.run i r built state)
     requests;
   check
     "T15 red control: some request reaches the raise, on both instances"
-    (!Native_fast.reached > 0 && !Native_ref.reached > 0);
+    (!Native_fast.reached > 0 && !Native_gen.reached > 0);
   Printf.printf "%d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
 ;;

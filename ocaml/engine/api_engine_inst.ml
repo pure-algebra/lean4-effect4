@@ -13,8 +13,7 @@
    read rather than a per-step scan of the table.
 
    The adapter -- the type abbreviations for the fully applied machine and the free-row
-   projections of `E4_engine.INSTANCE`, with their behaviours I1-I4 -- is `E4_instance.Make`,
-   which `Api_engine_ref` applies to the list twins.
+   projections of `E4_engine.INSTANCE`, with their behaviours I1-I4 -- is `E4_instance.Make`.
 
    Depends on: E4_instance (and through it Api_engine, generated), E4_table, E4_trace,
    E4_memo, E4_buckets, E4_ppath, E4_env, E4_fibers_view. *)

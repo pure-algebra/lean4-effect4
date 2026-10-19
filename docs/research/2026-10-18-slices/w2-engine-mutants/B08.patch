@@ -1,0 +1,13 @@
+B08 e4_buckets.ml: priority -1 is admitted (the refusal is off by one)
+
+--- a/ocaml/engine/e4_buckets.ml
++++ b/ocaml/engine/e4_buckets.ml
+@@ -34,7 +34,7 @@
+ (* The one place a priority is refused, shared by both carriers. `Dispatcher.enqueue` takes a
+    `Nat` (Dispatcher.enqueue (src/Effect4/Machine/Fibers.lean)), so a negative priority cannot arise from the generated code; it is
+    a violated precondition, hence an exception and not a `result` (Mirage's rule, survey §7). *)
+-let check_priority p = if p < 0 then invalid_arg "E4_buckets: negative priority"
++let check_priority p = if p < -1 then invalid_arg "E4_buckets: negative priority"
+ 
+ let rec check_ascending : (int * _) list -> unit = function
+   | [] | [ _ ] -> ()

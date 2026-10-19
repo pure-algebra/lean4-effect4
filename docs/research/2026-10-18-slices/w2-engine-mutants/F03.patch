@@ -1,0 +1,13 @@
+F03 e4_fibers_view.ml: add does not move the count
+
+--- a/ocaml/engine/e4_fibers_view.ml
++++ b/ocaml/engine/e4_fibers_view.ml
+@@ -137,7 +137,7 @@
+           Some v)
+       t.m
+   in
+-  let n = if !fresh then t.n + 1 else t.n in
++  let n = t.n in
+   match x, t.view with
+   | None, [] -> { n; m; view = [] }
+   | _ ->

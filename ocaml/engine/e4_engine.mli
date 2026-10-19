@@ -23,16 +23,15 @@
    this host refusal. Intermediate pure values from that decision are discarded; no claim
    of a simulated transition is made. The refused decision remains in replay_to's residue.
 
-   ONE loop, TWO instances.  {!Fast} is `Api_engine.Make` over the substituted carriers;
-   {!Ref} is the same generated bodies over Lean's list carriers; each instance file applies
-   `E4_instance.Make` to its seven.  Both are {!Make} applied to the module the instance file
-   supplies, so the loop, the answer alphabet and every renderer exist once.  The
-   declarations are e4_engine_intf.ml's, which this file includes.  A differential can then
-   call both through {!ENGINE} with one signature -- which is what `test/test_engine.ml`
-   does over the 37 byte goldens.
+   ONE loop over any instance.  {!Fast} is {!Make} of `Api_engine_inst`, which applies
+   `E4_instance.Make` to the substituted carriers; the test tree applies {!Make} to the
+   generated machine (`test/api_gen_inst.ml`, ocaml/gen/api_gen.ml over Lean's lists), the
+   oracle.  The loop, the answer alphabet and every renderer exist once.  The declarations are
+   e4_engine_intf.ml's, which this file includes.  A differential calls both engines through
+   {!ENGINE} with one signature -- which is what `test/test_diff.ml` does over every corpus.
 
-   Depends on: E4_engine_intf, Api_engine_inst, Api_engine_ref, effect4_eff (Eff_types,
-   Eff_ctors, Eff_wire), stdlib.
+   Depends on: E4_engine_intf, Api_engine_inst, effect4_eff (Eff_types, Eff_ctors, Eff_wire),
+   stdlib.
 
    Behaviours:
    EN8 Public numeric reply constructors check representability before constructing a decision.
@@ -84,9 +83,9 @@
        function of a machine value (INV-TAPE-1, brief §2.4).  by construction
 
    The projection, stated so its limits are loud (deviation D-D3 of the lane receipt).
-   `Api_engine_inst.event` and `Api_engine_ref.event` are two OCaml types -- the generated
-   type group lives inside the functor, so each application generates its own -- and a
-   differential must therefore compare RENDERINGS, not values.  {!ENGINE.trace_rows}
+   `Api_engine_inst.event` and the generated machine's `run_event` are two OCaml types -- the
+   generated type group lives inside each generated file, and inside the functor of the seam's
+   -- and a differential must therefore compare RENDERINGS, not values.  {!ENGINE.trace_rows}
    renders every constructor of `RunEvent`, `Task`, `Prim`, `FrameEvent`, `Exit`, `Cause`,
    `Val`, `Ctx` and `Observer` in full.  Two payloads are NOT descended into and print as
    `<name>` and `<thunk>`: `Effect4.Program.EffName` and `Effect4.Program.EffThunk`.  They

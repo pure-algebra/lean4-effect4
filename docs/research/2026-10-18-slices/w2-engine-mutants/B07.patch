@@ -1,0 +1,13 @@
+B07 e4_buckets.ml: a task at a bound priority goes to the front of its bucket
+
+--- a/ocaml/engine/e4_buckets.ml
++++ b/ocaml/engine/e4_buckets.ml
+@@ -78,7 +78,7 @@
+     | [] -> [ { priority = p; front = [ x ]; back = [] } ]
+     | b :: rest ->
+       if b.priority = p
+-      then { b with back = x :: b.back } :: rest
++      then { b with front = x :: b.front } :: rest
+       else if p < b.priority
+       then { priority = p; front = [ x ]; back = [] } :: b :: rest
+       else b :: insert p x rest

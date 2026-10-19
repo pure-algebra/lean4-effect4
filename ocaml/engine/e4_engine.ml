@@ -677,4 +677,3 @@ module Make (I : INSTANCE) = struct
 end
 
 module Fast = Make (Api_engine_inst)
-module Ref = Make (Api_engine_ref)

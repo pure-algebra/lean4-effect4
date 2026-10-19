@@ -16,7 +16,7 @@
        through the same declarations.                               by construction
    EI2 Callers keep their paths: `E4_engine.ENGINE`, `E4_engine.INSTANCE`, `E4_engine.answer`
        with its constructors, `E4_engine.frontier` with its fields, `E4_engine.check_answer`,
-       `E4_engine.Make`, `E4_engine.Fast` and `E4_engine.Ref`.     by construction *)
+       `E4_engine.Make` and `E4_engine.Fast`.                      by construction *)
 
 open Eff_types
 
@@ -450,8 +450,4 @@ module type E4_engine = sig
       `E4_instance.Make (E4_table) (E4_trace) (E4_memo) (E4_buckets) (E4_ppath) (E4_env)
       (E4_fibers_view)`. *)
   module Fast : ENGINE
-
-  (** {!Make} of `Api_engine_ref`: the same generated bodies over Lean's own carriers, the
-      seven list twins given to `E4_instance.Make`. *)
-  module Ref : ENGINE
 end

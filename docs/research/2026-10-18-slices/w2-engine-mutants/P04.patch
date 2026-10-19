@@ -1,0 +1,13 @@
+P04 e4_ppath.ml: walk stops one step short
+
+--- a/ocaml/engine/e4_ppath.ml
++++ b/ocaml/engine/e4_ppath.ml
+@@ -27,7 +27,7 @@
+ 
+ let rec walk (child : 'n -> int -> 'n option) (n : 'n) (l : int list) : 'n option =
+   match l with
+-  | [] -> Some n
++  | [] | [ _ ] -> Some n
+   | i :: rest ->
+     (match child n i with
+      | None -> None

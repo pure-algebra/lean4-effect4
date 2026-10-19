@@ -18,7 +18,7 @@
 
    Properties:
    Q1  Each program crosses as its canonical bytes: `of_bytes` reads exactly one program, on
-       BOTH instances (Fast and Ref).                                       tested
+       BOTH instances (Fast and Gen).                                       tested
    Q2  On each instance the run finishes, and the root's exit is the exit Lean wrote.
                                                                             tested (five runs)
    Q3  The two instances give one report: outcome, exits, fiber rows, trace rows, store row.
@@ -137,7 +137,9 @@ module Rep (En : E4_engine.ENGINE) = struct
 end
 
 module RF = Rep (E4_engine.Fast)
-module RR = Rep (E4_engine.Ref)
+
+(* The generated machine, ocaml/gen/api_gen.ml over Lean's lists: the second instance. *)
+module RG = Rep (E4_engine.Make (Api_gen_inst))
 
 let find_fixture (file : string) : string =
   let candidates =
@@ -158,11 +160,11 @@ let check_runs (label : string) (runs : run list) =
          name
          (String.length r.program)
          r.fuel;
-       match RF.report r.program ~fuel:r.fuel, RR.report r.program ~fuel:r.fuel with
+       match RF.report r.program ~fuel:r.fuel, RG.report r.program ~fuel:r.fuel with
        | Some fast, Some slow ->
          check (name ^ ": Q1 the program's bytes decode on both instances") true;
          check (name ^ ": Q2 Fast finishes") (fast.outcome = "finished");
-         check (name ^ ": Q2 Ref finishes") (slow.outcome = "finished");
+         check (name ^ ": Q2 Gen finishes") (slow.outcome = "finished");
          Printf.printf
            "  Lean's exit: %s\n  Fast's exit: %s\n"
            r.exit_text
@@ -171,18 +173,18 @@ let check_runs (label : string) (runs : run list) =
            (name ^ ": Q2 Fast's root exit is the exit Lean wrote")
            (fast.root = Some r.exit_text);
          check
-           (name ^ ": Q2 Ref's root exit is the exit Lean wrote")
+           (name ^ ": Q2 Gen's root exit is the exit Lean wrote")
            (slow.root = Some r.exit_text);
          check
-           (name ^ ": Q3 Fast = Ref: outcome, exits, fibers, trace, store")
+           (name ^ ": Q3 Fast = Gen: outcome, exits, fibers, trace, store")
            (fast = slow);
          (* Q4: a program cut by one byte is refused *)
          let cut = String.sub r.program 0 (String.length r.program - 1) in
          check
            (name ^ ": Q4 a program cut by one byte is refused on both instances")
-           (RF.report cut ~fuel:r.fuel = None && RR.report cut ~fuel:r.fuel = None);
+           (RF.report cut ~fuel:r.fuel = None && RG.report cut ~fuel:r.fuel = None);
          (* Q4: at a small fuel the run does not finish *)
-         (match RF.report r.program ~fuel:5, RR.report r.program ~fuel:5 with
+         (match RF.report r.program ~fuel:5, RG.report r.program ~fuel:5 with
           | Some f, Some s ->
             check
               (name ^ ": Q4 at fuel 5 neither instance finishes, and none has a root exit")

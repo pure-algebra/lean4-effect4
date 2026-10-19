@@ -18,7 +18,7 @@
 
    Properties:
    S1  Each program crosses as its canonical bytes: `of_bytes` reads exactly one program, on
-       BOTH instances (Fast and Ref).                                     tested (three runs)
+       BOTH instances (Fast and Gen).                                     tested (three runs)
    S2  On each instance the run finishes, and the root's exit is the exit Lean wrote.
                                                                           tested (three runs)
    S3  The two instances give one report: outcome, exits, fiber rows, trace rows, store row.
@@ -160,7 +160,9 @@ module Rep (En : E4_engine.ENGINE) = struct
 end
 
 module RF = Rep (E4_engine.Fast)
-module RR = Rep (E4_engine.Ref)
+
+(* The generated machine, ocaml/gen/api_gen.ml over Lean's lists: the second instance. *)
+module RG = Rep (E4_engine.Make (Api_gen_inst))
 
 let find_fixture () : string =
   let candidates =
@@ -208,14 +210,14 @@ let () =
          (String.concat " " r.tape);
        match
          ( RF.report r.program ~fuel:r.fuel ~tape:r.tape
-         , RR.report r.program ~fuel:r.fuel ~tape:r.tape )
+         , RG.report r.program ~fuel:r.fuel ~tape:r.tape )
        with
        | Some fast, Some slow ->
          check (r.name ^ ": S1 the program's bytes decode on both instances") true;
          check (r.name ^ ": S2 Fast finishes") (fast.outcome = "finished");
-         check (r.name ^ ": S2 Ref finishes") (slow.outcome = "finished");
+         check (r.name ^ ": S2 Gen finishes") (slow.outcome = "finished");
          Printf.printf
-           "  Lean's exit: %s\n  Fast's exit: %s\n  Ref's exit:  %s\n"
+           "  Lean's exit: %s\n  Fast's exit: %s\n  Gen's exit:  %s\n"
            r.exit_text
            (Option.value fast.root ~default:"-")
            (Option.value slow.root ~default:"-");
@@ -223,21 +225,21 @@ let () =
            (r.name ^ ": S2 Fast's root exit is the exit Lean wrote")
            (fast.root = Some r.exit_text);
          check
-           (r.name ^ ": S2 Ref's root exit is the exit Lean wrote")
+           (r.name ^ ": S2 Gen's root exit is the exit Lean wrote")
            (slow.root = Some r.exit_text);
          check
-           (r.name ^ ": S3 Fast = Ref: outcome, exits, fibers, trace, store")
+           (r.name ^ ": S3 Fast = Gen: outcome, exits, fibers, trace, store")
            (fast = slow);
          (* S4: a program cut by one byte is refused *)
          let cut = String.sub r.program 0 (String.length r.program - 1) in
          check
            (r.name ^ ": S4 a program cut by one byte is refused on both instances")
            (RF.report cut ~fuel:r.fuel ~tape:r.tape = None
-            && RR.report cut ~fuel:r.fuel ~tape:r.tape = None);
+            && RG.report cut ~fuel:r.fuel ~tape:r.tape = None);
          (* S4: at a small fuel the run does not finish *)
          (match
             ( RF.report r.program ~fuel:small_fuel ~tape:r.tape
-            , RR.report r.program ~fuel:small_fuel ~tape:r.tape )
+            , RG.report r.program ~fuel:small_fuel ~tape:r.tape )
           with
           | Some f, Some s ->
             check
@@ -259,7 +261,7 @@ let () =
            let first = List.hd runs in
            (match
               ( RF.report r.program ~fuel:r.fuel ~tape:[]
-              , RR.report r.program ~fuel:r.fuel ~tape:[] )
+              , RG.report r.program ~fuel:r.fuel ~tape:[] )
             with
             | Some f, Some s ->
               check
@@ -272,7 +274,7 @@ let () =
             | _ -> check (r.name ^ ": S5 the program decodes with no tape") false);
            match
              ( RF.report r.program ~fuel:r.fuel ~tape:(without_verdict r.tape)
-             , RR.report r.program ~fuel:r.fuel ~tape:(without_verdict r.tape) )
+             , RG.report r.program ~fuel:r.fuel ~tape:(without_verdict r.tape) )
            with
            | Some f, Some s ->
              check
@@ -299,7 +301,7 @@ let () =
        (a.program = c.program && a.tape <> c.tape);
      (match
         ( RF.report a.program ~fuel:a.fuel ~tape:a.tape
-        , RR.report a.program ~fuel:a.fuel ~tape:a.tape )
+        , RG.report a.program ~fuel:a.fuel ~tape:a.tape )
       with
       | Some fast, Some slow ->
         check

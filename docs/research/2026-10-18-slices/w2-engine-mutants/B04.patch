@@ -1,0 +1,13 @@
+B04 e4_buckets.ml: drain keeps the drained tasks
+
+--- a/ocaml/engine/e4_buckets.ml
++++ b/ocaml/engine/e4_buckets.ml
+@@ -96,7 +96,7 @@
+     let tasks =
+       List.fold_right (fun b acc -> b.front @ List.rev_append b.back acc) t.buckets []
+     in
+-    tasks, empty
++    tasks, t
+   ;;
+ 
+   let length t =

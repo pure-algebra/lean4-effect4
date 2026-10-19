@@ -1,0 +1,13 @@
+T03 e4_table.ml: add counts a replacing add as fresh (cardinal off by one after add on a bound key)
+
+--- a/ocaml/engine/e4_table.ml
++++ b/ocaml/engine/e4_table.ml
+@@ -148,7 +148,7 @@
+             Some v)
+         m
+     in
+-    { n = (if !fresh then t.n + 1 else t.n); rep = Big m' }
++    { n = t.n + 1; rep = Big m' }
+ ;;
+ 
+ let remove (k : int) (t : 'a t) : 'a t =

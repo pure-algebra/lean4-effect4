@@ -20,7 +20,7 @@
                                          of that residue is the REFUSED decision when the
                                          machine is stuck, at position |tape| - |residue|.
 
-   Every law is a named PASS/FAIL line, on BOTH instances (Fast and Ref).  Exit code 0 iff
+   Every law is a named PASS/FAIL line, on the engine's instance (Fast).  Exit code 0 iff
    every line passed.
 
    Run: cd ocaml && dune build @engine/test/runtest --force *)
@@ -211,7 +211,6 @@ module Laws (En : E4_engine.ENGINE) = struct
 end
 
 module L_fast = Laws (E4_engine.Fast)
-module L_ref = Laws (E4_engine.Ref)
 
 (* ================================================================ the cells *)
 
@@ -219,7 +218,7 @@ let () =
   print_endline
     "== lane W: replay_steps, replay_positions and replay_to (E4_engine EN4/EN4b) ==";
   print_endline "";
-  (* ---- 1. the general laws, on both instances, over four (program, fuel, tape) cells ---- *)
+  (* ---- 1. the general laws over five (program, fuel, tape) cells ---- *)
   let cells_fast =
     [ "p42 spent", p42, 1000, [ E4_engine.Fast.evaluate 0; E4_engine.Fast.flush ]
     ; "pFork spent", p_fork, 1000, [ E4_engine.Fast.evaluate 0; E4_engine.Fast.flush ]
@@ -242,27 +241,6 @@ let () =
        ignore (L_fast.rs2 l p ~fuel tape);
        L_fast.rs4 l p ~fuel tape)
     cells_fast;
-  print_endline "";
-  let cells_ref =
-    [ "p42 spent", p42, 1000, [ E4_engine.Ref.evaluate 0; E4_engine.Ref.flush ]
-    ; ( "pFork long"
-      , p_fork
-      , 1000
-      , [ E4_engine.Ref.evaluate 0
-        ; E4_engine.Ref.flush
-        ; E4_engine.Ref.flush
-        ; E4_engine.Ref.fire 0
-        ; E4_engine.Ref.yield_verdict 0 true
-        ] )
-    ; "chain40 low fuel", chain 40, 12, List.init 8 (fun _ -> E4_engine.Ref.evaluate 0)
-    ]
-  in
-  List.iter
-    (fun (l, p, fuel, tape) ->
-       L_ref.rs1 l p ~fuel tape;
-       ignore (L_ref.rs2 l p ~fuel tape);
-       L_ref.rs4 l p ~fuel tape)
-    cells_ref;
   (* ---- 2. finding F1 itself, as P6 met it: 64 decisions, one machine ---- *)
   print_endline "";
   print_endline "== finding F1: the 64-decision tape ==";

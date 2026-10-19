@@ -42,7 +42,14 @@
  (name test_todo)
  (modules test_todo)
  (deps todo-host.txt)
- (libraries todo_lane effect4_eff effect4_clock effect4_bytes effect4_engine))
+ (libraries
+  todo_lane
+  effect4_eff
+  effect4_clock
+  effect4_bytes
+  effect4_engine
+  effect4_gen
+  e4_gen_instance))
 
 (executable
  (name bench_todo)

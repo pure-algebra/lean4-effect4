@@ -12,9 +12,9 @@
    A carrier with one `add` would silently create cells Lean never mints.
 
    This module satisfies the generated functor's `TABLE` signature
-   (2026-09-08-engine-a1-state.md §1.5) verbatim, plus the extras of §4.1; `e4_table_list.ml`
-   is its list twin and satisfies the same signature.  Both ascriptions are checked at compile
-   time in test/prop_table.ml.
+   (2026-09-08-engine-a1-state.md §1.5) verbatim, plus the extras of §4.1.  The ascription is
+   checked at compile time in test/prop_table.ml, whose model `L` is Lean's carrier written
+   out: an association list in allocation order under the List operations above.
 
    Depends on: the OCaml standard library only (Map, List).
 
@@ -33,8 +33,8 @@
    used at or below `small_max` (a `remove` that crosses back down rebuilds a `Small`), so
    two tables with equal bindings have equal representations up to the Map's internal shape.
 
-   Behaviours (each is a named PASS/FAIL line in test/prop_table.ml; `L` is the list carrier
-   of e4_table_list.ml and `[[ ]]` is `bindings`):
+   Behaviours (each is a named PASS/FAIL line in test/prop_table.ml; `L` is the test's model
+   of Lean's list carrier and `[[ ]]` is `bindings`):
    T1  set-absent-is-a-no-op:  not (mem k t)  ==>  set k v t == t  (PHYSICALLY equal)
                                                                           tested
    T2  set-present-replaces:   mem k t  ==>  find_opt k (set k v t) = Some v, and
@@ -53,9 +53,9 @@
        lane depends on the order `for_all` visits in.  (A1 §4.1's T5 named `for_all` among
        the ordered operations — MEASURED FALSE for Map.Make and corrected here; the
        deviation is recorded in 2026-09-08-engine-lane-c-delivery.md.)      tested
-   T6  agreement with the list carrier: for every sequence of operations drawn from
-       {find_opt, set, add, remove, map, filter_map, for_all, fold}, E4_table and
-       E4_table_list agree on every answer and on `bindings`   tested (>= 10 000 ops, LCG)
+   T6  agreement with Lean's list: for every sequence of operations drawn from
+       {find_opt, set, add, remove, map, filter_map, for_all, fold}, E4_table and the model
+       `L` agree on every answer and on `bindings`             tested (>= 10 000 ops, LCG)
    T7  persistence: no operation mutates its argument; `t` observed after any operation on
        it is unchanged                                                     tested
    T8  snapshot = the value: a table is an ordinary immutable OCaml value with no mutable

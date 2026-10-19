@@ -24,11 +24,11 @@
  (modules test_buckets dispatcher_ref)
  (libraries effect4_engine unix))
 
-; lane C — the persistent state carriers, each against its list twin (the Lean carrier,
-; written out) on a fixed-LCG operation sequence.
+; lane C — the persistent state carriers, each against the Lean carrier written out in the
+; test (its List operations) on a fixed-LCG operation sequence.
 ;   prop_table    E4_table T1-T8 + R6a/R6b, and the TABLE module type of
-;                 2026-09-08-engine-a1-state.md §1.5 ascribed to BOTH carriers.
-;   prop_trace    E4_trace TR1-TR8, and the TRACE module type ascribed to both.
+;                 2026-09-08-engine-a1-state.md §1.5 ascribed to the carrier.
+;   prop_trace    E4_trace TR1-TR9, and the TRACE module type ascribed to the carrier.
 ;   prop_memo     E4_memo MM1-MM7, and the LAYERS module type ascribed to both; MM2 is the
 ;                 observation-equality law against the duplicating list twin.
 ;   bench_carriers  the §6.2 C1-C6 cells plus the memo and the small-size crossover.  An
@@ -69,21 +69,22 @@
  (modules test_sched)
  (libraries effect4_engine unix threads.posix))
 
-; lane D — the drive loop: the two instances of the generated engine, the differential
-; between them, and the first numbers. The program type is one (ocaml/eff/eff_types.ml, the
-; LCNF route's), so no conversion or ordinal pin stands between the wire and the engine.
-;   test_engine  G0 (p42 / pFork / pAwait) on Fast AND Ref; the numeric profile at load;
-;                the clock and creation-origin readers of the generated machine; a count of the
-;                two `failwith` rows of the generated prelude; and the W1/W2 bench cells (a
-;                measurement, printed, not a gate). The goldens' differential is test_diff's.
+; lane D — the drive loop: the generated engine's instance against the generated machine, and
+; the first numbers. The program type is one (ocaml/eff/eff_types.ml, the LCNF route's), so no
+; conversion or ordinal pin stands between the wire and the engine.
+;   test_engine  G0 (p42 / pFork / pAwait) on Fast, each whole report against the generated
+;                machine's (Gen); the numeric profile at load; the clock and creation-origin
+;                readers of the generated machine; a count of the two `failwith` rows of the
+;                generated prelude; and the W1/W2 bench cells (a measurement, printed, not a
+;                gate). The goldens' differential is test_diff's.
 
 (test
  (name test_engine)
  (modules test_engine)
- (libraries effect4_engine effect4_eff unix))
+ (libraries effect4_engine effect4_eff effect4_gen e4_gen_instance unix))
 
 ; the host boundary — E4_host, the driver over the engine.
-;   test_serve  E4_host.Make.serve's stops on Fast AND Ref: a reply refused while applied and
+;   test_serve  E4_host.Make.serve's stops on Fast: a reply refused while applied and
 ;               one admission refuses, each leaving everything as before the call; the machine's
 ;               outcomes (finished, waiting on a timer, short of fuel, a stuck answer through a
 ;               stand-in engine); and the loading refusal as a value. Each check has its control.
@@ -93,16 +94,15 @@
  (modules test_serve)
  (libraries effect4_engine effect4_eff effect4_clock))
 
-; lane X — the differential over every corpus, three engines.
+; lane X — the differential over every corpus, two engines.
 ;   test_diff   `Corpora` (the 37 byte goldens, the truth corpus's Lean-cut wire goldens,
 ;               and the Lean corpus `make corpus` prints under .lake/corpus: 400 programs
 ;               of Test/Program/Gen.lean plus the wire corpus, as Lean's own bytes with
 ;               Lean's typing verdict beside each) x `E4_diff` (thirteen
-;               projections per position) x three engines: `Api_gen` as generated (the
-;               oracle, built here into an `E4_engine.INSTANCE`), `Ref` (the seam over
-;               list twins — the extern-row half) and `Fast` (the substituted carriers —
-;               the carrier half).  Every position of every replay is compared on both
-;               pairs; the tapes are drawn from the machine as it runs, so they are
+;               projections per position) x two engines: `Api_gen` as generated (the
+;               oracle, built here into an `E4_engine.INSTANCE`) and `Fast` (the seam's
+;               extern rows over the substituted carriers).  Every position of every replay
+;               is compared; the tapes are drawn from the oracle as it runs, so they are
 ;               admissible by construction.  It also discharges lane C's OWED FB1, records
 ;               why DF-3 is not run, and reports the engines against
 ;               harness/truth/corpus.json.  Paths are found by an ancestor walk from the
@@ -111,8 +111,9 @@
 ;               `effect4_gen` is named here and NOWHERE in the library: the third engine
 ;               is a test-only functor application.
 
-; The generated machine as an `E4_engine.INSTANCE`: one module for the differential and the
-; bench (api_gen_inst.ml's header), unwrapped so both name `Api_gen_inst`.
+; The generated machine as an `E4_engine.INSTANCE`: one module for the differential, the
+; bench and the tests that compare the engine with it (api_gen_inst.ml's header), unwrapped so
+; each names `Api_gen_inst`.
 
 (library
  (name e4_gen_instance)
@@ -191,11 +192,12 @@
 
 ; lane G2 — the point's position and environment: the carriers behind `Point.path` and
 ; `Point.env` (docs/research/2026-09-08-engine-prof-chain.md).
-;   prop_point   E4_ppath PP1-PP7 and E4_env PE1-PE7, each against its list twin (which
-;                carries the Lean list and walks the whole path on every `node`), with the
-;                PPATH and PENV module types of the generated functor ascribed to both
-;                carriers.  PP2/PE2 measure the words `snoc` allocates at depth 1 and at
-;                depth 2000 on both, which is the sharing law as a number.
+;   prop_point   E4_ppath PP1-PP7 and E4_env PE1-PE7, each against the Lean list written out
+;                in the test (`path ++ [i]`, `Node.at_` walked from the root, `env ++ [v]`),
+;                with the PPATH and PENV module types of the generated functor ascribed to
+;                the carriers.  PP2/PE2 measure the words `snoc` allocates at depth 1 and at
+;                depth 2000, which is the sharing law as a number; PP2'/PE2' measure Lean's
+;                copying append with the same instrument, the control.
 
 (test
  (name prop_point)
@@ -206,8 +208,8 @@
 ; on the landed engine (docs/research/2026-09-08-engine-bench.md).
 ;   e4_engine_bench  W1 (the nine truth programs + the 37 byte goldens), W2 (chain of
 ;                    refMake at n = 100/300/1000/2000/8000), W3 (the Lean corpus of
-;                    `make corpus`), W4 (fan-out N x M yields) over the THREE engines
-;                    (`Api_gen` untouched, `Ref`, `Fast`), plus the domain sweep of 200 and
+;                    `make corpus`), W4 (fan-out N x M yields) over the TWO engines
+;                    (`Api_gen` untouched, `Fast`), plus the domain sweep of 200 and
 ;                    2 000 `pTwo` machines over 1/2/4/8 domains through `E4_sched` with the
 ;                    real `Fast` engine, and the AC1-AC9 acceptance table.  An executable,
 ;                    not a test: a bench is a measurement, not a gate.  Driven by
@@ -221,10 +223,10 @@
 
 ; lane G3 — the fiber table's maintained completed view (docs/research/
 ; 2026-09-08-engine-lane-g3-delivery.md).
-;   prop_fibers_view  E4_fibers_view FV1-FV8 against the LIST twin (which walks Lean's
-;                     filterMap at read time) and against E4_table.filter_map over the
-;                     carrier's own table, with the FIBERS module type of the generated
-;                     functor ascribed to both carriers.  FV8 is the sharing law: a write
+;   prop_fibers_view  E4_fibers_view FV1-FV8 against the Lean list written out in the test
+;                     (which walks Lean's filterMap at read time) and against the scan of
+;                     the carrier's own table, with the FIBERS module type of the generated
+;                     functor ascribed to the carrier.  FV8 is the sharing law: a write
 ;                     that does not change an exit leaves the answer PHYSICALLY the same
 ;                     list, which is why `completedExits` costs nothing per step.
 
