@@ -29,6 +29,9 @@
    such answers therefore cannot count as differential agreement. This is a host boundary,
    separate from a semantic Stuck answer.
 
+   It is test machinery: it left the installed effect4_engine for the test library
+   e4_reference on 2026-10-18 (the hygiene lane's H3).
+
    Depends on: E4_engine, E4_clock, effect4_eff (Eff_types), stdlib.
 
    Behaviours:

@@ -1,32 +1,9 @@
-(* E4_memo_list — the LIST twin of E4_memo: the same signature (`LAYERS`, 2026-09-08-engine-
-   a1-state.md §1.5), backed by `List (LayerId × MemoEntry)` in INSERTION order, reproducing
-   `MemoWorld.entryAt`, `MemoWorld.insertEntry`, `MemoWorld.updateEntry` and
-   `MemoWorld.deleteEntry` (src/Effect4/Machine/Stores.lean), including duplicate bindings.
-
-   This is the one twin whose raw carrier can differ from the map's: Lean's `insertEntry`
-   appends unconditionally (`MemoWorld.insertEntry`, src/Effect4/Machine/Stores.lean), so a second insert under a bound key leaves TWO entries
-   in the list where the map has one.  `find?` answers the FIRST (`MemoWorld.entryAt`, src/Effect4/Machine/Stores.lean); `updateEntry` maps
-   over ALL matches and `deleteEntry` filters ALL matches (`MemoWorld.updateEntry` and
-   `MemoWorld.deleteEntry`, src/Effect4/Machine/Stores.lean). Every
-   OBSERVATION the machine can make is the same on both sides.  That is law MM2, and the
-   differential in test/prop_memo.ml is what carries it.  `raw` exposes the duplicated list;
-   `bindings` is the observable projection (first binding per key, sorted by key) so that
-   the two carriers can be compared directly.
-
-   Depends on: E4_memo (for `key` and `compare_key` only), the OCaml standard library.
-
-   Behaviours:
-   ML1 the internal list is in INSERTION order with Lean's duplicates      by construction
-   ML2 find_opt is `List.find?`: the FIRST binding                         by construction
-   ML3 insert APPENDS unconditionally (`MemoWorld.insertEntry`, src/Effect4/Machine/Stores.lean)                          by construction
-   ML4 update maps over ALL matching entries (`MemoWorld.updateEntry`, src/Effect4/Machine/Stores.lean)                   by construction
-   ML5 delete filters out ALL matching entries (`MemoWorld.deleteEntry`, src/Effect4/Machine/Stores.lean)                 by construction
-   ML6 bindings dedupes by key keeping the FIRST, then sorts by E4_memo.compare_key, so
-       it is exactly what the map's `bindings` answers (MM6)               tested *)
+(* E4_memo_list -- see e4_memo_list.mli. *)
 
 module E4_memo = Effect4_engine.E4_memo
 
-type 'a t = (E4_memo.key * 'a) list
+type key = E4_memo.key
+type 'a t = (key * 'a) list
 
 (* Written out rather than `=`, so no polymorphic comparison appears in this file. *)
 let key_eq (a : E4_memo.key) (b : E4_memo.key) : bool = E4_memo.compare_key a b = 0
@@ -38,12 +15,6 @@ let find_opt (p : E4_memo.key) (t : 'a t) : 'a option =
     | (q, v) :: r -> if key_eq q p then Some v else go r
   in
   go t
-;;
-
-let mem (p : E4_memo.key) (t : 'a t) : bool =
-  match find_opt p t with
-  | Some _ -> true
-  | None -> false
 ;;
 
 (* Lean's insertEntry: `m.entries ++ [(layer, entry)]`, with no membership test (`MemoWorld.insertEntry`, src/Effect4/Machine/Stores.lean). *)
@@ -72,10 +43,7 @@ let bindings (t : 'a t) : (E4_memo.key * 'a) list =
   List.stable_sort (fun (a, _) (b, _) -> E4_memo.compare_key a b) (dedupe [] t)
 ;;
 
-let cardinal (t : 'a t) : int = List.length (bindings t)
-
-(* The Lean carrier itself, duplicates included. *)
-let raw (t : 'a t) : (E4_memo.key * 'a) list = t
+(* The length of the Lean carrier itself, duplicates included. *)
 let raw_length (t : 'a t) : int = List.length t
 
 (* MemoWorld.lookup over list-backed entry tables (MemoWorld.lookup (src/Effect4/Machine/Stores.lean)); the same fuel. *)

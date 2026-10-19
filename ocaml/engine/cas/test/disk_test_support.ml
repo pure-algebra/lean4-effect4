@@ -1,6 +1,4 @@
-(* Properties: checked images freeze bytes, roots, and durable boundary; preflight refuses
-   without writing; reopened stores retain complete heads; damage is a fault value.
-   These are finite controls of the actual disk writer, not a universal IO theorem. *)
+(* Disk_test_support -- see disk_test_support.mli. *)
 open Effect4_engine_cas
 
 let require condition message = if not condition then failwith message
