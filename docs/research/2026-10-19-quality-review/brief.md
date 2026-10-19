@@ -1,8 +1,9 @@
 # Codex brief: a quality audit of the OCaml estate, the next consolidations, and the backlog
 
 You are reviewing `/Users/pooks/Dev/lean4-effect4`, branch `refactor/phase1-phase3`, at
-`292becd3d`. Work in the worktree the coordinator made for you, `/Users/pooks/Dev/wt-quality-review`,
-cut from that commit. This is a review: commit nothing, push nothing and merge nothing.
+`3471cbe35`. Work in a worktree of your own, cut from that commit. This is a review: commit
+nothing, push nothing and merge nothing. The counts below were measured at `292becd3d`, and no
+code changed between the two commits.
 
 ## What we want
 
