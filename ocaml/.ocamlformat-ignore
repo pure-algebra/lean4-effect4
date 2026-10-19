@@ -21,6 +21,8 @@ engine/cas/e4_root_policy.mli
 engine/test/api_gen_inst.ml
 engine/test/ctors/ctors_gen.ml
 engine/test/ctors/ctors_gen.mli
+engine/test/lanes/lanes_gen.ml
+engine/test/lanes/lanes_gen.mli
 engine/test/modeled/modeled_gen.ml
 engine/test/modeled/modeled_gen.mli
 engine/test/rocq/rocq_gen.ml

@@ -1,0 +1,6 @@
+; Red control of the test scope (C5): the lanes' one closure is the test library effect4_lanes,
+; which nothing installs, so the outside project cannot link it.
+; ../../check_install.sh expects this build to fail with the line of red.expected.
+(executable
+ (name red)
+ (libraries effect4_lanes))

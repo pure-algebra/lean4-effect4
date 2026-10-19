@@ -1,0 +1,6 @@
+; Red control of the test scope (C5): a lane's facade is a module of the test library
+; effect4_lanes, which nothing installs, so the installed facade gives no path to it.
+; ../../check_install.sh expects this build to fail with the line of red.expected.
+(executable
+ (name red)
+ (libraries effect4_gen.effect4))

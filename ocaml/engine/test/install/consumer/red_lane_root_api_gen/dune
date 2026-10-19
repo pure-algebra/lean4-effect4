@@ -1,0 +1,6 @@
+; Red control of the test scope (C5): a lane's root lowers into the lanes' one closure, never
+; into the installed Api_gen, so the installed Api_gen does not export it.
+; ../../check_install.sh expects this build to fail with the line of red.expected.
+(executable
+ (name red)
+ (libraries effect4_gen.effect4))

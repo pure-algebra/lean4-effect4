@@ -316,27 +316,32 @@
       ]
     },
     {
-      "out": "ocaml/engine/test/todo/todo_gen.ml",
+      "out": "ocaml/engine/test/lanes/lanes_gen.ml",
       "import": [
         "Test.Dogfood.Scenario.Todo.HostRun"
       ],
-      "cap": 4000,
+      "cap": 2000,
       "types": [],
-      "linkage": [
-        "Test.Dogfood.Scenario.Todo.Host.serveBuiltVal",
-        "Test.Dogfood.Scenario.Todo.Host.serveBuiltForgetfulVal",
-        "Test.Dogfood.Scenario.Todo.Host.serveBuiltTypedVal",
-        "Test.Dogfood.Scenario.Todo.Typed.model",
-        "Test.Dogfood.Scenario.Todo.Typed.broken",
-        "Test.Dogfood.Scenario.Todo.Typed.Host.reactor",
-        "Test.Dogfood.Scenario.Todo.Host.resultVal",
-        "Test.Dogfood.Scenario.Todo.repository",
-        "Test.Dogfood.Scenario.Todo.forgetful",
-        "Effect4.Store.Image.equiv",
-        "Effect4.Store.Image.list",
-        "Test.Dogfood.Scenario.Todo.Typed.Todo.modeledStaged",
-        "Test.Dogfood.Scenario.Todo.Typed.Todo.modeledOfC",
-        "Test.Dogfood.Scenario.Todo.Typed.Todo.modeledToC"
+      "consumers": [
+        {
+          "out": "ocaml/engine/test/todo/todo_gen.ml",
+          "linkage": [
+            "Test.Dogfood.Scenario.Todo.Host.serveBuiltVal",
+            "Test.Dogfood.Scenario.Todo.Host.serveBuiltForgetfulVal",
+            "Test.Dogfood.Scenario.Todo.Host.serveBuiltTypedVal",
+            "Test.Dogfood.Scenario.Todo.Typed.model",
+            "Test.Dogfood.Scenario.Todo.Typed.broken",
+            "Test.Dogfood.Scenario.Todo.Typed.Host.reactor",
+            "Test.Dogfood.Scenario.Todo.Host.resultVal",
+            "Test.Dogfood.Scenario.Todo.repository",
+            "Test.Dogfood.Scenario.Todo.forgetful",
+            "Effect4.Store.Image.equiv",
+            "Effect4.Store.Image.list",
+            "Test.Dogfood.Scenario.Todo.Typed.Todo.modeledStaged",
+            "Test.Dogfood.Scenario.Todo.Typed.Todo.modeledOfC",
+            "Test.Dogfood.Scenario.Todo.Typed.Todo.modeledToC"
+          ]
+        }
       ],
       "open": {
         "module": "Eff_types",

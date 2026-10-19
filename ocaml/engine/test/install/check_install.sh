@@ -29,10 +29,12 @@
 #   I3 The installed eff prints consumer/ok's two lines for `eff check` and `eff run`. tested
 #   I4 Red controls: each red fixture's build fails, and its output holds the line of its
 #      red.expected. consumer/red_test_library names the test library
-#      effect4_disk_test_support. The other eight are the facade's (R6.2): a coverage root named
+#      effect4_disk_test_support. Eight are the facade's (R6.2): a coverage root named
 #      through the facade and through Api_gen, a linkage root named through the facade, and each
 #      sealed package (Built, Prepared, Checked, the tool Session, Memo) built or updated through
-#      a facade alias.                                                                 tested
+#      a facade alias. Three are the test lanes' (C5): the lanes' one closure, effect4_lanes,
+#      linked by name; a lane's facade, Todo_gen, named; and a lane's root named through
+#      Api_gen.                                                                        tested
 #   The prefix and the copy share one temporary directory, removed on every exit.
 #   Evidence: host-only, a finite run on this machine's switch; no theorem reaches it.
 set -euo pipefail
