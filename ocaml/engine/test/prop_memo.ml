@@ -264,6 +264,26 @@ let mm6 () =
   in
   if not (asc ks) then ok_a := false;
   if ks <> List.sort M.compare_key universe then ok_a := false;
+  (* The two lines above read the order off `compare_key` itself, so an order that put a prefix
+     last passed them (the mutant campaign's Y04, docs/research/2026-10-18-slices/
+     w2-engine-mutants/).  The order this law states, written out: *)
+  let written_out =
+    [ [], []
+    ; [ 0 ], []
+    ; [ 0; 0 ], []
+    ; [ 0; 0; 0 ], []
+    ; [ 0; 0; 1 ], []
+    ; [ 0; 0; 1 ], [ [ 0; 0; 1; 2 ] ]
+    ; [ 0; 0; 1 ], [ [ 1; 0 ] ]
+    ; [ 0; 0; 1 ], [ [ 1; 0 ]; [ 1 ] ]
+    ; [ 0; 1 ], []
+    ; [ 1 ], []
+    ; [ 1; 0 ], []
+    ; [ 1; 0; 3 ], []
+    ; [ 2 ], []
+    ]
+  in
+  if ks <> written_out then ok_a := false;
   (* MM6b: the twin's bindings — insertion order deduped and sorted — is the same list *)
   let l =
     List.fold_left

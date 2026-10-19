@@ -173,19 +173,32 @@ let pp2 () =
 
 let pp3 () =
   let ok = ref true in
-  let p = ref (P.make root_tree)
-  and l = ref [] in
-  (* on the tree, then off it: `rand 5` reaches indices 3 and 4, which no node has *)
-  for _ = 1 to 60 do
-    let k = rand 5 in
-    p := P.snoc child !p k;
-    l := !l @ [ k ];
-    let a = P.node child !p
-    and b = at_ root_tree !l in
-    if a <> b then ok := false;
-    if P.node child !p <> P.walk child (P.root !p) (P.to_list !p) then ok := false
+  let on_tree = ref 0
+  and off_tree = ref 0 in
+  (* 300 paths of 0 to 7 steps.  An index below 3 stays on the tree, down to its depth 6;
+     3 and 4 leave it, since no node has them.  One path of 60 steps, which this check once
+     took, left the tree at its first step under this seed and never came back, so the
+     mutant campaign's P01 and P07 passed it (docs/research/2026-10-18-slices/
+     w2-engine-mutants/).  The counts make the check fail if either side goes unvisited. *)
+  for _ = 1 to 300 do
+    let p = ref (P.make root_tree)
+    and l = ref [] in
+    for _ = 1 to rand 8 do
+      let k = if rand 4 = 0 then 3 + rand 2 else rand 3 in
+      p := P.snoc child !p k;
+      l := !l @ [ k ];
+      let a = P.node child !p
+      and b = at_ root_tree !l in
+      (match a with
+       | Some _ -> incr on_tree
+       | None -> incr off_tree);
+      if a <> b then ok := false;
+      if P.node child !p <> P.walk child (P.root !p) (P.to_list !p) then ok := false
+    done
   done;
-  check "PP3 node c p = walk c (root p) (to_list p) = Node.at_, on and off the tree" !ok
+  check
+    "PP3 node c p = walk c (root p) (to_list p) = Node.at_, on and off the tree"
+    (!ok && !on_tree > 0 && !off_tree > 0)
 ;;
 
 let pp5 () =
@@ -219,7 +232,14 @@ let pp7 () =
   let a = ref (P.make root_tree)
   and b = ref [] in
   let ok = ref true in
-  for _ = 1 to 400 do
+  let on_tree = ref 0 in
+  for i = 1 to 400 do
+    (* A path past the tree's depth 6 has no node, so the walk starts again every eight
+       operations: the node is compared on the tree as well as off it (PP3's note). *)
+    if i mod 8 = 1
+    then (
+      a := P.make root_tree;
+      b := []);
     (match rand 4 with
      | 0 ->
        let l = List.init (rand 3) (fun _ -> rand 4) in
@@ -229,13 +249,14 @@ let pp7 () =
        let k = rand 4 in
        a := P.snoc child !a k;
        b := !b @ [ k ]);
+    if Option.is_some (P.node child !a) then incr on_tree;
     if P.to_list !a <> !b then ok := false;
     if P.node child !a <> at_ root_tree !b then ok := false;
     if P.length !a <> List.length !b then ok := false
   done;
   check
     "PP7 agreement with Lean's list on 400 random spine operations (to_list and node)"
-    !ok
+    (!ok && !on_tree > 0)
 ;;
 
 (* --------------------------------------------------------------------------------- E4_env *)

@@ -1,5 +1,6 @@
 (* prop_table.ml — the property tests of E4_table (lane C, docs/research/
-   2026-09-08-engine-a1-state.md §4.1 T1-T8 and §7 R6).
+   2026-09-08-engine-a1-state.md §4.1 T1-T8 and §7 R6; T9, of_list, since the mutant campaign
+   of 2026-10-18).
 
    Every law of e4_table.mli is one named PASS/FAIL line.  The differential runs a fixed LCG
    over the operation alphabet against `Lean` below — Lean's carrier written out, an
@@ -86,6 +87,10 @@ module L = struct
 
   let fold (f : int -> 'a -> 'b -> 'b) (t : 'a t) (init : 'b) : 'b =
     List.fold_left (fun acc (k, v) -> f k v acc) init (bindings t)
+  ;;
+
+  let of_list (l : (int * 'a) list) : 'a t =
+    List.fold_left (fun t (k, v) -> add k v t) empty l
   ;;
 end
 
@@ -412,6 +417,23 @@ let r6 () =
     !ok_b
 ;;
 
+(* ------------------------------------------------------------------ T9 *)
+(* No check read `of_list` until the mutant campaign's T12, which builds it with `set` and so
+   answers the empty table, passed every test (docs/research/2026-10-18-slices/
+   w2-engine-mutants/).  The lists repeat keys, so a later pair replaces an earlier one. *)
+let t9 () =
+  reset ();
+  let ok = ref true in
+  for _ = 1 to 200 do
+    let l = List.init (rand 40) (fun _ -> rand 30, rand 1000) in
+    let a = T.of_list l
+    and b = L.of_list l in
+    if show_bindings (T.bindings a) <> show_bindings (L.bindings b) then ok := false;
+    if T.cardinal a <> L.cardinal b then ok := false
+  done;
+  check "T9 of_list is the fold of add: the bindings and the cardinal of Lean's list" !ok
+;;
+
 (* ------------------------------------------------------------------ the model's own law *)
 let tl2 () =
   (* TL2: for a monotone (machine-reachable) allocation sequence Lean's INSERTION order
@@ -442,6 +464,7 @@ let () =
     "T8 snapshot = the value"
     "'a t is a record of an int and an immutable list or Map; no mutable field anywhere";
   r6 ();
+  t9 ();
   tl2 ();
   E4_check.finish ()
 ;;

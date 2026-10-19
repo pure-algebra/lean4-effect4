@@ -26,7 +26,7 @@
 
 ; lane C — the persistent state carriers, each against the Lean carrier written out in the
 ; test (its List operations) on a fixed-LCG operation sequence.
-;   prop_table    E4_table T1-T8 + R6a/R6b, and the TABLE module type of
+;   prop_table    E4_table T1-T9 + R6a/R6b, and the TABLE module type of
 ;                 2026-09-08-engine-a1-state.md §1.5 ascribed to the carrier.
 ;   prop_trace    E4_trace TR1-TR9, and the TRACE module type ascribed to the carrier.
 ;   prop_memo     E4_memo MM1-MM7, and the LAYERS module type ascribed to both; MM2 is the

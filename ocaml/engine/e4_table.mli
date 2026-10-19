@@ -60,6 +60,8 @@
        it is unchanged                                                     tested
    T8  snapshot = the value: a table is an ordinary immutable OCaml value with no mutable
        field anywhere in its representation (brief §2.3)         by construction; argued
+   T9  of_list l is the fold of add over l: the bindings and the cardinal of `L.of_list l`,
+       a later pair under a key replacing an earlier one                   tested
    R6a canonical representation: is_small t  <->  cardinal t <= small_max, after every
        operation sequence, including one that grows past the threshold and shrinks back
                                                                            tested
