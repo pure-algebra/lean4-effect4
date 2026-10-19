@@ -27,9 +27,10 @@ and a document are each a state reached by its journal. The dictionary
   (`Test/Dogfood/Scenario/Todo/`). Today a service key and a typed host are still written by hand
   (release item 7).
 - **TypeScript.** The printer writes a program and its services as Effect TypeScript, checked
-  against rc.112 by tsgo 7 (`make check-ts`). The readers read printed programs back (`ts/eff`).
-  `apps/todo` runs the to-do on Bun over a SQLite layer. `ts/eff`'s JSON is still face 7's array
-  form, which the tool refuses (release item 3).
+  against rc.112 by tsgo 7 (`make check-ts`). The readers read the printed fragment back, with any
+  binder names (`ts/eff/read.ts`, `src/Effect4/Codegen/Read.lean`). `ts/eff` writes the tagged
+  print with arrays, the JSON the tool reads. `apps/todo` runs the to-do on Bun over a SQLite
+  layer.
 - **The tool.** `Effect4.Tool.serve` is one transition over a workspace. Two drivers serve it:
   `tools/Drivers/Workspace.lean` in Lean, and `eff tool` or `eff mcp` in the OCaml kit, over the
   lowered `serveTree`. An agent writes programs as JSON today (release items 4 and 5).
@@ -50,16 +51,17 @@ and a document are each a state reached by its journal. The dictionary
 - The vocabulary landed: host, runtime, reactor and tape in the dictionary, and the authoring
   tool's state renamed from "session" to "workspace".
 - Row 418 adopted the author-first release track.
+- Release item 3 landed. The public JSON is the tagged print with arrays (D2). Both readers take
+  any binder names, renamed to the printer's (`Rename.expr`).
 
 ## Next, in order
 
 The release track of `coherence.md` §9.1 (row 418). The first release is Lean authoring, the
 TypeScript face, and the tool over MCP.
 
-Done: 1, this page; 2, the typed-editing concept's prose (`docs/core/semantics.md` §2.11).
+Done: 1, this page; 2, the typed-editing concept's prose (`docs/core/semantics.md` §2.11); 3, the
+TypeScript slice (seats 3a and 3b).
 
-3. The TypeScript slice: `ts/eff` reads and writes the canonical tagged print; binders named by
-   scope.
 4. Agent text in: `open` and `fill` take Effect TypeScript text through the reader.
 5. The reply diet, and one field name per idea.
 6. One check, one observation, one command face (row 414 (3)).

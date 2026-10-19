@@ -177,6 +177,14 @@ Done: the vocabulary, in the dictionary (`5418973ea`, `c92fe3633`) and the works
 Row 418 records this plan. Release item 1, `docs/STATE.md` as one page, is done. Item 2 is
 done too: `docs/core/semantics.md` §2.11 holds the typed-editing concept, as prose.
 
+Item 3 is done in two parts. Seat 3a made the tagged print with arrays the one public JSON
+(`e826c8ac1`, `a2cfa8de5`; `receipt-item3a.md`). Seat 3b made both readers take any binder names
+(`c8b6d5ad6`, `f519aed3c`; `receipt-item3b.md`). The reader reads the printer's text as it
+stands, and any other text after the renaming of its binders (`Rename.expr`). Law 11 keeps its
+statement. Law 12 holds under that normaliser, as a disjunction. Left from item 3: the three
+`lastIndexOf` resolvers of `read.ts`, `oxc.ts` and `ck.ts` as one helper, with the next edit of
+`ck.ts`.
+
 ### 9.1 The release track
 
 The first release is Lean authoring, the TypeScript face, and the tool over MCP (`eff mcp`, in the
@@ -187,7 +195,7 @@ kit).
 | 1 | **`docs/STATE.md` as one page, true at HEAD**: the faces, how each is used, this plan, the owner's open decisions | about 400 lines of the entry point | XS |
 | 2 | **The author's half in the documents**: the typed-editing concept's prose (row 414 (5)) | nothing; it places the audit's lc-1, lc-2, lc-5 and lc-7 | S |
 | 3 | **The TypeScript slice, ahead of E6**: `ts/eff` reads and writes the canonical tagged print; `toJson` writes what `open` reads; binders named by scope in `ts/eff/read.ts` and `src/Effect4/Codegen/Read.lean` | `V.json` and `OCaml5.Eff.V`'s conversions (part of M7); the `a0` rule | M |
-| 4 | **Agent text in**: `open` and `fill` take Effect TypeScript text through the reader; `describe` serves the catalogue | nothing; it adds the face the ergonomics probe asked for | S |
+| 4 | **Agent text in**: `open` and `fill` take Effect TypeScript text through the reader; `describe` serves the catalogue; the typed reader renames, then erases, then reads (item 3b's open item 2) | nothing; it adds the face the ergonomics probe asked for | S |
 | 5 | **The reply diet, and one field name per idea** (A4; the slices plan's decision 9) | the repeated bytes; one of the two fill alphabets | S |
 | 6 | **One check, one observation, one command face** (row 414 (3); M8; A6, with R2's A7.1) | `Api.check`, `Api.explain`, `Run.Kit.check`, `Run.Kit.admit` and `Run.Preview.admit` as separate entries; `Run.observe`, `Run.work`, `machineViewOf`; `Kit_serve`'s execution | M |
 | 7 | **The host seam from `eff_rows`**: the typed interface, the host record and its reactor; keys by name | `Todo/Typed.lean`, `REPO`, the README's hand keys | M |
@@ -239,6 +247,7 @@ The rest of the repair wave follows the release: R2's A4.1 and A9.1, and R3.
 | S-1 | Is the store's on-disk format meaning? | deferred with D1 | estate item 5 |
 | D4 | The drive after a refused reply | deferred with the protocol; recommended: the OCaml rule, written once in Lean | estate item 1 |
 | D5 | Abandon, and whether a host is told | deferred past the first release (the owner, 2026-10-19) | estate item 1 |
+| — | Law 12 after item 3b: the landed disjunction, or option B (one-sided, on a smaller readable domain) | decided 2026-10-19: the landed disjunction; option B's corner is an ill-typed program at the native signature (`receipt-item3b.md`) | release item 3 |
 | — | What text an agent writes | adopted: Effect TypeScript in the printed fragment, through the reader | release item 4 |
 | — | What the first release is | adopted: Lean authoring, the TypeScript face, the tool over MCP | §9.1 |
 
