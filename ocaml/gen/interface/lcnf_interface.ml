@@ -5,7 +5,10 @@
    I2 Selected packages lose their representation as a whole. Tested by the sealing controls.
    I3 Final nominal ascriptions replace earlier inferred bindings. Tested by test_interface.
    I4 Missing roots or packages refuse as values. Tested by test_interface.
-   I5 Prelude values remain public until their source owner deletes them. By construction. *)
+   I5 Prelude values remain public until their source owner deletes them. By construction.
+   I6 With [Reachable], a top-level type stays only when an exported value's type, a selected
+      package or another kept type's declaration names it: a consumer's facade exports the
+      types its roots name, not every type of the unit it includes. Tested by test_interface. *)
 
 open Types
 
@@ -14,6 +17,10 @@ type refusal =
   | Not_implementation
   | Missing_values of string list
   | Missing_types of string list
+
+type types =
+  | All
+  | Reachable
 
 let message = function
   | Input why -> why
@@ -95,15 +102,86 @@ and filter_module ~roots ~abstract_types = function
   | other -> other
 ;;
 
-let select ~roots ~abstract_types signature =
-  let values, types = names signature in
+(* The unit's own type names (the [Pident] constructors) a type expression mentions. Each node is
+   read once: [get_id] is an int, so the table compares ints. *)
+let local_types ty =
+  let seen = Hashtbl.create 64 in
+  let found = ref [] in
+  let rec visit ty =
+    let id = get_id ty in
+    if not (Hashtbl.mem seen id)
+    then (
+      Hashtbl.add seen id ();
+      (match get_desc ty with
+       | Tconstr (Path.Pident ident, _, _) -> found := Ident.name ident :: !found
+       | _ -> ());
+      Btype.iter_type_expr visit ty)
+  in
+  visit ty;
+  !found
+;;
+
+(* The unit's own type names a type declaration mentions: its manifest and its representation. *)
+let declaration_types declaration =
+  let found = ref [] in
+  let add ty = found := local_types ty @ !found in
+  Option.iter add declaration.type_manifest;
+  Btype.iter_type_expr_kind add declaration.type_kind;
+  !found
+;;
+
+(* I6: the top-level types that an exported value, a selected package or a kept type's
+   declaration names, closed under the declarations; every other item stays as it is. *)
+let reachable ~abstract_types signature =
+  let declarations =
+    List.filter_map
+      (function
+        | Sig_type (id, declaration, _, _) -> Some (Ident.name id, declaration)
+        | _ -> None)
+      signature
+  in
+  let start =
+    List.concat_map
+      (function
+        | Sig_value (_, value, _) -> local_types value.val_type
+        | _ -> [])
+      signature
+    @ abstract_types
+  in
+  let rec close kept = function
+    | [] -> kept
+    | name :: rest when member name kept -> close kept rest
+    | name :: rest ->
+      let next =
+        match List.find_opt (fun (other, _) -> String.equal other name) declarations with
+        | Some (_, declaration) -> declaration_types declaration
+        | None -> []
+      in
+      close (name :: kept) (next @ rest)
+  in
+  let kept = close [] start in
+  List.filter
+    (function
+      | Sig_type (id, _, _, _) -> member (Ident.name id) kept
+      | _ -> true)
+    signature
+;;
+
+let select ~types ~roots ~abstract_types signature =
+  let values, declared = names signature in
   let missing_values = List.filter (fun name -> not (member name values)) roots in
-  let missing_types = List.filter (fun name -> not (member name types)) abstract_types in
+  let missing_types =
+    List.filter (fun name -> not (member name declared)) abstract_types
+  in
   if not (List.is_empty missing_values)
   then refuse (Missing_values missing_values)
   else if not (List.is_empty missing_types)
   then refuse (Missing_types missing_types)
-  else Ok (filter ~roots ~abstract_types signature)
+  else (
+    let selected = filter ~roots ~abstract_types signature in
+    match types with
+    | All -> Ok selected
+    | Reachable -> Ok (reachable ~abstract_types selected))
 ;;
 
 let prelude_values path =
@@ -139,7 +217,7 @@ let prelude_values path =
          structure)
 ;;
 
-let generate ~cmt ~roots ~abstract_types ~prelude =
+let generate ~types ~cmt ~roots ~abstract_types ~prelude =
   try
     let roots =
       roots
@@ -151,7 +229,7 @@ let generate ~cmt ~roots ~abstract_types ~prelude =
     let info = Cmt_format.read_cmt cmt in
     match info.Cmt_format.cmt_annots with
     | Cmt_format.Implementation structure ->
-      (match select ~roots ~abstract_types structure.Typedtree.str_type with
+      (match select ~types ~roots ~abstract_types structure.Typedtree.str_type with
        | Error why -> Error why
        | Ok signature ->
          let rendered =

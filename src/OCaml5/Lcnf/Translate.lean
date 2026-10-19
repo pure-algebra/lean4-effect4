@@ -1178,17 +1178,28 @@ private def Closure.absorb (c : Closure) (t : Translated) (st : St) : Closure :=
     todos := c.todos ++ st.todos }
 
 /-- Collect the translated closure and its original mono dependency graph. Intermediate
-carrier-inference rounds stay private; only the final checked closure is returned publicly. -/
+carrier-inference rounds stay private; only the final checked closure is returned publicly.
+
+`phases` are further root groups, walked in order once the walk from `roots` and every earlier
+phase is done: one walk, one set of translated declarations, and a declaration two phases reach is
+translated once, in the earlier phase. So an artefact's consumers (`OCaml5.Lcnf.Export`) share a
+node, and the first consumer's declarations come in the order its own walk gives them. -/
 private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
-    (ex : Externs := {}) : CoreM (Closure × Array ClockFlow.Flow) := do
+    (ex : Externs := {}) (phases : Array (Array Name) := #[]) :
+    CoreM (Closure × Array ClockFlow.Flow) := do
   let env ← getEnv
   let mono := persistedMonoIndex env
   let mut c : Closure := {}
   let mut clockFlows : Array ClockFlow.Flow := #[]
   let mut done : NameSet := {}
   let mut queue : Array Name := roots
+  let mut phase := 0
   let mut i := 0
-  while i < queue.size do
+  while i < queue.size || phase < phases.size do
+    if i == queue.size then
+      queue := queue ++ phases.getD phase #[]
+      phase := phase + 1
+      continue
     let n := queue[i]!
     i := i + 1
     if done.contains n then continue
@@ -1248,12 +1259,14 @@ def clockContext : CoreM ClockFlow.Context := do
   return { mono := persistedMonoIndex (← getEnv), reactor := ← reactorMonoType? }
 
 /-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
-declarations. Validate the final closure at the clock boundary before returning it. -/
+declarations, then each later root group of `phases` (`collectClosure`). Validate the final
+closure at the clock boundary before returning it. -/
 def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
-    (ex : Externs := {}) : CoreM Closure := do
-  let (closure, clockFlows) ← collectClosure roots cap tn ex
+    (ex : Externs := {}) (phases : Array (Array Name) := #[]) : CoreM Closure := do
+  let (closure, clockFlows) ← collectClosure roots cap tn ex phases
   return { closure with
-    clockRefusals := ClockFlow.refusals (← clockContext) (← getEnv) roots clockFlows }
+    clockRefusals := ClockFlow.refusals (← clockContext) (← getEnv) (roots ++ phases.flatten)
+      clockFlows }
 
 /-- `translateClosure`, with the carrier parameters inferred. A carrier that has no `to_list`
 operation can only be passed on as itself, so a generated callee that is handed one takes it as
@@ -1263,10 +1276,11 @@ its parameter is a carrier only once its row exists, and only then hands it on. 
 the closure, the table with the inferred rows added, and the inferred rows as the table would
 spell them. A wrong inference is an `ocamlopt` type error, as a wrong hand row is. -/
 def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
-    (ex : Externs := {}) : CoreM (Closure × Externs × Array String) := do
+    (ex : Externs := {}) (phases : Array (Array Name) := #[]) :
+    CoreM (Closure × Externs × Array String) := do
   let mut ex := ex
   let mut inferred : Array String := #[]
-  let (initial, initialFlows) ← collectClosure roots cap tn ex
+  let (initial, initialFlows) ← collectClosure roots cap tn ex phases
   let mut closure := initial
   let mut clockFlows := initialFlows
   for _ in [:64] do
@@ -1277,7 +1291,7 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
       unless prev.any (fun row => row.1 == CargParam.pos i) do
         ex := { ex with cargs := ex.cargs.insert key (prev ++ [(CargParam.pos i, [c])]) }
         inferred := inferred.push s!"carg {key} {i} {c}"
-    let (next, nextFlows) ← collectClosure roots cap tn ex
+    let (next, nextFlows) ← collectClosure roots cap tn ex phases
     closure := next
     clockFlows := nextFlows
   unless closure.wantedCargs.isEmpty do
@@ -1285,8 +1299,8 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
   -- Carrier rows affect translation, so validate the graph of the settled result.
   -- Checking intermediate results repeats the same analysis without returning an artifact.
   return ({ closure with
-    clockRefusals := ClockFlow.refusals (← clockContext) (← getEnv) roots clockFlows }, ex,
-    inferred)
+    clockRefusals := ClockFlow.refusals (← clockContext) (← getEnv) (roots ++ phases.flatten)
+      clockFlows }, ex, inferred)
 
 /-- The closure translated again under other type names (`tn`), with its settled carrier table.
 The walk, the carrier inference and the clock boundary read no type name, so their results stay:

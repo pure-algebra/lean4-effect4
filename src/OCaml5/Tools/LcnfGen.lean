@@ -23,7 +23,16 @@ roots are looked up in; required, repeatable), `--cap <n>` (default 60), `--type
 to emit in full even when no translated code destructs them), `--externs <file>` and
 `--prelude <file>`. Its roots come by export class (`OCaml5.Lcnf.Export`): every word that is no
 option is a `public` root, and `--linkage`, `--internal` and `--coverage` take the other three
-classes, comma-joined. The interface exports the public and linkage roots.
+classes, comma-joined. The interface exports the public and linkage roots. `--consumer <out>
+<roots>`, repeatable, adds a consumer: the artifact's closure takes the consumer's roots in a
+later phase of its one walk, its interface exports them, and the run writes the consumer's
+facade at `<out>` (`OCaml5.Lcnf.Gen`).
+
+With `--identity <manifest> …` it reads closure manifests and prints, for each pair, how many
+declarations both hold, how many of them are one node, and which part of the identity makes the
+rest two nodes (`OCaml5.Lcnf.Identity`). It writes nothing.
+
+    lake exe lcnfgen --identity ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-lanes_gen.tsv
 
 ## The seam (`--externs`, `--prelude`)
 
@@ -58,7 +67,24 @@ def readRecipe (path : System.FilePath) : IO Json := do
   | .ok j => pure j
   | .error e => throw (IO.userError s!"{path}: {e}")
 
+/-- `--identity`: every pair of the named closure manifests, compared node by node. -/
+def identityReport (paths : List String) : IO Unit := do
+  let mut units : Array (Identity.UnitKey × List Identity.Row) := #[]
+  for path in paths do
+    match Identity.parseManifest (← IO.FS.readFile path) with
+    | .ok u => units := units.push u
+    | .error e => throw (IO.userError s!"{path}: {e}")
+  for (u, rows) in units do
+    IO.println s!"{u.unit}: {rows.length} declarations; profile {u.profile}; catalogue {u.catalogue}"
+  for i in [:units.size] do
+    for j in [i + 1:units.size] do
+      match units[i]?, units[j]? with
+      | some a, some b => IO.println (Identity.compareUnits a b).line
+      | _, _ => pure ()
+
 def main (argv : List String) : IO Unit := do
+  if let "--identity" :: paths := argv then
+    return ← identityReport paths
   initSearchPath (← findSysroot)
   let (stage, argv) : Option System.FilePath × List String :=
     match argv with

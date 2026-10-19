@@ -1,6 +1,7 @@
 (* Public-interface controls for Lcnf_interface.
-   Depends on the compiled fixture. Tests abstract packages, hidden helpers,
-   last-binding ascriptions, missing roots, and retained prelude values. *)
+   Depends on the compiled fixtures. Tests abstract packages, hidden helpers,
+   last-binding ascriptions, missing roots, retained prelude values, and a facade's reachable
+   types. *)
 
 let contains text part =
   let rec loop index =
@@ -18,7 +19,7 @@ let get = function
 let () =
   let cmt = Sys.argv.(1) in
   let infer roots abstract_types prelude =
-    Lcnf_interface.generate ~cmt ~roots ~abstract_types ~prelude
+    Lcnf_interface.generate ~types:Lcnf_interface.All ~cmt ~roots ~abstract_types ~prelude
   in
   let signature = get (infer [ "empty" ] [ "memo" ] None) in
   assert (contains signature "type memo");
@@ -36,5 +37,22 @@ let () =
     | _ -> false);
   let prelude = get (infer [ "empty" ] [ "memo" ] (Some Sys.argv.(2))) in
   assert (contains prelude "val helper : memo -> memo");
-  print_endline "Interface roots, sealing, final ascriptions, and refusals pass."
+  (* I6: a facade over the fixture keeps the type its root names and drops the one no root
+     names; with every type kept, the dropped one is back. *)
+  let facade types =
+    Lcnf_interface.generate
+      ~types
+      ~cmt:Sys.argv.(3)
+      ~roots:[ "helper" ]
+      ~abstract_types:[]
+      ~prelude:None
+  in
+  let reachable = get (facade Lcnf_interface.Reachable) in
+  assert (contains reachable "type memo");
+  assert (contains reachable "val helper : memo -> memo");
+  assert (not (contains reachable "public_alias"));
+  assert (not (contains reachable "val empty"));
+  assert (contains (get (facade Lcnf_interface.All)) "public_alias");
+  print_endline
+    "Interface roots, sealing, final ascriptions, refusals and facade types pass."
 ;;

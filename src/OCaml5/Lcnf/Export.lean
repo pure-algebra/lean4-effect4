@@ -21,6 +21,14 @@ A root's identity includes its artefact: the same Lean name in two artefacts is 
 nodes (R6.1: "Specialization ... remain part of a node's identity"), so `Effect4.Api.run` may be
 public in `Api_gen` and linkage in `Api_engine`. Within one artefact a root has one class.
 
+**Consumers (R6.1, step 3).** An artefact may serve several consumers, each through a facade of
+its own: the entry's `consumers` list names each facade's file and the `linkage` roots it
+re-exports. The artefact is one closure of all its consumers' roots, so the consumers share every
+node they both reach, and a facade is a view of that closure, not a second copy. A consumer's root
+is a `linkage` root of the artefact whose consumers are the artefact and that facade. A root two
+consumers name is one root with both facades among its consumers. The test lanes are such
+consumers of one artefact (`ocaml/engine/test/lanes/lanes_gen.ml`); see `OCaml5.Lcnf.Gen`.
+
 **Depends on.** `Lean.Json`, `Lean.Name`, `OCaml5.Lcnf.Naming` (`capital`, for a unit's module name).
 
 **Properties.**
@@ -34,6 +42,9 @@ public in `Api_gen` and linkage in `Api_engine`. Within one artefact a root has 
 * **`facade_resolves` and `public_excludes_coverage` are finite checks.** `check` evaluates both
   on the whole plan and refuses a plan where either fails. They are checks of this table, not
   theorems about the lowering — *tested*, each with a red control.
+* **A consumer re-exports only `linkage` roots, and every unit has one name.** A consumer key other
+  than `out` and `linkage` is refused, a facade's unit name may not repeat an artefact's or another
+  facade's, and a consumer's root keeps the one-class rule — *tested*.
 -/
 
 namespace OCaml5.Lcnf.Export
@@ -230,7 +241,12 @@ def recipeFormat : String := "effect4-lcnf-roots-v3"
 
 /-- The keys a recipe entry may hold besides the export classes. -/
 def entryOptions : List String :=
-  ["out", "import", "cap", "types", "modules", "nominal", "abstract", "externs", "prelude", "open"]
+  ["out", "import", "cap", "types", "modules", "nominal", "abstract", "externs", "prelude", "open",
+   "consumers"]
+
+/-- The keys a consumer of an entry may hold: its facade's file and the roots the facade
+re-exports. -/
+def consumerKeys : List String := ["out", "linkage"]
 
 /-- The OCaml module of an artefact's output (`ocaml/gen/api_gen.ml` → `Api_gen`): the unit that
 names a root's node and the consumer of its exported roots. -/
@@ -245,7 +261,31 @@ def rootsOf (entry : Json) (cls : ExportClass) : Except PlanRefusal (List Name) 
     | .ok xs => .ok (xs.map String.toName)
     | .error e => .error (.malformed s!"`{cls.key}`: {e}")
 
-/-- The roots of one recipe entry, class by class (`ExportClass.all`), each with its consumers. -/
+/-- An entry's consumers, in the order listed, each as its facade's file and its JSON. -/
+def consumersOf (entry : Json) : Except PlanRefusal (List (String × Json)) :=
+  match entry.getObjVal? "consumers" with
+  | .error _ => .ok []
+  | .ok (.arr cs) => cs.toList.mapM fun c => match c.getObjValAs? String "out" with
+    | .ok o => .ok (o, c)
+    | .error e => .error (.malformed s!"a consumer without `out`: {e}")
+  | .ok _ => .error (.malformed "`consumers` is no list")
+
+/-- `roots` with root `n` of artefact `unit` re-exported by the facade `facade`, as a `linkage`
+root. A root the entry lists under another class, or one this facade names twice, is appended
+again, so `ExportPlan.refusals` names the contradiction or the duplicate. A root another consumer
+or the entry's own `linkage` list names gains this facade as a consumer: one root, one node. -/
+def addConsumer (unit facade : String) (roots : List ExportRoot) (n : Name) : List ExportRoot :=
+  let fresh : ExportRoot := { source := n, cls := .linkage, unit := unit, consumers := [unit, facade] }
+  match roots.find? (·.source == n) with
+  | none => roots ++ [fresh]
+  | some r =>
+    if r.cls != .linkage || r.consumers.contains facade then roots ++ [fresh]
+    else
+      let (before, after) := roots.span (·.source != n)
+      before ++ ({ r with consumers := r.consumers ++ [facade] } :: after.drop 1)
+
+/-- The roots of one recipe entry, class by class (`ExportClass.all`), each with its consumers,
+then its consumers' roots (`consumersOf`, `addConsumer`). -/
 def entryRoots (facade : String) (entry : Json) : Except PlanRefusal (List ExportRoot) := do
   let out ← match entry.getObjValAs? String "out" with
     | .ok o => pure o
@@ -262,6 +302,16 @@ def entryRoots (facade : String) (entry : Json) : Except PlanRefusal (List Expor
     let consumers := (if cls == .«public» then [facade] else []) ++ (if cls.exported then [unit] else [])
     for n in ← rootsOf entry cls do
       roots := roots ++ [{ source := n, cls := cls, unit := unit, consumers := consumers }]
+  -- each consumer's facade re-exports its `linkage` roots of this artefact, and nothing else
+  for (consumerOut, consumer) in ← consumersOf entry do
+    let f := unitOf consumerOut
+    let keys ← match consumer.getObj? with
+      | .ok fs => pure fs.keys
+      | .error e => throw (.malformed s!"{out}: consumer {consumerOut}: {e}")
+    for key in keys do
+      unless consumerKeys.contains key do throw (.unknownKey f key)
+    for n in ← rootsOf consumer .linkage do
+      roots := addConsumer unit f roots n
   -- a nominal root keeps its source type in the interface, so the interface must export it
   let nominal := ((entry.getObjValAs? (List String) "nominal").toOption.getD []).map String.toName
   for n in nominal do
@@ -282,7 +332,10 @@ def ExportPlan.ofRecipe (recipe : Json) : Except PlanRefusal ExportPlan := do
   let entries ← match recipe.getObjValAs? (Array Json) "artefacts" with
     | .ok es => pure es
     | .error e => throw (.malformed s!"no artefacts: {e}")
-  let units := entries.toList.filterMap fun e => (e.getObjValAs? String "out").toOption.map unitOf
+  -- every unit has one name: the artefacts, their consumers' facades and the public facade
+  let mut units := entries.toList.filterMap fun e => (e.getObjValAs? String "out").toOption.map unitOf
+  for e in entries do units := units ++ (← consumersOf e).map (unitOf ·.1)
+  units := units ++ [facade]
   unless units.eraseDups.length == units.length do
     throw (.malformed s!"two artefacts share one unit name: {units}")
   let mut roots : List ExportRoot := []
@@ -296,6 +349,17 @@ def readChecked (recipe : Json) : Except PlanRefusal CheckedPlan := do
 /-- An artefact's roots of one class, in the order its entry lists them. -/
 def CheckedPlan.rootsOf (p : CheckedPlan) (unit : String) (cls : ExportClass) : List Name :=
   (p.plan.roots.filter fun r => r.unit == unit && r.cls == cls).map (·.source)
+
+/-- An artefact's own roots of one class: those no consumer's facade re-exports. A root that both
+the entry's `linkage` list and a consumer name is the consumer's (`consumerRoots`), and the
+artefact's interface exports it either way. -/
+def CheckedPlan.ownRootsOf (p : CheckedPlan) (unit : String) (cls : ExportClass) : List Name :=
+  (p.plan.roots.filter fun r => r.unit == unit && r.cls == cls
+    && r.consumers.all (fun c => c == unit || c == p.plan.facadeModule)).map (·.source)
+
+/-- The roots a consumer's facade re-exports from an artefact, in plan order. -/
+def CheckedPlan.consumerRoots (p : CheckedPlan) (unit facade : String) : List Name :=
+  (p.plan.roots.filter fun r => r.unit == unit && r.consumers.contains facade).map (·.source)
 
 /-! ## Controls
 
@@ -346,6 +410,53 @@ private def clean : Json := recipe
 #guard match refusalOf (recipe "{\"out\": \"a/api_gen.ml\", \"coverage\": [\"A.run\"], \"nominal\": [\"A.run\"]}") with
   | some (.nominalHidden u n) => u == "Api_gen" && n == `A.run
   | _ => false
+
+-- Consumers (R6.1, step 3): one artefact, two facades. Each facade sees its own roots, the
+-- artefact's interface exports both sets, and a root both consumers name is one root with both
+-- facades among its consumers. The public facade sees none of them.
+private def lanes (consumers : String) : Json := recipe
+  ("{\"out\": \"a/api_gen.ml\", \"public\": [\"A.run\"]}, {\"out\": \"t/lanes_gen.ml\", " ++
+    "\"consumers\": [" ++ consumers ++ "]}")
+private def twoLanes : Json := lanes
+  "{\"out\": \"t/todo/todo_gen.ml\", \"linkage\": [\"T.serve\", \"S.image\"]}, \
+   {\"out\": \"t/modeled/modeled_gen.ml\", \"linkage\": [\"M.encode\", \"S.image\"]}"
+#guard (refusalOf twoLanes).isNone
+#guard match readChecked twoLanes with
+  | .ok p => p.plan.rootsFor "Todo_gen" == [`T.serve, `S.image]
+      && p.plan.rootsFor "Modeled_gen" == [`S.image, `M.encode]
+      && p.plan.rootsFor "Lanes_gen" == [`T.serve, `S.image, `M.encode]
+      && p.plan.rootsFor "Effect4" == [`A.run]
+      && p.consumerRoots "Lanes_gen" "Modeled_gen" == [`S.image, `M.encode]
+      && p.ownRootsOf "Lanes_gen" .linkage == []
+      && (p.plan.roots.filter (·.source == `S.image)).map (·.consumers)
+        == [["Lanes_gen", "Todo_gen", "Modeled_gen"]]
+  | .error _ => false
+-- red: a consumer re-exports `linkage` roots only, so another key is refused by its facade
+#guard match refusalOf (lanes "{\"out\": \"t/todo/todo_gen.ml\", \"public\": [\"T.serve\"]}") with
+  | some (.unknownKey u k) => u == "Todo_gen" && k == "public"
+  | _ => false
+-- red: one consumer naming a root twice, and a consumer root the artefact hides, keep the
+-- one-class rule
+#guard match refusalOf (lanes "{\"out\": \"t/todo/todo_gen.ml\", \"linkage\": [\"T.serve\", \"T.serve\"]}") with
+  | some (.duplicate u n c) => u == "Lanes_gen" && n == `T.serve && c == .linkage
+  | _ => false
+#guard match refusalOf (recipe "{\"out\": \"t/lanes_gen.ml\", \"coverage\": [\"T.serve\"], \
+    \"consumers\": [{\"out\": \"t/todo/todo_gen.ml\", \"linkage\": [\"T.serve\"]}]}") with
+  | some (.contradictory u n a b) => u == "Lanes_gen" && n == `T.serve && a == .coverage && b == .linkage
+  | _ => false
+-- red: a facade may not take an artefact's unit name, or the public facade's
+#guard match refusalOf (lanes "{\"out\": \"t/api_gen.ml\", \"linkage\": [\"T.serve\"]}") with
+  | some (.malformed _) => true
+  | _ => false
+#guard match refusalOf (lanes "{\"out\": \"t/effect4.ml\", \"linkage\": [\"T.serve\"]}") with
+  | some (.malformed _) => true
+  | _ => false
+-- an entry's own `linkage` root that a consumer also names is the consumer's
+#guard match readChecked (recipe "{\"out\": \"t/lanes_gen.ml\", \"linkage\": [\"T.serve\", \"T.own\"], \
+    \"consumers\": [{\"out\": \"t/todo/todo_gen.ml\", \"linkage\": [\"T.serve\"]}]}") with
+  | .ok p => p.ownRootsOf "Lanes_gen" .linkage == [`T.own]
+      && p.consumerRoots "Lanes_gen" "Todo_gen" == [`T.serve]
+  | .error _ => false
 
 -- `public_excludes_coverage`, red: a hand-built plan whose coverage root names the public facade
 -- as a consumer (a recipe cannot spell one; C5's per-consumer facades could)

@@ -25,7 +25,7 @@ properties of the *syntax*, and leaves typing to `ocamlc`. What it decides:
 | `duplicate-binding` | one `let … and …` group that binds a name twice |
 | `bad-name` | a name outside the identifier profile of `OCaml5.Ml.Identifier` |
 | `shadowed-value` | a binder whose name is already in scope, only when the environment asks (`Env.noShadow`) |
-| `unbound-module` | an `open` of a unit whose interface the checker is not handed, or a packed module that names no module in scope |
+| `unbound-module` | an `open` or an `include` of a unit whose interface the checker is not handed, or a packed module that names no module in scope |
 | `unbound-module-type` | a functor parameter or a packed module whose module type is no declared one |
 | `duplicate-module-type` | one module that declares a module type name twice |
 | `private-abstract` | `private` on an abstract type, which has no body to make private |
@@ -33,6 +33,9 @@ properties of the *syntax*, and leaves typing to `ocamlc`. What it decides:
 
 A module alias (`module M = P`) binds `M`; its path must be a module path. The checker reads no
 member of the aliased module.
+
+An `include` of a handed unit brings what an `open` brings, and the unit's type names become this
+module's own, so a later declaration of one of them is a `duplicate-type`.
 
 A qualified constructor (`Eff.Succeed`) is checked when its module is one the checker reads in
 full: a module of this unit, or of a unit an `open` hands it (`Interface.modules`).
@@ -479,6 +482,13 @@ def checkDeclAlg (units : List Interface) : DeclAlgebra Checked where
      fun _ => badName n "module name" isUpperIdent n
        ++ (if (path.splitOn ".").all isUpperIdent then []
            else [{ code := "bad-name", site := n, detail := "module path `" ++ path ++ "`" }]))
+  -- an include brings the scope an open brings, and its unit's type names become this module's
+  decl_includeD path :=
+    (fun e => match units.find? (·.name == path) with
+      | some u => { e.withInterface u with types := u.types.map (·.name) ++ e.types }
+      | none => e,
+     fun _ => if units.any (·.name == path) then []
+       else [{ code := "unbound-module", site := "include", detail := "`" ++ path ++ "`" }])
 
 /-- Everything a module declares at its top level, under the interfaces of the units it opens. -/
 def Env.ofModule (m : Module) (units : List Interface := []) : Env :=
@@ -581,5 +591,12 @@ private def ownerUnit : Interface := { name := "Types", modules := [("Eff", [eff
 #guard one [.types [{ name := "t", body := .variant [{ name := "A" }, { name := "B", args := [Ty.int, Ty.int] }] }],
     .letD false [{ name := "f", body := .fnMatch [(.ctor "B" [.wild], .int 1), (.ctor "A" [.wild], .int 0)] }]]
   == ["ctor-arity"]
+-- An include of a handed unit brings its constructors into scope, and its types become this
+-- module's, so a later declaration of one of them is a duplicate. An include of a unit the
+-- checker is not handed is refused, as an open of one is (a consumer's facade).
+#guard one [.includeD "Types", .letD false [{ name := "x", body := .ctor "B" [.int 1] }]] [typesUnit] == []
+#guard one [.includeD "Types", .types [{ name := "t", body := .alias Ty.int }]] [typesUnit]
+  == ["duplicate-type"]
+#guard one [.includeD "Other"] [typesUnit] == ["unbound-module"]
 
 end OCaml5.Ml

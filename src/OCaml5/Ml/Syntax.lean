@@ -12,8 +12,8 @@ producers, the interop plan's P1 and P2 (`docs/research/2026-10-15-interop-plan/
 decisions row 393): `pack`, `SigItem` with `Decl.moduleTypeD`, and `TypeDecl.isPrivate`. The
 program types' owner (`ocaml/eff/eff_types.ml`) builds `Decl.moduleD` and `Decl.moduleRecD`, one
 module per type (slice 1.2a of the OCaml estate refactor). The public facade
-(`OCaml5.Lcnf.Public`) builds `Decl.moduleAliasD`. A form no producer builds is not here
-otherwise. The cut of 2026-10-15 (LC-3 of
+(`OCaml5.Lcnf.Public`) builds `Decl.moduleAliasD`, and a consumer's facade (`OCaml5.Lcnf.Gen`)
+builds `Decl.includeD`. A form no producer builds is not here otherwise. The cut of 2026-10-15 (LC-3 of
 `docs/research/2026-10-14-lowering-cleanup/prompt.md`) measured each removal by a build: the
 avatar's surface of 55 expression constructors became 22. The `eff/` emitter added 6, and verbatim
 expression text went once the prelude's three primitives were structured. The join point's
@@ -283,6 +283,10 @@ inductive Decl where
   fields reachable through `M`. The public facade re-exports each program type's module at its
   owner so (`OCaml5.Lcnf.Public`), since OCaml re-exports constructors only with their module. -/
   | moduleAliasD (name : String) (path : String)
+  /-- `include P` (§11.11, "include"): the items of the module at `P`, re-exported. A consumer's
+  facade includes the unit that implements its roots (`OCaml5.Lcnf.Gen`), and its inferred
+  interface keeps the consumer's roots and the types they name. -/
+  | includeD (path : String)
 deriving Repr, Inhabited
 
 /-! ## The root -/

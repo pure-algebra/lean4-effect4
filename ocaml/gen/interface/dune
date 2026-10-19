@@ -28,10 +28,23 @@
  (action
   (run %{ocamlc} -bin-annot -w -32 -c %{dep:fixture.ml})))
 
+; A consumer's facade over the fixture, compiled against fixture.cmi as a facade is compiled
+; against the unit it includes.
+
+(rule
+ (targets fixture_facade.cmo fixture_facade.cmi fixture_facade.cmt)
+ (deps fixture_facade.ml fixture.cmi)
+ (action
+  (run %{ocamlc} -bin-annot -I . -c %{dep:fixture_facade.ml})))
+
 (test
  (name test_interface)
  (modules test_interface)
  (libraries lcnf_interface)
- (deps fixture.cmt fixture_prelude.ml)
+ (deps fixture.cmt fixture_prelude.ml fixture_facade.cmt)
  (action
-  (run %{test} %{dep:fixture.cmt} %{dep:fixture_prelude.ml})))
+  (run
+   %{test}
+   %{dep:fixture.cmt}
+   %{dep:fixture_prelude.ml}
+   %{dep:fixture_facade.cmt})))

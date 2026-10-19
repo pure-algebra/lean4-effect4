@@ -7,6 +7,9 @@ L3 The compiler checks each selected interface against its implementation.
 L4 A refused artifact publishes no output from this run.
 L5 The public facade (the recipe's `facade.out`) compiles against the staged artifacts and
    gets its interface as they do, before any output is published.
+L6 Each consumer's facade (an artifact's `consumers`) compiles against its artifact, staged
+   just before it, and its interface keeps the consumer's roots and the types they name
+   (Lcnf_interface's `reachable`), before any output is published.
 The interface and regeneration controls exercise these properties.
 """
 from pathlib import Path
@@ -19,7 +22,11 @@ def generate(root, recipe_path, out, checking, run, install):
     recipe = json.loads((root / recipe_path).read_text())
     artifacts = recipe['artefacts']
     destinations = [Path(entry['out']) for entry in artifacts]
+    consumers = [[Path(consumer['out']) for consumer in entry.get('consumers', [])]
+                 for entry in artifacts]
     facade = recipe.get('facade', {}).get('out')
+    # The artifacts come first, so `zip(artifacts, destinations)` below pairs each with its own.
+    destinations += [path for paths in consumers for path in paths]
     if facade:
         destinations.append(Path(facade))
     if any(path.is_absolute() or '..' in path.parts for path in destinations):
@@ -47,44 +54,39 @@ def generate(root, recipe_path, out, checking, run, install):
         flags = [flag for path in includes for flag in ['-I', str(path)]]
         compiler = ['opam', 'exec', '--switch=effect4', '--', 'ocamlopt',
                     '-bin-annot', '-w', '@55', *flags]
-        for entry, destination in zip(artifacts, destinations):
-            source = stage / destination
-            implementation = fresh / destination.name
+        def infer(source, prelude, reachable):
+            # No .mli exists beside the copy until inference has finished.
+            implementation = fresh / source.name
             interface = implementation.with_suffix('.mli')
             compiled = implementation.with_suffix('.cmx')
             shutil.copyfile(source, implementation)
-            # No .mli exists beside this copy until inference has finished.
             run([*compiler, '-c', str(implementation), '-o', str(compiled)])
             metadata = json.loads(Path(str(source) + '.interface.json').read_text())
-            prelude = str(root / entry['prelude']) if entry.get('prelude') else ''
             run(['opam', 'exec', '--switch=effect4', '--',
                  str(root / 'ocaml/_build/default/gen/interface/main.exe'),
                  str(implementation.with_suffix('.cmt')), str(interface),
-                 ','.join(metadata['roots']), ','.join(metadata['abstract']), prelude])
+                 ','.join(metadata['roots']), ','.join(metadata['abstract']), prelude,
+                 *(['reachable'] if reachable else [])])
             implementation.with_suffix('.cmi').unlink()
             run([*compiler, '-c', str(interface), '-o', str(interface.with_suffix('.cmi'))])
             run([*compiler, '-c', str(implementation), '-o', str(compiled)])
             shutil.copyfile(interface, source.with_suffix('.mli'))
+
+        for entry, destination, facades in zip(artifacts, destinations, consumers):
+            prelude = str(root / entry['prelude']) if entry.get('prelude') else ''
+            infer(stage / destination, prelude, False)
+            # Each consumer's facade includes the artifact just staged (L6).
+            for path in facades:
+                if not (stage / path).is_file():
+                    raise ValueError(f'{path}: {destination} wrote no facade for this consumer')
+                infer(stage / path, '', True)
         if facade:
             # The artifact that holds the public roots wrote the facade beside itself. It compiles
             # against the staged interfaces above, and its interface is inferred the same way.
             source = stage / facade
             if not source.is_file():
                 raise ValueError(f'{facade}: no artifact wrote the public facade')
-            implementation = fresh / Path(facade).name
-            interface = implementation.with_suffix('.mli')
-            compiled = implementation.with_suffix('.cmx')
-            shutil.copyfile(source, implementation)
-            run([*compiler, '-c', str(implementation), '-o', str(compiled)])
-            metadata = json.loads(Path(str(source) + '.interface.json').read_text())
-            run(['opam', 'exec', '--switch=effect4', '--',
-                 str(root / 'ocaml/_build/default/gen/interface/main.exe'),
-                 str(implementation.with_suffix('.cmt')), str(interface),
-                 ','.join(metadata['roots']), ','.join(metadata['abstract']), ''])
-            implementation.with_suffix('.cmi').unlink()
-            run([*compiler, '-c', str(interface), '-o', str(interface.with_suffix('.cmi'))])
-            run([*compiler, '-c', str(implementation), '-o', str(compiled)])
-            shutil.copyfile(interface, source.with_suffix('.mli'))
+            infer(source, '', False)
         prepared = sorted(path for path in stage.rglob('*')
                           if path.is_file() and path.suffix in {'.ml', '.mli', '.tsv'})
         # Check every artifact before the first publication. Failed inference or checking

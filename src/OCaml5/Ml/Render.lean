@@ -318,6 +318,7 @@ def renderDeclAlg : DeclAlgebra (fun _ => Nat → String) where
     | m :: rest =>
       member "module rec " m ++ String.join (rest.map fun m => "\n\n" ++ indentOf ind ++ member "and " m)
   decl_moduleAliasD n path := fun _ => "module " ++ n ++ " = " ++ path
+  decl_includeD path := fun _ => "include " ++ path
 
 /-- One declaration, as a top-level structure item. -/
 def renderDecl (d : Decl) : String := cata_decl renderDeclAlg d 0
@@ -448,5 +449,7 @@ private def wideVariant : TypeDecl :=
 -- A module inside a module moves right once per level (the public facade's tree).
 #guard renderDecl (.moduleD "Run" [] [.moduleD "Tree" [] [.types [{ name := "t", body := .alias Ty.int }]]])
   == "module Run = struct\n  module Tree = struct\n    type t = int\n  end\nend"
+-- An include, as a consumer's facade writes it.
+#guard renderDecl (.includeD "Lanes_gen") == "include Lanes_gen"
 
 end OCaml5.Ml
