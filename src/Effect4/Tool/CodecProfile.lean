@@ -1,5 +1,6 @@
 module
 public import Effect4.Store.Domain.ShapeJson
+public import Effect4.Store.Domain.JsonText
 
 /-!
 # Tool.CodecProfile — the tool's JSON profile
@@ -15,6 +16,10 @@ located reader of `Store/Domain/ShapeJson.lean`, and a refusal names a site and 
 profile refuses an unsupported shape at the shape's root, and a value tree the carrier refuses at
 the input's root. `read`, on the binary64 tree, is its projection: the same refusal, under the
 codec's own alphabet (`Refusal.unreadable`).
+
+The profile's text is read by one grammar (`NatJson.parse`, `Store/Domain/JsonText.lean`), which
+both session drivers use. It keeps a number that is no plain natural as a numeral and a key
+written twice, both refused by the reader at their place, and it refuses a comment at its byte.
 
 Placement: exact-codecs, R8; claims codec-profile-retains-value and json-read-located
 (`Laws/Tool/CodecProfile.lean`), compatibility.

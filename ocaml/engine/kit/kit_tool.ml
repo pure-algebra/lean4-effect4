@@ -2,7 +2,8 @@
 
    What it is: tools/Drivers/Session.lean's loop, in OCaml. A line is one request envelope
    (`Tool.Wire.Envelope Request`: the method, version 1, the request) in the Tool group's generated
-   JSON. yojson parses the text into the profile's tree (Kit.Json.parse), and the generated
+   JSON. Lean's text grammar reads the line into the profile's tree (Kit.Json.parse, lowered
+   `NatJson.parse`, the one tools/Drivers/Session.lean reads with), and the generated
    `Tool.Native.serveTree` (src/Effect4/Tool/Native.lean, lowered into ../../gen/api_gen.ml) does
    the rest: Lean's located reader under the envelope's shape, the connection check, `Tool.serve`
    through the checker memo, the reply's framing, and the reply envelope's print as the tools
@@ -11,7 +12,8 @@
    Depends on: Effect4_gen.Api_gen, Kit (Kit.Json).
 
    Behaviours:
-   T1 A line that does not parse prints {"refused": "<why>"}; a line that parses but does not read
+   T1 A line that does not parse prints {"refused": "<why>"}, Lean's sentence for where the text
+      stops fitting the grammar; a line that parses but does not read
       under the envelope's shape prints the wire refusal Lean's driver prints for it (`codec
       unreadable`, with the site and the reason Lean's reader names). Neither changes anything.
                                                                        tested (test_tool)

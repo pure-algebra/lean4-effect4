@@ -1,5 +1,6 @@
 import Effect4.Tool.CodecProfile
 import Effect4.Laws.Store.ShapeRead
+import Effect4.Laws.Store.JsonText
 import Effect4.Laws.Auto.Semantics
 /-!
 # Laws.Tool.CodecProfile — the tool's JSON profile, located and exact
@@ -28,6 +29,9 @@ R14 the sketch checker's; neither reads JSON.
   (`Tool.Native.serveTree`), and the MCP server's argument refusals.
 - **`read_toBinary64`** (a step of `json-read-located`, the theorem that replaces `kit_json.ml`'s
   caveat K1): within the profile, the two faces read a tree alike.
+- **`json-text-round-trip`** (proposed claim; pointer `NatJson.parse_render`,
+  `Laws/Store/JsonText.lean`): within the profile, the profile's text grammar reads back the text
+  `NatJson.render` writes, so the two session drivers read one text alike.
 -/
 set_option autoImplicit false
 namespace Effect4.Tool.CodecProfile

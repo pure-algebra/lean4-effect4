@@ -229,6 +229,68 @@ def nodeDoc : ShapeDoc := ⟨.named "T", [("T", .option (.pair (.named "T") (.na
 #guard readIn loopDoc.defs [] loopDoc.root (Canonical.print (5 : Nat)) = none
 #guard (readIn deepDoc.defs [] deepDoc.root (Canonical.print (5 : Nat))).isSome
 
+/-! ## The profile's text: one grammar for both drivers
+
+`NatJson.parse` (`Store/Domain/JsonText.lean`) reads the text both session drivers receive. Its law
+is the round trip of the compact text (`NatJson.parse_render`, `Laws/Store/JsonText.lean`). A
+number that is no plain natural, and a key written twice, reach the reader, which refuses them at
+their place; a comment, an unquoted key and a control byte refuse at their byte. -/
+
+-- reader: the round trip at a real carrier, sampleDoc's print through text and back
+#guard match NatJson.parse (NatJson.render (sampleDoc.printTree sampleValue)) with
+  | .ok t => (sampleDoc.readAny t).map Val.encode = some sampleValue.encode
+  | .error _ => false
+-- tested: white space between tokens reads as the compact text does
+#guard match NatJson.parse (NatJson.codes
+    " { \"xs\" : [ 1 ] ,\n \"e\" : { \"_tag\" : \"b\" } , \"k\" : \"x\" }\r\n") with
+  | .ok t => NatJson.render t = NatJson.codes "{\"xs\":[1],\"e\":{\"_tag\":\"b\"},\"k\":\"x\"}"
+  | .error _ => false
+-- control: a comment, an unquoted key, a control byte inside a string, a leading zero, a lone
+-- surrogate and text after the value refuse at their byte, with what the grammar expects there
+#guard match NatJson.parse (NatJson.codes "/* c */ 1") with
+  | .error ⟨0, .value⟩ => true | _ => false
+#guard match NatJson.parse (NatJson.codes "{a:1}") with
+  | .error ⟨1, .key⟩ => true | _ => false
+#guard match NatJson.parse (NatJson.codes "\"a\tb\"") with
+  | .error ⟨2, .control⟩ => true | _ => false
+#guard match NatJson.parse (NatJson.codes "007") with
+  | .error ⟨1, .leadingZero⟩ => true | _ => false
+#guard match NatJson.parse (NatJson.codes "\"\\ud800\"") with
+  | .error ⟨7, .surrogate⟩ => true | _ => false
+#guard match NatJson.parse (NatJson.codes "[1] 2") with
+  | .error ⟨4, .end_⟩ => true | _ => false
+#guard NatJson.codes (NatJson.refusalText ⟨4, .end_⟩) =
+  NatJson.codes "JSON text at byte 4: expected the end of the text"
+-- control: `-0` and `1e0` read as numerals, which the reader refuses at their place
+#guard match NatJson.parse (NatJson.codes "-0") with
+  | .ok t =>
+    match (ShapeDoc.mk .nat []).readLocated t with
+    | .error ⟨.value [], .expected .nat⟩ => true | _ => false
+  | .error _ => false
+#guard match NatJson.parse (NatJson.codes "1e0") with
+  | .ok t =>
+    match (ShapeDoc.mk .nat []).readLocated t with
+    | .error ⟨.value [], .expected .nat⟩ => true | _ => false
+  | .error _ => false
+-- control: 2^53 and a natural of 17 digits both refuse as outside the profile, at their place
+#guard match NatJson.parse (NatJson.codes "9007199254740992") with
+  | .ok t =>
+    match (ShapeDoc.mk .nat []).readLocated t with
+    | .error ⟨.value [], .naturalOutsideProfile _⟩ => true | _ => false
+  | .error _ => false
+#guard match NatJson.parse (NatJson.codes "18446744073709551616") with
+  | .ok t =>
+    match (ShapeDoc.mk .nat []).readLocated t with
+    | .error ⟨.value [], .naturalOutsideProfile _⟩ => true | _ => false
+  | .error _ => false
+-- control: a key written twice reaches the reader, which refuses it at its object
+#guard match NatJson.parse (NatJson.codes
+    "{\"xs\":[],\"xs\":[],\"e\":{\"_tag\":\"b\"},\"k\":\"x\"}") with
+  | .ok t =>
+    match refusalOf sampleDoc t with
+    | some ⟨.value [], .duplicateField "xs"⟩ => true | _ => false
+  | .error _ => false
+
 /-! ## Probe 1's four `unreadable` refusals, relative to the MCP tool's arguments -/
 
 /-- An object with its `_tag`. -/

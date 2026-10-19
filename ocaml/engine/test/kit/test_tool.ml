@@ -18,10 +18,10 @@
    N4  Both drivers carry the same naturals (`CodecProfile.carries`, up to 2^53 - 1): on
        tool-numbers.jsonl (2^53 - 1 answers; 2^53 and a line that parses but does not read refuse
        as `codec unreadable`, at a site) every reply equals Lean's (tool-numbers-replies.jsonl,
-       printed by tools/Drivers/Session.lean). Where Lean's text parser refuses (a number binary64
-       rounds, 2^53 + 1), the native shell refuses too, at the number's site: its tree holds the
-       number, as a natural or as a numeral past the int range, and the reader refuses it as
-       outside the profile.                                                     tested
+       printed by tools/Drivers/Session.lean). Both drivers read the text by one grammar
+       (NatJson.parse), so 2^53 + 1 and a number past the int range are in both trees, as a
+       natural or as a numeral, and the reader refuses each at its site as outside the profile.
+                                                                                tested
 
    N5  Drafts with invalid references recheck, kept edits refuse them, and the source entry
        stays at its address. Undo and wider subtree observations agree with Lean controls. tested

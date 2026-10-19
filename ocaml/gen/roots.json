@@ -172,7 +172,9 @@
         "Effect4.Tool.Native.relativeRefusal",
         "Effect4.Store.ShapeDoc.readLocated",
         "Effect4.Store.ShapeDoc.printTree",
-        "Effect4.NatJson.render"
+        "Effect4.NatJson.render",
+        "Effect4.NatJson.parse",
+        "Effect4.NatJson.refusalText"
       ],
       "linkage": [
         "Effect4.Api.load",

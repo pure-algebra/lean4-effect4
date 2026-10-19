@@ -214,14 +214,18 @@ module Json : sig
       , Effect4_gen.Api_gen.json_reason )
       Effect4_gen.Api_gen.located
 
-  (** The tree of one JSON text, or why it is none. yojson parses it ([Yojson.Raw], so each
-      number keeps its text); a yojson extension (a tuple, a variant, NaN, Infinity) or a string
-      that is not UTF-8 is refused. yojson's acceptance is the text's, and it is wider than
-      RFC 8259: it skips comments, takes an unquoted key, and takes a control byte inside a
-      string. A key written twice stays in the tree, and the reader refuses it at its object. *)
+  (** The tree of one JSON text, or why it is none: Lean's text grammar over the text's bytes
+      ([NatJson.parse], src/Effect4/Store/Domain/JsonText.lean, lowered), the one both session
+      drivers read with. It is RFC 8259's, with I-JSON's strings: white space is space, tab,
+      line feed and carriage return; a comment, an unquoted key, a control byte inside a string,
+      a leading zero and a lone surrogate are refused. A number that is no plain natural
+      ([-0], [1e0], [1.5]) and a natural of more than 16 digits are numerals, and a key written
+      twice stays in the tree; the reader refuses each at its place. The refusal is Lean's
+      sentence ([NatJson.refusalText]): [JSON text at byte N: expected …]. *)
   val parse : string -> (t, string) result
 
-  (** The tree of a yojson value whose literals are raw, as [parse] makes it. *)
+  (** The tree of a yojson value whose literals are raw: the MCP transport's arguments, which
+      [parse] read first (kit_mcp.ml). *)
   val of_raw : Yojson.Raw.t -> (t, string) result
 
   (** The compact text: Lean's [NatJson.render], lowered. *)

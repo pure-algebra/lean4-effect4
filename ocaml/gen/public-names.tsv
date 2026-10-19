@@ -34,6 +34,8 @@ constructor	Effect4.Machine.Err.Text	Effect4.Machine.Err.text	-	Eff_types.Err.Te
 type	Effect4.Machine.Err.t	Effect4.Machine.Err	0	Eff_types.Err
 type	Effect4.Machine.Payload.t	Effect4.Machine.Payload	0	Eff_types.Payload
 type	Effect4.Machine.RefKey.t	Effect4.Machine.RefKey	0	Eff_types.RefKey
+value	Effect4.NatJson.parse	Effect4.NatJson.parse	-	Api_gen.nat_json_parse
+value	Effect4.NatJson.refusal_text	Effect4.NatJson.refusalText	-	Api_gen.nat_json_refusal_text
 value	Effect4.NatJson.render	Effect4.NatJson.render	-	Api_gen.nat_json_render
 constructor	Effect4.Program.ActionTerm.AwaitAll	Effect4.Program.ActionTerm.awaitAll	-	Eff_types.ActionTerm.AwaitAll
 constructor	Effect4.Program.ActionTerm.AwaitAllFailFast	Effect4.Program.ActionTerm.awaitAllFailFast	-	Eff_types.ActionTerm.AwaitAllFailFast
