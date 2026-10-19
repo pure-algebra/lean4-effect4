@@ -82,6 +82,7 @@ Orient first. Read these, in order, before you open any code:
 4. ${ROOT}/docs/core/semantics.md, section 1, and the concepts your area serves.
 5. ${ROOT}/ocaml/STANDARDS.md, if your area holds OCaml.
 6. ${ABS}/plan.md and ${ROOT}/docs/research/2026-10-19-quality-review/coherence.md: why this audit runs, and the method applied once to the store.
+7. ${ROOT}/docs/research/2026-10-19-quality-review/receipt-r1-store.md, if you read OCaml: seat R1's repair of the store, and its open items O1 to O4. O1 and O2 are one rule with no owner: where a scan counts as reaching the published end.
 
 Your scope: ${r.scope}
 Your focus: ${r.focus}
@@ -107,7 +108,7 @@ ${RULES}`
 function synthPrompt(readings) {
   return `You are the synthesis of a three-agent coherence audit of the Effect4 repository at ${ROOT}, asked for by the owner on 2026-10-19. Two readers mapped the system onto its organizing principle: the Lean core, and the compiler with the OCaml estate. Their results are below, and their notes are in ${ABS} (lean-core.md, compiler-estate.md).
 
-Orient first: read ${ABS}/orientation.md in full, then ${ABS}/plan.md, ${ROOT}/docs/research/history/coherence-principle.md, ${ROOT}/docs/core/system-map.md sections 4 to 6 and 10, and ${ROOT}/docs/research/2026-10-19-quality-review/coherence.md. Read ${ROOT}/docs/research/2026-10-19-quality-review/codex-review/README.md and wave3.md beside it for the specific defects and the open repair wave, and docs/core/decisions.md rows 391 and 414 to 417.
+Orient first: read ${ABS}/orientation.md in full, then ${ABS}/plan.md, ${ROOT}/docs/research/history/coherence-principle.md, ${ROOT}/docs/core/system-map.md sections 4 to 6 and 10, and ${ROOT}/docs/research/2026-10-19-quality-review/coherence.md. Read ${ROOT}/docs/research/2026-10-19-quality-review/codex-review/README.md, wave3.md and receipt-r1-store.md beside it for the specific defects, the open repair wave and the store seat's open items (O1 to O4), and docs/core/decisions.md rows 391 and 414 to 417.
 
 Step 1, adversarial. For each departure, try to refute it before you keep it:
 - Does it argue from consumer counts, where the orientation says coherence is the measure?
@@ -121,7 +122,7 @@ Step 2, synthesis. Write ${ABS}/README.md, in short plain sentences, citing decl
 1. The one thing to know.
 2. The picture: how the core sits against the organizing principle today, as one table across both readings.
 3. The root causes: the kept departures grouped by the pattern misused. For each cause, one design rule in the project's vocabulary that removes the whole class (a rule for how we build, not a new gate), and the departures it covers.
-4. The refactor, as an ordered set of conceptual moves. For each move: what collapses into what, which construction or arrow kind it becomes an instance of, what it deletes in kind and rough size, and which observations stay. Order the moves so each makes the next smaller. Fold in the open repair wave: seat R1's remaining fixes, R2, R3, E6, the log question of coherence.md section 5, and the public JSON spelling of decisions row 417 (4). Say how each move subsumes, reshapes or leaves each of them.
+4. The refactor, as an ordered set of conceptual moves. For each move: what collapses into what, which construction or arrow kind it becomes an instance of, what it deletes in kind and rough size, and which observations stay. Order the moves so each makes the next smaller. Fold in the open repair wave: seat R1's open items O1 to O4 (receipt-r1-store.md), R2, R3, E6, the log question of coherence.md section 5 with the receipt's commit costs, and the public JSON spelling of decisions row 417 (4). Say how each move subsumes, reshapes or leaves each of them.
 5. What to preserve: the strengths both readers found, which no move may break.
 6. The rejected and amended departures, with reasons.
 7. The decisions only the owner can make — meaning, supported domain or representation — each with a recommendation.
