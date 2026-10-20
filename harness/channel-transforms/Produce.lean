@@ -53,7 +53,7 @@ def main (args : List String) : IO Unit := do
     let authored := Test.Program.Channel.moduleOf c.src
     let built ← match Api.Author.build authored with
       | .ok built => pure built
-      | .error refusal => throw (IO.userError s!"Produce: {c.name} does not check: {repr (Effect4.Store.RefusalsGen.BuildRefusalC.toVal refusal)}")
+      | .error refusal => throw (IO.userError s!"Produce: {c.name} does not check: {repr (Effect4.Store.Canonical.toVal refusal)}")
     let some emitted := (Api.emitModule "main" built.program built.table).toOption
       | throw (IO.userError s!"Produce: {c.name} does not emit")
     -- Ref requests are outside the existing header reader's domain. Retain that exact refusal.

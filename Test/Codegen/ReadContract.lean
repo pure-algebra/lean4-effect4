@@ -904,22 +904,22 @@ head matched no row, where the nearest row's skeleton and the tree part. -/
 -- head says what it has there
 #guard readEffAt [] sig spell 0 (.call (.ident "Effect.flatMap")
     [.call (.ident "Effect.succeed") [.int 1], .lambda ["a0", "a1"] (.ident "a0")]) =
-  .error { why := .arity "Effect.flatMap", expected := some (["argument 1", "parameters"], "a0") }
+  .error ⟨[], (.arity "Effect.flatMap", some (["argument 1", "parameters"], "a0"))⟩
 
 -- one argument too many
 #guard readEffAt [] sig spell 0 (.call (.ident "Effect.succeed") [.int 1, .int 2]) =
-  .error { why := .arity "Effect.succeed", expected := some ([], "1 arguments") }
+  .error ⟨[], (.arity "Effect.succeed", some ([], "1 arguments"))⟩
 
 -- a variable out of scope two levels down: the second argument of the bind, the first of the succeed
 #guard readEffAt [] sig spell 0 (.call (.ident "Effect.flatMap")
     [.call (.ident "Effect.succeed") [.int 1],
       .lambda ["a0"] (.call (.ident "Effect.succeed") [.ident "a5"])]) =
-  .error { path := [("bind", 1), ("succeed", 0)], why := .unknownIdent "a5" }
+  .error ⟨[("bind", 1), ("succeed", 0)], (.unknownIdent "a5", none)⟩
 
 -- inside a generator: the body, its second statement, that statement's value
 #guard readEffAt [] sig spell 0 (.call (.ident "Effect.gen") [.generator
     [.constYield "a0" (.call (.ident "Effect.succeed") [.int 1]) none, .ret (.ident "a9")]]) =
-  .error { path := [("gen", 0), ("cons", 1), ("cons", 0), ("ret", 0)], why := .unknownIdent "a9" }
+  .error ⟨[("gen", 0), ("cons", 1), ("cons", 0), ("ret", 0)], (.unknownIdent "a9", none)⟩
 
 -- the location never changes the refusal
 #guard readEff [] sig spell 0 (.call (.ident "Effect.flatMap")
@@ -985,8 +985,8 @@ private def one {Op : Type} : Eff Op := .succeed (.lit (.nat 1))
 #guard readEffAt [] sig spell 0 (.call (.ident "Effect.gen") [.generator
     [.yieldDiscard (succeed (.ident "x")), .constYield "x" (succeed (.int 2)) none,
       .ret (.ident "x")]]) =
-  .error { path := [("call", 1), ("generator", 0), ("yieldDiscard", 0),
-    ("call", 1)], why := .unknownIdent "x" }
+  .error ⟨[("call", 1), ("generator", 0), ("yieldDiscard", 0),
+    ("call", 1)], (.unknownIdent "x", none)⟩
 #guard (readEff [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["x"]
     (.call (.ident "Effect.gen") [.generator [.yieldDiscard (succeed (.ident "x")),
       .constYield "x" (succeed (.int 2)) none, .ret (.ident "x")]])))).isOk = false
@@ -1000,20 +1000,20 @@ private def one {Op : Type} : Eff Op := .succeed (.lit (.nat 1))
 
 -- an unbound name is refused where it stands, by the reader, on the program's path
 #guard readEffAt [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["x"] (succeed (.ident "y")))) =
-  .error { path := [("bind", 1), ("succeed", 0)], why := .unknownIdent "y" }
+  .error ⟨[("bind", 1), ("succeed", 0)], (.unknownIdent "y", none)⟩
 -- an unbound name of the printer's form that the renamed binder would capture is refused by the
 -- renaming, on the target syntax's path
 #guard readEffAt [] sig spell 0 (flatMap (succeed (.int 1)) (.lambda ["x"] (succeed (.ident "a0")))) =
-  .error { path := [("call", 2), ("lambda", 0), ("call", 1)], why := .unknownIdent "a0" }
+  .error ⟨[("call", 2), ("lambda", 0), ("call", 1)], (.unknownIdent "a0", none)⟩
 -- a call's head is a name: a binder there is refused
 #guard readEffAt [] sig spell 0 (flatMap (succeed (.int 1))
     (.lambda ["f"] (succeed (.call (.ident "f") [.int 1])))) =
-  .error { path := [("call", 2), ("lambda", 0), ("call", 1), ("call", 0)], why := .binder "f" }
+  .error ⟨[("call", 2), ("lambda", 0), ("call", 1), ("call", 0)], (.binder "f", none)⟩
 -- a block that declares one name twice is refused, as TypeScript refuses it
 #guard readEffAt [] sig spell 0 (.call (.ident "Effect.gen") [.generator
     [.constYield "x" (succeed (.int 1)) none, .constYield "x" (succeed (.int 2)) none,
       .ret (.ident "x")]]) =
-  .error { path := [("call", 1), ("generator", 1)], why := .binder "x" }
+  .error ⟨[("call", 1), ("generator", 1)], (.binder "x", none)⟩
 
 -- a layer clause closes the lexical scope: the printer prints a layer at the empty environment
 private def layered (outer inner use : String) : TypeScript.Expr :=
@@ -1027,8 +1027,8 @@ private def layeredProgram {Op : Type} : Eff Op :=
 #guard readEff [] sig spell 0 (layered "x" "y" "y") = .ok layeredProgram
 #guard readEff [] sig spell 0 (layered "x" "x" "x") = .ok layeredProgram
 #guard readEffAt [] sig spell 0 (layered "x" "y" "x") =
-  .error { path := [("bind", 1), ("provideLayer", 0), ("effectDiscard", 0), ("bind", 1),
-    ("succeed", 0)], why := .unknownIdent "x" }
+  .error ⟨[("bind", 1), ("provideLayer", 0), ("effectDiscard", 0), ("bind", 1),
+    ("succeed", 0)], (.unknownIdent "x", none)⟩
 #guard readLayer [] sig spell (.call (.ident "Layer.effectDiscard")
     [flatMap (succeed (.int 2)) (.lambda ["y"] (succeed (.ident "y")))]) =
   .ok (.effectDiscard (.bind (.succeed (.lit (.nat 2))) (.succeed (.var 0))))

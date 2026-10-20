@@ -32,8 +32,8 @@ stands (`unknownIdent`, with the path the reader gives). One unbound name is ref
 of the printer's form whose position a binder holds, which the renamed binder would capture. A
 declaration that repeats a name its block already declares is refused too
 (`ReadRefusal.binder`), as TypeScript refuses it. A refusal here carries the steps down the
-target syntax (`ReadFailure.under`): the constructor of `TypeScript.Expr` or `TypeScript.Stmt`
-and the child's position.
+target syntax, prefixed by the one prefix rule (`Located.under`): the constructor of
+`TypeScript.Expr` or `TypeScript.Stmt` and the child's position.
 
 The renaming is a fold of the target syntax (`TypeScript.cata_expr`, `Codegen/TsFold.lean`).
 Nothing here folds over a string: a name of the printer's form is read off its bytes
@@ -88,31 +88,24 @@ end Effect4.Codegen.Template
 
 namespace Effect4.Program
 
-/-- A refusal with where it happened. `path` is the constructor and argument index at each step
-from the root down to the node that refused, outermost first (a list's items are its `cons`
-cells: argument `0` the item, `1` the rest). The reader's steps are the program's constructors;
-the renaming's are the target syntax's (`Rename.expr`). `expected` is set when a reserved head
-matched no row: the steps down the nearest row's skeleton to where the tree parts from it, and
-what the skeleton has there. The refusal itself stays flat, so nothing that compares refusals
-moves. -/
-structure ReadFailure where
-  path : List (String × Nat) := []
-  why : ReadRefusal
-  expected : Option (List String × String) := none
-deriving DecidableEq, Repr
+/-- **The reader's located refusal** (`Data/Located.lean`). The site is the constructor and
+argument index at each step from the root down to the node that refused, outermost first (a
+list's items are its `cons` cells: argument `0` the item, `1` the rest). The reader's steps are
+the program's constructors; the renaming's are the target syntax's (`Rename.expr`). A step above
+is added by the one prefix rule, `Located.under`. The reason is the refusal, and what the nearest
+row expected when a reserved head matched no row: the steps down that row's skeleton to where
+the tree parts from it, and what the skeleton has there. The refusal itself stays flat, so
+nothing that compares refusals moves. -/
+abbrev ReadFailure := Located (List (String × Nat)) (ReadRefusal × Option (List String × String))
 
 /-- A refusal at the node being read. -/
-def ReadFailure.here (why : ReadRefusal) : ReadFailure := { why }
-
-/-- The same failure, seen from the argument `i` of a `ctor` node above it. -/
-def ReadFailure.under (ctor : String) (i : Nat) (f : ReadFailure) : ReadFailure :=
-  { f with path := (ctor, i) :: f.path }
+def ReadFailure.here (why : ReadRefusal) : ReadFailure := ⟨[], (why, none)⟩
 
 /-- For a person: `bind.1 > succeed.0: unknownIdent a1`, and what was expected where. -/
 def ReadFailure.render (f : ReadFailure) : String :=
-  let at_ := " > ".intercalate (f.path.map fun (ctor, i) => ctor ++ "." ++ toString i)
-  let why := reprStr f.why
-  let expected := match f.expected with
+  let at_ := " > ".intercalate (f.site.map fun (ctor, i) => ctor ++ "." ++ toString i)
+  let why := reprStr f.reason.1
+  let expected := match f.reason.2 with
     | some (steps, what) =>
       "; expected " ++ what ++ (if steps.isEmpty then "" else " at " ++ " > ".intercalate steps)
     | none => ""
@@ -215,7 +208,7 @@ def items (step : String) (b : Binders) :
     Nat → List (Carrier .expr) → Except ReadFailure (List Expr)
   | _, [] => .ok []
   | j, x :: xs => do
-    let y ← (x.2 b).mapError (·.under step j)
+    let y ← (x.2 b).mapError (Located.under [(step, j)])
     let ys ← items step b (j + 1) xs
     .ok (y :: ys)
 
@@ -224,7 +217,7 @@ def fields (step : String) (b : Binders) :
     Nat → List (String × Carrier .expr) → Except ReadFailure (List (String × Expr))
   | _, [] => .ok []
   | j, (key, x) :: xs => do
-    let y ← (x.2 b).mapError (·.under step j)
+    let y ← (x.2 b).mapError (Located.under [(step, j)])
     let ys ← fields step b (j + 1) xs
     .ok ((key, y) :: ys)
 
@@ -233,7 +226,7 @@ def entries (b : Binders) :
     Nat → List (Carrier .objectentry) → Except ReadFailure (List ObjectEntry)
   | _, [] => .ok []
   | j, x :: xs => do
-    let y ← (x b).mapError (·.under "objectWith" j)
+    let y ← (x b).mapError (Located.under [("objectWith", j)])
     let ys ← entries b (j + 1) xs
     .ok (y :: ys)
 
@@ -245,7 +238,7 @@ def block (step : String) (start : Nat) (outer : List (String × Nat)) :
   | _, _, [] => .ok []
   | names, j, s :: ss => do
     let later := outer ++ ((s :: ss).filterMap (·.1)).map (·, names.length)
-    let (s', after) ← (s.2 { names, later } start).mapError (·.under step j)
+    let (s', after) ← (s.2 { names, later } start).mapError (Located.under [(step, j)])
     let ss' ← block step start outer after (j + 1) ss
     .ok (s' :: ss')
 
@@ -259,15 +252,15 @@ def cases (b : Binders) :
     Nat → List (Nat × List (Carrier .stmt)) → Except ReadFailure (List (Nat × List Stmt))
   | _, [] => .ok []
   | j, (tag, body) :: rest => do
-    let c ← (nested "case" b body).mapError (·.under "switch" j)
+    let c ← (nested "case" b body).mapError (Located.under [("switch", j)])
     let cs ← cases b (j + 1) rest
     .ok ((tag, c) :: cs)
 
 /-- A callee: a bare identifier is a name; any other callee is renamed. -/
 def callee (step : String) (b : Binders) (fn : Carrier .expr) : Except ReadFailure Expr :=
   match fn.1 with
-  | some s => ((head b s).mapError (·.under step 0)).map .ident
-  | none => (fn.2 b).mapError (·.under step 0)
+  | some s => ((head b s).mapError (Located.under [(step, 0)])).map .ident
+  | none => (fn.2 b).mapError (Located.under [(step, 0)])
 
 /-- A parameter list binds its names in order; one that names a binder twice is refused. -/
 def bindParams (ps : List Parameter) : Except ReadFailure (List String) :=
@@ -299,32 +292,32 @@ def alg : ExprAlgebra Carrier where
     (fields "objectFromEntries" b 0 fs).map .objectFromEntries)
   expr_arr xs := (none, fun b => (items "arr" b 0 xs).map .arr)
   expr_arrow ty body := (none, fun b =>
-    ((body.2 b).mapError (·.under "arrow" 0)).map (.arrow ty))
+    ((body.2 b).mapError (Located.under [("arrow", 0)])).map (.arrow ty))
   expr_generic fn types := (none, fun b =>
     (callee "generic" b fn).map (.generic · types))
   expr_lambda ps body ty := (none, fun b => do
     let bound ← bindParams ps
-    let r ← (body.2 (b.bind bound)).mapError (·.under "lambda" 0)
+    let r ← (body.2 (b.bind bound)).mapError (Located.under [("lambda", 0)])
     .ok (.lambda (params b.names.length ps) r ty))
   expr_method target name args := (none, fun b => do
-    let t ← (target.2 b).mapError (·.under "method" 0)
+    let t ← (target.2 b).mapError (Located.under [("method", 0)])
     let as ← items "method" b 1 args
     .ok (.method t name as))
   expr_member target name := (none, fun b =>
-    ((target.2 b).mapError (·.under "member" 0)).map (.member · name))
+    ((target.2 b).mapError (Located.under [("member", 0)])).map (.member · name))
   expr_generator body := (none, fun b => (nested "generator" b body).map .generator)
   expr_cond t x y := (none, fun b => do
-    let t' ← (t.2 b).mapError (·.under "cond" 0)
-    let x' ← (x.2 b).mapError (·.under "cond" 1)
-    let y' ← (y.2 b).mapError (·.under "cond" 2)
+    let t' ← (t.2 b).mapError (Located.under [("cond", 0)])
+    let x' ← (x.2 b).mapError (Located.under [("cond", 1)])
+    let y' ← (y.2 b).mapError (Located.under [("cond", 2)])
     .ok (.cond t' x' y'))
   expr_arrowBlock ps body ty := (none, fun b => do
     let bound ← bindParams ps
     let r ← block "arrowBlock" b.names.length b.later (b.names ++ bound) 0 body
     .ok (.arrowBlock (params b.names.length ps) r ty))
   expr_index target key := (none, fun b => do
-    let t ← (target.2 b).mapError (·.under "index" 0)
-    let k ← (key.2 b).mapError (·.under "index" 1)
+    let t ← (target.2 b).mapError (Located.under [("index", 0)])
+    let k ← (key.2 b).mapError (Located.under [("index", 1)])
     .ok (.index t k))
   expr_new c args := (none, fun b => do
     let c' ← callee "new" b c
@@ -333,34 +326,34 @@ def alg : ExprAlgebra Carrier where
   expr_objectWith keys es := (none, fun b => (entries b 0 es).map (.objectWith keys))
   stmt_constYield name value ty := (some name, fun b start => do
     declare b.names start name
-    let v ← (value.2 b).mapError (·.under "constYield" 0)
+    let v ← (value.2 b).mapError (Located.under [("constYield", 0)])
     .ok (.constYield (Var.name b.names.length) v ty, b.names ++ [name]))
   stmt_ret value := (none, fun b _ => do
-    let v ← (value.2 b).mapError (·.under "ret" 0)
+    let v ← (value.2 b).mapError (Located.under [("ret", 0)])
     .ok (.ret v, b.names))
   stmt_yieldDiscard value := (none, fun b _ => do
-    let v ← (value.2 b).mapError (·.under "yieldDiscard" 0)
+    let v ← (value.2 b).mapError (Located.under [("yieldDiscard", 0)])
     .ok (.yieldDiscard v, b.names))
   stmt_letDefinite name ty := (some name, fun b start => do
     declare b.names start name
     .ok (.letDefinite (Var.name b.names.length) ty, b.names ++ [name]))
   stmt_letInit name value ty := (some name, fun b start => do
     declare b.names start name
-    let v ← (value.2 b).mapError (·.under "letInit" 0)
+    let v ← (value.2 b).mapError (Located.under [("letInit", 0)])
     .ok (.letInit (Var.name b.names.length) v ty, b.names ++ [name]))
   stmt_assign name value := (none, fun b _ => do
     let target ← use b name
-    let v ← (value.2 b).mapError (·.under "assign" 0)
+    let v ← (value.2 b).mapError (Located.under [("assign", 0)])
     .ok (.assign target v, b.names))
   stmt_whileTrue label body := (none, fun b _ => do
     let r ← nested "whileTrue" b body
     .ok (.whileTrue label r, b.names))
   stmt_switch scrutinee cs := (none, fun b _ => do
-    let s ← (scrutinee.2 b).mapError (·.under "switch" 0)
+    let s ← (scrutinee.2 b).mapError (Located.under [("switch", 0)])
     let c ← cases b 1 cs
     .ok (.switch s c, b.names))
   stmt_ifElse test yes no := (none, fun b _ => do
-    let t ← (test.2 b).mapError (·.under "ifElse" 0)
+    let t ← (test.2 b).mapError (Located.under [("ifElse", 0)])
     let y ← nested "then" b yes
     let n ← nested "else" b no
     .ok (.ifElse t y n, b.names))
@@ -370,22 +363,22 @@ def alg : ExprAlgebra Carrier where
   stmt_scopedGen name body onExit := (some name, fun b start => do
     declare b.names start name
     let r ← nested "scopedGen" b body
-    let e ← (onExit.2 b).mapError (·.under "onExit" 0)
+    let e ← (onExit.2 b).mapError (Located.under [("onExit", 0)])
     .ok (.scopedGen (Var.name b.names.length) r e, b.names ++ [name]))
   stmt_scopedGenMasked name body onExit := (some name, fun b start => do
     declare b.names start name
     let r ← nested "scopedGenMasked" b body
-    let e ← (onExit.2 b).mapError (·.under "onExit" 0)
+    let e ← (onExit.2 b).mapError (Located.under [("onExit", 0)])
     .ok (.scopedGenMasked (Var.name b.names.length) r e, b.names ++ [name]))
   stmt_breakTo label := (none, fun b _ => .ok (.breakTo label, b.names))
   stmt_continueTo label := (none, fun b _ => .ok (.continueTo label, b.names))
   stmt_exprStmt value := (none, fun b _ => do
-    let v ← (value.2 b).mapError (·.under "exprStmt" 0)
+    let v ← (value.2 b).mapError (Located.under [("exprStmt", 0)])
     .ok (.exprStmt v, b.names))
   objectentry_property name value := fun b =>
-    ((value.2 b).mapError (·.under "property" 0)).map (.property name)
+    ((value.2 b).mapError (Located.under [("property", 0)])).map (.property name)
   objectentry_spread value := fun b =>
-    ((value.2 b).mapError (·.under "spread" 0)).map .spread
+    ((value.2 b).mapError (Located.under [("spread", 0)])).map .spread
 
 /-- **The renaming of binders to the printer's names**, the binders in scope being `names`: the
 reader's named normaliser. -/

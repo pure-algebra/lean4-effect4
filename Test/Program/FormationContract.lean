@@ -30,10 +30,10 @@ def validTable : RowTable := [row .nat (.map .string .nat)]
 -- Raw syntax is checked before record normalization can discard the second field.
 #guard duplicate.normalize = (Ty.record [("x", false, .nat)]).normalize
 #guard Formation.checkInput pureProgram badTable =
-  some ⟨["table", "0", "answer", "type", "1"], duplicate, .repeatedField "x"⟩
+  some ⟨["table", "0", "answer", "type", "1"], .repeatedField "x" duplicate⟩
 #guard Formation.checkInput pureProgram validTable = none
 #guard Formation.checkInput pureProgram [row (.map .nat .string) .unit] =
-  some ⟨["table", "0", "request", "type", "0"], .map .nat .string, .mapKey⟩
+  some ⟨["table", "0", "request", "type", "0"], .mapKey (.map .nat .string)⟩
 #guard (Formation.checkInput pureProgram [row .unit (.app "Box" [.tuple [.nat, duplicate]])]).isSome
 
 -- Unused raw annotations and unused table rows still belong to the input.
@@ -41,28 +41,28 @@ def badAnnotation : NativeEff :=
   .suspend (.iterate (some duplicate) (.lit .unit) (.lit (.bool false))
     (.lit .unit) (.lit .unit) (.succeed (.lit .unit)))
 #guard match Formation.checkInput badAnnotation [] with
-  | some why => why.ty = duplicate && why.reason = .repeatedField "x"
+  | some why => why.reason = .repeatedField "x" duplicate
   | none => false
 
 -- Every checked public boundary shares the raw refusal, independent of the tape.
 #guard match admitProgram pureProgram ⟨badTable, [], []⟩ with
-  | .error (.formation why) => why.ty = duplicate
+  | .error (.formation why) => why.reason = .repeatedField "x" duplicate
   | _ => false
 #guard match Effect4.Codegen.emitModule "main" pureProgram badTable with
-  | .error (.formation why) => why.ty = duplicate
+  | .error (.formation why) => why.reason = .repeatedField "x" duplicate
   | _ => false
 
 def typedBadTable : TypedProgram (nativeSignature badTable) pureProgram :=
   ⟨.pure .nat, by decide⟩
 #guard match Effect4.Codegen.emitTypedModule "main" typedBadTable with
-  | .error (.formation why) => why.ty = duplicate
+  | .error (.formation why) => why.reason = .repeatedField "x" duplicate
   | _ => false
 #guard Api.printDecl "main" pureProgram badTable = none
 #guard match Api.replayChecked pureProgram 10 [] badTable with
-  | .inr (.formation why) => why.ty = duplicate
+  | .inr (.formation why) => why.reason = .repeatedField "x" duplicate
   | _ => false
 #guard match Api.replayChecked pureProgram 10 [Api.evaluate] badTable with
-  | .inr (.formation why) => why.ty = duplicate
+  | .inr (.formation why) => why.reason = .repeatedField "x" duplicate
   | _ => false
 
 def source : TypeScript.Module :=
@@ -70,7 +70,7 @@ def source : TypeScript.Module :=
       { doc := [], name := "main", value := .call (.ident "Effect.succeed") [.int 1],
         exported := true, type := some (.name ["Effect", "Effect"] [.name ["number"] [], .name ["never"] [], .name ["never"] []]) }] }
 #guard match Effect4.Codegen.admitModule "main" source badTable with
-  | .error (.formation why) => why.ty = duplicate
+  | .error (.formation why) => why.reason = .repeatedField "x" duplicate
   | _ => false
 
 -- Positive controls: none of the new checks is an unconditional refusal.
@@ -117,7 +117,7 @@ def mapTemplate : Row := row (.map (.var 0) (.var 1)) (.var 1)
 #guard match Api.explain (.perform (.external 0) (.lit (.nat 1)))
     [row (.var 0) (.map (.var 0) .nat)] with
   | some ⟨[], .instantiatedFormation "query" why⟩ =>
-    why.path = ["row", "answer", "type", "0"] && why.ty = .map .nat .nat
+    why.site = ["row", "answer", "type", "0"] && why.reason = .mapKey (.map .nat .nat)
   | _ => false
 #guard checkRow (row .nat (.map .nat .nat)) .string = .error .requestNotSubtype
 
@@ -138,10 +138,10 @@ def recordAnnotation : Term := .record [("x", true, duplicate)] [] .nil
   (.succeed (.lit .unit)) : NativeEff) []).isSome
 #guard (Formation.checkInput (.succeed (.app "some" (.cons recordAnnotation .nil)) : NativeEff) []).isSome
 #guard match Api.replayChecked (.succeed recordAnnotation) 10 [] with
-  | .inr (.formation why) => why.ty = duplicate
+  | .inr (.formation why) => why.reason = .repeatedField "x" duplicate
   | _ => false
 #guard match Effect4.Codegen.emitModule "main" (.succeed recordAnnotation) [] with
-  | .error (.formation why) => why.ty = duplicate
+  | .error (.formation why) => why.reason = .repeatedField "x" duplicate
   | _ => false
 
 /-! The formation rule on a deferred's error column (the state plan's T3a, its D4): a deferred
@@ -149,8 +149,8 @@ fails only with a value the error alphabet carries, so `Deferred.make<A, boolean
 its instance, at the row's answer column; `Deferred.make<void, never>()` is formed. -/
 #guard match checkRow (NativeOp.row (.deferredMakeOf .nat .bool)).normalizeTypes .unit with
   | .error (.formation why) =>
-    why.path == ["row", "answer", "type", "0"] && why.ty == .deferredOf .nat .bool &&
-      why.reason == .deferredError
+    why.site == ["row", "answer", "type", "0"] &&
+      why.reason == .deferredError (.deferredOf .nat .bool)
   | _ => false
 #guard (checkRow (NativeOp.row (.deferredMakeOf .unit .never)).normalizeTypes .unit).toOption =
   some (EffTy.pure (.deferredOf .unit .never))
@@ -166,8 +166,8 @@ its instance, at the row's answer column; `Deferred.make<void, never>()` is form
   some (.deferredOf .never .nat)
 #guard match admitProgram (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit)) ⟨[], [], []⟩ with
   | .error (.formation why) =>
-    why.path == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
-      why.ty == .var 0 && why.reason == .typeVariable
+    why.site == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
+      why.reason == .typeVariable (.var 0)
   | _ => false
 #guard (Formation.programAnnotations
     (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit) : NativeEff)).map (·.2) =
@@ -215,8 +215,8 @@ def inTermArgument (r : Term) : NativeEff := .bind (.succeed r) (.succeed (.lit 
 #guard (Formation.checkInput (inTermArgument duplicateRecord) []).isSome
 #guard match Formation.checkInput (inBinderTerm duplicateRecord) [] with
   | some why =>
-    why.path == ["program", "1", "argument", "0", "op", "term", "0", "0", "0", "1", "0", "fields",
-      "type", "0"] && why.reason == .repeatedField "x"
+    why.site == ["program", "1", "argument", "0", "op", "term", "0", "0", "0", "1", "0", "fields",
+      "type", "0"] && why.reason == .repeatedField "x" duplicate
   | none => false
 #guard Effect4.Api.typeOf (inBinderTerm duplicateRecord) = none
 -- control (decisions row 317): an `int` field is admitted in a term argument and inside a

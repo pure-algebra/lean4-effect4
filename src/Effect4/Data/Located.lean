@@ -4,16 +4,25 @@ module
 # Data.Located — a reason at a site
 
 A judgment refuses with a **reason** in its own alphabet, at a **site** in its own address
-space. `Located Site Reason` is that pair. A program's refusal is located at a program address
-(`TypeRefusal`, `Program/Typing/Blame.lean`); another judgment names its own site and its own
-reasons. Each judgment keeps its own reason alphabet and its own law that a refusal is absent
-exactly when the judgment holds (`programRefusal_none_iff`, `Program/CheckedTyping.lean`). No
-record of a generic judgment is shared: the owner's ruling 2 of 2026-10-18.
+space. `Located Site Reason` is that pair, and every judgment's refusal is one:
+- a program's refusal is located at a program address (`TypeRefusal`, `Program/Typing/Blame.lean`);
+- a failed term's at an address within the term (`TermTypingRefusal`, `Program/Typing/TermRefusal.lean`);
+- the scope reader's at a program address (`Authoring.Refusal`, `Program/Authoring.lean`);
+- raw formation's at a boundary path (`FormationRefusal`, `Program/Formation.lean`);
+- a persisted document's at a JSON path (`DocumentRefusal`, `Schema/Document.lean`);
+- the TypeScript reader's at its constructor steps (`ReadFailure`, `Codegen/Rename.lean`).
+
+Each judgment keeps its own reason alphabet and its own law that a refusal is absent exactly when
+the judgment holds (`programRefusal_none_iff`, `Program/CheckedTyping.lean`;
+`Formation.check_eq_none_iff`). No record of a generic judgment is shared: the owner's ruling 2 of
+2026-10-18.
 
 `mapSite` moves a refusal to another site and keeps its reason. `under` is the one prefix rule
-at a call boundary: a refusal at address `q` inside a part placed at address `p` is located at
-`p ++ q`. The source feed (`SourceSession.feed`), the certified checker's placement of a part
-(`Check.Internal.place`) and the checker's rebase (`TypeRefusal.rebase`) all relocate by it.
+at a call boundary, for any site that is a list of steps: a refusal at `q` inside a part placed at
+`p` is located at `p ++ q`. The source feed (`SourceSession.feed`), the certified checker's
+placement of a part (`Check.Internal.place`), the checker's rebase (`TypeRefusal.rebase`), the
+document reader (`Schema/DocumentJson.lean`) and the TypeScript reader (`Codegen/Read.lean`,
+`Codegen/Rename.lean`) all relocate by it.
 
 Placement of `mapSite_comp`: concept `initial-algebras-folds`, the property that a path is an
 inherited attribute which only locates refusals (claim `checker-base-natural`, requirement R14).
@@ -31,7 +40,7 @@ structure Located (Site Reason : Type) where
   site : Site
   /-- why it refuses, in the judgment's own alphabet -/
   reason : Reason
-deriving DecidableEq
+deriving DecidableEq, Repr
 
 namespace Located
 
@@ -42,9 +51,9 @@ def mapSite {P Q R : Type} (f : P → Q) (r : Located P R) : Located Q R := ⟨f
 theorem mapSite_comp {P Q S R : Type} (f : P → Q) (g : Q → S) (r : Located P R) :
     mapSite g (mapSite f r) = mapSite (g ∘ f) r := rfl
 
-/-- **The prefix rule** at a call boundary: a refusal at address `q` inside a part placed at `p`
-is located at `p ++ q`. -/
-def under {R : Type} (p : List Nat) (r : Located (List Nat) R) : Located (List Nat) R :=
+/-- **The prefix rule** at a call boundary, for any site that is a list of steps: a refusal at
+`q` inside a part placed at `p` is located at `p ++ q`. -/
+def under {α R : Type} (p : List α) (r : Located (List α) R) : Located (List α) R :=
   mapSite (p ++ ·) r
 
 end Located

@@ -548,7 +548,8 @@ def readArgs (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (n
     List ArgSort → Nat → Except ReadFailure (List (ArgF Op (EffSelfCarrier Op)))
   | [], _ => .ok []
   | s :: ss, i => do
-    let a ← (readArg classes sig n row σ child children block s i).mapError (·.under row.ctor i)
+    let a ← (readArg classes sig n row σ child children block s i).mapError
+      (Located.under [(row.ctor, i)])
     let rest ← readArgs classes sig n row σ child children block ss (i + 1)
     .ok (a :: rest)
 
@@ -821,7 +822,7 @@ def readRow (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (sp
     | .rowCall =>
       match fam with
       | .eff => some ((readPerform classes sig spell n x).mapError fun why =>
-          { why, expected := nearestRow n x })
+          ⟨[], (why, nearestRow n x)⟩)
       | _ => none
     -- an invocation with programs (slice HO-3b): a call whose head spells the invocation of a
     -- definition that takes programs, on its request and on one function of the binder due at
@@ -839,10 +840,10 @@ def readRow (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (sp
             | none => none
             | some bodies => some do
               let request ← (readTerm classes n rq).mapError fun why =>
-                (ReadFailure.here why).under "invoke" 1
+                Located.under [("invoke", 1)] (ReadFailure.here why)
               let programs ← (children .effs (n + 1) bodies (Nat.lt_of_le_of_lt
                 (Effect4.Codegen.Binders.mapM_read_size n [0] fns bodies hb)
-                (invokeView_size hx))).mapError (·.under "invoke" 2)
+                (invokeView_size hx))).mapError (Located.under [("invoke", 2)])
               buildRow .eff "invoke" [.nat j, .term request, .child .effs programs] k
       | _ => none
     | .tpl t =>
@@ -866,7 +867,7 @@ def readRow (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (sp
             | [.child fam'] =>
               if hk : famRank fam' < famRank fam then
                 (same fam' hk (Templates.argDepth fam (.child fam') n 0)).map fun r => do
-                  let c ← r.mapError (·.under row.ctor 0)
+                  let c ← r.mapError (Located.under [(row.ctor, 0)])
                   buildRow fam row.ctor [.child fam' c] k
               else none
             -- one leaf read of the whole tree, at the depth the printer prints it at
@@ -933,14 +934,14 @@ mutual
     | .effs, [] => .ok .nil
     | .effs, y :: rest => do
       let e ← ((readT classes sig spell .eff n y).getD (.error (.here (unread .eff)))).mapError
-        (·.under "cons" 0)
-      let es ← (readSpine classes sig spell .effs n rest).mapError (·.under "cons" 1)
+        (Located.under [("cons", 0)])
+      let es ← (readSpine classes sig spell .effs n rest).mapError (Located.under [("cons", 1)])
       .ok (.cons e es)
     | .layers, [] => .ok .nil
     | .layers, y :: rest => do
       let l ← ((readT classes sig spell .layer n y).getD (.error (.here (unread .layer)))).mapError
-        (·.under "cons" 0)
-      let ls ← (readSpine classes sig spell .layers n rest).mapError (·.under "cons" 1)
+        (Located.under [("cons", 0)])
+      let ls ← (readSpine classes sig spell .layers n rest).mapError (Located.under [("cons", 1)])
       .ok (.cons l ls)
     | _, _ => .error (.here readDefect)
   termination_by (sizeOf xs, 0)
@@ -960,10 +961,11 @@ mutual
           (fun d body _ => readStmts classes sig spell d body)
       match byRow with
       | some r => do
-        let (st, declared) ← r.mapError (·.under "cons" 0)
-        let tail ← (readStmts classes sig spell (n + declared) rest).mapError (·.under "cons" 1)
+        let (st, declared) ← r.mapError (Located.under [("cons", 0)])
+        let tail ← (readStmts classes sig spell (n + declared) rest).mapError
+          (Located.under [("cons", 1)])
         .ok (.cons st tail)
-      | none => .error ((ReadFailure.here (stmtRefusal s)).under "cons" 0)
+      | none => .error (Located.under [("cons", 0)] (ReadFailure.here (stmtRefusal s)))
   termination_by (sizeOf stmts, 0)
 end
 
@@ -988,7 +990,7 @@ def readEffAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
 /-- The same with the refusal alone: where it happened is `readEffAt`'s. -/
 def readEff (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
-  (readEffAt classes sig spell n x).mapError (·.why)
+  (readEffAt classes sig spell n x).mapError (·.reason.1)
 
 /-- A layer from a tree whose binders carry the printer's names. A layer is closed: its bodies
 are read at environment length `0`. -/
@@ -1006,7 +1008,7 @@ def readLayerAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
 
 def readLayer (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (x : Expr) : Except ReadRefusal (LayerTerm Op) :=
-  (readLayerAt classes sig spell x).mapError (·.why)
+  (readLayerAt classes sig spell x).mapError (·.reason.1)
 
 end TableReader
 

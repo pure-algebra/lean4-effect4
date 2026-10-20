@@ -706,10 +706,10 @@ private def conflicting : List ReferenceEntry :=
   | .error e => e == ⟨["references", "A"], .conflictingReference "A"⟩
   | .ok _ => false
 #guard match Codegen.Schema.documentSource (Schema.document Schema.string conflicting) with
-  | .error e => e.path == ["references", "A"]
+  | .error e => e.site == ["references", "A"]
   | .ok _ => false
 #guard match Codegen.Schema.moduleSyntax "Conflict" (Schema.document Schema.string conflicting) with
-  | .error e => e.path == ["references", "A"]
+  | .error e => e.site == ["references", "A"]
   | .ok _ => false
 -- the meta-schema's table repeats keys, every repeat with an equal body: written once each
 open Effect4.Store in

@@ -119,12 +119,12 @@ def term? (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) : Except 
   match termTy sig env t with
   | some type => .ok type
   | none => .error ⟨p, match TermRefusal.diagnose sig env t with
-      | some (.record why) => .recordTerm why
-      | some (.tuple why) => .tupleTerm why
-      | some (.fold why) => .foldTerm why
-      | some (.unbound path index depth) => .unboundVariable path index depth
-      | some (.unknownAtom path atom) => .unknownAtom path atom
-      | some (.refusedArguments path atom args) => .refusedArguments path atom args
+      | some ⟨path, .record why⟩ => .recordTerm ⟨path, why⟩
+      | some ⟨path, .tuple why⟩ => .tupleTerm ⟨path, why⟩
+      | some ⟨path, .fold why⟩ => .foldTerm ⟨path, why⟩
+      | some ⟨path, .unbound index depth⟩ => .unboundVariable path index depth
+      | some ⟨path, .unknownAtom atom⟩ => .unknownAtom path atom
+      | some ⟨path, .refusedArguments atom args⟩ => .refusedArguments path atom args
       | none => .term t⟩
 
 /-- A cause's type, or a located explanation when a leaf term failed. -/
@@ -133,9 +133,9 @@ def cause? (sig : Signature Op) (env : TyEnv) (p : List Nat) (cause : CauseTerm)
   match causeTy sig env cause with
   | some type => .ok type
   | none => .error ⟨p, match TermRefusal.diagnoseCause sig env cause with
-      | some (.record why) => .recordCause why
-      | some (.tuple why) => .tupleCause why
-      | some (.fold why) => .foldCause why
+      | some ⟨path, .record why⟩ => .recordCause ⟨path, why⟩
+      | some ⟨path, .tuple why⟩ => .tupleCause ⟨path, why⟩
+      | some ⟨path, .fold why⟩ => .foldCause ⟨path, why⟩
       | none => .cause cause⟩
 
 

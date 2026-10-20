@@ -64,7 +64,8 @@ def genericFirst : Term := .app "pair" (.cons (.var 5) (.cons missing .nil))
   error (.fieldNotSubtype "_tag" .string (.lit "User"))
 
 #guard match run (.record [("bad", true, .map .nat .nat)] [] .nil) with
-  | .error ⟨[2, 1], .recordTerm ⟨[], .declarationFormation why⟩⟩ => why.ty = .map .nat .nat
+  | .error ⟨[2, 1], .recordTerm ⟨[], .declarationFormation why⟩⟩ =>
+    why.reason = .mapKey (.map .nat .nat)
   | _ => false
 
 -- Cause and term addresses remain distinct, including nested `both` nodes.

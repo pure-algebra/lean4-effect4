@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Program.LayerView
+public import Effect4.Data.Located
 
 /-!
 # Raw type formation
@@ -25,25 +26,25 @@ checked replay. This judgment says nothing about typing or inhabitance.
 
 namespace Effect4.Program
 
+/-- Why a raw type occurrence is not formed. Each reason keeps the raw type `ty` it refuses. -/
 inductive FormationReason where
-  | repeatedField (name : String)
-  | mapKey
+  /-- A record type that names field `name` twice. -/
+  | repeatedField (name : String) (ty : Ty)
+  /-- A map type whose key does not normalize to `string`. -/
+  | mapKey (ty : Ty)
   /-- A deferred's error column that the error alphabet does not admit (`admittedErrTy`):
   `Deferred.fail` would fail it with a value `errOf` cannot carry (decisions rows 42, 120). -/
-  | deferredError
+  | deferredError (ty : Ty)
   /-- A type variable outside a template (decisions row 288, point 6 a). A row's column may hold
   a parameter, which the checker instantiates at each use. A program's annotation states a
   program's type, which holds none: the checker would give the program a type that is not
   closed, or close the variable to `never` without a word. The refusal keeps the variable. -/
-  | typeVariable
+  | typeVariable (ty : Ty)
   deriving DecidableEq, Repr
 
-/-- A refusal retains the raw type; its path ends in a preorder occurrence index. -/
-structure FormationRefusal where
-  path : List String
-  ty : Ty
-  reason : FormationReason
-  deriving DecidableEq, Repr
+/-- **Raw formation's located refusal** (`Data/Located.lean`): the reason, with the raw type it
+keeps, at a boundary path that ends in a preorder occurrence index. -/
+abbrev FormationRefusal := Located (List String) FormationReason
 
 namespace Formation
 
@@ -70,13 +71,14 @@ structure Site where
 abbrev Reason := FormationReason
 abbrev Refusal := FormationRefusal
 
-/-- A diagnostic reason. Only a failed `HeadFormed` check exposes this result. -/
+/-- A diagnostic reason, which keeps the raw type. Only a failed `HeadFormed` check exposes this
+result. -/
 def reason (ty : Ty) : Reason :=
   match ty with
-  | .record fields => .repeatedField ((Field.firstRepeated fields).getD "")
-  | .deferredOf _ _ => .deferredError
-  | .var _ => .typeVariable
-  | _ => .mapKey
+  | .record fields => .repeatedField ((Field.firstRepeated fields).getD "") ty
+  | .deferredOf _ _ => .deferredError ty
+  | .var _ => .typeVariable ty
+  | _ => .mapKey ty
 
 /-- Raw occurrences, including the root, collected without normalization. -/
 def nodes (ty : Ty) : List Ty := foldMap_ty [] (· ++ ·) ty (fun t => [t])
@@ -93,7 +95,7 @@ def check : List Site → Option Refusal
   | [] => none
   | site :: rest =>
     if HeadFormed site.template site.ty then check rest
-    else some ⟨site.path, site.ty, reason site.ty⟩
+    else some ⟨site.path, reason site.ty⟩
 
 /-- Decidability of `raw-formation`; admission certificates consume the forward direction. -/
 theorem check_eq_none_iff (input : List Site) : check input = none ↔ Formed input := by

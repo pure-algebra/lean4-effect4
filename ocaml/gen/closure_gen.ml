@@ -61,7 +61,7 @@ and admit_refusal =
   | AdmitRefusal_illTyped of (int list, type_reason) located
   | AdmitRefusal_signature of sig_refusal
   | AdmitRefusal_emptyColumn of string list
-  | AdmitRefusal_formation of formation_refusal
+  | AdmitRefusal_formation of (string list, formation_reason) located
 and reply_fault = ReplyFault_answerType of Ty.t | ReplyFault_errorType of Ty.t | ReplyFault_reservedDefect
 and shape =
   | Shape_unit
@@ -92,12 +92,12 @@ and reason =
   | Reason_duplicateDef of string
   | Reason_unboundParam of string
   | Reason_duplicateParam of string
-and effect4_program_authoring_refusal = { path : int list; reason : reason }
+and ('site, 'reason) located = { site : 'site; reason : 'reason }
 and 'op loop_spec = {
-  while_ : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (Term.t, effect4_program_authoring_refusal) result;
-  body : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> ('op Eff.t, effect4_program_authoring_refusal) result;
-  step : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (Term.t, effect4_program_authoring_refusal) result;
-  result : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (Term.t, effect4_program_authoring_refusal) result;
+  while_ : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (Term.t, (int list, reason) located) result;
+  body : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> ('op Eff.t, (int list, reason) located) result;
+  step : (env -> int list -> (Term.t, (int list, reason) located) result) -> (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (Term.t, (int list, reason) located) result;
+  result : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (Term.t, (int list, reason) located) result;
   cursor_ty : Ty.t option;
 }
 and env = {
@@ -110,9 +110,9 @@ and env = {
 and 'op module_ = {
   rows : row_def list;
   services : service_def list;
-  layers : (string * (env -> int list -> ('op LayerTerm.t, effect4_program_authoring_refusal) result)) list;
+  layers : (string * (env -> int list -> ('op LayerTerm.t, (int list, reason) located) result)) list;
   defs : 'op def_src list;
-  main : env -> int list -> ('op Eff.t, effect4_program_authoring_refusal) result;
+  main : env -> int list -> ('op Eff.t, (int list, reason) located) result;
   types : (string * Ty.t) list;
 }
 and sketch = { program : NativeOp.t Eff.t; holes : Row.t list }
@@ -165,7 +165,6 @@ and text_mode =
   | TextMode_afterItem of nat_json list * text_ctx
   | TextMode_afterMember of (string * nat_json) list * text_ctx
   | TextMode_done of nat_json
-and ('site, 'reason) located = { site : 'site; reason : 'reason }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp = {
   to_prim_interp : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp;
   park_of : 'k -> (park_kind, ('e, 'd, 'i, 'a) Cause.t) result option;
@@ -631,17 +630,17 @@ and type_reason =
   | TypeReason_returnNotLast
   | TypeReason_breakOutsideLoop
   | TypeReason_literalOutsideAlphabet of Lit.t
-  | TypeReason_instantiatedFormation of string * formation_refusal
-  | TypeReason_recordTerm of record_term_refusal
-  | TypeReason_recordCause of record_cause_refusal
-  | TypeReason_tupleTerm of tuple_term_refusal
-  | TypeReason_tupleCause of tuple_cause_refusal
+  | TypeReason_instantiatedFormation of string * (string list, formation_reason) located
+  | TypeReason_recordTerm of (int list, record_typing_reason) located
+  | TypeReason_recordCause of (int list, (int list, record_typing_reason) located) located
+  | TypeReason_tupleTerm of (int list, tuple_typing_reason) located
+  | TypeReason_tupleCause of (int list, (int list, tuple_typing_reason) located) located
   | TypeReason_errorPayloadField of Ty.t * string list * Ty.t
   | TypeReason_errorSpelling of Ty.t * Ty.t
   | TypeReason_binderTerm of string * Ty.t
   | TypeReason_resultNotSubtype of string * Ty.t * Ty.t
-  | TypeReason_foldTerm of fold_term_refusal
-  | TypeReason_foldCause of fold_cause_refusal
+  | TypeReason_foldTerm of (int list, fold_typing_reason) located
+  | TypeReason_foldCause of (int list, (int list, fold_typing_reason) located) located
   | TypeReason_maskRestoreExpected of Ty.t
   | TypeReason_definitionBlock
   | TypeReason_definitionsMismatch of int * int
@@ -903,7 +902,6 @@ and sig_refusal =
   | SigRefusal_rowName of int * decl_reason
   | SigRefusal_conflictingDecl of string
   | SigRefusal_unguardedDecl of string
-and formation_refusal = { path : string list; ty : Ty.t; reason : formation_reason }
 and path = { steps : step list; stop : stop }
 and node_env =
   | NodeEnv_env of Ty.t list
@@ -911,16 +909,16 @@ and node_env =
   | NodeEnv_closed
   | NodeEnv_slots of Ty.t list * ParamDecl.t list
 and entry = { path : int list; env : node_env option; result : (EffTy.t, (int list, type_reason) located) result option }
-and term_typing_refusal =
-  | TermTypingRefusal_record of record_term_refusal
-  | TermTypingRefusal_tuple of tuple_term_refusal
-  | TermTypingRefusal_fold of fold_term_refusal
-  | TermTypingRefusal_unbound of int list * int * int
-  | TermTypingRefusal_unknownAtom of int list * string
-  | TermTypingRefusal_refusedArguments of int list * string * Ty.t list
+and term_typing_reason =
+  | TermTypingReason_record of record_typing_reason
+  | TermTypingReason_tuple of tuple_typing_reason
+  | TermTypingReason_fold of fold_typing_reason
+  | TermTypingReason_unbound of int * int
+  | TermTypingReason_unknownAtom of string
+  | TermTypingReason_refusedArguments of string * Ty.t list
 and row_typing_refusal =
   | RowTypingRefusal_requestNotSubtype
-  | RowTypingRefusal_formation of formation_refusal
+  | RowTypingRefusal_formation of (string list, formation_reason) located
   | RowTypingRefusal_term of Ty.t
   | RowTypingRefusal_resultNotSubtype of Ty.t * Ty.t
 and protocol = {
@@ -1046,22 +1044,16 @@ and decl_reason =
   | DeclReason_handleAtName
   | DeclReason_undeclaredName
 and formation_reason =
-  | FormationReason_repeatedField of string
-  | FormationReason_mapKey
-  | FormationReason_deferredError
-  | FormationReason_typeVariable
+  | FormationReason_repeatedField of string * Ty.t
+  | FormationReason_mapKey of Ty.t
+  | FormationReason_deferredError of Ty.t
+  | FormationReason_typeVariable of Ty.t
 and ref_fault =
   | RefFault_notBefore
   | RefFault_encloses
   | RefFault_noLayer
   | RefFault_toReference
   | RefFault_otherScope
-and record_term_refusal = { path : int list; reason : record_typing_reason }
-and record_cause_refusal = { cause_path : int list; term : record_term_refusal }
-and tuple_term_refusal = { path : int list; index : int; reason : tuple_typing_reason }
-and tuple_cause_refusal = { cause_path : int list; term : tuple_term_refusal }
-and fold_term_refusal = { path : int list; reason : fold_typing_reason }
-and fold_cause_refusal = { cause_path : int list; term : fold_term_refusal }
 and service_def = { key : ServiceKey.t; carrier : Ty.t; ops : row_def list }
 and 'op def_src = {
   name : string;
@@ -1069,12 +1061,12 @@ and 'op def_src = {
   answer : Ty.t;
   error : Ty.t;
   requires : ServiceKey.t list;
-  body : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) list -> env -> int list -> ('op Eff.t, effect4_program_authoring_refusal) result;
+  body : (env -> int list -> (Term.t, (int list, reason) located) result) list -> env -> int list -> ('op Eff.t, (int list, reason) located) result;
   role : DefRole.t;
   program_params : ParamDecl.t list;
 }
 and stmt_ty = StmtTy_step of gen_ty * Ty.t list | StmtTy_ret of (Ty.t, (int list, type_reason) located) result | StmtTy_pass
-and cause_typing_refusal = CauseTypingRefusal_record of record_cause_refusal | CauseTypingRefusal_tuple of tuple_cause_refusal | CauseTypingRefusal_fold of fold_cause_refusal
+and cause_typing_reason = CauseTypingReason_record of (int list, record_typing_reason) located | CauseTypingReason_tuple of (int list, tuple_typing_reason) located | CauseTypingReason_fold of (int list, fold_typing_reason) located
 and binder_term = { term : Term.t; param : Ty.t; result : Ty.t }
 and term_use = { param : Ty.t; result : Ty.t; type_at : Ty.t -> Ty.t option }
 and tag =
@@ -1206,8 +1198,8 @@ and record_typing_reason =
   | RecordTypingReason_columnLengths of int * int
   | RecordTypingReason_missingReadField of string * Ty.t
   | RecordTypingReason_optionalReadField of string * Ty.t
-  | RecordTypingReason_declarationFormation of formation_refusal
-and tuple_typing_reason = TupleTypingReason_nonTuple of Ty.t | TupleTypingReason_outOfBounds of int
+  | RecordTypingReason_declarationFormation of (string list, formation_reason) located
+and tuple_typing_reason = TupleTypingReason_nonTuple of int * Ty.t | TupleTypingReason_outOfBounds of int * int
 and fold_typing_reason = FoldTypingReason_notList of Ty.t | FoldTypingReason_initialNotAccumulator of Ty.t * Ty.t | FoldTypingReason_bodyNotAccumulator of Ty.t * Ty.t
 and ('r_term, 'r_terms) term_algebra = {
   term_var : int -> 'r_term;
@@ -23107,23 +23099,23 @@ let program_formation_reason (ty : Ty.t) : formation_reason =
     | Ty.Record fields_1 -> (let _x_2 = field_first_repeated fields_1 in
       match _x_2 with
         | None -> (let _x_3 = "" in
-          FormationReason_repeatedField _x_3)
-        | Some val__5 -> FormationReason_repeatedField val__5)
-    | Ty.DeferredOf (_, _) -> FormationReason_deferredError
-    | Ty.Var _ -> FormationReason_typeVariable
-    | _ -> FormationReason_mapKey
+          FormationReason_repeatedField (_x_3, ty))
+        | Some val__5 -> FormationReason_repeatedField (val__5, ty))
+    | Ty.DeferredOf (_, _) -> FormationReason_deferredError ty
+    | Ty.Var _ -> FormationReason_typeVariable ty
+    | _ -> FormationReason_mapKey ty
 
 
 
-(* LCNF mono: Effect4.Program.Formation.check (x.1 : List Effect4.Program.Formation.Site) : Option Effect4.Program.FormationRefusal *)
+(* LCNF mono: Effect4.Program.Formation.check (x.1 : List Effect4.Program.Formation.Site) : Option (Effect4.Located (List String) Effect4.Program.FormationReason) *)
 
-let rec program_formation_check (x_1 : effect4_program_formation_site list) : formation_refusal option =
+let rec program_formation_check (x_1 : effect4_program_formation_site list) : (string list, formation_reason) located option =
   match x_1 with
     | [] -> None
     | head_3 :: tail_4 -> (match (head_3 : effect4_program_formation_site) with
         | { path = path; template = template; ty = ty } -> (let _x_5 = program_formation_inst_decidable_head_formed template ty in
           if _x_5 then program_formation_check tail_4 else (let _x_6 = program_formation_reason ty in
-            let _x_7 = ({ path = path; ty = ty; reason = _x_6 } : formation_refusal) in
+            let _x_7 = ({ site = path; reason = _x_6 } : (_, _) located) in
             Some _x_7)))
 
 
@@ -23605,63 +23597,66 @@ let program_term_ty (sig_ : _ signature) (env : Ty.t list) (t : Term.t) : Ty.t o
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_0 (level : Nat) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_0 (level : Nat) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason) *)
 
-let program_term_refusal_algebra__lam_0 (level : int) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_0 (level : int) (env : Ty.t list) (x_1 : bool) (path : int list) : (int list, term_typing_reason) located option =
   let _x_2 = list_get_opt_internal env level in
   match _x_2 with
     | None -> (let _x_3 = List.length env in
-      let _x_4 = TermTypingRefusal_unbound (path, level, _x_3) in
-      Some _x_4)
+      let _x_4 = TermTypingReason_unbound (level, _x_3) in
+      let _x_5 = ({ site = path; reason = _x_4 } : (_, _) located) in
+      Some _x_5)
     | Some _ -> None
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_1 (level : Nat) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_1 (level : Nat) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) *)
 
-let program_term_refusal_algebra__lam_1 (level : int) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_1 (level : int) : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option) =
   let _f_1 = program_term_refusal_algebra__lam_0 level in
   let _x_2 = Term.Var level in
   _x_2, _f_1
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_2 (x.1 : List Effect4.Program.Ty) (x.2 : Bool) (x.3 : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_2 (x.1 : List Effect4.Program.Ty) (x.2 : Bool) (x.3 : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason) *)
 
-let program_term_refusal_algebra__lam_2 (x_1 : Ty.t list) (x_2 : bool) (x_3 : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_2 (x_1 : Ty.t list) (x_2 : bool) (x_3 : int list) : (int list, term_typing_reason) located option =
   None
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_3 (_f.1 : (List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) (value : Effect4.Program.Lit) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_3 (_f.1 : (List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) (value : Effect4.Program.Lit) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) *)
 
-let program_term_refusal_algebra__lam_3 (_f_1 : Ty.t list -> bool -> int list -> term_typing_refusal option) (value : Lit.t) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_3 (_f_1 : Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option) (value : Lit.t) : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option) =
   let _x_2 = Term.Lit value in
   _x_2, _f_1
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_4 (constAtom : String -> Bool) (atom : String) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (fst : lcAny) (snd : lcAny) (atomOf : String -> (List Effect4.Program.Ty) -> (Option Effect4.Program.Ty)) (knownAtom : String -> Bool) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_4 (constAtom : String -> Bool) (atom : String) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (fst : lcAny) (snd : lcAny) (atomOf : String -> (List Effect4.Program.Ty) -> (Option Effect4.Program.Ty)) (knownAtom : String -> Bool) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason) *)
 
-let program_term_refusal_algebra__lam_4 (const_atom : string -> bool) (atom : string) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) fst_1 snd_1 (atom_of : string -> Ty.t list -> Ty.t option) (known_atom : string -> bool) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
-  let _x_2 = const_atom atom in
-  let _x_3 = infer_args env _x_2 fst_1 in
-  match _x_3 with
-    | None -> (let _x_4 = 0 in
-      snd_1 env _x_2 path _x_4)
-    | Some val__6 -> (let _x_7 = atom_of atom val__6 in
-      match _x_7 with
-        | None -> (let _x_8 = known_atom atom in
-          if _x_8 then (let _x_11 = TermTypingRefusal_refusedArguments (path, atom, val__6) in
-            Some _x_11) else (let _x_9 = TermTypingRefusal_unknownAtom (path, atom) in
-            Some _x_9))
+let program_term_refusal_algebra__lam_4 (const_atom : string -> bool) (atom : string) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) fst_1 snd_1 (atom_of : string -> Ty.t list -> Ty.t option) (known_atom : string -> bool) (env : Ty.t list) (x_1 : bool) (path : int list) : (int list, term_typing_reason) located option =
+  let[@local always] _jp_2 = fun _y_3 -> let _x_4 = ({ site = path; reason = _y_3 } : (_, _) located) in
+  Some _x_4 in
+  let _x_6 = const_atom atom in
+  let _x_7 = infer_args env _x_6 fst_1 in
+  match _x_7 with
+    | None -> (let _x_8 = 0 in
+      snd_1 env _x_6 path _x_8)
+    | Some val__10 -> (let _x_11 = atom_of atom val__10 in
+      match _x_11 with
+        | None -> (let _x_12 = known_atom atom in
+          if _x_12 then (let _x_14 = TermTypingReason_refusedArguments (atom, val__10) in
+            _jp_2 _x_14) else (let _x_13 = TermTypingReason_unknownAtom atom in
+            _jp_2 _x_13))
         | Some _ -> None)
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_5 (constAtom : String -> Bool) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (atomOf : String -> (List Effect4.Program.Ty) -> (Option Effect4.Program.Ty)) (knownAtom : String -> Bool) (atom : String) (args : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_5 (constAtom : String -> Bool) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (atomOf : String -> (List Effect4.Program.Ty) -> (Option Effect4.Program.Ty)) (knownAtom : String -> Bool) (atom : String) (args : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) *)
 
-let program_term_refusal_algebra__lam_5 (const_atom : string -> bool) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) (atom_of : string -> Ty.t list -> Ty.t option) (known_atom : string -> bool) (atom : string) (args : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_5 (const_atom : string -> bool) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) (atom_of : string -> Ty.t list -> Ty.t option) (known_atom : string -> bool) (atom : string) (args : Terms.t * (Ty.t list -> bool -> int list -> int -> (int list, term_typing_reason) located option)) : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option) =
   match args with
     | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_4 const_atom atom infer_args fst_1 snd_1 atom_of known_atom in
       let _x_2 = Term.App (atom, fst_1) in
@@ -23741,9 +23736,9 @@ let program_term_refusal_construction (decls : (string * Ty.t) list) (fields : (
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_6 (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (names : List String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_6 (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (names : List String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason) *)
 
-let program_term_refusal_algebra__lam_6 (fields : (string * (bool * Ty.t)) list) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) fst_1 snd_1 (decls : (string * Ty.t) list) (names : string list) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_6 (fields : (string * (bool * Ty.t)) list) (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) fst_1 snd_1 (decls : (string * Ty.t) list) (names : string list) (env : Ty.t list) (x_1 : bool) (path : int list) : (int list, term_typing_reason) located option =
   let _x_2 = program_term_refusal_declaration fields in
   match _x_2 with
     | None -> (let _x_3 = true in
@@ -23754,18 +23749,18 @@ let program_term_refusal_algebra__lam_6 (fields : (string * (bool * Ty.t)) list)
         | Some val__7 -> (let _x_8 = program_term_refusal_construction decls fields names val__7 in
           match _x_8 with
             | None -> None
-            | Some val__10 -> (let _x_11 = ({ path = path; reason = val__10 } : record_term_refusal) in
-              let _x_12 = TermTypingRefusal_record _x_11 in
+            | Some val__10 -> (let _x_11 = TermTypingReason_record val__10 in
+              let _x_12 = ({ site = path; reason = _x_11 } : (_, _) located) in
               Some _x_12)))
-    | Some val__14 -> (let _x_15 = ({ path = path; reason = val__14 } : record_term_refusal) in
-      let _x_16 = TermTypingRefusal_record _x_15 in
+    | Some val__14 -> (let _x_15 = TermTypingReason_record val__14 in
+      let _x_16 = ({ site = path; reason = _x_15 } : (_, _) located) in
       Some _x_16)
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_7 (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (decls : List (Prod String Effect4.Program.Ty)) (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (names : List String) (values : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_7 (inferArgs : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Terms -> (Option (List Effect4.Program.Ty))) (decls : List (Prod String Effect4.Program.Ty)) (fields : List (Prod String (Prod Bool Effect4.Program.Ty))) (names : List String) (values : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) *)
 
-let program_term_refusal_algebra__lam_7 (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) (decls : (string * Ty.t) list) (fields : (string * (bool * Ty.t)) list) (names : string list) (values : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_7 (infer_args : Ty.t list -> bool -> Terms.t -> Ty.t list option) (decls : (string * Ty.t) list) (fields : (string * (bool * Ty.t)) list) (names : string list) (values : Terms.t * (Ty.t list -> bool -> int list -> int -> (int list, term_typing_reason) located option)) : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option) =
   match values with
     | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_6 fields infer_args fst_1 snd_1 decls names in
       let _x_2 = Term.Record (fields, names, fst_1) in
@@ -23819,9 +23814,9 @@ let program_term_refusal_read_field (decls : (string * Ty.t) list) (mode : Field
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_8 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (name : String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_8 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (name : String) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason) *)
 
-let program_term_refusal_algebra__lam_8 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (decls : (string * Ty.t) list) (mode : FieldReadMode.t) (name : string) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_8 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (decls : (string * Ty.t) list) (mode : FieldReadMode.t) (name : string) (env : Ty.t list) (x_1 : bool) (path : int list) : (int list, term_typing_reason) located option =
   let _x_2 = false in
   let _x_3 = infer env _x_2 fst_1 in
   match _x_3 with
@@ -23833,15 +23828,15 @@ let program_term_refusal_algebra__lam_8 (infer : Ty.t list -> bool -> Term.t -> 
     | Some val__9 -> (let _x_10 = program_term_refusal_read_field decls mode val__9 name in
       match _x_10 with
         | None -> None
-        | Some val__12 -> (let _x_13 = ({ path = path; reason = val__12 } : record_term_refusal) in
-          let _x_14 = TermTypingRefusal_record _x_13 in
+        | Some val__12 -> (let _x_13 = TermTypingReason_record val__12 in
+          let _x_14 = ({ site = path; reason = _x_13 } : (_, _) located) in
           Some _x_14))
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_9 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (name : String) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_9 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (mode : Effect4.Program.FieldReadMode) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) (name : String) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) *)
 
-let program_term_refusal_algebra__lam_9 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (decls : (string * Ty.t) list) (mode : FieldReadMode.t) (target : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (name : string) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_9 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (decls : (string * Ty.t) list) (mode : FieldReadMode.t) (target : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option)) (name : string) : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option) =
   match target with
     | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_8 infer fst_1 snd_1 decls mode name in
       let _x_2 = Term.Field (mode, fst_1, name) in
@@ -23849,9 +23844,9 @@ let program_term_refusal_algebra__lam_9 (infer : Ty.t list -> bool -> Term.t -> 
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_10 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_10 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason) *)
 
-let program_term_refusal_algebra__lam_10 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 fst_2 snd_2 (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_10 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 fst_2 snd_2 (env : Ty.t list) (x_1 : bool) (path : int list) : (int list, term_typing_reason) located option =
   let _x_2 = false in
   let _x_3 = infer env _x_2 fst_1 in
   match _x_3 with
@@ -23872,9 +23867,9 @@ let program_term_refusal_algebra__lam_10 (infer : Ty.t list -> bool -> Term.t ->
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_11 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (name : String) (value : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_11 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) (name : String) (value : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) *)
 
-let program_term_refusal_algebra__lam_11 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (target : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (name : string) (value : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_11 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (target : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option)) (name : string) (value : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option)) : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option) =
   match target with
     | fst_1, snd_1 -> (match value with
         | fst_2, snd_2 -> (let _f_1 = program_term_refusal_algebra__lam_10 infer fst_1 snd_1 fst_2 snd_2 in
@@ -23894,14 +23889,14 @@ let rec array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_tuple_
     match _x_5 with
       | None -> (match (_x_4 : Ty.t) with
           | Ty.Tuple items_6 -> (let _x_7 = List.length items_6 in
-            let _x_8 = TupleTypingReason_outOfBounds _x_7 in
+            let _x_8 = TupleTypingReason_outOfBounds (index, _x_7) in
             let _x_9 = Some _x_8 in
             array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_tuple_index_spec_0_spec_0 index as_ _x_3 stop _x_9)
           | Ty.Prod (_, _) -> (let _x_13 = 2 in
-            let _x_14 = TupleTypingReason_outOfBounds _x_13 in
+            let _x_14 = TupleTypingReason_outOfBounds (index, _x_13) in
             let _x_15 = Some _x_14 in
             array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_tuple_index_spec_0_spec_0 index as_ _x_3 stop _x_15)
-          | _ -> (let _x_17 = TupleTypingReason_nonTuple _x_4 in
+          | _ -> (let _x_17 = TupleTypingReason_nonTuple (index, _x_4) in
             let _x_18 = Some _x_17 in
             array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_tuple_index_spec_0_spec_0 index as_ _x_3 stop _x_18))
       | Some _ -> array_foldr_munsafe_fold_at_list_foldr_tr_at_program_term_refusal_tuple_index_spec_0_spec_0 index as_ _x_3 stop b)
@@ -23931,9 +23926,9 @@ let program_term_refusal_tuple_index (target : Ty.t) (index : int) : tuple_typin
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_12 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (index : Nat) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_12 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (index : Nat) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason) *)
 
-let program_term_refusal_algebra__lam_12 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (index : int) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_12 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (index : int) (env : Ty.t list) (x_1 : bool) (path : int list) : (int list, term_typing_reason) located option =
   let _x_2 = false in
   let _x_3 = infer env _x_2 fst_1 in
   match _x_3 with
@@ -23945,15 +23940,15 @@ let program_term_refusal_algebra__lam_12 (infer : Ty.t list -> bool -> Term.t ->
     | Some val__9 -> (let _x_10 = program_term_refusal_tuple_index val__9 index in
       match _x_10 with
         | None -> None
-        | Some val__12 -> (let _x_13 = ({ path = path; index = index; reason = val__12 } : tuple_term_refusal) in
-          let _x_14 = TermTypingRefusal_tuple _x_13 in
+        | Some val__12 -> (let _x_13 = TermTypingReason_tuple val__12 in
+          let _x_14 = ({ site = path; reason = _x_13 } : (_, _) located) in
           Some _x_14))
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_13 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (index : Nat) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_13 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (target : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) (index : Nat) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) *)
 
-let program_term_refusal_algebra__lam_13 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (target : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (index : int) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_13 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (target : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option)) (index : int) : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option) =
   match target with
     | fst_1, snd_1 -> (let _f_1 = program_term_refusal_algebra__lam_12 infer fst_1 snd_1 index in
       let _x_2 = Term.TupleAt (fst_1, index) in
@@ -23961,9 +23956,9 @@ let program_term_refusal_algebra__lam_13 (infer : Ty.t list -> bool -> Term.t ->
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_14 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (accTy : Option Effect4.Program.Ty) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_14 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (decls : List (Prod String Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (fst : lcAny) (snd : lcAny) (accTy : Option Effect4.Program.Ty) (env : List Effect4.Program.Ty) (x.1 : Bool) (path : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason) *)
 
-let program_term_refusal_algebra__lam_14 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (decls : (string * Ty.t) list) fst_2 snd_2 fst_3 snd_3 (acc_ty : Ty.t option) (env : Ty.t list) (x_1 : bool) (path : int list) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_14 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 (decls : (string * Ty.t) list) fst_2 snd_2 fst_3 snd_3 (acc_ty : Ty.t option) (env : Ty.t list) (x_1 : bool) (path : int list) : (int list, term_typing_reason) located option =
   let _x_2 = false in
   let _x_3 = infer env _x_2 fst_1 in
   match _x_3 with
@@ -23975,8 +23970,8 @@ let program_term_refusal_algebra__lam_14 (infer : Ty.t list -> bool -> Term.t ->
     | Some val__9 -> (let _x_10 = program_checker_list_of_in decls val__9 in
       match _x_10 with
         | None -> (let _x_11 = FoldTypingReason_notList val__9 in
-          let _x_12 = ({ path = path; reason = _x_11 } : fold_term_refusal) in
-          let _x_13 = TermTypingRefusal_fold _x_12 in
+          let _x_12 = TermTypingReason_fold _x_11 in
+          let _x_13 = ({ site = path; reason = _x_12 } : (_, _) located) in
           Some _x_13)
         | Some val__15 -> (let _x_16 = infer env _x_2 fst_2 in
           match _x_16 with
@@ -24001,11 +23996,11 @@ let program_term_refusal_algebra__lam_14 (infer : Ty.t list -> bool -> Term.t ->
                   | Some val__41 -> (let _x_42 = program_ty_normalize val__41 in
                     let _x_43 = program_ty_sub _x_42 _x_26 in
                     if _x_43 then None else (let _x_44 = FoldTypingReason_bodyNotAccumulator (val__41, _y_24) in
-                      let _x_45 = ({ path = path; reason = _x_44 } : fold_term_refusal) in
-                      let _x_46 = TermTypingRefusal_fold _x_45 in
+                      let _x_45 = TermTypingReason_fold _x_44 in
+                      let _x_46 = ({ site = path; reason = _x_45 } : (_, _) located) in
                       Some _x_46))) else (let _x_28 = FoldTypingReason_initialNotAccumulator (val__22, _y_24) in
-                let _x_29 = ({ path = path; reason = _x_28 } : fold_term_refusal) in
-                let _x_30 = TermTypingRefusal_fold _x_29 in
+                let _x_29 = TermTypingReason_fold _x_28 in
+                let _x_30 = ({ site = path; reason = _x_29 } : (_, _) located) in
                 Some _x_30) in
               match acc_ty with
                 | None -> _jp_23 val__22
@@ -24013,9 +24008,9 @@ let program_term_refusal_algebra__lam_14 (infer : Ty.t list -> bool -> Term.t ->
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_15 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (accTy : Option Effect4.Program.Ty) (list : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (init : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (body : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_15 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (decls : List (Prod String Effect4.Program.Ty)) (accTy : Option Effect4.Program.Ty) (list : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) (init : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) (body : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) *)
 
-let program_term_refusal_algebra__lam_15 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (decls : (string * Ty.t) list) (acc_ty : Ty.t option) (list : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (init : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (body : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_15 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (decls : (string * Ty.t) list) (acc_ty : Ty.t option) (list : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option)) (init : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option)) (body : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option)) : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option) =
   match list with
     | fst_1, snd_1 -> (match init with
         | fst_2, snd_2 -> (match body with
@@ -24025,16 +24020,16 @@ let program_term_refusal_algebra__lam_15 (infer : Ty.t list -> bool -> Term.t ->
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_16 (x.1 : List Effect4.Program.Ty) (x.2 : Bool) (x.3 : List Nat) (x.4 : Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_16 (x.1 : List Effect4.Program.Ty) (x.2 : Bool) (x.3 : List Nat) (x.4 : Nat) : Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason) *)
 
-let program_term_refusal_algebra__lam_16 (x_1 : Ty.t list) (x_2 : bool) (x_3 : int list) (x_4 : int) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_16 (x_1 : Ty.t list) (x_2 : bool) (x_3 : int list) (x_4 : int) : (int list, term_typing_reason) located option =
   None
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_17 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (snd : lcAny) (env : List Effect4.Program.Ty) (flag : Bool) (path : List Nat) (index : Nat) : Option Effect4.Program.TermTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_17 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (snd : lcAny) (env : List Effect4.Program.Ty) (flag : Bool) (path : List Nat) (index : Nat) : Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason) *)
 
-let program_term_refusal_algebra__lam_17 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 snd_2 (env : Ty.t list) (flag : bool) (path : int list) (index : int) : term_typing_refusal option =
+let program_term_refusal_algebra__lam_17 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) fst_1 snd_1 snd_2 (env : Ty.t list) (flag : bool) (path : int list) (index : int) : (int list, term_typing_reason) located option =
   let _x_1 = infer env flag fst_1 in
   match _x_1 with
     | None -> (let _x_2 = [] in
@@ -24047,9 +24042,9 @@ let program_term_refusal_algebra__lam_17 (infer : Ty.t list -> bool -> Term.t ->
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_18 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (head : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option Effect4.Program.TermTypingRefusal))) (tail : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal))) : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option Effect4.Program.TermTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.algebra._lam_18 (infer : (List Effect4.Program.Ty) -> Bool -> Effect4.Program.Term -> (Option Effect4.Program.Ty)) (head : Prod Effect4.Program.Term ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) (tail : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason)))) : Prod Effect4.Program.Terms ((List Effect4.Program.Ty) -> Bool -> (List Nat) -> Nat -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) *)
 
-let program_term_refusal_algebra__lam_18 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (head : Term.t * (Ty.t list -> bool -> int list -> term_typing_refusal option)) (tail : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option)) : Terms.t * (Ty.t list -> bool -> int list -> int -> term_typing_refusal option) =
+let program_term_refusal_algebra__lam_18 (infer : Ty.t list -> bool -> Term.t -> Ty.t option) (head : Term.t * (Ty.t list -> bool -> int list -> (int list, term_typing_reason) located option)) (tail : Terms.t * (Ty.t list -> bool -> int list -> int -> (int list, term_typing_reason) located option)) : Terms.t * (Ty.t list -> bool -> int list -> int -> (int list, term_typing_reason) located option) =
   match head with
     | fst_1, snd_1 -> (match tail with
         | fst_2, snd_2 -> (let _f_1 = program_term_refusal_algebra__lam_17 infer fst_1 snd_1 snd_2 in
@@ -24146,20 +24141,24 @@ let program_checker_term_opt (sig_ : _ signature) (env : Ty.t list) (p : int lis
       match _x_6 with
         | None -> (let _x_7 = TypeReason_term t in
           _jp_1 _x_7)
-        | Some val__8 -> (match (val__8 : term_typing_refusal) with
-            | TermTypingRefusal_record why_9 -> (let _x_10 = TypeReason_recordTerm why_9 in
-              _jp_1 _x_10)
-            | TermTypingRefusal_tuple why_11 -> (let _x_12 = TypeReason_tupleTerm why_11 in
-              _jp_1 _x_12)
-            | TermTypingRefusal_fold why_13 -> (let _x_14 = TypeReason_foldTerm why_13 in
-              _jp_1 _x_14)
-            | TermTypingRefusal_unbound (path_15, index_16, depth_17) -> (let _x_18 = TypeReason_unboundVariable (path_15, index_16, depth_17) in
-              _jp_1 _x_18)
-            | TermTypingRefusal_unknownAtom (path_19, atom_20) -> (let _x_21 = TypeReason_unknownAtom (path_19, atom_20) in
-              _jp_1 _x_21)
-            | TermTypingRefusal_refusedArguments (path_22, atom_23, args_24) -> (let _x_25 = TypeReason_refusedArguments (path_22, atom_23, args_24) in
-              _jp_1 _x_25)))
-    | Some val__26 -> Ok val__26
+        | Some val__8 -> (match (val__8 : (_, _) located) with
+            | { site = site_9; reason = reason_10 } -> (match (reason_10 : term_typing_reason) with
+                | TermTypingReason_record why_11 -> (let _x_12 = ({ site = site_9; reason = why_11 } : (_, _) located) in
+                  let _x_13 = TypeReason_recordTerm _x_12 in
+                  _jp_1 _x_13)
+                | TermTypingReason_tuple why_14 -> (let _x_15 = ({ site = site_9; reason = why_14 } : (_, _) located) in
+                  let _x_16 = TypeReason_tupleTerm _x_15 in
+                  _jp_1 _x_16)
+                | TermTypingReason_fold why_17 -> (let _x_18 = ({ site = site_9; reason = why_17 } : (_, _) located) in
+                  let _x_19 = TypeReason_foldTerm _x_18 in
+                  _jp_1 _x_19)
+                | TermTypingReason_unbound (index_20, depth_21) -> (let _x_22 = TypeReason_unboundVariable (site_9, index_20, depth_21) in
+                  _jp_1 _x_22)
+                | TermTypingReason_unknownAtom atom_23 -> (let _x_24 = TypeReason_unknownAtom (site_9, atom_23) in
+                  _jp_1 _x_24)
+                | TermTypingReason_refusedArguments (atom_25, args_26) -> (let _x_27 = TypeReason_refusedArguments (site_9, atom_25, args_26) in
+                  _jp_1 _x_27))))
+    | Some val__28 -> Ok val__28
 
 
 
@@ -24286,26 +24285,30 @@ let rec program_cause_ty (sig_ : _ signature) (env : Ty.t list) (x_1 : CauseTerm
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.inCause (path : List Nat) (x.1 : Effect4.Program.TermTypingRefusal) : Option Effect4.Program.CauseTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.inCause (path : List Nat) (x.1 : Effect4.Located (List Nat) Effect4.Program.TermTypingReason) : Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason) *)
 
-let program_term_refusal_in_cause (path : int list) (x_1 : term_typing_refusal) : cause_typing_refusal option =
-  match (x_1 : term_typing_refusal) with
-    | TermTypingRefusal_record why_2 -> (let _x_3 = ({ cause_path = path; term = why_2 } : record_cause_refusal) in
-      let _x_4 = CauseTypingRefusal_record _x_3 in
-      Some _x_4)
-    | TermTypingRefusal_tuple why_6 -> (let _x_7 = ({ cause_path = path; term = why_6 } : tuple_cause_refusal) in
-      let _x_8 = CauseTypingRefusal_tuple _x_7 in
-      Some _x_8)
-    | TermTypingRefusal_fold why_10 -> (let _x_11 = ({ cause_path = path; term = why_10 } : fold_cause_refusal) in
-      let _x_12 = CauseTypingRefusal_fold _x_11 in
-      Some _x_12)
-    | _ -> None
+let program_term_refusal_in_cause (path : int list) (x_1 : (int list, term_typing_reason) located) : (int list, cause_typing_reason) located option =
+  match (x_1 : (_, _) located) with
+    | { site = site_2; reason = reason_3 } -> (match (reason_3 : term_typing_reason) with
+        | TermTypingReason_record why_4 -> (let _x_5 = ({ site = site_2; reason = why_4 } : (_, _) located) in
+          let _x_6 = CauseTypingReason_record _x_5 in
+          let _x_7 = ({ site = path; reason = _x_6 } : (_, _) located) in
+          Some _x_7)
+        | TermTypingReason_tuple why_9 -> (let _x_10 = ({ site = site_2; reason = why_9 } : (_, _) located) in
+          let _x_11 = CauseTypingReason_tuple _x_10 in
+          let _x_12 = ({ site = path; reason = _x_11 } : (_, _) located) in
+          Some _x_12)
+        | TermTypingReason_fold why_14 -> (let _x_15 = ({ site = site_2; reason = why_14 } : (_, _) located) in
+          let _x_16 = CauseTypingReason_fold _x_15 in
+          let _x_17 = ({ site = path; reason = _x_16 } : (_, _) located) in
+          Some _x_17)
+        | _ -> None)
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_0 (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (term : Effect4.Program.Term) (diagnose : Effect4.Program.Term -> (Option Effect4.Program.TermTypingRefusal)) (path : List Nat) : Option Effect4.Program.CauseTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_0 (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (term : Effect4.Program.Term) (diagnose : Effect4.Program.Term -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) (path : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason) *)
 
-let program_term_refusal_cause_algebra__lam_0 (infer_term : Term.t -> Ty.t option) (term : Term.t) (diagnose : Term.t -> term_typing_refusal option) (path : int list) : cause_typing_refusal option =
+let program_term_refusal_cause_algebra__lam_0 (infer_term : Term.t -> Ty.t option) (term : Term.t) (diagnose : Term.t -> (int list, term_typing_reason) located option) (path : int list) : (int list, cause_typing_reason) located option =
   let _x_1 = infer_term term in
   match _x_1 with
     | None -> (let _x_2 = diagnose term in
@@ -24316,27 +24319,27 @@ let program_term_refusal_cause_algebra__lam_0 (infer_term : Term.t -> Ty.t optio
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_1 (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option Effect4.Program.TermTypingRefusal)) (term : Effect4.Program.Term) : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option Effect4.Program.CauseTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_1 (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) (term : Effect4.Program.Term) : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason))) *)
 
-let program_term_refusal_cause_algebra__lam_1 (infer_term : Term.t -> Ty.t option) (diagnose : Term.t -> term_typing_refusal option) (term : Term.t) : CauseTerm.t * (int list -> cause_typing_refusal option) =
+let program_term_refusal_cause_algebra__lam_1 (infer_term : Term.t -> Ty.t option) (diagnose : Term.t -> (int list, term_typing_reason) located option) (term : Term.t) : CauseTerm.t * (int list -> (int list, cause_typing_reason) located option) =
   let _f_1 = program_term_refusal_cause_algebra__lam_0 infer_term term diagnose in
   let _x_2 = CauseTerm.Fail term in
   _x_2, _f_1
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_3 (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option Effect4.Program.TermTypingRefusal)) (term : Effect4.Program.Term) : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option Effect4.Program.CauseTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_3 (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) (term : Effect4.Program.Term) : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason))) *)
 
-let program_term_refusal_cause_algebra__lam_3 (infer_term : Term.t -> Ty.t option) (diagnose : Term.t -> term_typing_refusal option) (term : Term.t) : CauseTerm.t * (int list -> cause_typing_refusal option) =
+let program_term_refusal_cause_algebra__lam_3 (infer_term : Term.t -> Ty.t option) (diagnose : Term.t -> (int list, term_typing_reason) located option) (term : Term.t) : CauseTerm.t * (int list -> (int list, cause_typing_reason) located option) =
   let _f_1 = program_term_refusal_cause_algebra__lam_0 infer_term term diagnose in
   let _x_2 = CauseTerm.Die term in
   _x_2, _f_1
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_2 (term : Option Effect4.Program.Term) (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option Effect4.Program.TermTypingRefusal)) (path : List Nat) : Option Effect4.Program.CauseTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_2 (term : Option Effect4.Program.Term) (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) (path : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason) *)
 
-let program_term_refusal_cause_algebra__lam_2 (term : Term.t option) (infer_term : Term.t -> Ty.t option) (diagnose : Term.t -> term_typing_refusal option) (path : int list) : cause_typing_refusal option =
+let program_term_refusal_cause_algebra__lam_2 (term : Term.t option) (infer_term : Term.t -> Ty.t option) (diagnose : Term.t -> (int list, term_typing_reason) located option) (path : int list) : (int list, cause_typing_reason) located option =
   match term with
     | None -> None
     | Some val__2 -> (let _x_3 = infer_term val__2 in
@@ -24349,18 +24352,18 @@ let program_term_refusal_cause_algebra__lam_2 (term : Term.t option) (infer_term
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_4 (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option Effect4.Program.TermTypingRefusal)) (term : Option Effect4.Program.Term) : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option Effect4.Program.CauseTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_4 (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) (term : Option Effect4.Program.Term) : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason))) *)
 
-let program_term_refusal_cause_algebra__lam_4 (infer_term : Term.t -> Ty.t option) (diagnose : Term.t -> term_typing_refusal option) (term : Term.t option) : CauseTerm.t * (int list -> cause_typing_refusal option) =
+let program_term_refusal_cause_algebra__lam_4 (infer_term : Term.t -> Ty.t option) (diagnose : Term.t -> (int list, term_typing_reason) located option) (term : Term.t option) : CauseTerm.t * (int list -> (int list, cause_typing_reason) located option) =
   let _f_1 = program_term_refusal_cause_algebra__lam_2 term infer_term diagnose in
   let _x_2 = CauseTerm.Interrupt term in
   _x_2, _f_1
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_5 (inferCause : Effect4.Program.CauseTerm -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (snd : lcAny) (path : List Nat) : Option Effect4.Program.CauseTypingRefusal *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_5 (inferCause : Effect4.Program.CauseTerm -> (Option Effect4.Program.Ty)) (fst : lcAny) (snd : lcAny) (snd : lcAny) (path : List Nat) : Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason) *)
 
-let program_term_refusal_cause_algebra__lam_5 (infer_cause : CauseTerm.t -> Ty.t option) fst_1 snd_1 snd_2 (path : int list) : cause_typing_refusal option =
+let program_term_refusal_cause_algebra__lam_5 (infer_cause : CauseTerm.t -> Ty.t option) fst_1 snd_1 snd_2 (path : int list) : (int list, cause_typing_reason) located option =
   let _x_1 = infer_cause fst_1 in
   match _x_1 with
     | None -> (let _x_2 = 0 in
@@ -24376,9 +24379,9 @@ let program_term_refusal_cause_algebra__lam_5 (infer_cause : CauseTerm.t -> Ty.t
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_6 (inferCause : Effect4.Program.CauseTerm -> (Option Effect4.Program.Ty)) (left : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option Effect4.Program.CauseTypingRefusal))) (right : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option Effect4.Program.CauseTypingRefusal))) : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option Effect4.Program.CauseTypingRefusal)) *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra._lam_6 (inferCause : Effect4.Program.CauseTerm -> (Option Effect4.Program.Ty)) (left : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason)))) (right : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason)))) : Prod Effect4.Program.CauseTerm ((List Nat) -> (Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason))) *)
 
-let program_term_refusal_cause_algebra__lam_6 (infer_cause : CauseTerm.t -> Ty.t option) (left : CauseTerm.t * (int list -> cause_typing_refusal option)) (right : CauseTerm.t * (int list -> cause_typing_refusal option)) : CauseTerm.t * (int list -> cause_typing_refusal option) =
+let program_term_refusal_cause_algebra__lam_6 (infer_cause : CauseTerm.t -> Ty.t option) (left : CauseTerm.t * (int list -> (int list, cause_typing_reason) located option)) (right : CauseTerm.t * (int list -> (int list, cause_typing_reason) located option)) : CauseTerm.t * (int list -> (int list, cause_typing_reason) located option) =
   match left with
     | fst_1, snd_1 -> (match right with
         | fst_2, snd_2 -> (let _f_1 = program_term_refusal_cause_algebra__lam_5 infer_cause fst_1 snd_1 snd_2 in
@@ -24387,9 +24390,9 @@ let program_term_refusal_cause_algebra__lam_6 (infer_cause : CauseTerm.t -> Ty.t
 
 
 
-(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra (inferCause : Effect4.Program.CauseTerm -> (Option Effect4.Program.Ty)) (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option Effect4.Program.TermTypingRefusal)) : Effect4.Program.CauseTermAlgebra lcAny *)
+(* LCNF mono: _private.Effect4.Program.Typing.TermRefusal.0.Effect4.Program.TermRefusal.causeAlgebra (inferCause : Effect4.Program.CauseTerm -> (Option Effect4.Program.Ty)) (inferTerm : Effect4.Program.Term -> (Option Effect4.Program.Ty)) (diagnose : Effect4.Program.Term -> (Option (Effect4.Located (List Nat) Effect4.Program.TermTypingReason))) : Effect4.Program.CauseTermAlgebra lcAny *)
 
-let program_term_refusal_cause_algebra (infer_cause : CauseTerm.t -> Ty.t option) (infer_term : Term.t -> Ty.t option) (diagnose : Term.t -> term_typing_refusal option) : _ cause_term_algebra =
+let program_term_refusal_cause_algebra (infer_cause : CauseTerm.t -> Ty.t option) (infer_term : Term.t -> Ty.t option) (diagnose : Term.t -> (int list, term_typing_reason) located option) : _ cause_term_algebra =
   let _f_1 = program_term_refusal_cause_algebra__lam_1 infer_term diagnose in
   let _f_2 = program_term_refusal_cause_algebra__lam_3 infer_term diagnose in
   let _f_3 = program_term_refusal_cause_algebra__lam_4 infer_term diagnose in
@@ -24415,9 +24418,9 @@ let rec program_cata_cause (alg : _ cause_term_algebra) (node : CauseTerm.t) =
 
 
 
-(* LCNF mono: Effect4.Program.TermRefusal.diagnoseCause._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (cause : Effect4.Program.CauseTerm) : Option Effect4.Program.CauseTypingRefusal *)
+(* LCNF mono: Effect4.Program.TermRefusal.diagnoseCause._redArg (sig : Effect4.Program.Signature lcAny) (env : List Effect4.Program.Ty) (cause : Effect4.Program.CauseTerm) : Option (Effect4.Located (List Nat) Effect4.Program.CauseTypingReason) *)
 
-let program_term_refusal_diagnose_cause (sig_ : _ signature) (env : Ty.t list) (cause : CauseTerm.t) : cause_typing_refusal option =
+let program_term_refusal_diagnose_cause (sig_ : _ signature) (env : Ty.t list) (cause : CauseTerm.t) : (int list, cause_typing_reason) located option =
   let _x_1 = fun _eta -> program_cause_ty sig_ env _eta in
   let _x_2 = fun _eta_1 -> program_term_ty sig_ env _eta_1 in
   let _x_3 = fun _eta_2 -> program_term_refusal_diagnose sig_ env _eta_2 in
@@ -24440,14 +24443,18 @@ let program_checker_cause_opt (sig_ : _ signature) (env : Ty.t list) (p : int li
       match _x_6 with
         | None -> (let _x_7 = TypeReason_cause cause in
           _jp_1 _x_7)
-        | Some val__8 -> (match (val__8 : cause_typing_refusal) with
-            | CauseTypingRefusal_record why_9 -> (let _x_10 = TypeReason_recordCause why_9 in
-              _jp_1 _x_10)
-            | CauseTypingRefusal_tuple why_11 -> (let _x_12 = TypeReason_tupleCause why_11 in
-              _jp_1 _x_12)
-            | CauseTypingRefusal_fold why_13 -> (let _x_14 = TypeReason_foldCause why_13 in
-              _jp_1 _x_14)))
-    | Some val__15 -> Ok val__15
+        | Some val__8 -> (match (val__8 : (_, _) located) with
+            | { site = site_9; reason = reason_10 } -> (match (reason_10 : cause_typing_reason) with
+                | CauseTypingReason_record why_11 -> (let _x_12 = ({ site = site_9; reason = why_11 } : (_, _) located) in
+                  let _x_13 = TypeReason_recordCause _x_12 in
+                  _jp_1 _x_13)
+                | CauseTypingReason_tuple why_14 -> (let _x_15 = ({ site = site_9; reason = why_14 } : (_, _) located) in
+                  let _x_16 = TypeReason_tupleCause _x_15 in
+                  _jp_1 _x_16)
+                | CauseTypingReason_fold why_17 -> (let _x_18 = ({ site = site_9; reason = why_17 } : (_, _) located) in
+                  let _x_19 = TypeReason_foldCause _x_18 in
+                  _jp_1 _x_19))))
+    | Some val__20 -> Ok val__20
 
 
 
@@ -25979,14 +25986,14 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
     | Eff.Iterate (cursor_ty_384, initial_385, test_386, step_387, result_388, body_389) -> (let _x_390 = program_checker_term_opt sig_ env p initial_385 in
       match _x_390 with
         | Error a_391 -> Error a_391
-        | Ok a_393 -> (let[@local always] _jp_394 = fun _y_395 _y_396 _y_397 _y_398 -> if _y_395 then (let _x_402 = program_ty_normalize a_393 in
-            let _x_403 = program_ty_normalize _y_398 in
+        | Ok a_393 -> (let[@local always] _jp_394 = fun _y_395 _y_396 _y_397 _y_398 -> if _y_396 then (let _x_402 = program_ty_normalize a_393 in
+            let _x_403 = program_ty_normalize _y_397 in
             let _x_404 = program_ty_sub _x_402 _x_403 in
-            if _x_404 then (let _x_408 = TypeReason_stepNotCursor (_y_396, _y_398) in
+            if _x_404 then (let _x_408 = TypeReason_stepNotCursor (_y_398, _y_397) in
               let _x_409 = ({ site = p; reason = _x_408 } : (_, _) located) in
-              Error _x_409) else (let _x_405 = TypeReason_initialNotCursor (a_393, _y_398) in
+              Error _x_409) else (let _x_405 = TypeReason_initialNotCursor (a_393, _y_397) in
               let _x_406 = ({ site = p; reason = _x_405 } : (_, _) located) in
-              Error _x_406)) else (let _x_399 = TypeReason_predicateNotBool _y_397 in
+              Error _x_406)) else (let _x_399 = TypeReason_predicateNotBool _y_395 in
             let _x_400 = ({ site = p; reason = _x_399 } : (_, _) located) in
             Error _x_400) in
           let[@local always] _jp_411 = fun _y_412 -> let _x_413 = [] in
@@ -26020,7 +26027,7 @@ let rec program_checker_check (sig_ : _ signature) (env : Ty.t list) (p : int li
                                 if _x_442 then (let _x_443 = program_ty_normalize a_432 in
                                   let _x_444 = program_ty_sub _x_443 _x_441 in
                                   if _x_444 then (let _x_445 = ({ EffTy.answer = a_436; EffTy.error = error_22; EffTy.requires = requires_20 } : EffTy.t) in
-                                    Ok _x_445) else _jp_394 _x_439 a_432 a_419 _y_412) else _jp_394 _x_439 a_432 a_419 _y_412) else _jp_394 _x_439 a_432 a_419 _y_412))))) in
+                                    Ok _x_445) else _jp_394 a_419 _x_439 _y_412 a_432) else _jp_394 a_419 _x_439 _y_412 a_432) else _jp_394 a_419 _x_439 _y_412 a_432))))) in
           match cursor_ty_384 with
             | None -> _jp_411 a_393
             | Some val__447 -> _jp_411 val__447))
@@ -30588,10 +30595,10 @@ let store_program_gen_eff_ty_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_FoldTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_fold_typing_reason_c_shape_doc : shape_doc =
-  let _x_1 = "FoldTypingReason" in
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_fold_typing_reason_c_shape_doc : shape_doc =
+  let _x_1 = "Effect4.Program.FoldTypingReason" in
   let _x_2 = "notList" in
   let _x_3 = 0 in
   let _x_4 = "list" in
@@ -30628,13 +30635,13 @@ let store_refusals_gen_fold_typing_reason_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldTermRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_FoldTypingReason_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_fold_term_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_fold_typing_reason_c_shape_doc in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_fold_typing_reason_41_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_fold_typing_reason_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "FoldTermRefusal" in
-      let _x_3 = "path" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Located(List(Nat), Effect4.Program.FoldTypingReason)" in
+      let _x_3 = "site" in
       let _x_4 = Shape_nat in
       let _x_5 = [] in
       let _x_6 = Shape_list _x_4 in
@@ -30649,18 +30656,18 @@ let store_refusals_gen_fold_term_refusal_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldCauseRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_FoldTypingReason_41__41_C.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_fold_cause_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_fold_term_refusal_c_shape_doc in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_fold_typing_reason_41__41_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_fold_typing_reason_41_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "FoldCauseRefusal" in
-      let _x_3 = "causePath" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Located(List(Nat), Effect4.Located(List(Nat), Effect4.Program.FoldTypingReason))" in
+      let _x_3 = "site" in
       let _x_4 = Shape_nat in
       let _x_5 = [] in
       let _x_6 = Shape_list _x_4 in
       let _x_7 = _x_3, _x_6 in
-      let _x_8 = "term" in
+      let _x_8 = "reason" in
       let _x_9 = _x_8, root in
       let _x_10 = _x_9 :: _x_5 in
       let _x_11 = _x_7 :: _x_10 in
@@ -30670,71 +30677,71 @@ let store_refusals_gen_fold_cause_refusal_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FormationReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_FormationReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_formation_reason_c_shape_doc : shape_doc =
-  let _x_1 = "FormationReason" in
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_formation_reason_c_shape_doc : shape_doc =
+  let _x_1 = "Effect4.Program.FormationReason" in
   let _x_2 = "repeatedField" in
   let _x_3 = 0 in
   let _x_4 = "name" in
   let _x_5 = Shape_string in
   let _x_6 = [] in
   let _x_7 = _x_4, _x_5 in
-  let _x_8 = _x_7 :: _x_6 in
-  let _x_9 = _x_3, _x_8 in
-  let _x_10 = _x_2, _x_9 in
-  let _x_11 = "mapKey" in
-  let _x_12 = 1 in
-  let _x_13 = _x_12, _x_6 in
-  let _x_14 = _x_11, _x_13 in
-  let _x_15 = "deferredError" in
-  let _x_16 = 2 in
-  let _x_17 = _x_16, _x_6 in
-  let _x_18 = _x_15, _x_17 in
-  let _x_19 = "typeVariable" in
-  let _x_20 = 3 in
-  let _x_21 = _x_20, _x_6 in
-  let _x_22 = _x_19, _x_21 in
-  let _x_23 = _x_22 :: _x_6 in
-  let _x_24 = _x_18 :: _x_23 in
-  let _x_25 = _x_14 :: _x_24 in
-  let _x_26 = _x_10 :: _x_25 in
-  let _x_27 = Shape_sum (_x_1, _x_26) in
-  ({ root = _x_27; defs = _x_6 } : shape_doc)
+  let _x_8 = "ty" in
+  let _x_9 = "Ty" in
+  let _x_10 = Shape_named _x_9 in
+  let _x_11 = store_program_gen_ty_c_defs in
+  let _x_12 = _x_8, _x_10 in
+  let _x_13 = _x_12 :: _x_6 in
+  let _x_14 = _x_7 :: _x_13 in
+  let _x_15 = _x_3, _x_14 in
+  let _x_16 = _x_2, _x_15 in
+  let _x_17 = "mapKey" in
+  let _x_18 = 1 in
+  let _x_19 = _x_18, _x_13 in
+  let _x_20 = _x_17, _x_19 in
+  let _x_21 = "deferredError" in
+  let _x_22 = 2 in
+  let _x_23 = _x_22, _x_13 in
+  let _x_24 = _x_21, _x_23 in
+  let _x_25 = "typeVariable" in
+  let _x_26 = 3 in
+  let _x_27 = _x_26, _x_13 in
+  let _x_28 = _x_25, _x_27 in
+  let _x_29 = _x_28 :: _x_6 in
+  let _x_30 = _x_24 :: _x_29 in
+  let _x_31 = _x_20 :: _x_30 in
+  let _x_32 = _x_16 :: _x_31 in
+  let _x_33 = Shape_sum (_x_1, _x_32) in
+  let _x_34 = _x_6 @ _x_11 in
+  ({ root = _x_33; defs = _x_34 } : shape_doc)
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FormationRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_String_41__41__32__40__95_root_95__46_Effect4_46_Program_46_FormationReason_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_formation_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_formation_reason_c_shape_doc in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_string_41__41__32__40__95_root_95__46_effect4_46_program_46_formation_reason_41_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_formation_reason_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; _ } -> (let _x_2 = [] in
-      let _x_3 = "FormationRefusal" in
-      let _x_4 = "path" in
-      let _x_5 = Shape_string in
-      let _x_6 = Shape_list _x_5 in
-      let _x_7 = _x_4, _x_6 in
-      let _x_8 = "ty" in
-      let _x_9 = "Ty" in
-      let _x_10 = Shape_named _x_9 in
-      let _x_11 = store_program_gen_ty_c_defs in
-      let _x_12 = _x_8, _x_10 in
-      let _x_13 = "reason" in
-      let _x_14 = _x_13, root in
-      let _x_15 = _x_14 :: _x_2 in
-      let _x_16 = _x_12 :: _x_15 in
-      let _x_17 = _x_7 :: _x_16 in
-      let _x_18 = Shape_struct (_x_3, _x_17) in
-      let _x_19 = _x_2 @ _x_11 in
-      let _x_20 = _x_19 @ _x_2 in
-      ({ root = _x_18; defs = _x_20 } : shape_doc))
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Located(List(String), Effect4.Program.FormationReason)" in
+      let _x_3 = "site" in
+      let _x_4 = Shape_string in
+      let _x_5 = [] in
+      let _x_6 = Shape_list _x_4 in
+      let _x_7 = _x_3, _x_6 in
+      let _x_8 = "reason" in
+      let _x_9 = _x_8, root in
+      let _x_10 = _x_9 :: _x_5 in
+      let _x_11 = _x_7 :: _x_10 in
+      let _x_12 = Shape_struct (_x_2, _x_11) in
+      let _x_13 = _x_5 @ defs in
+      ({ root = _x_12; defs = _x_13 } : shape_doc))
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_RecordTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_record_typing_reason_c_shape_doc : shape_doc =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_record_typing_reason_c_shape_doc : shape_doc =
   let _x_1 = 0 in
   let _x_2 = "name" in
   let _x_3 = Shape_string in
@@ -30759,7 +30766,7 @@ let store_refusals_gen_record_typing_reason_c_shape_doc : shape_doc =
   let _x_22 = "values" in
   let _x_23 = _x_22, _x_20 in
   let _x_24 = _x_23 :: _x_4 in
-  let _x_25 = store_refusals_gen_formation_refusal_c_shape_doc in
+  let _x_25 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_string_41__41__32__40__95_root_95__46_effect4_46_program_46_formation_reason_41_c_shape_doc in
   match (_x_25 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_26 = 2 in
       let _x_27 = _x_26, _x_6 in
@@ -30769,7 +30776,7 @@ let store_refusals_gen_record_typing_reason_c_shape_doc : shape_doc =
       let _x_31 = _x_30 :: _x_4 in
       let _x_32 = _x_5 :: _x_31 in
       let _x_33 = _x_28, _x_32 in
-      let _x_34 = "RecordTypingReason" in
+      let _x_34 = "Effect4.Program.RecordTypingReason" in
       let _x_35 = "duplicateDeclaration" in
       let _x_36 = _x_35, _x_7 in
       let _x_37 = "duplicateSupplied" in
@@ -30820,13 +30827,13 @@ let store_refusals_gen_record_typing_reason_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordTermRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_RecordTypingReason_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_record_term_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_record_typing_reason_c_shape_doc in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_record_typing_reason_41_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_record_typing_reason_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "RecordTermRefusal" in
-      let _x_3 = "path" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Located(List(Nat), Effect4.Program.RecordTypingReason)" in
+      let _x_3 = "site" in
       let _x_4 = Shape_nat in
       let _x_5 = [] in
       let _x_6 = Shape_list _x_4 in
@@ -30841,18 +30848,18 @@ let store_refusals_gen_record_term_refusal_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordCauseRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_RecordTypingReason_41__41_C.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_record_cause_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_record_term_refusal_c_shape_doc in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_record_typing_reason_41__41_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_record_typing_reason_41_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "RecordCauseRefusal" in
-      let _x_3 = "causePath" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Located(List(Nat), Effect4.Located(List(Nat), Effect4.Program.RecordTypingReason))" in
+      let _x_3 = "site" in
       let _x_4 = Shape_nat in
       let _x_5 = [] in
       let _x_6 = Shape_list _x_4 in
       let _x_7 = _x_3, _x_6 in
-      let _x_8 = "term" in
+      let _x_8 = "reason" in
       let _x_9 = _x_8, root in
       let _x_10 = _x_9 :: _x_5 in
       let _x_11 = _x_7 :: _x_10 in
@@ -30862,74 +30869,74 @@ let store_refusals_gen_record_cause_refusal_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_TupleTypingReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_tuple_typing_reason_c_shape_doc : shape_doc =
-  let _x_1 = "TupleTypingReason" in
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_tuple_typing_reason_c_shape_doc : shape_doc =
+  let _x_1 = "Effect4.Program.TupleTypingReason" in
   let _x_2 = "nonTuple" in
   let _x_3 = 0 in
-  let _x_4 = "branch" in
-  let _x_5 = "Ty" in
-  let _x_6 = Shape_named _x_5 in
-  let _x_7 = store_program_gen_ty_c_defs in
-  let _x_8 = _x_4, _x_6 in
-  let _x_9 = [] in
-  let _x_10 = _x_8 :: _x_9 in
-  let _x_11 = _x_3, _x_10 in
-  let _x_12 = _x_2, _x_11 in
-  let _x_13 = "outOfBounds" in
-  let _x_14 = 1 in
-  let _x_15 = "arity" in
-  let _x_16 = Shape_nat in
-  let _x_17 = _x_15, _x_16 in
-  let _x_18 = _x_17 :: _x_9 in
-  let _x_19 = _x_14, _x_18 in
-  let _x_20 = _x_13, _x_19 in
-  let _x_21 = _x_20 :: _x_9 in
-  let _x_22 = _x_12 :: _x_21 in
-  let _x_23 = Shape_sum (_x_1, _x_22) in
-  let _x_24 = _x_7 @ _x_9 in
-  ({ root = _x_23; defs = _x_24 } : shape_doc)
+  let _x_4 = "index" in
+  let _x_5 = Shape_nat in
+  let _x_6 = [] in
+  let _x_7 = _x_4, _x_5 in
+  let _x_8 = "branch" in
+  let _x_9 = "Ty" in
+  let _x_10 = Shape_named _x_9 in
+  let _x_11 = store_program_gen_ty_c_defs in
+  let _x_12 = _x_8, _x_10 in
+  let _x_13 = _x_12 :: _x_6 in
+  let _x_14 = _x_7 :: _x_13 in
+  let _x_15 = _x_3, _x_14 in
+  let _x_16 = _x_2, _x_15 in
+  let _x_17 = "outOfBounds" in
+  let _x_18 = 1 in
+  let _x_19 = "arity" in
+  let _x_20 = _x_19, _x_5 in
+  let _x_21 = _x_20 :: _x_6 in
+  let _x_22 = _x_7 :: _x_21 in
+  let _x_23 = _x_18, _x_22 in
+  let _x_24 = _x_17, _x_23 in
+  let _x_25 = _x_24 :: _x_6 in
+  let _x_26 = _x_16 :: _x_25 in
+  let _x_27 = Shape_sum (_x_1, _x_26) in
+  let _x_28 = _x_6 @ _x_11 in
+  ({ root = _x_27; defs = _x_28 } : shape_doc)
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleTermRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TupleTypingReason_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_tuple_term_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_tuple_typing_reason_c_shape_doc in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_tuple_typing_reason_41_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_tuple_typing_reason_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = Shape_nat in
-      let _x_3 = Shape_list _x_2 in
-      let _x_4 = "TupleTermRefusal" in
-      let _x_5 = "path" in
-      let _x_6 = [] in
-      let _x_7 = _x_5, _x_3 in
-      let _x_8 = "index" in
-      let _x_9 = _x_8, _x_2 in
-      let _x_10 = "reason" in
-      let _x_11 = _x_10, root in
-      let _x_12 = _x_11 :: _x_6 in
-      let _x_13 = _x_9 :: _x_12 in
-      let _x_14 = _x_7 :: _x_13 in
-      let _x_15 = Shape_struct (_x_4, _x_14) in
-      let _x_16 = _x_6 @ _x_6 in
-      let _x_17 = _x_16 @ defs in
-      ({ root = _x_15; defs = _x_17 } : shape_doc))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleCauseRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
-
-let store_refusals_gen_tuple_cause_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_tuple_term_refusal_c_shape_doc in
-  match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "TupleCauseRefusal" in
-      let _x_3 = "causePath" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Located(List(Nat), Effect4.Program.TupleTypingReason)" in
+      let _x_3 = "site" in
       let _x_4 = Shape_nat in
       let _x_5 = [] in
       let _x_6 = Shape_list _x_4 in
       let _x_7 = _x_3, _x_6 in
-      let _x_8 = "term" in
+      let _x_8 = "reason" in
+      let _x_9 = _x_8, root in
+      let _x_10 = _x_9 :: _x_5 in
+      let _x_11 = _x_7 :: _x_10 in
+      let _x_12 = Shape_struct (_x_2, _x_11) in
+      let _x_13 = _x_5 @ defs in
+      ({ root = _x_12; defs = _x_13 } : shape_doc))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TupleTypingReason_41__41_C.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_tuple_typing_reason_41__41_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_tuple_typing_reason_41_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Located(List(Nat), Effect4.Located(List(Nat), Effect4.Program.TupleTypingReason))" in
+      let _x_3 = "site" in
+      let _x_4 = Shape_nat in
+      let _x_5 = [] in
+      let _x_6 = Shape_list _x_4 in
+      let _x_7 = _x_3, _x_6 in
+      let _x_8 = "reason" in
       let _x_9 = _x_8, root in
       let _x_10 = _x_9 :: _x_5 in
       let _x_11 = _x_7 :: _x_10 in
@@ -30981,10 +30988,10 @@ let store_program_gen_lit_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RefFaultC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_RefFaultC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_ref_fault_c_shape_doc : shape_doc =
-  let _x_1 = "RefFault" in
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_ref_fault_c_shape_doc : shape_doc =
+  let _x_1 = "Effect4.Program.RefFault" in
   let _x_2 = "notBefore" in
   let _x_3 = 0 in
   let _x_4 = [] in
@@ -31298,9 +31305,9 @@ let store_program_gen_cause_term_c_defs : (string * shape) list =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.TypeReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_TypeReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_type_reason_c_shape_doc : shape_doc =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_type_reason_c_shape_doc : shape_doc =
   let _x_1 = store_program_gen_eff_ty_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = "name" in
@@ -31333,13 +31340,13 @@ let store_refusals_gen_type_reason_c_shape_doc : shape_doc =
       let _x_29 = "Ty" in
       let _x_30 = Shape_named _x_29 in
       let _x_31 = Shape_list _x_30 in
-      let _x_32 = store_refusals_gen_fold_term_refusal_c_shape_doc in
+      let _x_32 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_fold_typing_reason_41_c_shape_doc in
       match (_x_32 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_33 = _x_13, _x_31 in
           let _x_34 = _x_33 :: _x_4 in
           let _x_35 = "result" in
           let _x_36 = _x_35, _x_30 in
-          let _x_37 = store_refusals_gen_fold_cause_refusal_c_shape_doc in
+          let _x_37 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_fold_typing_reason_41__41_c_shape_doc in
           match (_x_37 : shape_doc) with
             | { root = root_2; defs = defs_2 } -> (let _x_38 = "expected" in
               let _x_39 = _x_38, _x_30 in
@@ -31352,18 +31359,18 @@ let store_refusals_gen_type_reason_c_shape_doc : shape_doc =
               let _x_46 = "t" in
               let _x_47 = _x_46, _x_30 in
               let _x_48 = _x_47 :: _x_4 in
-              let _x_49 = store_refusals_gen_record_cause_refusal_c_shape_doc in
+              let _x_49 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_record_typing_reason_41__41_c_shape_doc in
               match (_x_49 : shape_doc) with
                 | { root = root_3; defs = defs_3 } -> (let _x_50 = 37 in
                   let _x_51 = _x_50, _x_4 in
                   let _x_52 = "decls" in
                   let _x_53 = _x_52, _x_11 in
-                  let _x_54 = store_refusals_gen_tuple_term_refusal_c_shape_doc in
+                  let _x_54 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_tuple_typing_reason_41_c_shape_doc in
                   match (_x_54 : shape_doc) with
                     | { root = root_4; defs = defs_4 } -> (let _x_55 = "bodies" in
                       let _x_56 = _x_55, _x_11 in
                       let _x_57 = _x_56 :: _x_4 in
-                      let _x_58 = store_refusals_gen_tuple_cause_refusal_c_shape_doc in
+                      let _x_58 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_tuple_typing_reason_41__41_c_shape_doc in
                       match (_x_58 : shape_doc) with
                         | { root = root_5; defs = defs_5 } -> (let _x_59 = _x_41, root_3 in
                           let _x_60 = _x_59 :: _x_4 in
@@ -31388,13 +31395,13 @@ let store_refusals_gen_type_reason_c_shape_doc : shape_doc =
                           match (_x_78 : shape_doc) with
                             | { root = root_6; defs = defs_6 } -> (let _x_79 = 22 in
                               let _x_80 = _x_79, _x_4 in
-                              let _x_81 = store_refusals_gen_formation_refusal_c_shape_doc in
+                              let _x_81 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_string_41__41__32__40__95_root_95__46_effect4_46_program_46_formation_reason_41_c_shape_doc in
                               match (_x_81 : shape_doc) with
                                 | { root = root_7; defs = defs_7 } -> (let _x_82 = _x_36 :: _x_40 in
                                   let _x_83 = _x_62 :: _x_82 in
                                   let _x_84 = 23 in
                                   let _x_85 = _x_84, _x_4 in
-                                  let _x_86 = store_refusals_gen_record_term_refusal_c_shape_doc in
+                                  let _x_86 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_record_typing_reason_41_c_shape_doc in
                                   match (_x_86 : shape_doc) with
                                     | { root = root_8; defs = defs_8 } -> (let _x_87 = "value" in
                                       let _x_88 = _x_87, root_6 in
@@ -31409,7 +31416,7 @@ let store_refusals_gen_type_reason_c_shape_doc : shape_doc =
                                           let _x_96 = _x_95, root_9 in
                                           let _x_97 = _x_96 :: _x_4 in
                                           let _x_98 = _x_87, _x_30 in
-                                          let _x_99 = store_refusals_gen_ref_fault_c_shape_doc in
+                                          let _x_99 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_ref_fault_c_shape_doc in
                                           match (_x_99 : shape_doc) with
                                             | { root = root_10; _ } -> (let _x_100 = 36 in
                                               let _x_101 = _x_100, _x_48 in
@@ -31442,7 +31449,7 @@ let store_refusals_gen_type_reason_c_shape_doc : shape_doc =
                                                   let _x_127 = _x_126 :: _x_4 in
                                                   let _x_128 = 15 in
                                                   let _x_129 = _x_128, _x_48 in
-                                                  let _x_130 = "TypeReason" in
+                                                  let _x_130 = "Effect4.Program.TypeReason" in
                                                   let _x_131 = "definitionColumns" in
                                                   let _x_132 = 39 in
                                                   let _x_133 = _x_132, _x_6 in
@@ -31715,12 +31722,12 @@ let store_refusals_gen_type_reason_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.LocatedC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TypeReason_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_located_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_type_reason_c_shape_doc in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_type_reason_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = "Located" in
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Located(List(Nat), Effect4.Program.TypeReason)" in
       let _x_3 = "site" in
       let _x_4 = Shape_nat in
       let _x_5 = [] in
@@ -31736,10 +31743,10 @@ let store_refusals_gen_located_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RowReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_RowReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_row_reason_c_shape_doc : shape_doc =
-  let _x_1 = "RowReason" in
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_row_reason_c_shape_doc : shape_doc =
+  let _x_1 = "Effect4.Program.RowReason" in
   let _x_2 = "notExternal" in
   let _x_3 = 0 in
   let _x_4 = [] in
@@ -31817,10 +31824,10 @@ let store_program_gen_row_arg_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.ServiceReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_ServiceReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_service_reason_c_shape_doc : shape_doc =
-  let _x_1 = "ServiceReason" in
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_service_reason_c_shape_doc : shape_doc =
+  let _x_1 = "Effect4.Program.ServiceReason" in
   let _x_2 = "reservedName" in
   let _x_3 = 0 in
   let _x_4 = [] in
@@ -31842,10 +31849,10 @@ let store_refusals_gen_service_reason_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.DeclReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_DeclReasonC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_decl_reason_c_shape_doc : shape_doc =
-  let _x_1 = "DeclReason" in
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_decl_reason_c_shape_doc : shape_doc =
+  let _x_1 = "Effect4.Program.DeclReason" in
   let _x_2 = "internalSpelling" in
   let _x_3 = 0 in
   let _x_4 = [] in
@@ -31877,10 +31884,10 @@ let store_refusals_gen_decl_reason_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.SigRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_SigRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_sig_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_row_reason_c_shape_doc in
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_sig_refusal_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_row_reason_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; _ } -> (let _x_2 = [] in
       let _x_3 = store_program_gen_row_arg_c_shape_doc in
@@ -31888,7 +31895,7 @@ let store_refusals_gen_sig_refusal_c_shape_doc : shape_doc =
         | { root = root_1; _ } -> (let _x_4 = "reason" in
           let _x_5 = _x_4, root in
           let _x_6 = _x_5 :: _x_2 in
-          let _x_7 = store_refusals_gen_service_reason_c_shape_doc in
+          let _x_7 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_service_reason_c_shape_doc in
           match (_x_7 : shape_doc) with
             | { root = root_2; _ } -> (let _x_8 = _x_2 @ _x_2 in
               let _x_9 = store_program_gen_service_type_code_c_shape_doc in
@@ -31903,7 +31910,7 @@ let store_refusals_gen_sig_refusal_c_shape_doc : shape_doc =
                   match (_x_16 : shape_doc) with
                     | { root = root_4; defs = defs } -> (let _x_17 = _x_4, root_2 in
                       let _x_18 = _x_17 :: _x_2 in
-                      let _x_19 = store_refusals_gen_decl_reason_c_shape_doc in
+                      let _x_19 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_decl_reason_c_shape_doc in
                       match (_x_19 : shape_doc) with
                         | { root = root_5; _ } -> (let _x_20 = "index" in
                           let _x_21 = Shape_nat in
@@ -31916,7 +31923,7 @@ let store_refusals_gen_sig_refusal_c_shape_doc : shape_doc =
                           let _x_28 = "code" in
                           let _x_29 = _x_28, root_3 in
                           let _x_30 = _x_29 :: _x_2 in
-                          let _x_31 = "SigRefusal" in
+                          let _x_31 = "Effect4.Program.SigRefusal" in
                           let _x_32 = "duplicateRow" in
                           let _x_33 = 1 in
                           let _x_34 = _x_33, _x_15 in
@@ -31980,22 +31987,22 @@ let store_refusals_gen_sig_refusal_c_shape_doc : shape_doc =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.AdmitRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_AdmitRefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_refusals_gen_admit_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_located_c_shape_doc in
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_shape_doc : shape_doc =
+  let _x_1 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = store_refusals_gen_sig_refusal_c_shape_doc in
+    | { root = root; defs = defs } -> (let _x_2 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_sig_refusal_c_shape_doc in
       match (_x_2 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_3 = "why" in
           let _x_4 = _x_3, root in
           let _x_5 = [] in
           let _x_6 = _x_4 :: _x_5 in
-          let _x_7 = store_refusals_gen_formation_refusal_c_shape_doc in
+          let _x_7 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_string_41__41__32__40__95_root_95__46_effect4_46_program_46_formation_reason_41_c_shape_doc in
           match (_x_7 : shape_doc) with
             | { root = root_2; defs = defs_2 } -> (let _x_8 = _x_3, root_1 in
               let _x_9 = _x_8 :: _x_5 in
-              let _x_10 = "AdmitRefusal" in
+              let _x_10 = "Effect4.Program.AdmitRefusal" in
               let _x_11 = "illTyped" in
               let _x_12 = 0 in
               let _x_13 = _x_12, _x_6 in
@@ -32034,7 +32041,7 @@ let store_refusals_gen_admit_refusal_c_shape_doc : shape_doc =
 (* LCNF mono: Effect4.Run.Kit.admitShape : Effect4.Store.ShapeDoc *)
 
 let run_kit_admit_shape : shape_doc =
-  store_refusals_gen_admit_refusal_c_shape_doc
+  store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_shape_doc
 
 
 
@@ -32644,9 +32651,9 @@ let store_program_gen_decision_c_to_val (x_1 : Decision.t) : Val.t =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RefFaultC.toVal (x.1 : Effect4.Program.RefFault) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_RefFaultC.toVal (x.1 : Effect4.Program.RefFault) : Effect4.Store.Val *)
 
-let store_refusals_gen_ref_fault_c_to_val (x_1 : ref_fault) : Val.t =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_ref_fault_c_to_val (x_1 : ref_fault) : Val.t =
   match (x_1 : ref_fault) with
     | RefFault_notBefore -> (let _x_2 = 0 in
       let _x_3 = [] in
@@ -32666,47 +32673,53 @@ let store_refusals_gen_ref_fault_c_to_val (x_1 : ref_fault) : Val.t =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FormationReasonC.toVal (x.1 : Effect4.Program.FormationReason) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_FormationReasonC.toVal (x.1 : Effect4.Program.FormationReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_formation_reason_c_to_val (x_1 : formation_reason) : Val.t =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_formation_reason_c_to_val (x_1 : formation_reason) : Val.t =
   match (x_1 : formation_reason) with
-    | FormationReason_repeatedField name_2 -> (let _x_3 = 0 in
-      let _x_4 = Val.Str name_2 in
+    | FormationReason_repeatedField (name_2, ty_3) -> (let _x_4 = 0 in
+      let _x_5 = Val.Str name_2 in
+      let _x_6 = store_program_gen_ty_c_to_val_ty ty_3 in
+      let _x_7 = [] in
+      let _x_8 = _x_6 :: _x_7 in
+      let _x_9 = _x_5 :: _x_8 in
+      Val.Ctor (_x_4, _x_9))
+    | FormationReason_mapKey ty_11 -> (let _x_12 = 1 in
+      let _x_13 = store_program_gen_ty_c_to_val_ty ty_11 in
+      let _x_14 = [] in
+      let _x_15 = _x_13 :: _x_14 in
+      Val.Ctor (_x_12, _x_15))
+    | FormationReason_deferredError ty_17 -> (let _x_18 = 2 in
+      let _x_19 = store_program_gen_ty_c_to_val_ty ty_17 in
+      let _x_20 = [] in
+      let _x_21 = _x_19 :: _x_20 in
+      Val.Ctor (_x_18, _x_21))
+    | FormationReason_typeVariable ty_23 -> (let _x_24 = 3 in
+      let _x_25 = store_program_gen_ty_c_to_val_ty ty_23 in
+      let _x_26 = [] in
+      let _x_27 = _x_25 :: _x_26 in
+      Val.Ctor (_x_24, _x_27))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_String_41__41__32__40__95_root_95__46_Effect4_46_Program_46_FormationReason_41_C.toVal (x.1 : Effect4.Located (List String) Effect4.Program.FormationReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_string_41__41__32__40__95_root_95__46_effect4_46_program_46_formation_reason_41_c_to_val (x_1 : (string list, formation_reason) located) : Val.t =
+  match (x_1 : (_, _) located) with
+    | { site = site_2; reason = reason_3 } -> (let _x_4 = 0 in
       let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | FormationReason_mapKey -> (let _x_8 = 1 in
-      let _x_9 = [] in
-      Val.Ctor (_x_8, _x_9))
-    | FormationReason_deferredError -> (let _x_11 = 2 in
-      let _x_12 = [] in
-      Val.Ctor (_x_11, _x_12))
-    | FormationReason_typeVariable -> (let _x_14 = 3 in
-      let _x_15 = [] in
-      Val.Ctor (_x_14, _x_15))
+      let _x_6 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 site_2 _x_5 in
+      let _x_7 = Val.List _x_6 in
+      let _x_8 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_formation_reason_c_to_val reason_3 in
+      let _x_9 = _x_8 :: _x_5 in
+      let _x_10 = _x_7 :: _x_9 in
+      Val.Ctor (_x_4, _x_10))
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FormationRefusalC.toVal (x.1 : Effect4.Program.FormationRefusal) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_RecordTypingReasonC.toVal (x.1 : Effect4.Program.RecordTypingReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_formation_refusal_c_to_val (x_1 : formation_refusal) : Val.t =
-  match (x_1 : formation_refusal) with
-    | { path = path_2; ty = ty_3; reason = reason_4 } -> (let _x_5 = 0 in
-      let _x_6 = [] in
-      let _x_7 = list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 path_2 _x_6 in
-      let _x_8 = Val.List _x_7 in
-      let _x_9 = store_program_gen_ty_c_to_val_ty ty_3 in
-      let _x_10 = store_refusals_gen_formation_reason_c_to_val reason_4 in
-      let _x_11 = _x_10 :: _x_6 in
-      let _x_12 = _x_9 :: _x_11 in
-      let _x_13 = _x_8 :: _x_12 in
-      Val.Ctor (_x_5, _x_13))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordTypingReasonC.toVal (x.1 : Effect4.Program.RecordTypingReason) : Effect4.Store.Val *)
-
-let store_refusals_gen_record_typing_reason_c_to_val (x_1 : record_typing_reason) : Val.t =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_record_typing_reason_c_to_val (x_1 : record_typing_reason) : Val.t =
   match (x_1 : record_typing_reason) with
     | RecordTypingReason_duplicateDeclaration name_2 -> (let _x_3 = 0 in
       let _x_4 = Val.Str name_2 in
@@ -32759,95 +32772,97 @@ let store_refusals_gen_record_typing_reason_c_to_val (x_1 : record_typing_reason
       let _x_63 = _x_59 :: _x_62 in
       Val.Ctor (_x_58, _x_63))
     | RecordTypingReason_declarationFormation why_65 -> (let _x_66 = 8 in
-      let _x_67 = store_refusals_gen_formation_refusal_c_to_val why_65 in
+      let _x_67 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_string_41__41__32__40__95_root_95__46_effect4_46_program_46_formation_reason_41_c_to_val why_65 in
       let _x_68 = [] in
       let _x_69 = _x_67 :: _x_68 in
       Val.Ctor (_x_66, _x_69))
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordTermRefusalC.toVal (x.1 : Effect4.Program.RecordTermRefusal) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_RecordTypingReason_41_C.toVal (x.1 : Effect4.Located (List Nat) Effect4.Program.RecordTypingReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_record_term_refusal_c_to_val (x_1 : record_term_refusal) : Val.t =
-  match (x_1 : record_term_refusal) with
-    | { path = path_2; reason = reason_3 } -> (let _x_4 = 0 in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_record_typing_reason_41_c_to_val (x_1 : (int list, record_typing_reason) located) : Val.t =
+  match (x_1 : (_, _) located) with
+    | { site = site_2; reason = reason_3 } -> (let _x_4 = 0 in
       let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_5 in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 site_2 _x_5 in
       let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_record_typing_reason_c_to_val reason_3 in
+      let _x_8 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_record_typing_reason_c_to_val reason_3 in
       let _x_9 = _x_8 :: _x_5 in
       let _x_10 = _x_7 :: _x_9 in
       Val.Ctor (_x_4, _x_10))
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RecordCauseRefusalC.toVal (x.1 : Effect4.Program.RecordCauseRefusal) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_RecordTypingReason_41__41_C.toVal (x.1 : Effect4.Located (List Nat) (Effect4.Located (List Nat) Effect4.Program.RecordTypingReason)) : Effect4.Store.Val *)
 
-let store_refusals_gen_record_cause_refusal_c_to_val (x_1 : record_cause_refusal) : Val.t =
-  match (x_1 : record_cause_refusal) with
-    | { cause_path = cause_path_2; term = term_3 } -> (let _x_4 = 0 in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_record_typing_reason_41__41_c_to_val (x_1 : (int list, (int list, record_typing_reason) located) located) : Val.t =
+  match (x_1 : (_, _) located) with
+    | { site = site_2; reason = reason_3 } -> (let _x_4 = 0 in
       let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 cause_path_2 _x_5 in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 site_2 _x_5 in
       let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_record_term_refusal_c_to_val term_3 in
+      let _x_8 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_record_typing_reason_41_c_to_val reason_3 in
       let _x_9 = _x_8 :: _x_5 in
       let _x_10 = _x_7 :: _x_9 in
       Val.Ctor (_x_4, _x_10))
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleTypingReasonC.toVal (x.1 : Effect4.Program.TupleTypingReason) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_TupleTypingReasonC.toVal (x.1 : Effect4.Program.TupleTypingReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_tuple_typing_reason_c_to_val (x_1 : tuple_typing_reason) : Val.t =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_tuple_typing_reason_c_to_val (x_1 : tuple_typing_reason) : Val.t =
   match (x_1 : tuple_typing_reason) with
-    | TupleTypingReason_nonTuple branch_2 -> (let _x_3 = 0 in
-      let _x_4 = store_program_gen_ty_c_to_val_ty branch_2 in
+    | TupleTypingReason_nonTuple (index_2, branch_3) -> (let _x_4 = 0 in
+      let _x_5 = Val.Nat index_2 in
+      let _x_6 = store_program_gen_ty_c_to_val_ty branch_3 in
+      let _x_7 = [] in
+      let _x_8 = _x_6 :: _x_7 in
+      let _x_9 = _x_5 :: _x_8 in
+      Val.Ctor (_x_4, _x_9))
+    | TupleTypingReason_outOfBounds (index_11, arity_12) -> (let _x_13 = 1 in
+      let _x_14 = Val.Nat index_11 in
+      let _x_15 = Val.Nat arity_12 in
+      let _x_16 = [] in
+      let _x_17 = _x_15 :: _x_16 in
+      let _x_18 = _x_14 :: _x_17 in
+      Val.Ctor (_x_13, _x_18))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TupleTypingReason_41_C.toVal (x.1 : Effect4.Located (List Nat) Effect4.Program.TupleTypingReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_tuple_typing_reason_41_c_to_val (x_1 : (int list, tuple_typing_reason) located) : Val.t =
+  match (x_1 : (_, _) located) with
+    | { site = site_2; reason = reason_3 } -> (let _x_4 = 0 in
       let _x_5 = [] in
-      let _x_6 = _x_4 :: _x_5 in
-      Val.Ctor (_x_3, _x_6))
-    | TupleTypingReason_outOfBounds arity_8 -> (let _x_9 = 1 in
-      let _x_10 = Val.Nat arity_8 in
-      let _x_11 = [] in
-      let _x_12 = _x_10 :: _x_11 in
-      Val.Ctor (_x_9, _x_12))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleTermRefusalC.toVal (x.1 : Effect4.Program.TupleTermRefusal) : Effect4.Store.Val *)
-
-let store_refusals_gen_tuple_term_refusal_c_to_val (x_1 : tuple_term_refusal) : Val.t =
-  match (x_1 : tuple_term_refusal) with
-    | { path = path_2; index = index_3; reason = reason_4 } -> (let _x_5 = 0 in
-      let _x_6 = [] in
-      let _x_7 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_6 in
-      let _x_8 = Val.List _x_7 in
-      let _x_9 = Val.Nat index_3 in
-      let _x_10 = store_refusals_gen_tuple_typing_reason_c_to_val reason_4 in
-      let _x_11 = _x_10 :: _x_6 in
-      let _x_12 = _x_9 :: _x_11 in
-      let _x_13 = _x_8 :: _x_12 in
-      Val.Ctor (_x_5, _x_13))
-
-
-
-(* LCNF mono: Effect4.Store.RefusalsGen.TupleCauseRefusalC.toVal (x.1 : Effect4.Program.TupleCauseRefusal) : Effect4.Store.Val *)
-
-let store_refusals_gen_tuple_cause_refusal_c_to_val (x_1 : tuple_cause_refusal) : Val.t =
-  match (x_1 : tuple_cause_refusal) with
-    | { cause_path = cause_path_2; term = term_3 } -> (let _x_4 = 0 in
-      let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 cause_path_2 _x_5 in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 site_2 _x_5 in
       let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_tuple_term_refusal_c_to_val term_3 in
+      let _x_8 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_tuple_typing_reason_c_to_val reason_3 in
       let _x_9 = _x_8 :: _x_5 in
       let _x_10 = _x_7 :: _x_9 in
       Val.Ctor (_x_4, _x_10))
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldTypingReasonC.toVal (x.1 : Effect4.Program.FoldTypingReason) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TupleTypingReason_41__41_C.toVal (x.1 : Effect4.Located (List Nat) (Effect4.Located (List Nat) Effect4.Program.TupleTypingReason)) : Effect4.Store.Val *)
 
-let store_refusals_gen_fold_typing_reason_c_to_val (x_1 : fold_typing_reason) : Val.t =
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_tuple_typing_reason_41__41_c_to_val (x_1 : (int list, (int list, tuple_typing_reason) located) located) : Val.t =
+  match (x_1 : (_, _) located) with
+    | { site = site_2; reason = reason_3 } -> (let _x_4 = 0 in
+      let _x_5 = [] in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 site_2 _x_5 in
+      let _x_7 = Val.List _x_6 in
+      let _x_8 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_tuple_typing_reason_41_c_to_val reason_3 in
+      let _x_9 = _x_8 :: _x_5 in
+      let _x_10 = _x_7 :: _x_9 in
+      Val.Ctor (_x_4, _x_10))
+
+
+
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_FoldTypingReasonC.toVal (x.1 : Effect4.Program.FoldTypingReason) : Effect4.Store.Val *)
+
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_fold_typing_reason_c_to_val (x_1 : fold_typing_reason) : Val.t =
   match (x_1 : fold_typing_reason) with
     | FoldTypingReason_notList list_2 -> (let _x_3 = 0 in
       let _x_4 = store_program_gen_ty_c_to_val_ty list_2 in
@@ -32871,30 +32886,30 @@ let store_refusals_gen_fold_typing_reason_c_to_val (x_1 : fold_typing_reason) : 
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldTermRefusalC.toVal (x.1 : Effect4.Program.FoldTermRefusal) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_FoldTypingReason_41_C.toVal (x.1 : Effect4.Located (List Nat) Effect4.Program.FoldTypingReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_fold_term_refusal_c_to_val (x_1 : fold_term_refusal) : Val.t =
-  match (x_1 : fold_term_refusal) with
-    | { path = path_2; reason = reason_3 } -> (let _x_4 = 0 in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_fold_typing_reason_41_c_to_val (x_1 : (int list, fold_typing_reason) located) : Val.t =
+  match (x_1 : (_, _) located) with
+    | { site = site_2; reason = reason_3 } -> (let _x_4 = 0 in
       let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_2 _x_5 in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 site_2 _x_5 in
       let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_fold_typing_reason_c_to_val reason_3 in
+      let _x_8 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_fold_typing_reason_c_to_val reason_3 in
       let _x_9 = _x_8 :: _x_5 in
       let _x_10 = _x_7 :: _x_9 in
       Val.Ctor (_x_4, _x_10))
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.FoldCauseRefusalC.toVal (x.1 : Effect4.Program.FoldCauseRefusal) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_FoldTypingReason_41__41_C.toVal (x.1 : Effect4.Located (List Nat) (Effect4.Located (List Nat) Effect4.Program.FoldTypingReason)) : Effect4.Store.Val *)
 
-let store_refusals_gen_fold_cause_refusal_c_to_val (x_1 : fold_cause_refusal) : Val.t =
-  match (x_1 : fold_cause_refusal) with
-    | { cause_path = cause_path_2; term = term_3 } -> (let _x_4 = 0 in
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_fold_typing_reason_41__41_c_to_val (x_1 : (int list, (int list, fold_typing_reason) located) located) : Val.t =
+  match (x_1 : (_, _) located) with
+    | { site = site_2; reason = reason_3 } -> (let _x_4 = 0 in
       let _x_5 = [] in
-      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 cause_path_2 _x_5 in
+      let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 site_2 _x_5 in
       let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_fold_term_refusal_c_to_val term_3 in
+      let _x_8 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_fold_typing_reason_41_c_to_val reason_3 in
       let _x_9 = _x_8 :: _x_5 in
       let _x_10 = _x_7 :: _x_9 in
       Val.Ctor (_x_4, _x_10))
@@ -32919,20 +32934,20 @@ let store_program_gen_eff_ty_c_to_val (x_1 : EffTy.t) : Val.t =
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.RefusalsGen.TermTypingRefusalC.toVal.spec_0 (a.1 : List Effect4.Program.Ty) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_TermTypingReasonC.toVal.spec_0 (a.1 : List Effect4.Program.Ty) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 (a_1 : Ty.t list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 (a_1 : Ty.t list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _x_6 = store_program_gen_ty_c_to_val_ty head_4 in
       let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 tail_5 _x_7)
+      list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 tail_5 _x_7)
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.TypeReasonC.toVal (x.1 : Effect4.Program.TypeReason) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_TypeReasonC.toVal (x.1 : Effect4.Program.TypeReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_type_reason_c_to_val (x_1 : type_reason) : Val.t =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_type_reason_c_to_val (x_1 : type_reason) : Val.t =
   match (x_1 : type_reason) with
     | TypeReason_term t_2 -> (let _x_3 = 0 in
       let _x_4 = store_program_gen_term_c_to_val_term t_2 in
@@ -33053,7 +33068,7 @@ let store_refusals_gen_type_reason_c_to_val (x_1 : type_reason) : Val.t =
       let _x_147 = [] in
       let _x_148 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 target_144 _x_147 in
       let _x_149 = Val.List _x_148 in
-      let _x_150 = store_refusals_gen_ref_fault_c_to_val why_145 in
+      let _x_150 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_ref_fault_c_to_val why_145 in
       let _x_151 = _x_150 :: _x_147 in
       let _x_152 = _x_149 :: _x_151 in
       Val.Ctor (_x_146, _x_152))
@@ -33073,28 +33088,28 @@ let store_refusals_gen_type_reason_c_to_val (x_1 : type_reason) : Val.t =
       Val.Ctor (_x_164, _x_167))
     | TypeReason_instantiatedFormation (row_169, why_170) -> (let _x_171 = 25 in
       let _x_172 = Val.Str row_169 in
-      let _x_173 = store_refusals_gen_formation_refusal_c_to_val why_170 in
+      let _x_173 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_string_41__41__32__40__95_root_95__46_effect4_46_program_46_formation_reason_41_c_to_val why_170 in
       let _x_174 = [] in
       let _x_175 = _x_173 :: _x_174 in
       let _x_176 = _x_172 :: _x_175 in
       Val.Ctor (_x_171, _x_176))
     | TypeReason_recordTerm why_178 -> (let _x_179 = 26 in
-      let _x_180 = store_refusals_gen_record_term_refusal_c_to_val why_178 in
+      let _x_180 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_record_typing_reason_41_c_to_val why_178 in
       let _x_181 = [] in
       let _x_182 = _x_180 :: _x_181 in
       Val.Ctor (_x_179, _x_182))
     | TypeReason_recordCause why_184 -> (let _x_185 = 27 in
-      let _x_186 = store_refusals_gen_record_cause_refusal_c_to_val why_184 in
+      let _x_186 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_record_typing_reason_41__41_c_to_val why_184 in
       let _x_187 = [] in
       let _x_188 = _x_186 :: _x_187 in
       Val.Ctor (_x_185, _x_188))
     | TypeReason_tupleTerm why_190 -> (let _x_191 = 28 in
-      let _x_192 = store_refusals_gen_tuple_term_refusal_c_to_val why_190 in
+      let _x_192 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_tuple_typing_reason_41_c_to_val why_190 in
       let _x_193 = [] in
       let _x_194 = _x_192 :: _x_193 in
       Val.Ctor (_x_191, _x_194))
     | TypeReason_tupleCause why_196 -> (let _x_197 = 29 in
-      let _x_198 = store_refusals_gen_tuple_cause_refusal_c_to_val why_196 in
+      let _x_198 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_tuple_typing_reason_41__41_c_to_val why_196 in
       let _x_199 = [] in
       let _x_200 = _x_198 :: _x_199 in
       Val.Ctor (_x_197, _x_200))
@@ -33132,12 +33147,12 @@ let store_refusals_gen_type_reason_c_to_val (x_1 : type_reason) : Val.t =
       let _x_243 = _x_237 :: _x_242 in
       Val.Ctor (_x_236, _x_243))
     | TypeReason_foldTerm why_245 -> (let _x_246 = 34 in
-      let _x_247 = store_refusals_gen_fold_term_refusal_c_to_val why_245 in
+      let _x_247 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_fold_typing_reason_41_c_to_val why_245 in
       let _x_248 = [] in
       let _x_249 = _x_247 :: _x_248 in
       Val.Ctor (_x_246, _x_249))
     | TypeReason_foldCause why_251 -> (let _x_252 = 35 in
-      let _x_253 = store_refusals_gen_fold_cause_refusal_c_to_val why_251 in
+      let _x_253 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_fold_typing_reason_41__41_c_to_val why_251 in
       let _x_254 = [] in
       let _x_255 = _x_253 :: _x_254 in
       Val.Ctor (_x_252, _x_255))
@@ -33200,7 +33215,7 @@ let store_refusals_gen_type_reason_c_to_val (x_1 : type_reason) : Val.t =
       let _x_330 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 path_325 _x_329 in
       let _x_331 = Val.List _x_330 in
       let _x_332 = Val.Str atom_326 in
-      let _x_333 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 args_327 _x_329 in
+      let _x_333 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 args_327 _x_329 in
       let _x_334 = Val.List _x_333 in
       let _x_335 = _x_334 :: _x_329 in
       let _x_336 = _x_332 :: _x_335 in
@@ -33209,24 +33224,24 @@ let store_refusals_gen_type_reason_c_to_val (x_1 : type_reason) : Val.t =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.LocatedC.toVal (x.1 : Effect4.Located (List Nat) Effect4.Program.TypeReason) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_64__95_root_95__46_Effect4_46_Located_32__40__64__95_root_95__46_List_32__40__95_root_95__46_Nat_41__41__32__40__95_root_95__46_Effect4_46_Program_46_TypeReason_41_C.toVal (x.1 : Effect4.Located (List Nat) Effect4.Program.TypeReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_located_c_to_val (x_1 : (int list, type_reason) located) : Val.t =
+let store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_to_val (x_1 : (int list, type_reason) located) : Val.t =
   match (x_1 : (_, _) located) with
     | { site = site_2; reason = reason_3 } -> (let _x_4 = 0 in
       let _x_5 = [] in
       let _x_6 = list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 site_2 _x_5 in
       let _x_7 = Val.List _x_6 in
-      let _x_8 = store_refusals_gen_type_reason_c_to_val reason_3 in
+      let _x_8 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_type_reason_c_to_val reason_3 in
       let _x_9 = _x_8 :: _x_5 in
       let _x_10 = _x_7 :: _x_9 in
       Val.Ctor (_x_4, _x_10))
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.RowReasonC.toVal (x.1 : Effect4.Program.RowReason) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_RowReasonC.toVal (x.1 : Effect4.Program.RowReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_row_reason_c_to_val (x_1 : row_reason) : Val.t =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_row_reason_c_to_val (x_1 : row_reason) : Val.t =
   match (x_1 : row_reason) with
     | RowReason_notExternal -> (let _x_2 = 0 in
       let _x_3 = [] in
@@ -33289,9 +33304,9 @@ let rec list_map_tr_loop_at_store_program_gen_row_c_to_val_spec_0 (a_1 : RowArg.
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.ServiceReasonC.toVal (x.1 : Effect4.Program.ServiceReason) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_ServiceReasonC.toVal (x.1 : Effect4.Program.ServiceReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_service_reason_c_to_val (x_1 : service_reason) : Val.t =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_service_reason_c_to_val (x_1 : service_reason) : Val.t =
   match (x_1 : service_reason) with
     | ServiceReason_reservedName -> (let _x_2 = 0 in
       let _x_3 = [] in
@@ -33305,9 +33320,9 @@ let store_refusals_gen_service_reason_c_to_val (x_1 : service_reason) : Val.t =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.DeclReasonC.toVal (x.1 : Effect4.Program.DeclReason) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_DeclReasonC.toVal (x.1 : Effect4.Program.DeclReason) : Effect4.Store.Val *)
 
-let store_refusals_gen_decl_reason_c_to_val (x_1 : decl_reason) : Val.t =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_decl_reason_c_to_val (x_1 : decl_reason) : Val.t =
   match (x_1 : decl_reason) with
     | DeclReason_internalSpelling -> (let _x_2 = 0 in
       let _x_3 = [] in
@@ -33327,13 +33342,13 @@ let store_refusals_gen_decl_reason_c_to_val (x_1 : decl_reason) : Val.t =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.SigRefusalC.toVal (x.1 : Effect4.Program.SigRefusal) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_SigRefusalC.toVal (x.1 : Effect4.Program.SigRefusal) : Effect4.Store.Val *)
 
-let store_refusals_gen_sig_refusal_c_to_val (x_1 : sig_refusal) : Val.t =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_sig_refusal_c_to_val (x_1 : sig_refusal) : Val.t =
   match (x_1 : sig_refusal) with
     | SigRefusal_row (index_2, reason_3) -> (let _x_4 = 0 in
       let _x_5 = Val.Nat index_2 in
-      let _x_6 = store_refusals_gen_row_reason_c_to_val reason_3 in
+      let _x_6 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_row_reason_c_to_val reason_3 in
       let _x_7 = [] in
       let _x_8 = _x_6 :: _x_7 in
       let _x_9 = _x_5 :: _x_8 in
@@ -33349,7 +33364,7 @@ let store_refusals_gen_sig_refusal_c_to_val (x_1 : sig_refusal) : Val.t =
           Val.Ctor (_x_12, _x_18)))
     | SigRefusal_service (index_20, reason_21) -> (let _x_22 = 2 in
       let _x_23 = Val.Nat index_20 in
-      let _x_24 = store_refusals_gen_service_reason_c_to_val reason_21 in
+      let _x_24 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_service_reason_c_to_val reason_21 in
       let _x_25 = [] in
       let _x_26 = _x_24 :: _x_25 in
       let _x_27 = _x_23 :: _x_26 in
@@ -33368,14 +33383,14 @@ let store_refusals_gen_sig_refusal_c_to_val (x_1 : sig_refusal) : Val.t =
       Val.Ctor (_x_37, _x_42))
     | SigRefusal_decl (index_44, reason_45) -> (let _x_46 = 5 in
       let _x_47 = Val.Nat index_44 in
-      let _x_48 = store_refusals_gen_decl_reason_c_to_val reason_45 in
+      let _x_48 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_decl_reason_c_to_val reason_45 in
       let _x_49 = [] in
       let _x_50 = _x_48 :: _x_49 in
       let _x_51 = _x_47 :: _x_50 in
       Val.Ctor (_x_46, _x_51))
     | SigRefusal_rowName (index_53, reason_54) -> (let _x_55 = 6 in
       let _x_56 = Val.Nat index_53 in
-      let _x_57 = store_refusals_gen_decl_reason_c_to_val reason_54 in
+      let _x_57 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_decl_reason_c_to_val reason_54 in
       let _x_58 = [] in
       let _x_59 = _x_57 :: _x_58 in
       let _x_60 = _x_56 :: _x_59 in
@@ -33393,17 +33408,17 @@ let store_refusals_gen_sig_refusal_c_to_val (x_1 : sig_refusal) : Val.t =
 
 
 
-(* LCNF mono: Effect4.Store.RefusalsGen.AdmitRefusalC.toVal (x.1 : Effect4.Program.AdmitRefusal) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.RefusalsGen.T_95_root_95__46_Effect4_46_Program_46_AdmitRefusalC.toVal (x.1 : Effect4.Program.AdmitRefusal) : Effect4.Store.Val *)
 
-let store_refusals_gen_admit_refusal_c_to_val (x_1 : admit_refusal) : Val.t =
+let store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_to_val (x_1 : admit_refusal) : Val.t =
   match (x_1 : admit_refusal) with
     | AdmitRefusal_illTyped why_2 -> (let _x_3 = 0 in
-      let _x_4 = store_refusals_gen_located_c_to_val why_2 in
+      let _x_4 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_to_val why_2 in
       let _x_5 = [] in
       let _x_6 = _x_4 :: _x_5 in
       Val.Ctor (_x_3, _x_6))
     | AdmitRefusal_signature why_8 -> (let _x_9 = 1 in
-      let _x_10 = store_refusals_gen_sig_refusal_c_to_val why_8 in
+      let _x_10 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_sig_refusal_c_to_val why_8 in
       let _x_11 = [] in
       let _x_12 = _x_10 :: _x_11 in
       Val.Ctor (_x_9, _x_12))
@@ -33414,7 +33429,7 @@ let store_refusals_gen_admit_refusal_c_to_val (x_1 : admit_refusal) : Val.t =
       let _x_19 = _x_18 :: _x_16 in
       Val.Ctor (_x_15, _x_19))
     | AdmitRefusal_formation why_21 -> (let _x_22 = 3 in
-      let _x_23 = store_refusals_gen_formation_refusal_c_to_val why_21 in
+      let _x_23 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_string_41__41__32__40__95_root_95__46_effect4_46_program_46_formation_reason_41_c_to_val why_21 in
       let _x_24 = [] in
       let _x_25 = _x_23 :: _x_24 in
       Val.Ctor (_x_22, _x_25))
@@ -33424,7 +33439,7 @@ let store_refusals_gen_admit_refusal_c_to_val (x_1 : admit_refusal) : Val.t =
 (* LCNF mono: Effect4.Run.Kit.admitToVal (r : Effect4.Program.AdmitRefusal) : Effect4.Store.Val *)
 
 let run_kit_admit_to_val (r : admit_refusal) : Val.t =
-  store_refusals_gen_admit_refusal_c_to_val r
+  store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_to_val r
 
 
 
@@ -38784,14 +38799,14 @@ let run_kit_eff_ty_to_val (t : EffTy.t) : Val.t =
 (* LCNF mono: Effect4.Run.Kit.refusalShape : Effect4.Store.ShapeDoc *)
 
 let run_kit_refusal_shape : shape_doc =
-  store_refusals_gen_located_c_shape_doc
+  store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_shape_doc
 
 
 
 (* LCNF mono: Effect4.Run.Kit.refusalToVal (r : Effect4.Located (List Nat) Effect4.Program.TypeReason) : Effect4.Store.Val *)
 
 let run_kit_refusal_to_val (r : (int list, type_reason) located) : Val.t =
-  store_refusals_gen_located_c_to_val r
+  store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_to_val r
 
 
 
@@ -40258,73 +40273,73 @@ let program_authoring_names_resolve (names : string list) (x : string) : int opt
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.minted (x : String) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal Effect4.Program.Term *)
+(* LCNF mono: Effect4.Program.Authoring.minted (x : String) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term *)
 
-let program_authoring_minted (x : string) (env : env) (p : int list) : (Term.t, effect4_program_authoring_refusal) result =
+let program_authoring_minted (x : string) (env : env) (p : int list) : (Term.t, (int list, reason) located) result =
   match (env : env) with
     | { names = names; _ } -> (let _x_1 = program_authoring_names_resolve names x in
       match _x_1 with
         | None -> (let _x_2 = Reason_unbound x in
-          let _x_3 = ({ path = p; reason = _x_2 } : effect4_program_authoring_refusal) in
+          let _x_3 = ({ site = p; reason = _x_2 } : (_, _) located) in
           Error _x_3)
         | Some val__5 -> (let _x_6 = Term.Var val__5 in
           Ok _x_6))
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.var (x : String) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal Effect4.Program.Term *)
+(* LCNF mono: Effect4.Program.Authoring.var (x : String) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term *)
 
-let program_authoring_var (x : string) (env : env) (p : int list) : (Term.t, effect4_program_authoring_refusal) result =
+let program_authoring_var (x : string) (env : env) (p : int list) : (Term.t, (int list, reason) located) result =
   let _x_1 = program_authoring_name_reserved x in
   if _x_1 then (let _x_3 = Reason_reservedName x in
-    let _x_4 = ({ path = p; reason = _x_3 } : effect4_program_authoring_refusal) in
+    let _x_4 = ({ site = p; reason = _x_3 } : (_, _) located) in
     Error _x_4) else program_authoring_minted x env p
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.lit._redArg (value : Effect4.Program.Lit) : Except Effect4.Program.Authoring.Refusal Effect4.Program.Term *)
+(* LCNF mono: Effect4.Program.Authoring.lit._redArg (value : Effect4.Program.Lit) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term *)
 
-let program_authoring_lit (value : Lit.t) : (Term.t, effect4_program_authoring_refusal) result =
+let program_authoring_lit (value : Lit.t) : (Term.t, (int list, reason) located) result =
   let _x_1 = Term.Lit value in
   Ok _x_1
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.nat._redArg (n : Nat) : Except Effect4.Program.Authoring.Refusal Effect4.Program.Term *)
+(* LCNF mono: Effect4.Program.Authoring.nat._redArg (n : Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term *)
 
-let program_authoring_nat (n : int) : (Term.t, effect4_program_authoring_refusal) result =
+let program_authoring_nat (n : int) : (Term.t, (int list, reason) located) result =
   let _x_1 = Lit.Nat n in
   program_authoring_lit _x_1
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.str._redArg (s : String) : Except Effect4.Program.Authoring.Refusal Effect4.Program.Term *)
+(* LCNF mono: Effect4.Program.Authoring.str._redArg (s : String) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term *)
 
-let program_authoring_str (s : string) : (Term.t, effect4_program_authoring_refusal) result =
+let program_authoring_str (s : string) : (Term.t, (int list, reason) located) result =
   let _x_1 = Lit.Str s in
   program_authoring_lit _x_1
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.bool._redArg (b : Bool) : Except Effect4.Program.Authoring.Refusal Effect4.Program.Term *)
+(* LCNF mono: Effect4.Program.Authoring.bool._redArg (b : Bool) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term *)
 
-let program_authoring_bool (b : bool) : (Term.t, effect4_program_authoring_refusal) result =
+let program_authoring_bool (b : bool) : (Term.t, (int list, reason) located) result =
   let _x_1 = Lit.Bool b in
   program_authoring_lit _x_1
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.unit (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal Effect4.Program.Term *)
+(* LCNF mono: Effect4.Program.Authoring.unit (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term *)
 
-let program_authoring_unit (a_1 : env) (a_2 : int list) : (Term.t, effect4_program_authoring_refusal) result =
+let program_authoring_unit (a_1 : env) (a_2 : int list) : (Term.t, (int list, reason) located) result =
   let _x_3 = Lit.Unit in
   program_authoring_lit _x_3
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Program.Authoring.app.spec_0 (env : Effect4.Program.Authoring.Env) (p : List Nat) (x.1 : List (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term))) (x.2 : List Effect4.Program.Term) : Except Effect4.Program.Authoring.Refusal (List Effect4.Program.Term) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Program.Authoring.app.spec_0 (env : Effect4.Program.Authoring.Env) (p : List Nat) (x.1 : List (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term))) (x.2 : List Effect4.Program.Term) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List Effect4.Program.Term) *)
 
-let rec list_map_m_loop_at_program_authoring_app_spec_0 (env : env) (p : int list) (x_1 : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) list) (x_2 : Term.t list) : (Term.t list, effect4_program_authoring_refusal) result =
+let rec list_map_m_loop_at_program_authoring_app_spec_0 (env : env) (p : int list) (x_1 : (env -> int list -> (Term.t, (int list, reason) located) result) list) (x_2 : Term.t list) : (Term.t list, (int list, reason) located) result =
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Ok _x_3)
@@ -40346,9 +40361,9 @@ let rec program_authoring_terms_of_list (x_1 : Term.t list) : Terms.t =
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.app (atom : String) (args : List (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal Effect4.Program.Term *)
+(* LCNF mono: Effect4.Program.Authoring.app (atom : String) (args : List (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term *)
 
-let program_authoring_app (atom : string) (args : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) list) (env : env) (p : int list) : (Term.t, effect4_program_authoring_refusal) result =
+let program_authoring_app (atom : string) (args : (env -> int list -> (Term.t, (int list, reason) located) result) list) (env : env) (p : int list) : (Term.t, (int list, reason) located) result =
   let _x_1 = [] in
   let _x_2 = list_map_m_loop_at_program_authoring_app_spec_0 env p args _x_1 in
   match _x_2 with
@@ -40359,9 +40374,9 @@ let program_authoring_app (atom : string) (args : (env -> int list -> (Term.t, e
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.succeed._redArg (value : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.succeed._redArg (value : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_succeed (value : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_succeed (value : env -> int list -> (Term.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = value env p in
   match _x_1 with
     | Error a_2 -> Error a_2
@@ -40370,9 +40385,9 @@ let program_authoring_succeed (value : env -> int list -> (Term.t, effect4_progr
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.fail._redArg (error : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.fail._redArg (error : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_fail (error : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_fail (error : env -> int list -> (Term.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = error env p in
   match _x_1 with
     | Error a_2 -> Error a_2
@@ -40381,9 +40396,9 @@ let program_authoring_fail (error : env -> int list -> (Term.t, effect4_program_
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.sync._redArg (thunk : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.sync._redArg (thunk : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_sync (thunk : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_sync (thunk : env -> int list -> (Term.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = thunk env p in
   match _x_1 with
     | Error a_2 -> Error a_2
@@ -40392,9 +40407,9 @@ let program_authoring_sync (thunk : env -> int list -> (Term.t, effect4_program_
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.suspend._redArg (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.suspend._redArg (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_suspend (body : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_suspend (body : env -> int list -> (_ Eff.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = 0 in
   let _x_2 = [] in
   let _x_3 = _x_1 :: _x_2 in
@@ -40416,9 +40431,9 @@ let program_authoring_env_push (env : env) (xs : string list) : env =
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.bind._redArg (answer : String) (first : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (rest : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.bind._redArg (answer : String) (first : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (rest : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_bind (answer : string) (first : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (rest : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_bind (answer : string) (first : env -> int list -> (_ Eff.t, (int list, reason) located) result) (rest : env -> int list -> (_ Eff.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = 0 in
   let _x_2 = [] in
   let _x_3 = _x_1 :: _x_2 in
@@ -40439,9 +40454,9 @@ let program_authoring_bind (answer : string) (first : env -> int list -> (_ Eff.
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.bindWith._redArg._lam_0 (rest : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (first : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (x : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.bindWith._redArg._lam_0 (rest : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (first : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (x : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_bind_with__red_arg__lam_0 (rest : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (first : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (x : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_bind_with__red_arg__lam_0 (rest : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (_ Eff.t, (int list, reason) located) result) (first : env -> int list -> (_ Eff.t, (int list, reason) located) result) (x : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_3 = program_authoring_minted x in
   let _x_4 = rest _x_3 in
   program_authoring_bind x first _x_4 _y_1 _y_2
@@ -40460,42 +40475,42 @@ let program_authoring_env_mint (env : env) (stem : string) : string =
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.minting._redArg (stem : String) (k : String -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.minting._redArg (stem : String) (k : String -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_minting (stem : string) (k : string -> env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_minting (stem : string) (k : string -> env -> int list -> (_ Eff.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = program_authoring_env_mint env stem in
   k _x_1 env p
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.bindWith._redArg (first : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (rest : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.bindWith._redArg (first : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (rest : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_bind_with (first : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (rest : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_bind_with (first : env -> int list -> (_ Eff.t, (int list, reason) located) result) (rest : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (_ Eff.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _f_3 = program_authoring_bind_with__red_arg__lam_0 rest first in
   let _x_4 = "answer" in
   program_authoring_minting _x_4 _f_3 a_1 a_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.andThen._redArg._lam_0 (first : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (rest : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (x : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.andThen._redArg._lam_0 (first : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (rest : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (x : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_and_then__red_arg__lam_0 (first : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (rest : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (x : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_and_then__red_arg__lam_0 (first : env -> int list -> (_ Eff.t, (int list, reason) located) result) (rest : env -> int list -> (_ Eff.t, (int list, reason) located) result) (x : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   program_authoring_bind x first rest _y_1 _y_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.andThen._redArg (first : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (rest : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.andThen._redArg (first : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (rest : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_and_then (first : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (rest : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_and_then (first : env -> int list -> (_ Eff.t, (int list, reason) located) result) (rest : env -> int list -> (_ Eff.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _f_3 = program_authoring_and_then__red_arg__lam_0 first rest in
   let _x_4 = "answer" in
   program_authoring_minting _x_4 _f_3 a_1 a_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.selectBool._redArg (scrutinee : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (arm0 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (arm1 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.selectBool._redArg (scrutinee : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (arm0 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (arm1 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_select_bool (scrutinee : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (arm0 : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (arm1 : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_select_bool (scrutinee : env -> int list -> (Term.t, (int list, reason) located) result) (arm0 : env -> int list -> (_ Eff.t, (int list, reason) located) result) (arm1 : env -> int list -> (_ Eff.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = scrutinee env p in
   match _x_1 with
     | Error a_2 -> Error a_2
@@ -40518,16 +40533,16 @@ let program_authoring_select_bool (scrutinee : env -> int list -> (Term.t, effec
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.ifElse (Op : lcErased) (test : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (thenB : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (elseB : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.ifElse (Op : lcErased) (test : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (thenB : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (elseB : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_if_else op (test : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (then_b : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (else_b : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_if_else op (test : env -> int list -> (Term.t, (int list, reason) located) result) (then_b : env -> int list -> (_ Eff.t, (int list, reason) located) result) (else_b : env -> int list -> (_ Eff.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   program_authoring_select_bool test then_b else_b a_1 a_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.selectOption._redArg (bound : String) (scrutinee : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (arm0 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (arm1 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.selectOption._redArg (bound : String) (scrutinee : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (arm0 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (arm1 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_select_option (bound : string) (scrutinee : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (arm0 : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (arm1 : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_select_option (bound : string) (scrutinee : env -> int list -> (Term.t, (int list, reason) located) result) (arm0 : env -> int list -> (_ Eff.t, (int list, reason) located) result) (arm1 : env -> int list -> (_ Eff.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = scrutinee env p in
   match _x_1 with
     | Error a_2 -> Error a_2
@@ -40552,27 +40567,27 @@ let program_authoring_select_option (bound : string) (scrutinee : env -> int lis
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.selectOptionWith._redArg._lam_0 (arm1 : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (scrutinee : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (arm0 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (x : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.selectOptionWith._redArg._lam_0 (arm1 : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (scrutinee : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (arm0 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (x : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_select_option_with__red_arg__lam_0 (arm1 : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (scrutinee : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (arm0 : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (x : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_select_option_with__red_arg__lam_0 (arm1 : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (_ Eff.t, (int list, reason) located) result) (scrutinee : env -> int list -> (Term.t, (int list, reason) located) result) (arm0 : env -> int list -> (_ Eff.t, (int list, reason) located) result) (x : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_3 = program_authoring_minted x in
   let _x_4 = arm1 _x_3 in
   program_authoring_select_option x scrutinee arm0 _x_4 _y_1 _y_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.selectOptionWith._redArg (scrutinee : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (arm0 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (arm1 : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.selectOptionWith._redArg (scrutinee : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (arm0 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (arm1 : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_select_option_with (scrutinee : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (arm0 : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (arm1 : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_select_option_with (scrutinee : env -> int list -> (Term.t, (int list, reason) located) result) (arm0 : env -> int list -> (_ Eff.t, (int list, reason) located) result) (arm1 : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (_ Eff.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _f_3 = program_authoring_select_option_with__red_arg__lam_0 arm1 scrutinee arm0 in
   let _x_4 = "payload" in
   program_authoring_minting _x_4 _f_3 a_1 a_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.iterate._redArg (cursor : String) (answer : String) (cursorTy : Option Effect4.Program.Ty) (initial : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (test : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (step : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (result : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.iterate._redArg (cursor : String) (answer : String) (cursorTy : Option Effect4.Program.Ty) (initial : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (test : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (step : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (result : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_iterate (cursor : string) (answer : string) (cursor_ty : Ty.t option) (initial : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (test : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (step : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (result : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (body : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_iterate (cursor : string) (answer : string) (cursor_ty : Ty.t option) (initial : env -> int list -> (Term.t, (int list, reason) located) result) (test : env -> int list -> (Term.t, (int list, reason) located) result) (step : env -> int list -> (Term.t, (int list, reason) located) result) (result : env -> int list -> (Term.t, (int list, reason) located) result) (body : env -> int list -> (_ Eff.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = initial env p in
   match _x_1 with
     | Error a_2 -> Error a_2
@@ -40602,9 +40617,9 @@ let program_authoring_iterate (cursor : string) (answer : string) (cursor_ty : T
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.iterateWith._redArg._lam_0 (spec : Effect4.Program.Authoring.LoopSpec lcAny) (c : String) (initial : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (a : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.iterateWith._redArg._lam_0 (spec : Effect4.Program.Authoring.LoopSpec lcAny) (c : String) (initial : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (a : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_iterate_with__red_arg__lam_0 (spec : _ loop_spec) (c : string) (initial : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (a : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_iterate_with__red_arg__lam_0 (spec : _ loop_spec) (c : string) (initial : env -> int list -> (Term.t, (int list, reason) located) result) (a : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   match (spec : _ loop_spec) with
     | { while_ = while_; body = body; step = step; result = result; cursor_ty = cursor_ty } -> (let _x_3 = program_authoring_minted c in
       let _x_4 = while_ _x_3 in
@@ -40616,36 +40631,36 @@ let program_authoring_iterate_with__red_arg__lam_0 (spec : _ loop_spec) (c : str
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.iterateWith._redArg._lam_1 (spec : Effect4.Program.Authoring.LoopSpec lcAny) (initial : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (c : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.iterateWith._redArg._lam_1 (spec : Effect4.Program.Authoring.LoopSpec lcAny) (initial : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (c : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_iterate_with__red_arg__lam_1 (spec : _ loop_spec) (initial : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (c : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_iterate_with__red_arg__lam_1 (spec : _ loop_spec) (initial : env -> int list -> (Term.t, (int list, reason) located) result) (c : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _f_3 = program_authoring_iterate_with__red_arg__lam_0 spec c initial in
   let _x_4 = "answer" in
   program_authoring_minting _x_4 _f_3 _y_1 _y_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.iterateWith._redArg (initial : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (spec : Effect4.Program.Authoring.LoopSpec lcAny) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.iterateWith._redArg (initial : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (spec : Effect4.Program.Authoring.LoopSpec lcAny) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_iterate_with (initial : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (spec : _ loop_spec) (a_1 : env) (a_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_iterate_with (initial : env -> int list -> (Term.t, (int list, reason) located) result) (spec : _ loop_spec) (a_1 : env) (a_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _f_3 = program_authoring_iterate_with__red_arg__lam_1 spec initial in
   let _x_4 = "cursor" in
   program_authoring_minting _x_4 _f_3 a_1 a_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.loopWith (initial : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (while_ : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (body : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff Effect4.Program.NativeOp))) (step : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (result : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff Effect4.Program.NativeOp) *)
+(* LCNF mono: Effect4.Program.Authoring.loopWith (initial : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (while_ : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (body : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff Effect4.Program.NativeOp))) (step : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (result : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff Effect4.Program.NativeOp) *)
 
-let program_authoring_loop_with (initial : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (while_ : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (body : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (NativeOp.t Eff.t, effect4_program_authoring_refusal) result) (step : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (result : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (NativeOp.t Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_loop_with (initial : env -> int list -> (Term.t, (int list, reason) located) result) (while_ : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (Term.t, (int list, reason) located) result) (body : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (NativeOp.t Eff.t, (int list, reason) located) result) (step : (env -> int list -> (Term.t, (int list, reason) located) result) -> (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (Term.t, (int list, reason) located) result) (result : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (Term.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (NativeOp.t Eff.t, (int list, reason) located) result =
   let _x_3 = None in
   let _x_4 = ({ while_ = while_; body = body; step = step; result = result; cursor_ty = _x_3 } : _ loop_spec) in
   program_authoring_iterate_with initial _x_4 a_1 a_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.catchCause._redArg (cause : String) (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (handler : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.catchCause._redArg (cause : String) (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (handler : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_catch_cause (cause : string) (body : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (handler : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_catch_cause (cause : string) (body : env -> int list -> (_ Eff.t, (int list, reason) located) result) (handler : env -> int list -> (_ Eff.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = 0 in
   let _x_2 = [] in
   let _x_3 = _x_1 :: _x_2 in
@@ -40666,27 +40681,27 @@ let program_authoring_catch_cause (cause : string) (body : env -> int list -> (_
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.catchWith._redArg._lam_0 (handler : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (c : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.catchWith._redArg._lam_0 (handler : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (c : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_catch_with__red_arg__lam_0 (handler : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (body : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (c : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_catch_with__red_arg__lam_0 (handler : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (_ Eff.t, (int list, reason) located) result) (body : env -> int list -> (_ Eff.t, (int list, reason) located) result) (c : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_3 = program_authoring_minted c in
   let _x_4 = handler _x_3 in
   program_authoring_catch_cause c body _x_4 _y_1 _y_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.catchWith._redArg (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (handler : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.catchWith._redArg (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (handler : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_catch_with (body : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (handler : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_catch_with (body : env -> int list -> (_ Eff.t, (int list, reason) located) result) (handler : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (_ Eff.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _f_3 = program_authoring_catch_with__red_arg__lam_0 handler body in
   let _x_4 = "cause" in
   program_authoring_minting _x_4 _f_3 a_1 a_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.onExit._redArg (exit : String) (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (finalizer : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.onExit._redArg (exit : String) (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (finalizer : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_on_exit (exit_ : string) (body : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (finalizer : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_on_exit (exit_ : string) (body : env -> int list -> (_ Eff.t, (int list, reason) located) result) (finalizer : env -> int list -> (_ Eff.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = 0 in
   let _x_2 = [] in
   let _x_3 = _x_1 :: _x_2 in
@@ -40707,27 +40722,27 @@ let program_authoring_on_exit (exit_ : string) (body : env -> int list -> (_ Eff
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.onExitWith._redArg._lam_0 (finalizer : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (x : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.onExitWith._redArg._lam_0 (finalizer : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (x : String) (_y.1 : Effect4.Program.Authoring.Env) (_y.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_on_exit_with__red_arg__lam_0 (finalizer : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (body : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (x : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_on_exit_with__red_arg__lam_0 (finalizer : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (_ Eff.t, (int list, reason) located) result) (body : env -> int list -> (_ Eff.t, (int list, reason) located) result) (x : string) (_y_1 : env) (_y_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_3 = program_authoring_minted x in
   let _x_4 = finalizer _x_3 in
   program_authoring_on_exit x body _x_4 _y_1 _y_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.onExitWith._redArg (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (finalizer : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.onExitWith._redArg (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (finalizer : (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) -> Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_on_exit_with (body : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (finalizer : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) -> env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_on_exit_with (body : env -> int list -> (_ Eff.t, (int list, reason) located) result) (finalizer : (env -> int list -> (Term.t, (int list, reason) located) result) -> env -> int list -> (_ Eff.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (_ Eff.t, (int list, reason) located) result =
   let _f_3 = program_authoring_on_exit_with__red_arg__lam_0 finalizer body in
   let _x_4 = "exit" in
   program_authoring_minting _x_4 _f_3 a_1 a_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.exit._redArg (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.exit._redArg (body : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_exit_ (body : env -> int list -> (_ Eff.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_exit_ (body : env -> int list -> (_ Eff.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = 0 in
   let _x_2 = [] in
   let _x_3 = _x_1 :: _x_2 in
@@ -40740,9 +40755,9 @@ let program_authoring_exit_ (body : env -> int list -> (_ Eff.t, effect4_program
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.perform._redArg (op : lcAny) (request : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.perform._redArg (op : lcAny) (request : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_perform op (request : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_perform op (request : env -> int list -> (Term.t, (int list, reason) located) result) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = request env p in
   match _x_1 with
     | Error a_2 -> Error a_2
@@ -40751,25 +40766,25 @@ let program_authoring_perform op (request : env -> int list -> (Term.t, effect4_
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.Ref.make (request : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff Effect4.Program.NativeOp) *)
+(* LCNF mono: Effect4.Program.Authoring.Ref.make (request : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff Effect4.Program.NativeOp) *)
 
-let program_authoring_ref_make (request : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (NativeOp.t Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_ref_make (request : env -> int list -> (Term.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (NativeOp.t Eff.t, (int list, reason) located) result =
   let _x_3 = NativeOp.RefMake in
   program_authoring_perform _x_3 request a_1 a_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.Ref.get (request : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff Effect4.Program.NativeOp) *)
+(* LCNF mono: Effect4.Program.Authoring.Ref.get (request : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff Effect4.Program.NativeOp) *)
 
-let program_authoring_ref_get (request : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (NativeOp.t Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_ref_get (request : env -> int list -> (Term.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (NativeOp.t Eff.t, (int list, reason) located) result =
   let _x_3 = NativeOp.RefGet in
   program_authoring_perform _x_3 request a_1 a_2
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.Ref.set (x0 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (x1 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff Effect4.Program.NativeOp) *)
+(* LCNF mono: Effect4.Program.Authoring.Ref.set (x0 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (x1 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff Effect4.Program.NativeOp) *)
 
-let program_authoring_ref_set (x0 : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (x1 : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (NativeOp.t Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_ref_set (x0 : env -> int list -> (Term.t, (int list, reason) located) result) (x1 : env -> int list -> (Term.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (NativeOp.t Eff.t, (int list, reason) located) result =
   let _x_3 = NativeOp.RefSet in
   let _x_4 = "pair" in
   let _x_5 = [] in
@@ -40803,15 +40818,15 @@ let rec list_find_opt_at_program_authoring_row_call_spec_0 (r : Row.t) (x_1 : (s
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.Row.call (r : Effect4.Program.Row) (request : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff Effect4.Program.NativeOp) *)
+(* LCNF mono: Effect4.Program.Authoring.Row.call (r : Effect4.Program.Row) (request : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff Effect4.Program.NativeOp) *)
 
-let program_authoring_row_call (r : Row.t) (request : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (env : env) (p : int list) : (NativeOp.t Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_row_call (r : Row.t) (request : env -> int list -> (Term.t, (int list, reason) located) result) (env : env) (p : int list) : (NativeOp.t Eff.t, (int list, reason) located) result =
   match (env : env) with
     | { rows = rows; _ } -> (let _x_1 = list_find_opt_at_program_authoring_row_call_spec_0 r rows in
       match _x_1 with
         | None -> (match (r : Row.t) with
             | { Row.spelling = spelling; _ } -> (let _x_2 = Reason_unboundRow spelling in
-              let _x_3 = ({ path = p; reason = _x_2 } : effect4_program_authoring_refusal) in
+              let _x_3 = ({ site = p; reason = _x_2 } : (_, _) located) in
               Error _x_3))
         | Some val__5 -> (match val__5 with
             | _, snd_7 -> (let _x_8 = request env p in
@@ -40823,9 +40838,9 @@ let program_authoring_row_call (r : Row.t) (request : env -> int list -> (Term.t
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.Row.callNamed (spelling : String) (request : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff Effect4.Program.NativeOp) *)
+(* LCNF mono: Effect4.Program.Authoring.Row.callNamed (spelling : String) (request : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) (a.1 : Effect4.Program.Authoring.Env) (a.2 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff Effect4.Program.NativeOp) *)
 
-let program_authoring_row_call_named (spelling : string) (request : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) (a_1 : env) (a_2 : int list) : (NativeOp.t Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_row_call_named (spelling : string) (request : env -> int list -> (Term.t, (int list, reason) located) result) (a_1 : env) (a_2 : int list) : (NativeOp.t Eff.t, (int list, reason) located) result =
   let _x_3 = Ty.Unit in
   let _x_4 = Ty.Never in
   let _x_5 = "" in
@@ -40845,9 +40860,9 @@ let rec list_find_opt_at_program_authoring_layer_ref_spec_0 (name : string) (x_1
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.requestOf (x.1 : List (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term))) (a.2 : Effect4.Program.Authoring.Env) (a.3 : List Nat) : Except Effect4.Program.Authoring.Refusal Effect4.Program.Term *)
+(* LCNF mono: Effect4.Program.Authoring.requestOf (x.1 : List (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term))) (a.2 : Effect4.Program.Authoring.Env) (a.3 : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term *)
 
-let rec program_authoring_request_of (x_1 : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) list) (a_2 : env) (a_3 : int list) : (Term.t, effect4_program_authoring_refusal) result =
+let rec program_authoring_request_of (x_1 : (env -> int list -> (Term.t, (int list, reason) located) result) list) (a_2 : env) (a_3 : int list) : (Term.t, (int list, reason) located) result =
   match x_1 with
     | [] -> program_authoring_unit a_2 a_3
     | head_5 :: tail_6 -> (match tail_6 with
@@ -40861,14 +40876,14 @@ let rec program_authoring_request_of (x_1 : (env -> int list -> (Term.t, effect4
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.Def.invoke (name : String) (args : List (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff Effect4.Program.NativeOp) *)
+(* LCNF mono: Effect4.Program.Authoring.Def.invoke (name : String) (args : List (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term))) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff Effect4.Program.NativeOp) *)
 
-let program_authoring_def_invoke (name : string) (args : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) list) (env : env) (p : int list) : (NativeOp.t Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_def_invoke (name : string) (args : (env -> int list -> (Term.t, (int list, reason) located) result) list) (env : env) (p : int list) : (NativeOp.t Eff.t, (int list, reason) located) result =
   match (env : env) with
     | { defs = defs; _ } -> (let _x_1 = list_find_opt_at_program_authoring_layer_ref_spec_0 name defs in
       match _x_1 with
         | None -> (let _x_2 = Reason_unboundDef name in
-          let _x_3 = ({ path = p; reason = _x_2 } : effect4_program_authoring_refusal) in
+          let _x_3 = ({ site = p; reason = _x_2 } : (_, _) located) in
           Error _x_3)
         | Some val__5 -> (match val__5 with
             | _, snd_7 -> (let _x_8 = program_authoring_request_of args env p in
@@ -40901,9 +40916,9 @@ let rec list_any_at__private_effect4_program_authoring_0_effect4_program_authori
 
 
 
-(* LCNF mono: List.foldlM._at_._private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.layerNamesOf.spec_1._redArg (x.1 : List (Prod String Nat)) (x.2 : List (Prod (Prod String (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.LayerTerm lcAny)))) Nat)) : Except Effect4.Program.Authoring.Refusal (List (Prod String Nat)) *)
+(* LCNF mono: List.foldlM._at_._private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.layerNamesOf.spec_1._redArg (x.1 : List (Prod String Nat)) (x.2 : List (Prod (Prod String (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.LayerTerm lcAny)))) Nat)) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List (Prod String Nat)) *)
 
-let rec list_foldl_m_at__private_effect4_program_authoring_0_effect4_program_authoring_layer_names_of_spec_1 (x_1 : (string * int) list) (x_2 : ((string * (env -> int list -> (_ LayerTerm.t, effect4_program_authoring_refusal) result)) * int) list) : ((string * int) list, effect4_program_authoring_refusal) result =
+let rec list_foldl_m_at__private_effect4_program_authoring_0_effect4_program_authoring_layer_names_of_spec_1 (x_1 : (string * int) list) (x_2 : ((string * (env -> int list -> (_ LayerTerm.t, (int list, reason) located) result)) * int) list) : ((string * int) list, (int list, reason) located) result =
   match x_2 with
     | [] -> Ok x_1
     | head_4 :: tail_5 -> (match head_4 with
@@ -40911,7 +40926,7 @@ let rec list_foldl_m_at__private_effect4_program_authoring_0_effect4_program_aut
             | fst_8, _ -> (let _x_10 = list_any_at__private_effect4_program_authoring_0_effect4_program_authoring_layer_names_of_spec_0 fst_8 x_1 in
               if _x_10 then (let _x_16 = [] in
                 let _x_17 = Reason_duplicateLayer fst_8 in
-                let _x_18 = ({ path = _x_16; reason = _x_17 } : effect4_program_authoring_refusal) in
+                let _x_18 = ({ site = _x_16; reason = _x_17 } : (_, _) located) in
                 Error _x_18) else (let _x_11 = fst_8, snd_7 in
                 let _x_12 = [] in
                 let _x_13 = _x_11 :: _x_12 in
@@ -40920,9 +40935,9 @@ let rec list_foldl_m_at__private_effect4_program_authoring_0_effect4_program_aut
 
 
 
-(* LCNF mono: _private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.layerNamesOf._redArg (layers : List (Prod String (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.LayerTerm lcAny))))) : Except Effect4.Program.Authoring.Refusal (List (Prod String Nat)) *)
+(* LCNF mono: _private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.layerNamesOf._redArg (layers : List (Prod String (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.LayerTerm lcAny))))) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List (Prod String Nat)) *)
 
-let program_authoring_layer_names_of (layers : (string * (env -> int list -> (_ LayerTerm.t, effect4_program_authoring_refusal) result)) list) : ((string * int) list, effect4_program_authoring_refusal) result =
+let program_authoring_layer_names_of (layers : (string * (env -> int list -> (_ LayerTerm.t, (int list, reason) located) result)) list) : ((string * int) list, (int list, reason) located) result =
   let _x_1 = [] in
   let _x_2 = 0 in
   let _x_3 = list_zip_idx_tr layers _x_2 in
@@ -40997,16 +41012,16 @@ let program_authoring_row_def_names (rows : Row.t list) : (string * int) list =
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.rowNamesOf (rows : List Effect4.Program.Row) : Except Effect4.Program.Authoring.Refusal (List (Prod String Nat)) *)
+(* LCNF mono: Effect4.Program.Authoring.rowNamesOf (rows : List Effect4.Program.Row) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List (Prod String Nat)) *)
 
-let program_authoring_row_names_of (rows : Row.t list) : ((string * int) list, effect4_program_authoring_refusal) result =
+let program_authoring_row_names_of (rows : Row.t list) : ((string * int) list, (int list, reason) located) result =
   let _x_1 = program_authoring_row_def_duplicate_opt rows in
   match _x_1 with
     | None -> (let _x_2 = program_authoring_row_def_names rows in
       Ok _x_2)
     | Some val__4 -> (let _x_5 = [] in
       let _x_6 = Reason_duplicateRow val__4 in
-      let _x_7 = ({ path = _x_5; reason = _x_6 } : effect4_program_authoring_refusal) in
+      let _x_7 = ({ site = _x_5; reason = _x_6 } : (_, _) located) in
       Error _x_7)
 
 
@@ -41023,9 +41038,9 @@ let rec list_any_at_program_authoring_def_names_of_spec_0 (fst_1 : _ def_src) (x
 
 
 
-(* LCNF mono: List.foldlM._at_.Effect4.Program.Authoring.defNamesOf.spec_1._redArg (x.1 : List (Prod String Nat)) (x.2 : List (Prod (Effect4.Program.Authoring.DefSrc lcAny) Nat)) : Except Effect4.Program.Authoring.Refusal (List (Prod String Nat)) *)
+(* LCNF mono: List.foldlM._at_.Effect4.Program.Authoring.defNamesOf.spec_1._redArg (x.1 : List (Prod String Nat)) (x.2 : List (Prod (Effect4.Program.Authoring.DefSrc lcAny) Nat)) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List (Prod String Nat)) *)
 
-let rec list_foldl_m_at_program_authoring_def_names_of_spec_1 (x_1 : (string * int) list) (x_2 : (_ def_src * int) list) : ((string * int) list, effect4_program_authoring_refusal) result =
+let rec list_foldl_m_at_program_authoring_def_names_of_spec_1 (x_1 : (string * int) list) (x_2 : (_ def_src * int) list) : ((string * int) list, (int list, reason) located) result =
   match x_2 with
     | [] -> Ok x_1
     | head_4 :: tail_5 -> (match head_4 with
@@ -41033,7 +41048,7 @@ let rec list_foldl_m_at_program_authoring_def_names_of_spec_1 (x_1 : (string * i
           if _x_8 then (match (fst_6 : _ def_src) with
               | { name = name_1; _ } -> (let _x_14 = [] in
                 let _x_15 = Reason_duplicateDef name_1 in
-                let _x_16 = ({ path = _x_14; reason = _x_15 } : effect4_program_authoring_refusal) in
+                let _x_16 = ({ site = _x_14; reason = _x_15 } : (_, _) located) in
                 Error _x_16)) else (match (fst_6 : _ def_src) with
               | { name = name; _ } -> (let _x_9 = name, snd_7 in
                 let _x_10 = [] in
@@ -41043,9 +41058,9 @@ let rec list_foldl_m_at_program_authoring_def_names_of_spec_1 (x_1 : (string * i
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.defNamesOf._redArg (defs : List (Effect4.Program.Authoring.DefSrc lcAny)) : Except Effect4.Program.Authoring.Refusal (List (Prod String Nat)) *)
+(* LCNF mono: Effect4.Program.Authoring.defNamesOf._redArg (defs : List (Effect4.Program.Authoring.DefSrc lcAny)) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List (Prod String Nat)) *)
 
-let program_authoring_def_names_of (defs : _ def_src list) : ((string * int) list, effect4_program_authoring_refusal) result =
+let program_authoring_def_names_of (defs : _ def_src list) : ((string * int) list, (int list, reason) located) result =
   let _x_1 = [] in
   let _x_2 = 0 in
   let _x_3 = list_zip_idx_tr defs _x_2 in
@@ -41078,16 +41093,16 @@ let rec list_any_at_program_authoring_param_names_of_spec_0 (fst_1 : ParamDecl.t
 
 
 
-(* LCNF mono: List.foldlM._at_.Effect4.Program.Authoring.paramNamesOf.spec_1 (p : List Nat) (x.1 : List (Prod String Nat)) (x.2 : List (Prod Effect4.Program.ParamDecl Nat)) : Except Effect4.Program.Authoring.Refusal (List (Prod String Nat)) *)
+(* LCNF mono: List.foldlM._at_.Effect4.Program.Authoring.paramNamesOf.spec_1 (p : List Nat) (x.1 : List (Prod String Nat)) (x.2 : List (Prod Effect4.Program.ParamDecl Nat)) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List (Prod String Nat)) *)
 
-let rec list_foldl_m_at_program_authoring_param_names_of_spec_1 (p : int list) (x_1 : (string * int) list) (x_2 : (ParamDecl.t * int) list) : ((string * int) list, effect4_program_authoring_refusal) result =
+let rec list_foldl_m_at_program_authoring_param_names_of_spec_1 (p : int list) (x_1 : (string * int) list) (x_2 : (ParamDecl.t * int) list) : ((string * int) list, (int list, reason) located) result =
   match x_2 with
     | [] -> Ok x_1
     | head_4 :: tail_5 -> (match head_4 with
         | fst_6, snd_7 -> (let _x_8 = list_any_at_program_authoring_param_names_of_spec_0 fst_6 x_1 in
           if _x_8 then (match (fst_6 : ParamDecl.t) with
               | { ParamDecl.name = name_1; _ } -> (let _x_14 = Reason_duplicateParam name_1 in
-                let _x_15 = ({ path = p; reason = _x_14 } : effect4_program_authoring_refusal) in
+                let _x_15 = ({ site = p; reason = _x_14 } : (_, _) located) in
                 Error _x_15)) else (match (fst_6 : ParamDecl.t) with
               | { ParamDecl.name = name; _ } -> (let _x_9 = name, snd_7 in
                 let _x_10 = [] in
@@ -41097,9 +41112,9 @@ let rec list_foldl_m_at_program_authoring_param_names_of_spec_1 (p : int list) (
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.paramNamesOf (p : List Nat) (params : List Effect4.Program.ParamDecl) : Except Effect4.Program.Authoring.Refusal (List (Prod String Nat)) *)
+(* LCNF mono: Effect4.Program.Authoring.paramNamesOf (p : List Nat) (params : List Effect4.Program.ParamDecl) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List (Prod String Nat)) *)
 
-let program_authoring_param_names_of (p : int list) (params : ParamDecl.t list) : ((string * int) list, effect4_program_authoring_refusal) result =
+let program_authoring_param_names_of (p : int list) (params : ParamDecl.t list) : ((string * int) list, (int list, reason) located) result =
   let _x_1 = [] in
   let _x_2 = 0 in
   let _x_3 = list_zip_idx_tr params _x_2 in
@@ -41116,9 +41131,9 @@ let program_authoring_env_closed (env : env) : env =
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.requestParts (x.1 : Nat) (x.2 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) : List (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal Effect4.Program.Term)) *)
+(* LCNF mono: Effect4.Program.Authoring.requestParts (x.1 : Nat) (x.2 : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) : List (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) Effect4.Program.Term)) *)
 
-let rec program_authoring_request_parts (x_1 : int) (x_2 : env -> int list -> (Term.t, effect4_program_authoring_refusal) result) : (env -> int list -> (Term.t, effect4_program_authoring_refusal) result) list =
+let rec program_authoring_request_parts (x_1 : int) (x_2 : env -> int list -> (Term.t, (int list, reason) located) result) : (env -> int list -> (Term.t, (int list, reason) located) result) list =
   let zero = 0 in
   let is_zero = x_1 = zero in
   if is_zero then [] else (let one = 1 in
@@ -41138,9 +41153,9 @@ let rec program_authoring_request_parts (x_1 : int) (x_2 : env -> int list -> (T
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.DefSrc.elaborate._redArg (d : Effect4.Program.Authoring.DefSrc lcAny) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.DefSrc.elaborate._redArg (d : Effect4.Program.Authoring.DefSrc lcAny) (env : Effect4.Program.Authoring.Env) (p : List Nat) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_def_src_elaborate (d : _ def_src) (env : env) (p : int list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_def_src_elaborate (d : _ def_src) (env : env) (p : int list) : (_ Eff.t, (int list, reason) located) result =
   match (d : _ def_src) with
     | { params = params; body = body; program_params = program_params; _ } -> (let _x_1 = program_authoring_param_names_of p program_params in
       match _x_1 with
@@ -41160,9 +41175,9 @@ let program_authoring_def_src_elaborate (d : _ def_src) (env : env) (p : int lis
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Program.Authoring.elaborateTree.spec_0._redArg (env : Effect4.Program.Authoring.Env) (x.1 : List (Prod (Effect4.Program.Authoring.DefSrc lcAny) Nat)) (x.2 : List (Effect4.Program.Eff lcAny)) : Except Effect4.Program.Authoring.Refusal (List (Effect4.Program.Eff lcAny)) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Program.Authoring.elaborateTree.spec_0._redArg (env : Effect4.Program.Authoring.Env) (x.1 : List (Prod (Effect4.Program.Authoring.DefSrc lcAny) Nat)) (x.2 : List (Effect4.Program.Eff lcAny)) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List (Effect4.Program.Eff lcAny)) *)
 
-let rec list_map_m_loop_at_program_authoring_elaborate_tree_spec_0 (env : env) (x_1 : (_ def_src * int) list) (x_2 : _ Eff.t list) : (_ Eff.t list, effect4_program_authoring_refusal) result =
+let rec list_map_m_loop_at_program_authoring_elaborate_tree_spec_0 (env : env) (x_1 : (_ def_src * int) list) (x_2 : _ Eff.t list) : (_ Eff.t list, (int list, reason) located) result =
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Ok _x_3)
@@ -41231,9 +41246,9 @@ let rec program_authoring_effs_of_list (x_1 : _ Eff.t list) : _ Effs.t =
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.elaborateTree._redArg (m : Effect4.Program.Authoring.Module lcAny) (env : Effect4.Program.Authoring.Env) (layers : Effect4.Program.LayerTerms lcAny) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.elaborateTree._redArg (m : Effect4.Program.Authoring.Module lcAny) (env : Effect4.Program.Authoring.Env) (layers : Effect4.Program.LayerTerms lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_elaborate_tree (m : _ module_) (env : env) (layers : _ LayerTerms.t) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_elaborate_tree (m : _ module_) (env : env) (layers : _ LayerTerms.t) : (_ Eff.t, (int list, reason) located) result =
   match (m : _ module_) with
     | { defs = defs; main = main; _ } -> (match defs with
         | [] -> (let _x_1 = [] in
@@ -41266,9 +41281,9 @@ let program_authoring_placeholder (k : int) : int list =
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Program.Authoring.elaborateModule.spec_0._redArg (_x.1 : Effect4.Program.Authoring.Env) (x.2 : List (Prod (Prod String (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.LayerTerm lcAny)))) Nat)) (x.3 : List (Effect4.Program.LayerTerm lcAny)) : Except Effect4.Program.Authoring.Refusal (List (Effect4.Program.LayerTerm lcAny)) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Program.Authoring.elaborateModule.spec_0._redArg (_x.1 : Effect4.Program.Authoring.Env) (x.2 : List (Prod (Prod String (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.LayerTerm lcAny)))) Nat)) (x.3 : List (Effect4.Program.LayerTerm lcAny)) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List (Effect4.Program.LayerTerm lcAny)) *)
 
-let rec list_map_m_loop_at_program_authoring_elaborate_module_spec_0 (_x_1 : env) (x_2 : ((string * (env -> int list -> (_ LayerTerm.t, effect4_program_authoring_refusal) result)) * int) list) (x_3 : _ LayerTerm.t list) : (_ LayerTerm.t list, effect4_program_authoring_refusal) result =
+let rec list_map_m_loop_at_program_authoring_elaborate_module_spec_0 (_x_1 : env) (x_2 : ((string * (env -> int list -> (_ LayerTerm.t, (int list, reason) located) result)) * int) list) (x_3 : _ LayerTerm.t list) : (_ LayerTerm.t list, (int list, reason) located) result =
   match x_2 with
     | [] -> (let _x_4 = List.rev x_3 in
       Ok _x_4)
@@ -41904,9 +41919,9 @@ let rec list_find_opt_at__private_effect4_program_authoring_0_effect4_program_au
 
 
 
-(* LCNF mono: _private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.placeRounds._redArg (terms : List (Effect4.Program.LayerTerm lcAny)) (names : List (Prod String Nat)) (x.1 : Nat) (x.2 : Effect4.Program.Eff lcAny) (x.3 : List (Prod Nat (List Nat))) : Except Effect4.Program.Authoring.Refusal (Prod (Effect4.Program.Eff lcAny) (List (Prod Nat (List Nat)))) *)
+(* LCNF mono: _private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.placeRounds._redArg (terms : List (Effect4.Program.LayerTerm lcAny)) (names : List (Prod String Nat)) (x.1 : Nat) (x.2 : Effect4.Program.Eff lcAny) (x.3 : List (Prod Nat (List Nat))) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Prod (Effect4.Program.Eff lcAny) (List (Prod Nat (List Nat)))) *)
 
-let rec program_authoring_place_rounds (terms : _ LayerTerm.t list) (names : (string * int) list) (x_1 : int) (x_2 : _ Eff.t) (x_3 : (int * int list) list) : (_ Eff.t * (int * int list) list, effect4_program_authoring_refusal) result =
+let rec program_authoring_place_rounds (terms : _ LayerTerm.t list) (names : (string * int) list) (x_1 : int) (x_2 : _ Eff.t) (x_3 : (int * int list) list) : (_ Eff.t * (int * int list) list, (int list, reason) located) result =
   let zero = 0 in
   let is_zero = x_1 = zero in
   if is_zero then (let _x_4 = x_2, x_3 in
@@ -41917,7 +41932,7 @@ let rec program_authoring_place_rounds (terms : _ LayerTerm.t list) (names : (st
         Ok _x_8)
       | Some val__10 -> (match val__10 with
           | fst_11, snd_12 -> (let[@local always] _jp_13 = fun _y_14 -> let _x_15 = Reason_placement _y_14 in
-            let _x_16 = ({ path = fst_11; reason = _x_15 } : effect4_program_authoring_refusal) in
+            let _x_16 = ({ site = fst_11; reason = _x_15 } : (_, _) located) in
             Error _x_16 in
             let one = 1 in
             let n_18 = max 0 (x_1 - one) in
@@ -41955,21 +41970,21 @@ let rec list_find_opt_at__private_effect4_program_authoring_0_effect4_program_au
 
 
 
-(* LCNF mono: List.foldlM._at_._private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.pointAtPlaced.spec_1._redArg (placed : List (Prod Nat (List Nat))) (x.1 : Effect4.Program.Eff lcAny) (x.2 : List (Prod (List Nat) Nat)) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: List.foldlM._at_._private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.pointAtPlaced.spec_1._redArg (placed : List (Prod Nat (List Nat))) (x.1 : Effect4.Program.Eff lcAny) (x.2 : List (Prod (List Nat) Nat)) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let rec list_foldl_m_at__private_effect4_program_authoring_0_effect4_program_authoring_point_at_placed_spec_1 (placed : (int * int list) list) (x_1 : _ Eff.t) (x_2 : (int list * int) list) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let rec list_foldl_m_at__private_effect4_program_authoring_0_effect4_program_authoring_point_at_placed_spec_1 (placed : (int * int list) list) (x_1 : _ Eff.t) (x_2 : (int list * int) list) : (_ Eff.t, (int list, reason) located) result =
   match x_2 with
     | [] -> Ok x_1
     | head_4 :: tail_5 -> (match head_4 with
         | fst_6, snd_7 -> (let[@local always] _jp_8 = fun () -> let _x_9 = "" in
           let _x_10 = Reason_placement _x_9 in
-          let _x_11 = ({ path = fst_6; reason = _x_10 } : effect4_program_authoring_refusal) in
+          let _x_11 = ({ site = fst_6; reason = _x_10 } : (_, _) located) in
           Error _x_11 in
           let _x_13 = list_find_opt_at__private_effect4_program_authoring_0_effect4_program_authoring_point_at_placed_spec_0 snd_7 placed in
           match _x_13 with
             | None -> (let _x_14 = "" in
               let _x_15 = Reason_placement _x_14 in
-              let _x_16 = ({ path = fst_6; reason = _x_15 } : effect4_program_authoring_refusal) in
+              let _x_16 = ({ site = fst_6; reason = _x_15 } : (_, _) located) in
               Error _x_16)
             | Some val__18 -> (match val__18 with
                 | _, snd_20 -> (let _x_21 = Node_eff x_1 in
@@ -41983,9 +41998,9 @@ let rec list_foldl_m_at__private_effect4_program_authoring_0_effect4_program_aut
 
 
 
-(* LCNF mono: _private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.pointAtPlaced._redArg (placed : List (Prod Nat (List Nat))) (tree : Effect4.Program.Eff lcAny) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: _private.Effect4.Program.Authoring.0.Effect4.Program.Authoring.pointAtPlaced._redArg (placed : List (Prod Nat (List Nat))) (tree : Effect4.Program.Eff lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_point_at_placed (placed : (int * int list) list) (tree : _ Eff.t) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_point_at_placed (placed : (int * int list) list) (tree : _ Eff.t) : (_ Eff.t, (int list, reason) located) result =
   let _x_1 = program_authoring_placeholder_sites tree in
   list_foldl_m_at__private_effect4_program_authoring_0_effect4_program_authoring_point_at_placed_spec_1 placed tree _x_1
 
@@ -42005,9 +42020,9 @@ let program_path_layer_path (k : int) : int list =
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Program.Authoring.elaborateModule.spec_1._redArg (_x.1 : Effect4.Program.Authoring.Env) (x.2 : List (Prod (Prod String (Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.LayerTerm lcAny)))) Nat)) (x.3 : List (Effect4.Program.LayerTerm lcAny)) : Except Effect4.Program.Authoring.Refusal (List (Effect4.Program.LayerTerm lcAny)) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Program.Authoring.elaborateModule.spec_1._redArg (_x.1 : Effect4.Program.Authoring.Env) (x.2 : List (Prod (Prod String (Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.LayerTerm lcAny)))) Nat)) (x.3 : List (Effect4.Program.LayerTerm lcAny)) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (List (Effect4.Program.LayerTerm lcAny)) *)
 
-let rec list_map_m_loop_at_program_authoring_elaborate_module_spec_1 (_x_1 : env) (x_2 : ((string * (env -> int list -> (_ LayerTerm.t, effect4_program_authoring_refusal) result)) * int) list) (x_3 : _ LayerTerm.t list) : (_ LayerTerm.t list, effect4_program_authoring_refusal) result =
+let rec list_map_m_loop_at_program_authoring_elaborate_module_spec_1 (_x_1 : env) (x_2 : ((string * (env -> int list -> (_ LayerTerm.t, (int list, reason) located) result)) * int) list) (x_3 : _ LayerTerm.t list) : (_ LayerTerm.t list, (int list, reason) located) result =
   match x_2 with
     | [] -> (let _x_4 = List.rev x_3 in
       Ok _x_4)
@@ -42044,9 +42059,9 @@ let rec list_map_tr_loop_at_program_authoring_elaborate_module_spec_2 (a_1 : int
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.elaborateModule._redArg (m : Effect4.Program.Authoring.Module lcAny) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff lcAny) *)
+(* LCNF mono: Effect4.Program.Authoring.elaborateModule._redArg (m : Effect4.Program.Authoring.Module lcAny) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff lcAny) *)
 
-let program_authoring_elaborate_module (m : _ module_) : (_ Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_elaborate_module (m : _ module_) : (_ Eff.t, (int list, reason) located) result =
   match (m : _ module_) with
     | { layers = layers; defs = defs; _ } -> (let _x_1 = program_authoring_layer_names_of layers in
       match _x_1 with
@@ -42094,9 +42109,9 @@ let program_authoring_elaborate_module (m : _ module_) : (_ Eff.t, effect4_progr
 
 
 
-(* LCNF mono: Effect4.Program.Authoring.elaborateAt (rows : List Effect4.Program.Row) (defs : List (Effect4.Program.Authoring.DefSrc Effect4.Program.NativeOp)) (main : Effect4.Program.Authoring.Env -> (List Nat) -> (Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff Effect4.Program.NativeOp))) : Except Effect4.Program.Authoring.Refusal (Effect4.Program.Eff Effect4.Program.NativeOp) *)
+(* LCNF mono: Effect4.Program.Authoring.elaborateAt (rows : List Effect4.Program.Row) (defs : List (Effect4.Program.Authoring.DefSrc Effect4.Program.NativeOp)) (main : Effect4.Program.Authoring.Env -> (List Nat) -> (Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff Effect4.Program.NativeOp))) : Except (Effect4.Located (List Nat) Effect4.Program.Authoring.Reason) (Effect4.Program.Eff Effect4.Program.NativeOp) *)
 
-let program_authoring_elaborate_at (rows : Row.t list) (defs : NativeOp.t def_src list) (main : env -> int list -> (NativeOp.t Eff.t, effect4_program_authoring_refusal) result) : (NativeOp.t Eff.t, effect4_program_authoring_refusal) result =
+let program_authoring_elaborate_at (rows : Row.t list) (defs : NativeOp.t def_src list) (main : env -> int list -> (NativeOp.t Eff.t, (int list, reason) located) result) : (NativeOp.t Eff.t, (int list, reason) located) result =
   let _x_1 = [] in
   let _x_2 = list_map_tr_loop_at_program_authoring_elaborate_at_spec_0 rows _x_1 in
   let _x_3 = ({ rows = _x_2; services = _x_1; layers = _x_1; defs = defs; main = main; types = _x_1 } : _ module_) in
@@ -42249,9 +42264,9 @@ let rec list_map_tr_loop_at_program_check_internal_join_bodies_spec_0 (x_1 : int
 
 
 
-(* LCNF mono: Effect4.Located.under._redArg._lam_0 (p : List Nat) (x.1 : List Nat) : List Nat *)
+(* LCNF mono: Effect4.Located.under._redArg._lam_0 (p : List lcAny) (x.1 : List lcAny) : List lcAny *)
 
-let located_under__red_arg__lam_0 (p : int list) (x_1 : int list) : int list =
+let located_under__red_arg__lam_0 (p : _ list) (x_1 : _ list) : _ list =
   p @ x_1
 
 
@@ -42265,9 +42280,9 @@ let located_map_site (f : _ -> _) (r : (_, _) located) : (_, _) located =
 
 
 
-(* LCNF mono: Effect4.Located.under._redArg (p : List Nat) (r : Effect4.Located (List Nat) lcAny) : Effect4.Located (List Nat) lcAny *)
+(* LCNF mono: Effect4.Located.under._redArg (p : List lcAny) (r : Effect4.Located (List lcAny) lcAny) : Effect4.Located (List lcAny) lcAny *)
 
-let located_under (p : int list) (r : (int list, _) located) : (int list, _) located =
+let located_under (p : _ list) (r : (_ list, _) located) : (_ list, _) located =
   let _f_1 = located_under__red_arg__lam_0 p in
   located_map_site _f_1 r
 
@@ -44637,9 +44652,9 @@ let program_formation_input_at_program_formation_check_input_at_program_admit_pr
 
 
 
-(* LCNF mono: Effect4.Program.Formation.checkInput._at_.Effect4.Program.admitProgram.spec_0 (program : Effect4.Program.Eff Effect4.Program.NativeOp) (table : List Effect4.Program.Row) (services : List (Prod Effect4.ServiceKey Effect4.Program.Ty)) : Option Effect4.Program.FormationRefusal *)
+(* LCNF mono: Effect4.Program.Formation.checkInput._at_.Effect4.Program.admitProgram.spec_0 (program : Effect4.Program.Eff Effect4.Program.NativeOp) (table : List Effect4.Program.Row) (services : List (Prod Effect4.ServiceKey Effect4.Program.Ty)) : Option (Effect4.Located (List String) Effect4.Program.FormationReason) *)
 
-let program_formation_check_input_at_program_admit_program_spec_0 (program : NativeOp.t Eff.t) (table : Row.t list) (services : (ServiceKey.t * Ty.t) list) : formation_refusal option =
+let program_formation_check_input_at_program_admit_program_spec_0 (program : NativeOp.t Eff.t) (table : Row.t list) (services : (ServiceKey.t * Ty.t) list) : (string list, formation_reason) located option =
   let _x_1 = program_formation_input_at_program_formation_check_input_at_program_admit_program_spec_0_spec_0 program table services in
   program_formation_check _x_1
 
@@ -47667,9 +47682,9 @@ let program_check_refusal_site (i : check_input) (why : (int list, type_reason) 
 
 
 
-(* LCNF mono: Effect4.Program.instDecidableEqTypeRefusal._lam_0 (a : List Nat) (b : List Nat) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqTypeReason.decEq._lam_1 (a : List Nat) (b : List Nat) : Bool *)
 
-let program_inst_decidable_eq_type_refusal__lam_0 (a : int list) (b : int list) : bool =
+let program_inst_decidable_eq_type_reason_dec_eq__lam_1 (a : int list) (b : int list) : bool =
   let _x_1 = fun _b1 _b2 -> _b1 = _b2 in
   inst_decidable_eq_list _x_1 a b
 
@@ -47748,39 +47763,56 @@ let program_inst_decidable_eq_ref_fault (x_1 : ref_fault) (y_2 : ref_fault) : bo
 
 
 
+(* LCNF mono: Effect4.Program.instDecidableEqTypeReason.decEq._lam_0 (a : List String) (b : List String) : Bool *)
+
+let program_inst_decidable_eq_type_reason_dec_eq__lam_0 (a : string list) (b : string list) : bool =
+  let _x_1 = fun _b1 _b2 -> _b1 = _b2 in
+  inst_decidable_eq_list _x_1 a b
+
+
+
 (* LCNF mono: Effect4.Program.instDecidableEqFormationReason.decEq (x.1 : Effect4.Program.FormationReason) (x.2 : Effect4.Program.FormationReason) : Bool *)
 
 let program_inst_decidable_eq_formation_reason_dec_eq (x_1 : formation_reason) (x_2 : formation_reason) : bool =
   match (x_1 : formation_reason) with
-    | FormationReason_repeatedField name_3 -> (let _x_4 = false in
-      match (x_2 : formation_reason) with
-        | FormationReason_repeatedField name_5 -> (let _x_6 = name_3 = name_5 in
-          if _x_6 then _x_6 else _x_4)
-        | _ -> _x_4)
-    | FormationReason_mapKey -> (match (x_2 : formation_reason) with
-        | FormationReason_repeatedField _ -> false
-        | FormationReason_mapKey -> true
+    | FormationReason_repeatedField (name_3, ty_4) -> (match (x_2 : formation_reason) with
+        | FormationReason_repeatedField (name_5, ty_6) -> (let _x_7 = name_3 = name_5 in
+          if _x_7 then program_ty_beq ty_4 ty_6 else _x_7)
         | _ -> false)
-    | FormationReason_deferredError -> (match (x_2 : formation_reason) with
-        | FormationReason_repeatedField _ -> false
-        | FormationReason_deferredError -> true
+    | FormationReason_mapKey ty_10 -> (match (x_2 : formation_reason) with
+        | FormationReason_mapKey ty_11 -> program_ty_beq ty_10 ty_11
         | _ -> false)
-    | FormationReason_typeVariable -> (match (x_2 : formation_reason) with
-        | FormationReason_repeatedField _ -> false
-        | FormationReason_typeVariable -> true
+    | FormationReason_deferredError ty_14 -> (match (x_2 : formation_reason) with
+        | FormationReason_deferredError ty_15 -> program_ty_beq ty_14 ty_15
+        | _ -> false)
+    | FormationReason_typeVariable ty_18 -> (match (x_2 : formation_reason) with
+        | FormationReason_typeVariable ty_19 -> program_ty_beq ty_18 ty_19
         | _ -> false)
 
 
 
-(* LCNF mono: Effect4.Program.instDecidableEqFormationRefusal.decEq (x.1 : Effect4.Program.FormationRefusal) (x.2 : Effect4.Program.FormationRefusal) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqFormationReason (x.1 : Effect4.Program.FormationReason) (x.2 : Effect4.Program.FormationReason) : Bool *)
 
-let program_inst_decidable_eq_formation_refusal_dec_eq (x_1 : formation_refusal) (x_2 : formation_refusal) : bool =
-  match (x_1 : formation_refusal) with
-    | { path = path_3; ty = ty_4; reason = reason_5 } -> (match (x_2 : formation_refusal) with
-        | { path = path_6; ty = ty_7; reason = reason_8 } -> (let _x_9 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_10 = inst_decidable_eq_list _x_9 path_3 path_6 in
-          if _x_10 then (let _x_11 = program_ty_beq ty_4 ty_7 in
-            if _x_11 then program_inst_decidable_eq_formation_reason_dec_eq reason_5 reason_8 else _x_11) else _x_10))
+let program_inst_decidable_eq_formation_reason (x_1 : formation_reason) (x_2 : formation_reason) : bool =
+  program_inst_decidable_eq_formation_reason_dec_eq x_1 x_2
+
+
+
+(* LCNF mono: Effect4.instDecidableEqLocated.decEq._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (x.3 : Effect4.Located lcAny lcAny) (x.4 : Effect4.Located lcAny lcAny) : Bool *)
+
+let inst_decidable_eq_located_dec_eq (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (x_3 : (_, _) located) (x_4 : (_, _) located) : bool =
+  match (x_3 : (_, _) located) with
+    | { site = site_5; reason = reason_6 } -> (match (x_4 : (_, _) located) with
+        | { site = site_7; reason = reason_8 } -> (let _x_9 = inst_1 site_5 site_7 in
+          if _x_9 then inst_2 reason_6 reason_8 else _x_9))
+
+
+
+(* LCNF mono: Effect4.Program.instDecidableEqRecordTypingReason.decEq._lam_0 (a : List String) (b : List String) : Bool *)
+
+let program_inst_decidable_eq_record_typing_reason_dec_eq__lam_0 (a : string list) (b : string list) : bool =
+  let _x_1 = fun _b1 _b2 -> _b1 = _b2 in
+  inst_decidable_eq_list _x_1 a b
 
 
 
@@ -47818,30 +47850,25 @@ let program_inst_decidable_eq_record_typing_reason_dec_eq (x_1 : record_typing_r
           if _x_47 then program_ty_beq branch_44 branch_46 else _x_47)
         | _ -> false)
     | RecordTypingReason_declarationFormation why_50 -> (match (x_2 : record_typing_reason) with
-        | RecordTypingReason_declarationFormation why_51 -> program_inst_decidable_eq_formation_refusal_dec_eq why_50 why_51
+        | RecordTypingReason_declarationFormation why_51 -> (let _f_52 = program_inst_decidable_eq_record_typing_reason_dec_eq__lam_0 in
+          let _x_53 = program_inst_decidable_eq_formation_reason in
+          inst_decidable_eq_located_dec_eq _f_52 _x_53 why_50 why_51)
         | _ -> false)
 
 
 
-(* LCNF mono: Effect4.Program.instDecidableEqRecordTermRefusal.decEq (x.1 : Effect4.Program.RecordTermRefusal) (x.2 : Effect4.Program.RecordTermRefusal) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqRecordTypingReason (x.1 : Effect4.Program.RecordTypingReason) (x.2 : Effect4.Program.RecordTypingReason) : Bool *)
 
-let program_inst_decidable_eq_record_term_refusal_dec_eq (x_1 : record_term_refusal) (x_2 : record_term_refusal) : bool =
-  match (x_1 : record_term_refusal) with
-    | { path = path_3; reason = reason_4 } -> (match (x_2 : record_term_refusal) with
-        | { path = path_5; reason = reason_6 } -> (let _x_7 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_8 = inst_decidable_eq_list _x_7 path_3 path_5 in
-          if _x_8 then program_inst_decidable_eq_record_typing_reason_dec_eq reason_4 reason_6 else _x_8))
+let program_inst_decidable_eq_record_typing_reason (x_1 : record_typing_reason) (x_2 : record_typing_reason) : bool =
+  program_inst_decidable_eq_record_typing_reason_dec_eq x_1 x_2
 
 
 
-(* LCNF mono: Effect4.Program.instDecidableEqRecordCauseRefusal.decEq (x.1 : Effect4.Program.RecordCauseRefusal) (x.2 : Effect4.Program.RecordCauseRefusal) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqTypeReason.decEq._lam_3 (_f.1 : (List Nat) -> (List Nat) -> Bool) (a : Effect4.Located (List Nat) Effect4.Program.RecordTypingReason) (b : Effect4.Located (List Nat) Effect4.Program.RecordTypingReason) : Bool *)
 
-let program_inst_decidable_eq_record_cause_refusal_dec_eq (x_1 : record_cause_refusal) (x_2 : record_cause_refusal) : bool =
-  match (x_1 : record_cause_refusal) with
-    | { cause_path = cause_path_3; term = term_4 } -> (match (x_2 : record_cause_refusal) with
-        | { cause_path = cause_path_5; term = term_6 } -> (let _x_7 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_8 = inst_decidable_eq_list _x_7 cause_path_3 cause_path_5 in
-          if _x_8 then program_inst_decidable_eq_record_term_refusal_dec_eq term_4 term_6 else _x_8))
+let program_inst_decidable_eq_type_reason_dec_eq__lam_3 (_f_1 : int list -> int list -> bool) (a : (int list, record_typing_reason) located) (b : (int list, record_typing_reason) located) : bool =
+  let _x_2 = program_inst_decidable_eq_record_typing_reason in
+  inst_decidable_eq_located_dec_eq _f_1 _x_2 a b
 
 
 
@@ -47849,35 +47876,29 @@ let program_inst_decidable_eq_record_cause_refusal_dec_eq (x_1 : record_cause_re
 
 let program_inst_decidable_eq_tuple_typing_reason_dec_eq (x_1 : tuple_typing_reason) (x_2 : tuple_typing_reason) : bool =
   match (x_1 : tuple_typing_reason) with
-    | TupleTypingReason_nonTuple branch_3 -> (match (x_2 : tuple_typing_reason) with
-        | TupleTypingReason_nonTuple branch_4 -> program_ty_beq branch_3 branch_4
-        | TupleTypingReason_outOfBounds _ -> false)
-    | TupleTypingReason_outOfBounds arity_8 -> (match (x_2 : tuple_typing_reason) with
-        | TupleTypingReason_nonTuple _ -> false
-        | TupleTypingReason_outOfBounds arity_11 -> arity_8 = arity_11)
+    | TupleTypingReason_nonTuple (index_3, branch_4) -> (match (x_2 : tuple_typing_reason) with
+        | TupleTypingReason_nonTuple (index_5, branch_6) -> (let _x_7 = index_3 = index_5 in
+          if _x_7 then program_ty_beq branch_4 branch_6 else _x_7)
+        | TupleTypingReason_outOfBounds (_, _) -> false)
+    | TupleTypingReason_outOfBounds (index_12, arity_13) -> (match (x_2 : tuple_typing_reason) with
+        | TupleTypingReason_nonTuple (_, _) -> false
+        | TupleTypingReason_outOfBounds (index_17, arity_18) -> (let _x_19 = index_12 = index_17 in
+          if _x_19 then arity_13 = arity_18 else _x_19))
 
 
 
-(* LCNF mono: Effect4.Program.instDecidableEqTupleTermRefusal.decEq (x.1 : Effect4.Program.TupleTermRefusal) (x.2 : Effect4.Program.TupleTermRefusal) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqTupleTypingReason (x.1 : Effect4.Program.TupleTypingReason) (x.2 : Effect4.Program.TupleTypingReason) : Bool *)
 
-let program_inst_decidable_eq_tuple_term_refusal_dec_eq (x_1 : tuple_term_refusal) (x_2 : tuple_term_refusal) : bool =
-  match (x_1 : tuple_term_refusal) with
-    | { path = path_3; index = index_4; reason = reason_5 } -> (match (x_2 : tuple_term_refusal) with
-        | { path = path_6; index = index_7; reason = reason_8 } -> (let _x_9 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_10 = inst_decidable_eq_list _x_9 path_3 path_6 in
-          if _x_10 then (let _x_11 = index_4 = index_7 in
-            if _x_11 then program_inst_decidable_eq_tuple_typing_reason_dec_eq reason_5 reason_8 else _x_11) else _x_10))
+let program_inst_decidable_eq_tuple_typing_reason (x_1 : tuple_typing_reason) (x_2 : tuple_typing_reason) : bool =
+  program_inst_decidable_eq_tuple_typing_reason_dec_eq x_1 x_2
 
 
 
-(* LCNF mono: Effect4.Program.instDecidableEqTupleCauseRefusal.decEq (x.1 : Effect4.Program.TupleCauseRefusal) (x.2 : Effect4.Program.TupleCauseRefusal) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqTypeReason.decEq._lam_5 (_f.1 : (List Nat) -> (List Nat) -> Bool) (a : Effect4.Located (List Nat) Effect4.Program.TupleTypingReason) (b : Effect4.Located (List Nat) Effect4.Program.TupleTypingReason) : Bool *)
 
-let program_inst_decidable_eq_tuple_cause_refusal_dec_eq (x_1 : tuple_cause_refusal) (x_2 : tuple_cause_refusal) : bool =
-  match (x_1 : tuple_cause_refusal) with
-    | { cause_path = cause_path_3; term = term_4 } -> (match (x_2 : tuple_cause_refusal) with
-        | { cause_path = cause_path_5; term = term_6 } -> (let _x_7 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_8 = inst_decidable_eq_list _x_7 cause_path_3 cause_path_5 in
-          if _x_8 then program_inst_decidable_eq_tuple_term_refusal_dec_eq term_4 term_6 else _x_8))
+let program_inst_decidable_eq_type_reason_dec_eq__lam_5 (_f_1 : int list -> int list -> bool) (a : (int list, tuple_typing_reason) located) (b : (int list, tuple_typing_reason) located) : bool =
+  let _x_2 = program_inst_decidable_eq_tuple_typing_reason in
+  inst_decidable_eq_located_dec_eq _f_1 _x_2 a b
 
 
 
@@ -47899,25 +47920,18 @@ let program_inst_decidable_eq_fold_typing_reason_dec_eq (x_1 : fold_typing_reaso
 
 
 
-(* LCNF mono: Effect4.Program.instDecidableEqFoldTermRefusal.decEq (x.1 : Effect4.Program.FoldTermRefusal) (x.2 : Effect4.Program.FoldTermRefusal) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqFoldTypingReason (x.1 : Effect4.Program.FoldTypingReason) (x.2 : Effect4.Program.FoldTypingReason) : Bool *)
 
-let program_inst_decidable_eq_fold_term_refusal_dec_eq (x_1 : fold_term_refusal) (x_2 : fold_term_refusal) : bool =
-  match (x_1 : fold_term_refusal) with
-    | { path = path_3; reason = reason_4 } -> (match (x_2 : fold_term_refusal) with
-        | { path = path_5; reason = reason_6 } -> (let _x_7 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_8 = inst_decidable_eq_list _x_7 path_3 path_5 in
-          if _x_8 then program_inst_decidable_eq_fold_typing_reason_dec_eq reason_4 reason_6 else _x_8))
+let program_inst_decidable_eq_fold_typing_reason (x_1 : fold_typing_reason) (x_2 : fold_typing_reason) : bool =
+  program_inst_decidable_eq_fold_typing_reason_dec_eq x_1 x_2
 
 
 
-(* LCNF mono: Effect4.Program.instDecidableEqFoldCauseRefusal.decEq (x.1 : Effect4.Program.FoldCauseRefusal) (x.2 : Effect4.Program.FoldCauseRefusal) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqTypeReason.decEq._lam_6 (_f.1 : (List Nat) -> (List Nat) -> Bool) (a : Effect4.Located (List Nat) Effect4.Program.FoldTypingReason) (b : Effect4.Located (List Nat) Effect4.Program.FoldTypingReason) : Bool *)
 
-let program_inst_decidable_eq_fold_cause_refusal_dec_eq (x_1 : fold_cause_refusal) (x_2 : fold_cause_refusal) : bool =
-  match (x_1 : fold_cause_refusal) with
-    | { cause_path = cause_path_3; term = term_4 } -> (match (x_2 : fold_cause_refusal) with
-        | { cause_path = cause_path_5; term = term_6 } -> (let _x_7 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_8 = inst_decidable_eq_list _x_7 cause_path_3 cause_path_5 in
-          if _x_8 then program_inst_decidable_eq_fold_term_refusal_dec_eq term_4 term_6 else _x_8))
+let program_inst_decidable_eq_type_reason_dec_eq__lam_6 (_f_1 : int list -> int list -> bool) (a : (int list, fold_typing_reason) located) (b : (int list, fold_typing_reason) located) : bool =
+  let _x_2 = program_inst_decidable_eq_fold_typing_reason in
+  inst_decidable_eq_located_dec_eq _f_1 _x_2 a b
 
 
 
@@ -48018,81 +48032,95 @@ let program_inst_decidable_eq_type_reason_dec_eq (x_1 : type_reason) (x_2 : type
           | _ -> assert false)
       | TypeReason_instantiatedFormation (row_4, why_2) -> (match (x_2 : type_reason) with
           | TypeReason_instantiatedFormation (row_5, why_3) -> (let _x_38 = row_4 = row_5 in
-            if _x_38 then program_inst_decidable_eq_formation_refusal_dec_eq why_2 why_3 else _x_38)
+            if _x_38 then (let _f_39 = program_inst_decidable_eq_type_reason_dec_eq__lam_0 in
+              let _x_40 = program_inst_decidable_eq_formation_reason in
+              inst_decidable_eq_located_dec_eq _f_39 _x_40 why_2 why_3) else _x_38)
           | _ -> assert false)
       | TypeReason_recordTerm why_4 -> (match (x_2 : type_reason) with
-          | TypeReason_recordTerm why_5 -> program_inst_decidable_eq_record_term_refusal_dec_eq why_4 why_5
+          | TypeReason_recordTerm why_5 -> (let _f_42 = program_inst_decidable_eq_type_reason_dec_eq__lam_1 in
+            let _x_43 = program_inst_decidable_eq_record_typing_reason in
+            inst_decidable_eq_located_dec_eq _f_42 _x_43 why_4 why_5)
           | _ -> assert false)
       | TypeReason_recordCause why_6 -> (match (x_2 : type_reason) with
-          | TypeReason_recordCause why_7 -> program_inst_decidable_eq_record_cause_refusal_dec_eq why_6 why_7
+          | TypeReason_recordCause why_7 -> (let _f_45 = program_inst_decidable_eq_type_reason_dec_eq__lam_1 in
+            let _f_46 = program_inst_decidable_eq_type_reason_dec_eq__lam_3 _f_45 in
+            inst_decidable_eq_located_dec_eq _f_45 _f_46 why_6 why_7)
           | _ -> assert false)
       | TypeReason_tupleTerm why_8 -> (match (x_2 : type_reason) with
-          | TypeReason_tupleTerm why_9 -> program_inst_decidable_eq_tuple_term_refusal_dec_eq why_8 why_9
+          | TypeReason_tupleTerm why_9 -> (let _f_48 = program_inst_decidable_eq_type_reason_dec_eq__lam_1 in
+            let _x_49 = program_inst_decidable_eq_tuple_typing_reason in
+            inst_decidable_eq_located_dec_eq _f_48 _x_49 why_8 why_9)
           | _ -> assert false)
       | TypeReason_tupleCause why_10 -> (match (x_2 : type_reason) with
-          | TypeReason_tupleCause why_11 -> program_inst_decidable_eq_tuple_cause_refusal_dec_eq why_10 why_11
+          | TypeReason_tupleCause why_11 -> (let _f_51 = program_inst_decidable_eq_type_reason_dec_eq__lam_1 in
+            let _f_52 = program_inst_decidable_eq_type_reason_dec_eq__lam_5 _f_51 in
+            inst_decidable_eq_located_dec_eq _f_51 _f_52 why_10 why_11)
           | _ -> assert false)
       | TypeReason_errorPayloadField (error_4, path, field) -> (match (x_2 : type_reason) with
-          | TypeReason_errorPayloadField (error_5, path_1, field_1) -> (let _x_44 = program_ty_beq error_4 error_5 in
-            if _x_44 then (let _x_45 = fun _b1 _b2 -> _b1 = _b2 in
-              let _x_46 = inst_decidable_eq_list _x_45 path path_1 in
-              if _x_46 then program_ty_beq field field_1 else _x_46) else _x_44)
+          | TypeReason_errorPayloadField (error_5, path_1, field_1) -> (let _x_54 = program_ty_beq error_4 error_5 in
+            if _x_54 then (let _x_55 = fun _b1 _b2 -> _b1 = _b2 in
+              let _x_56 = inst_decidable_eq_list _x_55 path path_1 in
+              if _x_56 then program_ty_beq field field_1 else _x_56) else _x_54)
           | _ -> assert false)
       | TypeReason_errorSpelling (error_6, spelling) -> (match (x_2 : type_reason) with
-          | TypeReason_errorSpelling (error_7, spelling_1) -> (let _x_48 = program_ty_beq error_6 error_7 in
-            if _x_48 then program_ty_beq spelling spelling_1 else _x_48)
+          | TypeReason_errorSpelling (error_7, spelling_1) -> (let _x_58 = program_ty_beq error_6 error_7 in
+            if _x_58 then program_ty_beq spelling spelling_1 else _x_58)
           | _ -> assert false)
       | TypeReason_binderTerm (row_6, param) -> (match (x_2 : type_reason) with
-          | TypeReason_binderTerm (row_7, param_1) -> (let _x_50 = row_6 = row_7 in
-            if _x_50 then program_ty_beq param param_1 else _x_50)
+          | TypeReason_binderTerm (row_7, param_1) -> (let _x_60 = row_6 = row_7 in
+            if _x_60 then program_ty_beq param param_1 else _x_60)
           | _ -> assert false)
       | TypeReason_resultNotSubtype (row_8, result, expected_2) -> (match (x_2 : type_reason) with
-          | TypeReason_resultNotSubtype (row_9, result_1, expected_3) -> (let _x_52 = row_8 = row_9 in
-            if _x_52 then (let _x_53 = program_ty_beq result result_1 in
-              if _x_53 then program_ty_beq expected_2 expected_3 else _x_53) else _x_52)
+          | TypeReason_resultNotSubtype (row_9, result_1, expected_3) -> (let _x_62 = row_8 = row_9 in
+            if _x_62 then (let _x_63 = program_ty_beq result result_1 in
+              if _x_63 then program_ty_beq expected_2 expected_3 else _x_63) else _x_62)
           | _ -> assert false)
       | TypeReason_foldTerm why_12 -> (match (x_2 : type_reason) with
-          | TypeReason_foldTerm why_13 -> program_inst_decidable_eq_fold_term_refusal_dec_eq why_12 why_13
+          | TypeReason_foldTerm why_13 -> (let _f_65 = program_inst_decidable_eq_type_reason_dec_eq__lam_1 in
+            let _x_66 = program_inst_decidable_eq_fold_typing_reason in
+            inst_decidable_eq_located_dec_eq _f_65 _x_66 why_12 why_13)
           | _ -> assert false)
       | TypeReason_foldCause why_14 -> (match (x_2 : type_reason) with
-          | TypeReason_foldCause why_15 -> program_inst_decidable_eq_fold_cause_refusal_dec_eq why_14 why_15
+          | TypeReason_foldCause why_15 -> (let _f_68 = program_inst_decidable_eq_type_reason_dec_eq__lam_1 in
+            let _f_69 = program_inst_decidable_eq_type_reason_dec_eq__lam_6 _f_68 in
+            inst_decidable_eq_located_dec_eq _f_68 _f_69 why_14 why_15)
           | _ -> assert false)
       | TypeReason_maskRestoreExpected t_18 -> (match (x_2 : type_reason) with
           | TypeReason_maskRestoreExpected t_19 -> program_ty_beq t_18 t_19
           | _ -> assert false)
       | TypeReason_definitionsMismatch (decls, bodies) -> (match (x_2 : type_reason) with
-          | TypeReason_definitionsMismatch (decls_1, bodies_1) -> (let _x_58 = decls = decls_1 in
-            if _x_58 then bodies = bodies_1 else _x_58)
+          | TypeReason_definitionsMismatch (decls_1, bodies_1) -> (let _x_72 = decls = decls_1 in
+            if _x_72 then bodies = bodies_1 else _x_72)
           | _ -> assert false)
       | TypeReason_definitionColumns name -> (match (x_2 : type_reason) with
           | TypeReason_definitionColumns name_1 -> name = name_1
           | _ -> assert false)
       | TypeReason_bodyNotDeclared (name_2, body) -> (match (x_2 : type_reason) with
-          | TypeReason_bodyNotDeclared (name_3, body_1) -> (let _x_61 = name_2 = name_3 in
-            if _x_61 then program_inst_decidable_eq_eff_ty_dec_eq body body_1 else _x_61)
+          | TypeReason_bodyNotDeclared (name_3, body_1) -> (let _x_75 = name_2 = name_3 in
+            if _x_75 then program_inst_decidable_eq_eff_ty_dec_eq body body_1 else _x_75)
           | _ -> assert false)
       | TypeReason_invokeArity (name_4, params, args) -> (match (x_2 : type_reason) with
-          | TypeReason_invokeArity (name_5, params_1, args_1) -> (let _x_63 = name_4 = name_5 in
-            if _x_63 then (let _x_64 = params = params_1 in
-              if _x_64 then args = args_1 else _x_64) else _x_63)
+          | TypeReason_invokeArity (name_5, params_1, args_1) -> (let _x_77 = name_4 = name_5 in
+            if _x_77 then (let _x_78 = params = params_1 in
+              if _x_78 then args = args_1 else _x_78) else _x_77)
           | _ -> assert false)
       | TypeReason_unboundVariable (path_2, index, depth) -> (match (x_2 : type_reason) with
-          | TypeReason_unboundVariable (path_3, index_1, depth_1) -> (let _x_66 = fun _b1 _b2 -> _b1 = _b2 in
-            let _x_67 = inst_decidable_eq_list _x_66 path_2 path_3 in
-            if _x_67 then (let _x_68 = index = index_1 in
-              if _x_68 then depth = depth_1 else _x_68) else _x_67)
+          | TypeReason_unboundVariable (path_3, index_1, depth_1) -> (let _x_80 = fun _b1 _b2 -> _b1 = _b2 in
+            let _x_81 = inst_decidable_eq_list _x_80 path_2 path_3 in
+            if _x_81 then (let _x_82 = index = index_1 in
+              if _x_82 then depth = depth_1 else _x_82) else _x_81)
           | _ -> assert false)
       | TypeReason_unknownAtom (path_4, atom) -> (match (x_2 : type_reason) with
-          | TypeReason_unknownAtom (path_5, atom_1) -> (let _x_70 = fun _b1 _b2 -> _b1 = _b2 in
-            let _x_71 = inst_decidable_eq_list _x_70 path_4 path_5 in
-            if _x_71 then atom = atom_1 else _x_71)
+          | TypeReason_unknownAtom (path_5, atom_1) -> (let _x_84 = fun _b1 _b2 -> _b1 = _b2 in
+            let _x_85 = inst_decidable_eq_list _x_84 path_4 path_5 in
+            if _x_85 then atom = atom_1 else _x_85)
           | _ -> assert false)
       | TypeReason_refusedArguments (path_6, atom_2, args_2) -> (match (x_2 : type_reason) with
-          | TypeReason_refusedArguments (path_7, atom_3, args_3) -> (let _x_73 = fun _b1 _b2 -> _b1 = _b2 in
-            let _x_74 = inst_decidable_eq_list _x_73 path_6 path_7 in
-            if _x_74 then (let _x_75 = atom_2 = atom_3 in
-              if _x_75 then (let _x_76 = program_inst_decidable_eq_ty in
-                inst_decidable_eq_list _x_76 args_2 args_3) else _x_75) else _x_74)
+          | TypeReason_refusedArguments (path_7, atom_3, args_3) -> (let _x_87 = fun _b1 _b2 -> _b1 = _b2 in
+            let _x_88 = inst_decidable_eq_list _x_87 path_6 path_7 in
+            if _x_88 then (let _x_89 = atom_2 = atom_3 in
+              if _x_89 then (let _x_90 = program_inst_decidable_eq_ty in
+                inst_decidable_eq_list _x_90 args_2 args_3) else _x_89) else _x_88)
           | _ -> assert false)
       | _ -> _x_5) else _x_5
 
@@ -48105,20 +48133,10 @@ let program_inst_decidable_eq_type_reason (x_1 : type_reason) (x_2 : type_reason
 
 
 
-(* LCNF mono: Effect4.instDecidableEqLocated.decEq._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (x.3 : Effect4.Located lcAny lcAny) (x.4 : Effect4.Located lcAny lcAny) : Bool *)
-
-let inst_decidable_eq_located_dec_eq (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (x_3 : (_, _) located) (x_4 : (_, _) located) : bool =
-  match (x_3 : (_, _) located) with
-    | { site = site_5; reason = reason_6 } -> (match (x_4 : (_, _) located) with
-        | { site = site_7; reason = reason_8 } -> (let _x_9 = inst_1 site_5 site_7 in
-          if _x_9 then inst_2 reason_6 reason_8 else _x_9))
-
-
-
 (* LCNF mono: Effect4.Program.instDecidableEqTypeRefusal (a : Effect4.Located (List Nat) Effect4.Program.TypeReason) (b : Effect4.Located (List Nat) Effect4.Program.TypeReason) : Bool *)
 
 let program_inst_decidable_eq_type_refusal (a : (int list, type_reason) located) (b : (int list, type_reason) located) : bool =
-  let _f_1 = program_inst_decidable_eq_type_refusal__lam_0 in
+  let _f_1 = program_inst_decidable_eq_type_reason_dec_eq__lam_1 in
   let _x_2 = program_inst_decidable_eq_type_reason in
   inst_decidable_eq_located_dec_eq _f_1 _x_2 a b
 
@@ -50748,7 +50766,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_place_refusal_c_to_val
 let store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_46_program_46_type_refusal_41__32__40__95_root_95__46_effect4_46_program_46_eff_ty_41_c_to_val (x_1 : (EffTy.t, (int list, type_reason) located) result) : Val.t =
   match x_1 with
     | Error a_2 -> (let _x_3 = 0 in
-      let _x_4 = store_refusals_gen_located_c_to_val a_2 in
+      let _x_4 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_to_val a_2 in
       let _x_5 = [] in
       let _x_6 = _x_4 :: _x_5 in
       Val.Ctor (_x_3, _x_6))
@@ -50765,7 +50783,7 @@ let store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_4
 let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val_spec_0 (a_1 : (int list, type_reason) located list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_refusals_gen_located_c_to_val head_4 in
+    | head_4 :: tail_5 -> (let _x_6 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_to_val head_4 in
       let _x_7 = _x_6 :: a_2 in
       list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val_spec_0 tail_5 _x_7)
 
@@ -50790,7 +50808,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val 
     | FeedRefusal_notKept (focus_16, verdict_17) -> (match focus_16 with
         | fst_1, snd_1 -> (let _x_18 = 2 in
           let _x_19 = [] in
-          let _x_20 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 fst_1 _x_19 in
+          let _x_20 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 fst_1 _x_19 in
           let _x_21 = Val.List _x_20 in
           let _x_22 = store_program_gen_eff_ty_c_to_val snd_1 in
           let _x_23 = Val.Pair (_x_21, _x_22) in
@@ -50821,7 +50839,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val 
           _jp_47 _y_55 _x_56)
         | Some val__57 -> (match val__57 with
             | fst_2, snd_2 -> (let _x_58 = [] in
-              let _x_59 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 fst_2 _x_58 in
+              let _x_59 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 fst_2 _x_58 in
               let _x_60 = Val.List _x_59 in
               let _x_61 = store_program_gen_eff_ty_c_to_val snd_2 in
               let _x_62 = Val.Pair (_x_60, _x_61) in
@@ -50832,7 +50850,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_to_val 
           _jp_54 _x_64)
         | Some val__65 -> (match val__65 with
             | fst_3, snd_3 -> (let _x_66 = [] in
-              let _x_67 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 fst_3 _x_66 in
+              let _x_67 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 fst_3 _x_66 in
               let _x_68 = Val.List _x_67 in
               let _x_69 = store_program_gen_eff_ty_c_to_val snd_3 in
               let _x_70 = Val.Pair (_x_68, _x_69) in
@@ -50896,7 +50914,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_record_46_refusal_c_to_val (
       let _x_6 = _x_4 :: _x_5 in
       Val.Ctor (_x_3, _x_6))
     | Effect4_live_record_refusal_admission why_8 -> (let _x_9 = 1 in
-      let _x_10 = store_refusals_gen_admit_refusal_c_to_val why_8 in
+      let _x_10 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_to_val why_8 in
       let _x_11 = [] in
       let _x_12 = _x_10 :: _x_11 in
       Val.Ctor (_x_9, _x_12))
@@ -50908,7 +50926,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_record_46_refusal_c_to_val (
 let store_tool_gen_t_95_root_95__46_effect4_46_run_46_preview_46_refusal_c_to_val (x_1 : effect4_run_preview_refusal) : Val.t =
   match (x_1 : effect4_run_preview_refusal) with
     | Effect4_run_preview_refusal_admission why_2 -> (let _x_3 = 0 in
-      let _x_4 = store_refusals_gen_admit_refusal_c_to_val why_2 in
+      let _x_4 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_to_val why_2 in
       let _x_5 = [] in
       let _x_6 = _x_4 :: _x_5 in
       Val.Ctor (_x_3, _x_6))
@@ -50960,7 +50978,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_refusal_c_to_val (x_1 : e
       let _x_21 = [] in
       Val.Ctor (_x_20, _x_21))
     | Effect4_tool_refusal_admission why_23 -> (let _x_24 = 4 in
-      let _x_25 = store_refusals_gen_admit_refusal_c_to_val why_23 in
+      let _x_25 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_to_val why_23 in
       let _x_26 = [] in
       let _x_27 = _x_25 :: _x_26 in
       Val.Ctor (_x_24, _x_27))
@@ -51026,7 +51044,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_view_c_to_val (x_1 :
         | None -> (let _x_19 = Val.None in
           _jp_12 _x_19)
         | Some val__20 -> (match val__20 with
-            | fst_1, snd_1 -> (let _x_21 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 fst_1 _x_9 in
+            | fst_1, snd_1 -> (let _x_21 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 fst_1 _x_9 in
               let _x_22 = Val.List _x_21 in
               let _x_23 = store_program_gen_eff_ty_c_to_val snd_1 in
               let _x_24 = Val.Pair (_x_22, _x_23) in
@@ -51123,13 +51141,13 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_node_env_c_to_val (x_
   match (x_1 : node_env) with
     | NodeEnv_env env_2 -> (let _x_3 = 0 in
       let _x_4 = [] in
-      let _x_5 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 env_2 _x_4 in
+      let _x_5 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 env_2 _x_4 in
       let _x_6 = Val.List _x_5 in
       let _x_7 = _x_6 :: _x_4 in
       Val.Ctor (_x_3, _x_7))
     | NodeEnv_body (env_9, in_loop_10) -> (let _x_11 = 1 in
       let _x_12 = [] in
-      let _x_13 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 env_9 _x_12 in
+      let _x_13 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 env_9 _x_12 in
       let _x_14 = Val.List _x_13 in
       let _x_15 = Val.Bool in_loop_10 in
       let _x_16 = _x_15 :: _x_12 in
@@ -51140,7 +51158,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_node_env_c_to_val (x_
       Val.Ctor (_x_19, _x_20))
     | NodeEnv_slots (env_22, qs_23) -> (let _x_24 = 3 in
       let _x_25 = [] in
-      let _x_26 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 env_22 _x_25 in
+      let _x_26 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 env_22 _x_25 in
       let _x_27 = Val.List _x_26 in
       let _x_28 = list_map_tr_loop_at_store_program_gen_def_decl_c_to_val_spec_0 qs_23 _x_25 in
       let _x_29 = Val.List _x_28 in
@@ -51184,7 +51202,7 @@ let store_tool_gen_t_64__95_root_95__46_effect4_46_program_46_focus_32__40__95_r
     | { program = program_2; env = env_3; ty = ty_4 } -> (let _x_5 = 0 in
       let _x_6 = store_program_gen_eff_c_to_val_eff program_2 in
       let _x_7 = [] in
-      let _x_8 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 env_3 _x_7 in
+      let _x_8 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 env_3 _x_7 in
       let _x_9 = Val.List _x_8 in
       let _x_10 = store_program_gen_eff_ty_c_to_val ty_4 in
       let _x_11 = _x_10 :: _x_7 in
@@ -51214,7 +51232,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val (x_1 
       let[@local always] _jp_25 = fun _y_26 _y_27 -> match refusal_7 with
         | None -> (let _x_28 = Val.None in
           _jp_14 _y_27 _y_26 _x_28)
-        | Some val__29 -> (let _x_30 = store_refusals_gen_located_c_to_val val__29 in
+        | Some val__29 -> (let _x_30 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_to_val val__29 in
           let _x_31 = Val.Some _x_30 in
           _jp_14 _y_27 _y_26 _x_31) in
       let[@local always] _jp_32 = fun _y_33 -> match entry_6 with
@@ -51856,7 +51874,7 @@ let store_runner_gen_refusal_c_to_val (x_1 : effect4_api_host_session_refusal) :
       let _x_12 = [] in
       Val.Ctor (_x_11, _x_12))
     | Effect4_api_host_session_refusal_program reason_14 -> (let _x_15 = 4 in
-      let _x_16 = store_refusals_gen_admit_refusal_c_to_val reason_14 in
+      let _x_16 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_to_val reason_14 in
       let _x_17 = [] in
       let _x_18 = _x_16 :: _x_17 in
       Val.Ctor (_x_15, _x_18))
@@ -52055,7 +52073,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_
     | CheckInput_part (sig__15, env_16, program_17) -> (let _x_18 = 1 in
       let _x_19 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_data_c_to_val sig__15 in
       let _x_20 = [] in
-      let _x_21 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 env_16 _x_20 in
+      let _x_21 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 env_16 _x_20 in
       let _x_22 = Val.List _x_21 in
       let _x_23 = store_program_gen_eff_c_to_val_eff program_17 in
       let _x_24 = _x_23 :: _x_20 in
@@ -52082,7 +52100,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_suggest_46_evidence_c_
       let _x_15 = _x_11 :: _x_14 in
       Val.Ctor (_x_10, _x_15))
     | Evidence_refused why_17 -> (let _x_18 = 2 in
-      let _x_19 = store_refusals_gen_located_c_to_val why_17 in
+      let _x_19 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_to_val why_17 in
       let _x_20 = [] in
       let _x_21 = _x_19 :: _x_20 in
       Val.Ctor (_x_18, _x_21))
@@ -52093,9 +52111,9 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_suggest_46_evidence_c_
       Val.Ctor (_x_24, _x_27))
     | Evidence_differentEnv (source_env_29, target_env_30) -> (let _x_31 = 4 in
       let _x_32 = [] in
-      let _x_33 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 source_env_29 _x_32 in
+      let _x_33 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 source_env_29 _x_32 in
       let _x_34 = Val.List _x_33 in
-      let _x_35 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 target_env_30 _x_32 in
+      let _x_35 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 target_env_30 _x_32 in
       let _x_36 = Val.List _x_35 in
       let _x_37 = _x_36 :: _x_32 in
       let _x_38 = _x_34 :: _x_37 in
@@ -52850,7 +52868,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_slot_view_c_to_val (x_1 :
         | None -> (let _x_27 = Val.None in
           _jp_18 _y_26 _x_27)
         | Some val__28 -> (let _x_29 = [] in
-          let _x_30 = list_map_tr_loop_at_store_refusals_gen_term_typing_refusal_c_to_val_spec_0 val__28 _x_29 in
+          let _x_30 = list_map_tr_loop_at_store_refusals_gen_t_95_root_95__46_effect4_46_program_46_term_typing_reason_c_to_val_spec_0 val__28 _x_29 in
           let _x_31 = Val.List _x_30 in
           let _x_32 = Val.Some _x_31 in
           _jp_18 _y_26 _x_32) in
@@ -56240,9 +56258,9 @@ let program_source_session_feed (o : check_input -> verdict) (policy : feed_poli
         | Edit_omitAt (path_45, _) -> _jp_31 path_45) in
   let[@local always] _jp_47 = fun _y_48 _y_49 _y_50 _y_51 -> let _x_52 = program_source_session_candidate_part_key s _y_51 _y_48 in
   match _x_52 with
-    | None -> program_source_session_recheck o policy s _y_48 edit _y_49
+    | None -> program_source_session_recheck o policy s _y_48 edit _y_50
     | Some val__54 -> (let _x_55 = program_check_checked_ask o val__54 in
-      program_check_checked_bind' _x_55 _y_50) in
+      program_check_checked_bind' _x_55 _y_49) in
   let[@local always] _jp_57 = fun _y_58 _y_59 _y_60 _y_61 _y_62 -> let _x_63 = program_source_session_focus_at s _y_62 in
   match _x_63 with
     | Some val__64 -> (let _x_65 = program_source_session_view s in
@@ -56253,8 +56271,8 @@ let program_source_session_feed (o : check_input -> verdict) (policy : feed_poli
                   | { ty = ty; _ } -> (let _x_69 = program_source_session_draft_omit_allows edit ty in
                     if _x_69 then (let _f_71 = program_source_session_feed__lam_0 o policy s _y_58 edit _y_59 ty in
                       match (edit : edit) with
-                        | Edit_fill (path_72, _) -> _jp_47 _y_60 _y_61 _f_71 path_72
-                        | Edit_omitAt (path_74, _) -> _jp_47 _y_60 _y_61 _f_71 path_74) else program_source_session_recheck o policy s _y_60 edit _y_61)) else program_source_session_recheck o policy s _y_60 edit _y_61)
+                        | Edit_fill (path_72, _) -> _jp_47 _y_60 _f_71 _y_61 path_72
+                        | Edit_omitAt (path_74, _) -> _jp_47 _y_60 _f_71 _y_61 path_74) else program_source_session_recheck o policy s _y_60 edit _y_61)) else program_source_session_recheck o policy s _y_60 edit _y_61)
             | _ -> program_source_session_recheck o policy s _y_60 edit _y_61))
     | _ -> program_source_session_recheck o policy s _y_60 edit _y_61 in
   let[@local always] _jp_78 = fun _y_79 _y_80 _y_81 _y_82 -> match _y_82 with
@@ -57361,6 +57379,14 @@ let program_inst_decidable_eq_sig_refusal_dec_eq (x_1 : sig_refusal) (x_2 : sig_
 
 
 
+(* LCNF mono: Effect4.Program.instDecidableEqAdmitRefusal.decEq._lam_0 (a : List String) (b : List String) : Bool *)
+
+let program_inst_decidable_eq_admit_refusal_dec_eq__lam_0 (a : string list) (b : string list) : bool =
+  let _x_1 = fun _b1 _b2 -> _b1 = _b2 in
+  inst_decidable_eq_list _x_1 a b
+
+
+
 (* LCNF mono: Effect4.Program.instDecidableEqAdmitRefusal.decEq (x.1 : Effect4.Program.AdmitRefusal) (x.2 : Effect4.Program.AdmitRefusal) : Bool *)
 
 let program_inst_decidable_eq_admit_refusal_dec_eq (x_1 : admit_refusal) (x_2 : admit_refusal) : bool =
@@ -57376,7 +57402,9 @@ let program_inst_decidable_eq_admit_refusal_dec_eq (x_1 : admit_refusal) (x_2 : 
           inst_decidable_eq_list _x_13 at_11 at_12)
         | _ -> false)
     | AdmitRefusal_formation why_16 -> (match (x_2 : admit_refusal) with
-        | AdmitRefusal_formation why_17 -> program_inst_decidable_eq_formation_refusal_dec_eq why_16 why_17
+        | AdmitRefusal_formation why_17 -> (let _f_18 = program_inst_decidable_eq_admit_refusal_dec_eq__lam_0 in
+          let _x_19 = program_inst_decidable_eq_formation_reason in
+          inst_decidable_eq_located_dec_eq _f_18 _x_19 why_16 why_17)
         | _ -> false)
 
 
@@ -60040,7 +60068,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_place_refusal_c_shape_
 (* LCNF mono: Effect4.Store.CheckGen.T_64__95_root_95__46_Except_32__40__95_root_95__46_Effect4_46_Program_46_TypeRefusal_41__32__40__95_root_95__46_Effect4_46_Program_46_EffTy_41_C.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_46_program_46_type_refusal_41__32__40__95_root_95__46_effect4_46_program_46_eff_ty_41_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_located_c_shape_doc in
+  let _x_1 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_program_gen_eff_ty_c_shape_doc in
       match (_x_2 : shape_doc) with
@@ -60074,7 +60102,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_feed_refusal_c_shape_d
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_check_gen_t_64__95_root_95__46_except_32__40__95_root_95__46_effect4_46_program_46_type_refusal_41__32__40__95_root_95__46_effect4_46_program_46_eff_ty_41_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_refusals_gen_located_c_shape_doc in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_shape_doc in
           match (_x_3 : shape_doc) with
             | { root = root_2; defs = defs_2 } -> (let _x_4 = 0 in
               let _x_5 = "path" in
@@ -60232,7 +60260,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_doc_refusal_c_shape_do
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_LiveRecord_46_RefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_live_record_46_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_admit_refusal_c_shape_doc in
+  let _x_1 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = "Effect4.LiveRecord.Refusal" in
       let _x_3 = "unsupportedVersion" in
@@ -60262,7 +60290,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_record_46_refusal_c_shape_do
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Run_46_Preview_46_RefusalC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_run_46_preview_46_refusal_c_shape_doc : shape_doc =
-  let _x_1 = store_refusals_gen_admit_refusal_c_shape_doc in
+  let _x_1 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = "Effect4.Run.Preview.Refusal" in
       let _x_3 = "admission" in
@@ -60320,7 +60348,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_refusal_c_shape_doc : sha
           let _x_8 = _x_7 :: _x_4 in
           let _x_9 = "anchor" in
           let _x_10 = _x_9, root_1 in
-          let _x_11 = store_refusals_gen_admit_refusal_c_shape_doc in
+          let _x_11 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_shape_doc in
           match (_x_11 : shape_doc) with
             | { root = root_2; defs = defs_2 } -> (let _x_12 = "now" in
               let _x_13 = _x_12, root_1 in
@@ -60691,7 +60719,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_shape_doc : 
       match (_x_2 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_3 = store_check_gen_t_95_root_95__46_effect4_46_program_46_table_46_entry_c_shape_doc in
           match (_x_3 : shape_doc) with
-            | { root = root_2; defs = defs_2 } -> (let _x_4 = store_refusals_gen_located_c_shape_doc in
+            | { root = root_2; defs = defs_2 } -> (let _x_4 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_shape_doc in
               match (_x_4 : shape_doc) with
                 | { root = root_3; defs = defs_3 } -> (let _x_5 = "Effect4.Tool.Inspection" in
                   let _x_6 = "path" in
@@ -60738,7 +60766,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_shape_doc : sh
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_program_gen_eff_ty_c_shape_doc in
       match (_x_2 : shape_doc) with
-        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_refusals_gen_located_c_shape_doc in
+        | { root = root_1; defs = defs_1 } -> (let _x_3 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_shape_doc in
           match (_x_3 : shape_doc) with
             | { root = root_2; defs = defs_2 } -> (let _x_4 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_hole_view_c_shape_doc in
               match (_x_4 : shape_doc) with
@@ -61493,7 +61521,7 @@ let store_runner_gen_refusal_c_shape_doc : shape_doc =
   let _x_3 = _x_1, _x_2 in
   let _x_4 = 1 in
   let _x_5 = _x_4, _x_2 in
-  let _x_6 = store_refusals_gen_admit_refusal_c_shape_doc in
+  let _x_6 = store_refusals_gen_t_95_root_95__46_effect4_46_program_46_admit_refusal_c_shape_doc in
   match (_x_6 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_7 = 2 in
       let _x_8 = _x_7, _x_2 in
@@ -61824,7 +61852,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_suggest_46_evidence_c_
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = "ty" in
       let _x_3 = _x_2, root in
-      let _x_4 = store_refusals_gen_located_c_shape_doc in
+      let _x_4 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_shape_doc in
       match (_x_4 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_5 = [] in
           let _x_6 = _x_3 :: _x_5 in

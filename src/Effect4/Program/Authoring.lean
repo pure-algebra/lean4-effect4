@@ -3,6 +3,7 @@ module
 public import Effect4.Program.Refs
 public import Effect4.Program.Native
 public import Effect4.Program.TyExpand
+public import Effect4.Data.Located
 
 /-!
 # Program.Authoring — the scope reader: names for the program algebra's binders
@@ -53,7 +54,7 @@ where
     | [], _, acc => acc
     | y :: ys, i, acc => go ys (i + 1) (if y = x then some i else acc)
 
-/-- Why elaboration refused, at the path where it did. -/
+/-- Why elaboration refused. -/
 inductive Reason
   /-- A name with no binder in scope. -/
   | unbound (name : String)
@@ -83,10 +84,9 @@ inductive Reason
   | duplicateParam (name : String)
   deriving DecidableEq, Repr
 
-structure Refusal where
-  path : List Nat
-  reason : Reason
-  deriving DecidableEq, Repr
+/-- **The scope reader's located refusal** (`Data/Located.lean`): the reason, at the program
+address where elaboration refused. -/
+abbrev Refusal := Located (List Nat) Reason
 
 /-! ## Names the surface mints for itself
 

@@ -251,7 +251,7 @@ theorem minted_tree {name : String} {env : Env} {i : Nat}
     minted name env path = .ok (.var i) := by
   show (match env.names.resolve name with
     | some i => Except.ok (Term.var i)
-    | none => Except.error (Refusal.mk path (Reason.unbound name))) = _
+    | none => Except.error (Located.mk path (Reason.unbound name))) = _
   rw [bound]
 
 /-- Under a fold's two binders, the accumulator's name is the variable at the scope's depth.

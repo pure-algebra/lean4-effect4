@@ -103,7 +103,7 @@ and admit_refusal =
     AdmitRefusal_illTyped of (int list, type_reason) located
   | AdmitRefusal_signature of sig_refusal
   | AdmitRefusal_emptyColumn of string list
-  | AdmitRefusal_formation of formation_refusal
+  | AdmitRefusal_formation of (string list, formation_reason) located
 and reply_fault =
   Closure_gen.reply_fault =
     ReplyFault_answerType of Eff_types.Ty.t
@@ -144,36 +144,27 @@ and reason =
   | Reason_duplicateDef of string
   | Reason_unboundParam of string
   | Reason_duplicateParam of string
-and effect4_program_authoring_refusal =
-  Closure_gen.effect4_program_authoring_refusal = {
-  path : int list;
-  reason : reason;
+and ('site, 'reason) located =
+  ('site, 'reason) Closure_gen.located = {
+  site : 'site;
+  reason : 'reason;
 }
 and 'op loop_spec =
   'op Closure_gen.loop_spec = {
   while_ :
-    (env ->
-     int list -> (Eff_types.Term.t, effect4_program_authoring_refusal) result) ->
-    env ->
-    int list -> (Eff_types.Term.t, effect4_program_authoring_refusal) result;
+    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+    env -> int list -> (Eff_types.Term.t, (int list, reason) located) result;
   body :
-    (env ->
-     int list -> (Eff_types.Term.t, effect4_program_authoring_refusal) result) ->
+    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
     env ->
-    int list ->
-    ('op Eff_types.Eff.t, effect4_program_authoring_refusal) result;
+    int list -> ('op Eff_types.Eff.t, (int list, reason) located) result;
   step :
-    (env ->
-     int list -> (Eff_types.Term.t, effect4_program_authoring_refusal) result) ->
-    (env ->
-     int list -> (Eff_types.Term.t, effect4_program_authoring_refusal) result) ->
-    env ->
-    int list -> (Eff_types.Term.t, effect4_program_authoring_refusal) result;
+    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+    env -> int list -> (Eff_types.Term.t, (int list, reason) located) result;
   result :
-    (env ->
-     int list -> (Eff_types.Term.t, effect4_program_authoring_refusal) result) ->
-    env ->
-    int list -> (Eff_types.Term.t, effect4_program_authoring_refusal) result;
+    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+    env -> int list -> (Eff_types.Term.t, (int list, reason) located) result;
   cursor_ty : Eff_types.Ty.t option;
 }
 and env =
@@ -192,13 +183,12 @@ and 'op module_ =
     (string *
      (env ->
       int list ->
-      ('op Eff_types.LayerTerm.t, effect4_program_authoring_refusal) result))
+      ('op Eff_types.LayerTerm.t, (int list, reason) located) result))
     list;
   defs : 'op def_src list;
   main :
     env ->
-    int list ->
-    ('op Eff_types.Eff.t, effect4_program_authoring_refusal) result;
+    int list -> ('op Eff_types.Eff.t, (int list, reason) located) result;
   types : (string * Eff_types.Ty.t) list;
 }
 and sketch =
@@ -295,11 +285,6 @@ and text_mode =
   | TextMode_afterItem of nat_json list * text_ctx
   | TextMode_afterMember of (string * nat_json) list * text_ctx
   | TextMode_done of nat_json
-and ('site, 'reason) located =
-  ('site, 'reason) Closure_gen.located = {
-  site : 'site;
-  reason : 'reason;
-}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp =
   ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) Closure_gen.run_interp = {
   to_prim_interp : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp;
@@ -925,18 +910,22 @@ and type_reason =
   | TypeReason_returnNotLast
   | TypeReason_breakOutsideLoop
   | TypeReason_literalOutsideAlphabet of Eff_types.Lit.t
-  | TypeReason_instantiatedFormation of string * formation_refusal
-  | TypeReason_recordTerm of record_term_refusal
-  | TypeReason_recordCause of record_cause_refusal
-  | TypeReason_tupleTerm of tuple_term_refusal
-  | TypeReason_tupleCause of tuple_cause_refusal
+  | TypeReason_instantiatedFormation of string *
+      (string list, formation_reason) located
+  | TypeReason_recordTerm of (int list, record_typing_reason) located
+  | TypeReason_recordCause of
+      (int list, (int list, record_typing_reason) located) located
+  | TypeReason_tupleTerm of (int list, tuple_typing_reason) located
+  | TypeReason_tupleCause of
+      (int list, (int list, tuple_typing_reason) located) located
   | TypeReason_errorPayloadField of Eff_types.Ty.t * string list *
       Eff_types.Ty.t
   | TypeReason_errorSpelling of Eff_types.Ty.t * Eff_types.Ty.t
   | TypeReason_binderTerm of string * Eff_types.Ty.t
   | TypeReason_resultNotSubtype of string * Eff_types.Ty.t * Eff_types.Ty.t
-  | TypeReason_foldTerm of fold_term_refusal
-  | TypeReason_foldCause of fold_cause_refusal
+  | TypeReason_foldTerm of (int list, fold_typing_reason) located
+  | TypeReason_foldCause of
+      (int list, (int list, fold_typing_reason) located) located
   | TypeReason_maskRestoreExpected of Eff_types.Ty.t
   | TypeReason_definitionBlock
   | TypeReason_definitionsMismatch of int * int
@@ -1325,12 +1314,6 @@ and sig_refusal =
   | SigRefusal_rowName of int * decl_reason
   | SigRefusal_conflictingDecl of string
   | SigRefusal_unguardedDecl of string
-and formation_refusal =
-  Closure_gen.formation_refusal = {
-  path : string list;
-  ty : Eff_types.Ty.t;
-  reason : formation_reason;
-}
 and path = Closure_gen.path = { steps : step list; stop : stop; }
 and node_env =
   Closure_gen.node_env =
@@ -1344,19 +1327,18 @@ and entry =
   env : node_env option;
   result : (Eff_types.EffTy.t, (int list, type_reason) located) result option;
 }
-and term_typing_refusal =
-  Closure_gen.term_typing_refusal =
-    TermTypingRefusal_record of record_term_refusal
-  | TermTypingRefusal_tuple of tuple_term_refusal
-  | TermTypingRefusal_fold of fold_term_refusal
-  | TermTypingRefusal_unbound of int list * int * int
-  | TermTypingRefusal_unknownAtom of int list * string
-  | TermTypingRefusal_refusedArguments of int list * string *
-      Eff_types.Ty.t list
+and term_typing_reason =
+  Closure_gen.term_typing_reason =
+    TermTypingReason_record of record_typing_reason
+  | TermTypingReason_tuple of tuple_typing_reason
+  | TermTypingReason_fold of fold_typing_reason
+  | TermTypingReason_unbound of int * int
+  | TermTypingReason_unknownAtom of string
+  | TermTypingReason_refusedArguments of string * Eff_types.Ty.t list
 and row_typing_refusal =
   Closure_gen.row_typing_refusal =
     RowTypingRefusal_requestNotSubtype
-  | RowTypingRefusal_formation of formation_refusal
+  | RowTypingRefusal_formation of (string list, formation_reason) located
   | RowTypingRefusal_term of Eff_types.Ty.t
   | RowTypingRefusal_resultNotSubtype of Eff_types.Ty.t * Eff_types.Ty.t
 and protocol =
@@ -1526,10 +1508,10 @@ and decl_reason =
   | DeclReason_undeclaredName
 and formation_reason =
   Closure_gen.formation_reason =
-    FormationReason_repeatedField of string
-  | FormationReason_mapKey
-  | FormationReason_deferredError
-  | FormationReason_typeVariable
+    FormationReason_repeatedField of string * Eff_types.Ty.t
+  | FormationReason_mapKey of Eff_types.Ty.t
+  | FormationReason_deferredError of Eff_types.Ty.t
+  | FormationReason_typeVariable of Eff_types.Ty.t
 and ref_fault =
   Closure_gen.ref_fault =
     RefFault_notBefore
@@ -1537,37 +1519,6 @@ and ref_fault =
   | RefFault_noLayer
   | RefFault_toReference
   | RefFault_otherScope
-and record_term_refusal =
-  Closure_gen.record_term_refusal = {
-  path : int list;
-  reason : record_typing_reason;
-}
-and record_cause_refusal =
-  Closure_gen.record_cause_refusal = {
-  cause_path : int list;
-  term : record_term_refusal;
-}
-and tuple_term_refusal =
-  Closure_gen.tuple_term_refusal = {
-  path : int list;
-  index : int;
-  reason : tuple_typing_reason;
-}
-and tuple_cause_refusal =
-  Closure_gen.tuple_cause_refusal = {
-  cause_path : int list;
-  term : tuple_term_refusal;
-}
-and fold_term_refusal =
-  Closure_gen.fold_term_refusal = {
-  path : int list;
-  reason : fold_typing_reason;
-}
-and fold_cause_refusal =
-  Closure_gen.fold_cause_refusal = {
-  cause_path : int list;
-  term : fold_term_refusal;
-}
 and service_def =
   Closure_gen.service_def = {
   key : Eff_types.ServiceKey.t;
@@ -1582,12 +1533,10 @@ and 'op def_src =
   error : Eff_types.Ty.t;
   requires : Eff_types.ServiceKey.t list;
   body :
-    (env ->
-     int list -> (Eff_types.Term.t, effect4_program_authoring_refusal) result)
+    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result)
     list ->
     env ->
-    int list ->
-    ('op Eff_types.Eff.t, effect4_program_authoring_refusal) result;
+    int list -> ('op Eff_types.Eff.t, (int list, reason) located) result;
   role : Eff_types.DefRole.t;
   program_params : Eff_types.ParamDecl.t list;
 }
@@ -1596,11 +1545,11 @@ and stmt_ty =
     StmtTy_step of gen_ty * Eff_types.Ty.t list
   | StmtTy_ret of (Eff_types.Ty.t, (int list, type_reason) located) result
   | StmtTy_pass
-and cause_typing_refusal =
-  Closure_gen.cause_typing_refusal =
-    CauseTypingRefusal_record of record_cause_refusal
-  | CauseTypingRefusal_tuple of tuple_cause_refusal
-  | CauseTypingRefusal_fold of fold_cause_refusal
+and cause_typing_reason =
+  Closure_gen.cause_typing_reason =
+    CauseTypingReason_record of (int list, record_typing_reason) located
+  | CauseTypingReason_tuple of (int list, tuple_typing_reason) located
+  | CauseTypingReason_fold of (int list, fold_typing_reason) located
 and binder_term =
   Closure_gen.binder_term = {
   term : Eff_types.Term.t;
@@ -1781,11 +1730,12 @@ and record_typing_reason =
   | RecordTypingReason_columnLengths of int * int
   | RecordTypingReason_missingReadField of string * Eff_types.Ty.t
   | RecordTypingReason_optionalReadField of string * Eff_types.Ty.t
-  | RecordTypingReason_declarationFormation of formation_refusal
+  | RecordTypingReason_declarationFormation of
+      (string list, formation_reason) located
 and tuple_typing_reason =
   Closure_gen.tuple_typing_reason =
-    TupleTypingReason_nonTuple of Eff_types.Ty.t
-  | TupleTypingReason_outOfBounds of int
+    TupleTypingReason_nonTuple of int * Eff_types.Ty.t
+  | TupleTypingReason_outOfBounds of int * int
 and fold_typing_reason =
   Closure_gen.fold_typing_reason =
     FoldTypingReason_notList of Eff_types.Ty.t

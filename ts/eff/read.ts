@@ -145,7 +145,7 @@ const locations = new WeakMap<Refusal, { path: Array<readonly [string, number]>;
 /** Where a refusal this reader returned happened. */
 export const locate = (r: Refusal): Location => locations.get(r) ?? { path: [] }
 
-/** The same failure, seen from argument `i` of a `ctor` node above it (`ReadFailure.under`). */
+/** The same failure, seen from argument `i` of a `ctor` node above it (Lean's `Located.under`). */
 const under = <A>(r: Read<A>, ctor: string, i: number): Read<A> => {
   if (Result.isFailure(r)) {
     const at = locations.get(r.failure) ?? { path: [] }

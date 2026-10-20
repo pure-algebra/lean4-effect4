@@ -12,7 +12,7 @@ def main (args : List String) : IO Unit := do
   for c in cases do
     let built ← match Api.Author.program c.source with
       | .ok built => pure built
-      | .error refusal => throw (IO.userError s!"Produce: {c.name} does not check: {repr (Effect4.Store.RefusalsGen.BuildRefusalC.toVal refusal)}")
+      | .error refusal => throw (IO.userError s!"Produce: {c.name} does not check: {repr (Effect4.Store.Canonical.toVal refusal)}")
     let emitted ← match Api.emitModule "main" built.program built.table with
       | .ok emitted => pure emitted
       | .error _ => throw (IO.userError s!"Produce: {c.name} does not emit")

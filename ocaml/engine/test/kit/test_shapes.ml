@@ -27,16 +27,16 @@ module Kit = Effect4_kit.Kit
 
 (* The rule: when S1 fails, a shape has changed. Take the digests this test prints as the new
    pins, and move [pinned_version] and Kit.format_version up by one, in the same commit. *)
-let pinned_version = 3
+let pinned_version = 4
 
 let pins =
-  [ "admit", "fece61a8e4b0cec24350afeea5a9b63d4e28b14a2ed3e7487738141b81f8ee7f"
+  [ "admit", "50dd5483906aca9aa38eb2036203e2b6066aed260389b14e8fca9b6106b71d15"
   ; "program", "1c64c460235b36677a1c5cc62a6aa2bc5a8eb4bd17a969ce7c4bef929954633f"
   ; "rows", "8bb28dafc37d3d6c4b6c344684f3b0d8b65fe0c4378e3944e9264044386e147a"
   ; "services", "6cf93867e4469d6394f62acfed9cf19a48c83ab6bf9ff9989c4b440b5603bd8e"
   ; "ty", "a326c1d8b4416d0c12708fdc6fb57710eb2774e8515a889148b787ba90d672d3"
   ; "eff_ty", "398dd55b90392c4a595beff164ab1ac76f6c13f9abdf2c1bf964cb43ed6534a3"
-  ; "refusal", "27dc1facbfc1308441beb99940201e98d7ac0f26558d53d8fb91739b2efadfac"
+  ; "refusal", "df01f501a7aea75d3510900288f0f5892bc60cbf34da0b1d22c1b5ffcb6e7941"
   ; "exit", "9ca17adb010d9efd0ce3b031f338e1a862cb71b703a3a0ae45675123cb8bfb1f"
   ; "val", "5af72e029939913e205454540e86ed7b6e965492ee5c18fc8449873e07451cc8"
   ]

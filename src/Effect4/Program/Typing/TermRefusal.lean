@@ -2,6 +2,7 @@ module
 
 public import Effect4.Program.Typing.Rules
 public import Effect4.Program.Fold
+public import Effect4.Data.Located
 
 /-!
 Located reasons for a failed term: a variable past the environment, an application of an atom
@@ -9,6 +10,11 @@ the signature does not name or at argument types it refuses, and the record, tup
 reasons. The diagnostic fold never returns a type. `argTy` and `argsTy` remain the acceptance
 rules; the caller invokes this fold only after failure, and each arm names a premise of its rule
 only where that premise fails. Program paths and nested term addresses remain separate data.
+
+A refusal is `Located Site Reason` (`Data/Located.lean`). A term's refusal is located at its
+address within the refused term (`TermTypingRefusal`). A cause's refusal is located at the address
+of its leaf within the cause, and its reason is the leaf term's located refusal
+(`CauseTypingRefusal`), so the two addresses stay separate.
 
 A literal always has a type (`argTy`'s literal arm), so no literal is a cause here; the literal
 outside the value alphabet is a layer value's reason (`TypeReason.literalOutsideAlphabet`).
@@ -36,39 +42,15 @@ inductive RecordTypingReason
   | declarationFormation (why : FormationRefusal)
 deriving DecidableEq
 
-/-- An address within a term, followed by its record-specific reason.
-Indices count immediate term children: argument positions, target zero, replacement one. -/
-structure RecordTermRefusal where
-  path : List Nat
-  reason : RecordTypingReason
-deriving DecidableEq
-
-/-- The address of a cause leaf and the independent address within that leaf's term. -/
-structure RecordCauseRefusal where
-  causePath : List Nat
-  term : RecordTermRefusal
-deriving DecidableEq
-
-/-- Why a normalized alternative cannot supply a static tuple position. -/
+/-- Why a normalized alternative cannot supply a static tuple position. Each reason keeps the raw
+index the projection asked for. -/
 inductive TupleTypingReason
-  | nonTuple (branch : Ty)
-  | outOfBounds (arity : Nat)
+  | nonTuple (index : Nat) (branch : Ty)
+  | outOfBounds (index : Nat) (arity : Nat)
 deriving DecidableEq
 
-/-- A static tuple refusal retains the raw index and its separate term address. -/
-structure TupleTermRefusal where
-  path : List Nat
-  index : Nat
-  reason : TupleTypingReason
-deriving DecidableEq
-
-/-- Cause and term addresses remain separate for a failed tuple projection. -/
-structure TupleCauseRefusal where
-  causePath : List Nat
-  term : TupleTermRefusal
-deriving DecidableEq
-
-/-- Why a list fold has no type (decisions row 228), in the order its rule reads its parts. -/
+/-- Why a list fold has no type (decisions row 228), in the order its rule reads its parts. A
+fold's children are the list at zero, the initial value at one and the body at two. -/
 inductive FoldTypingReason
   /-- The folded term's type is no list type. -/
   | notList (list : Ty)
@@ -78,40 +60,37 @@ inductive FoldTypingReason
   | bodyNotAccumulator (body accumulator : Ty)
 deriving DecidableEq
 
-/-- A fold refusal at its address within the refused term. Its children are the list at zero,
-the initial value at one and the body at two. -/
-structure FoldTermRefusal where
-  path : List Nat
-  reason : FoldTypingReason
-deriving DecidableEq
-
-/-- Cause and term addresses remain separate for a refused fold. -/
-structure FoldCauseRefusal where
-  causePath : List Nat
-  term : FoldTermRefusal
-deriving DecidableEq
-
-/-- The diagnostic fold's alternatives, independent of term acceptance. The last three are the
-rules of a variable and an application, each at its address within the refused term. -/
-inductive TermTypingRefusal
-  | record (why : RecordTermRefusal)
-  | tuple (why : TupleTermRefusal)
-  | fold (why : FoldTermRefusal)
+/-- The diagnostic fold's reasons, independent of term acceptance: the record, tuple and fold
+reasons, then the rules of a variable and an application. Each is located at its address within
+the refused term (`TermTypingRefusal`): indices count immediate term children, the argument
+positions, the target at zero and the replacement at one. -/
+inductive TermTypingReason
+  | record (why : RecordTypingReason)
+  | tuple (why : TupleTypingReason)
+  | fold (why : FoldTypingReason)
   /-- `var index` past an environment that holds `depth` variables. -/
-  | unbound (path : List Nat) (index depth : Nat)
+  | unbound (index depth : Nat)
   /-- An application of an atom the signature does not name (`Signature.knownAtom`). -/
-  | unknownAtom (path : List Nat) (atom : String)
+  | unknownAtom (atom : String)
   /-- An application of an atom the signature names, at argument types it refuses: `args` are
   the types the arguments have under the atom's literal rule. -/
-  | refusedArguments (path : List Nat) (atom : String) (args : List Ty)
+  | refusedArguments (atom : String) (args : List Ty)
 deriving DecidableEq
 
-/-- The corresponding diagnostic alternatives inside cause leaves. -/
-inductive CauseTypingRefusal
-  | record (why : RecordCauseRefusal)
-  | tuple (why : TupleCauseRefusal)
-  | fold (why : FoldCauseRefusal)
+/-- **A failed term's located refusal**: the reason at its address within the refused term. -/
+abbrev TermTypingRefusal := Located (List Nat) TermTypingReason
+
+/-- The diagnostic alternatives inside cause leaves: the record, tuple and fold refusals of the
+leaf's term, each at its address within that term. -/
+inductive CauseTypingReason
+  | record (why : Located (List Nat) RecordTypingReason)
+  | tuple (why : Located (List Nat) TupleTypingReason)
+  | fold (why : Located (List Nat) FoldTypingReason)
 deriving DecidableEq
+
+/-- **A failed cause's located refusal**: the leaf term's refusal, at the leaf's address within
+the cause. -/
+abbrev CauseTypingRefusal := Located (List Nat) CauseTypingReason
 
 namespace TermRefusal
 
@@ -159,9 +138,9 @@ def tupleIndex (target : Ty) (index : Nat) : Option TupleTypingReason :=
   (Ty.members target.normalize).foldr (fun branch rest =>
     if (Tuple.project index branch).isSome then rest else
       match branch with
-      | .tuple items => some (.outOfBounds items.length)
-      | .prod _ _ => some (.outOfBounds 2)
-      | _ => some (.nonTuple branch)) none
+      | .tuple items => some (.outOfBounds index items.length)
+      | .prod _ _ => some (.outOfBounds index 2)
+      | _ => some (.nonTuple index branch)) none
 
 set_option backward.privateInPublic true in
 private def Carrier : TermFam → Type
@@ -181,7 +160,7 @@ private def algebra (infer : TyEnv → Bool → Term → Option Ty)
   term_var level := (.var level, fun env _ path =>
     match env[level]? with
     | some _ => none
-    | none => some (.unbound path level env.length))
+    | none => some ⟨path, .unbound level env.length⟩)
   term_lit value := (.lit value, fun _ _ _ => none)
   term_app atom args := (.app atom args.1, fun env _ path =>
     match inferArgs env (constAtom atom) args.1 with
@@ -189,19 +168,19 @@ private def algebra (infer : TyEnv → Bool → Term → Option Ty)
     | some types =>
       match atomOf atom types with
       | some _ => none
-      | none => some (if knownAtom atom then .refusedArguments path atom types
-          else .unknownAtom path atom))
+      | none => some ⟨path, if knownAtom atom then .refusedArguments atom types
+          else .unknownAtom atom⟩)
   term_record fields names values := (.record fields names values.1, fun env _ path =>
     match declaration fields with
-    | some why => some (.record ⟨path, why⟩)
+    | some why => some ⟨path, .record why⟩
     | none =>
       match inferArgs env true values.1 with
       | none => values.2 env true path 0
-      | some types => (construction decls fields names types).map (fun why => .record ⟨path, why⟩))
+      | some types => (construction decls fields names types).map (fun why => ⟨path, .record why⟩))
   term_field mode target name := (.field mode target.1 name, fun env _ path =>
     match infer env false target.1 with
     | none => target.2 env false (path ++ [0])
-    | some type => (readField decls mode type name).map (fun why => .record ⟨path, why⟩))
+    | some type => (readField decls mode type name).map (fun why => ⟨path, .record why⟩))
   term_recordSet target name value := (.recordSet target.1 name value.1, fun env _ path =>
     match infer env false target.1 with
     | none => target.2 env false (path ++ [0])
@@ -211,7 +190,7 @@ private def algebra (infer : TyEnv → Bool → Term → Option Ty)
   term_tupleAt target index := (.tupleAt target.1 index, fun env _ path =>
     match infer env false target.1 with
     | none => target.2 env false (path ++ [0])
-    | some type => (tupleIndex type index).map (fun why => .tuple ⟨path, index, why⟩))
+    | some type => (tupleIndex type index).map (fun why => ⟨path, .tuple why⟩))
   -- `argTy`'s fold arm, step for step: the list, its element type, the initial value, the
   -- accumulator's order, then the body under the two binders
   term_fold accTy list init body := (.fold accTy list.1 init.1 body.1, fun env _ path =>
@@ -219,7 +198,7 @@ private def algebra (infer : TyEnv → Bool → Term → Option Ty)
     | none => list.2 env false (path ++ [0])
     | some listType =>
       match Checker.listOfIn decls listType with
-      | none => some (.fold ⟨path, .notList listType⟩)
+      | none => some ⟨path, .fold (.notList listType)⟩
       | some item =>
         match infer env false init.1 with
         | none => init.2 env false (path ++ [1])
@@ -230,8 +209,8 @@ private def algebra (infer : TyEnv → Bool → Term → Option Ty)
             | none => body.2 (env ++ [acc, item]) false (path ++ [2])
             | some bodyType =>
               if Ty.sub bodyType.normalize acc.normalize then none
-              else some (.fold ⟨path, .bodyNotAccumulator bodyType acc⟩)
-          else some (.fold ⟨path, .initialNotAccumulator initType acc⟩))
+              else some ⟨path, .fold (.bodyNotAccumulator bodyType acc)⟩
+          else some ⟨path, .fold (.initialNotAccumulator initType acc)⟩)
   terms_nil := (.nil, fun _ _ _ _ => none)
   terms_cons head tail := (.cons head.1 tail.1, fun env flag path index =>
     match infer env flag head.1 with
@@ -248,19 +227,19 @@ def diagnose {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :
 
 /-- Compatibility projection for callers that request record-specific diagnostics. -/
 def locate {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :
-    Option RecordTermRefusal := do
+    Option (Located (List Nat) RecordTypingReason) := do
   match ← diagnose sig env term with
-  | .record why => some why
+  | ⟨path, .record why⟩ => some ⟨path, why⟩
   | _ => none
 
 set_option backward.privateInPublic true in
 /-- A term's refusal inside a cause leaf: the record, tuple and fold reasons keep both addresses.
 A variable's and an application's have no cause form; the cause's own refusal stays. -/
 private def inCause (path : List Nat) : TermTypingRefusal → Option CauseTypingRefusal
-  | .record why => some (.record ⟨path, why⟩)
-  | .tuple why => some (.tuple ⟨path, why⟩)
-  | .fold why => some (.fold ⟨path, why⟩)
-  | .unbound .. | .unknownAtom .. | .refusedArguments .. => none
+  | ⟨site, .record why⟩ => some ⟨path, .record ⟨site, why⟩⟩
+  | ⟨site, .tuple why⟩ => some ⟨path, .tuple ⟨site, why⟩⟩
+  | ⟨site, .fold why⟩ => some ⟨path, .fold ⟨site, why⟩⟩
+  | ⟨_, .unbound ..⟩ | ⟨_, .unknownAtom ..⟩ | ⟨_, .refusedArguments ..⟩ => none
 
 set_option backward.privateInPublic true in
 private def CauseCarrier (_ : CauseTermFam) : Type :=
@@ -296,10 +275,10 @@ def diagnoseCause {Op : Type} (sig : Signature Op) (env : TyEnv) (cause : CauseT
 
 /-- Compatibility projection retaining the separate record cause and term addresses. -/
 def locateCause {Op : Type} (sig : Signature Op) (env : TyEnv) (cause : CauseTerm) :
-    Option RecordCauseRefusal := do
+    Option (Located (List Nat) (Located (List Nat) RecordTypingReason)) := do
   match ← diagnoseCause sig env cause with
-  | .record why => some why
-  | .tuple _ | .fold _ => none
+  | ⟨path, .record why⟩ => some ⟨path, why⟩
+  | ⟨_, .tuple _⟩ | ⟨_, .fold _⟩ => none
 
 end TermRefusal
 end Effect4.Program

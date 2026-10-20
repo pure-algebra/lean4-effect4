@@ -72,19 +72,24 @@ def closed5 : List NativeEff :=
 
 /-! ## Red: a variable in an annotation is refused at formation -/
 
-/-- The first refusal of raw formation of a program with no row table. -/
-def refusal (e : NativeEff) : Option (List String × Ty × FormationReason) :=
-  (Formation.checkInput e []).map fun (why : FormationRefusal) => (why.path, why.ty, why.reason)
+/-- The first refusal of raw formation of a program with no row table: its site and its reason. -/
+def refusal (e : NativeEff) : Option (List String × FormationReason) :=
+  (Formation.checkInput e []).map fun (why : FormationRefusal) => (why.site, why.reason)
+
+/-- Whether a formation reason refuses a type variable, whichever variable it keeps. -/
+def refusesVariable : FormationReason → Bool
+  | .typeVariable _ => true
+  | _ => false
 
 #guard refusal recordOpen =
-  some (["program", "argument", "0", "term", "fields", "type", "1"], .var 7, .typeVariable)
+  some (["program", "argument", "0", "term", "fields", "type", "1"], .typeVariable (.var 7))
 #guard refusal typeArgOpen =
-  some (["program", "argument", "0", "op", "typeArgs", "0", "type", "0"], .var 5,
-    .typeVariable)
-#guard refusal cursorOpen = some (["program", "cursorTy", "type", "2"], .var 2, .typeVariable)
+  some (["program", "argument", "0", "op", "typeArgs", "0", "type", "0"],
+    .typeVariable (.var 5))
+#guard refusal cursorOpen = some (["program", "cursorTy", "type", "2"], .typeVariable (.var 2))
 #guard refusal accumulatorOpen =
-  some (["program", "argument", "0", "term", "accTy", "type", "2"], .var 2, .typeVariable)
-#guard (refusal binderOpen).map (·.2) = some (.var 2, .typeVariable)
+  some (["program", "argument", "0", "term", "accTy", "type", "2"], .typeVariable (.var 2))
+#guard (refusal binderOpen).map (·.2) = some (.typeVariable (.var 2))
 #guard (refusal binderOpen).any fun why =>
   why.1.take 6 == ["program", "1", "argument", "0", "op", "term"]
 
@@ -92,16 +97,16 @@ def refusal (e : NativeEff) : Option (List String × Ty × FormationReason) :=
 -- declaration and the checked replay.
 #guard open5.all fun e =>
   match admitProgram e {} with
-  | .error (.formation why) => why.reason == .typeVariable
+  | .error (.formation why) => refusesVariable why.reason
   | _ => false
 #guard open5.all fun e =>
   match Effect4.Api.emitModule "main" e with
-  | .error (.formation why) => why.reason == .typeVariable
+  | .error (.formation why) => refusesVariable why.reason
   | _ => false
 #guard open5.all fun e => (Effect4.Api.printDecl "main" e).isNone
 #guard open5.all fun e =>
   match Effect4.Api.replayChecked e 10 [] with
-  | .inr (.formation why) => why.reason == .typeVariable
+  | .inr (.formation why) => refusesVariable why.reason
   | _ => false
 
 /-! ### The checker's two rules that read strict formation
@@ -111,8 +116,7 @@ So the checker refuses these two by itself, with no formation pass before it. -/
 
 #guard Effect4.Api.typeOf recordOpen = none
 #guard match Effect4.Api.explain recordOpen with
-  | some ⟨[], .recordTerm ⟨_, .declarationFormation why⟩⟩ =>
-    why.ty == .var 7 && why.reason == .typeVariable
+  | some ⟨[], .recordTerm ⟨_, .declarationFormation why⟩⟩ => why.reason == .typeVariable (.var 7)
   | _ => false
 
 /-- A host row for the controls. -/
@@ -127,8 +131,7 @@ def templateRow : Row := host (.var 0) (.list (.var 0))
 -- column is refused. Until the clause, formation had no rule at a variable.
 #guard match checkRow templateRow (.var 3) with
   | .error (.formation why) =>
-    why.path == ["row", "request", "type", "0"] && why.ty == .var 3 &&
-      why.reason == .typeVariable
+    why.site == ["row", "request", "type", "0"] && why.reason == .typeVariable (.var 3)
   | _ => false
 
 /-! ## Green: a template may hold a parameter -/
@@ -148,8 +151,8 @@ example : ¬ Formation.HeadFormed false (.var 3) := Bool.noConfusion
 -- Each native row is formed as a template: the `Ref` and `Deferred` rows hold parameters. The
 -- same column is refused where no template is expected.
 #guard Formation.check (Formation.tableSites (NativeOp.spelled.map NativeOp.row)) = none
-#guard (Formation.check (Formation.sites false [] (NativeOp.row .refGet).request)).map (·.reason) =
-  some .typeVariable
+#guard (Formation.check (Formation.sites false [] (NativeOp.row .refGet).request)).map
+  (refusesVariable ·.reason) = some true
 
 -- A program that uses the template rows is admitted: the checker instantiates each parameter.
 #guard (admitProgram (.bind (.perform .refMake (.lit (.nat 0))) (.perform .refGet (.var 0)))
@@ -226,11 +229,10 @@ signature whose carrier holds a variable. Until this step `admitProgram` admitte
 above at `Ref.Ref<T3>`. -/
 
 #guard Formation.checkInput (.service cellKey : NativeEff) openCarrier.rows openCarrier.services =
-  some ⟨["service", "0", "carrier", "type", "1"], .var 3, .typeVariable⟩
+  some ⟨["service", "0", "carrier", "type", "1"], .typeVariable (.var 3)⟩
 #guard match admitProgram (.service cellKey) openCarrier with
   | .error (.formation why) =>
-    why.path == ["service", "0", "carrier", "type", "1"] && why.ty == .var 3 &&
-      why.reason == .typeVariable
+    why.site == ["service", "0", "carrier", "type", "1"] && why.reason == .typeVariable (.var 3)
   | _ => false
 
 /-- An application's signature that declares one carrier. -/
@@ -240,9 +242,10 @@ def declaring (carrier : Ty) : SigApp := { services := [(cellKey, carrier)] }
 -- is no string, and a deferred's error column outside the error alphabet. The signature's
 -- local checks accept each of the three cells, and formation refuses each.
 #guard [ (Ty.refOf (.record [("x", false, .nat), ("x", true, .string)]),
-          FormationReason.repeatedField "x")
-       , (.refOf (.map .nat .nat), .mapKey)
-       , (.refOf (.deferredOf .nat .bool), .deferredError) ].all fun (carrier, reason) =>
+          FormationReason.repeatedField "x" (.record [("x", false, .nat), ("x", true, .string)]))
+       , (.refOf (.map .nat .nat), .mapKey (.map .nat .nat))
+       , (.refOf (.deferredOf .nat .bool), .deferredError (.deferredOf .nat .bool)) ].all
+    fun (carrier, reason) =>
   admitSig (declaring carrier) = .ok () &&
     match admitProgram (.succeed (.lit .unit)) (declaring carrier) with
     | .error (.formation why) => why.reason == reason
@@ -281,8 +284,8 @@ def referring (ty : Ty) : NativeEff :=
 #guard answer (referring .nat) = some (.nat, true)
 -- Red: a variable in the one stored annotation is refused, at the layer's path.
 #guard refusal (referring openTy) =
-  some (["program", "0", "0", "0", "argument", "0", "term", "accTy", "type", "2"], .var 2,
-    .typeVariable)
+  some (["program", "0", "0", "0", "argument", "0", "term", "accTy", "type", "2"],
+    .typeVariable (.var 2))
 
 /-- `typeOfProgram_closed` at a program with a layer reference: the formation premise is the
 stored program's. -/
@@ -305,6 +308,6 @@ def holdsVariable (e : NativeEff) : Bool :=
 #guard (Wire.Corpus.all.filter fun entry => holdsVariable entry.2).length = 0
 -- So no program of either corpus is refused with the new reason.
 #guard Test.Program.Gen.sample.all fun e =>
-  !(refusal e).any fun why => why.2.2 == .typeVariable
+  !(refusal e).any fun why => refusesVariable why.2
 
 end Test.Program.FormationClosed

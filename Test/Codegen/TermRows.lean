@@ -856,8 +856,8 @@ module's representability check and its class table reach them at a located path
 #guard match Formation.checkInput
     (make (.record [("x", false, .nat), ("x", true, .string)]) .never) [] with
   | some why =>
-    why.path == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
-      why.reason == .repeatedField "x"
+    why.site == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
+      why.reason == .repeatedField "x" (.record [("x", false, .nat), ("x", true, .string)])
   | none => false
 -- A type argument at `int` is admitted (decisions row 317), as at `unit`.
 #guard (admitProgram (.bind (make .int .never) (.succeed (.lit (.nat 0)))) ⟨[], [], []⟩).isOk
@@ -881,8 +881,8 @@ module's representability check and its class table reach them at a located path
 -- 6 a). Until that clause this module was refused by the printer, at the rendering `A`.
 #guard match Effect4.Api.emitModule "main" (make (.var 0) .never) with
   | .error (.formation why) =>
-    why.path == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
-      why.ty == .var 0 && why.reason == .typeVariable
+    why.site == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
+      why.reason == .typeVariable (.var 0)
   | _ => false
 
 /-! ## 7. An operation that carries a binder term and type arguments

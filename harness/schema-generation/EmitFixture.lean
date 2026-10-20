@@ -23,6 +23,6 @@ private def fixture : Except DocumentRefusal String :=
   IO.println ("// " ++ Tools.GeneratedStamp.note "harness/schema-generation/EmitFixture.lean")
   match fixture with
   | .ok text => IO.print text
-  | .error e => throw (IO.userError s!"the emitter refused at {e.path}: {reprStr e.reason}")
+  | .error e => throw (IO.userError s!"the emitter refused at {e.site}: {reprStr e.reason}")
 
 end Effect4Harness.SchemaGeneration

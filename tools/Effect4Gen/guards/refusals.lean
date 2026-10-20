@@ -6,22 +6,28 @@ open Effect4 Effect4.Program Effect4.Api
 
 def tables : List TableRefusal := [.notExternal 0, .notAsync 3]
 
-def formationReasons : List FormationReason := [.repeatedField "x", .mapKey, .typeVariable]
+def formationReasons : List FormationReason :=
+  [.repeatedField "x" (.record [("x", false, .nat), ("x", true, .string)]),
+   .mapKey (.map .nat .string), .typeVariable (.var 0)]
 
 def formations : List FormationRefusal :=
-  [⟨["table", "0", "answer", "type", "0"], .map .nat .string, .mapKey⟩,
+  [⟨["table", "0", "answer", "type", "0"], .mapKey (.map .nat .string)⟩,
    ⟨["program", "cursorTy", "type", "0"],
-     .record [("x", false, .nat), ("x", true, .string)], .repeatedField "x"⟩]
+     .repeatedField "x" (.record [("x", false, .nat), ("x", true, .string)])⟩]
 
 def recordReasons : List RecordTypingReason :=
   [.duplicateDeclaration "x", .duplicateSupplied "x", .missingRequired "x",
    .unknownSupplied "x", .fieldNotSubtype "x" .string .nat, .columnLengths 1 2,
    .missingReadField "x" (.record []), .optionalReadField "x" (.record [("x", true, .nat)]),
-   .declarationFormation ⟨["type"], .map .nat .string, .mapKey⟩]
+   .declarationFormation ⟨["type"], .mapKey (.map .nat .string)⟩]
 
-def recordTerms : List RecordTermRefusal := recordReasons.map fun why => ⟨[0, 2], why⟩
+/-- A record reason at its address within the refused term. -/
+def recordTerms : List (Located (List Nat) RecordTypingReason) :=
+  recordReasons.map fun why => ⟨[0, 2], why⟩
 
-def recordCauses : List RecordCauseRefusal := recordTerms.map fun why => ⟨[1, 0], why⟩
+/-- A record refusal at its leaf's address within a cause. -/
+def recordCauses : List (Located (List Nat) (Located (List Nat) RecordTypingReason)) :=
+  recordTerms.map fun why => ⟨[1, 0], why⟩
 
 /-- Every constructor of a row's reason (decisions row 21: the signature's refusal reaches an
 agent through admission's). -/
@@ -109,11 +115,11 @@ def reasons : List TypeReason :=
    .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat, .layerReference [0, 1],
    .referenceIllFormed [0, 0] .encloses,
    .mergeAllEmpty, .returnNotLast, .breakOutsideLoop, .literalOutsideAlphabet (.str "x"),
-   .instantiatedFormation "Db.get" ⟨["row", "answer", "type", "0"], .map .nat .string, .mapKey⟩,
+   .instantiatedFormation "Db.get" ⟨["row", "answer", "type", "0"], .mapKey (.map .nat .string)⟩,
    .recordTerm ⟨[0], .missingRequired "x"⟩,
    .recordCause ⟨[1], ⟨[0], .missingRequired "x"⟩⟩,
-   .tupleTerm ⟨[0], 2, .outOfBounds 2⟩,
-   .tupleCause ⟨[1], ⟨[0], 0, .nonTuple .nat⟩⟩,
+   .tupleTerm ⟨[0], .outOfBounds 2 2⟩,
+   .tupleCause ⟨[1], ⟨[0], .nonTuple 0 .nat⟩⟩,
    .errorPayloadField (.record [("_tag", false, .lit "E"), ("cause", false, .unknown)])
      ["cause"] .unknown,
    .errorSpelling (.record [("_tag", false, .lit "E")]) (.lit "E"),
@@ -138,14 +144,23 @@ def printedHead : Effect4.Json → String
 #guard recordReasons.all fun x => Canonical.decode (α := RecordTypingReason) (Canonical.encode x ++ [0]) = none
 #guard recordReasons.all fun x => Canonical.decode (α := RecordTypingReason) (Canonical.encode x).dropLast = none
 #guard recordReasons.all fun x => (Canonical.shape RecordTypingReason).accepts (Canonical.toVal x)
-#guard recordTerms.all fun x => Canonical.decode (α := RecordTermRefusal) (Canonical.encode x) = some x
-#guard recordTerms.all fun x => Canonical.decode (α := RecordTermRefusal) (Canonical.encode x ++ [0]) = none
-#guard recordTerms.all fun x => Canonical.decode (α := RecordTermRefusal) (Canonical.encode x).dropLast = none
-#guard recordTerms.all fun x => (Canonical.shape RecordTermRefusal).accepts (Canonical.toVal x)
-#guard recordCauses.all fun x => Canonical.decode (α := RecordCauseRefusal) (Canonical.encode x) = some x
-#guard recordCauses.all fun x => Canonical.decode (α := RecordCauseRefusal) (Canonical.encode x ++ [0]) = none
-#guard recordCauses.all fun x => Canonical.decode (α := RecordCauseRefusal) (Canonical.encode x).dropLast = none
-#guard recordCauses.all fun x => (Canonical.shape RecordCauseRefusal).accepts (Canonical.toVal x)
+#guard recordTerms.all fun x =>
+  Canonical.decode (α := Located (List Nat) RecordTypingReason) (Canonical.encode x) = some x
+#guard recordTerms.all fun x =>
+  Canonical.decode (α := Located (List Nat) RecordTypingReason) (Canonical.encode x ++ [0]) = none
+#guard recordTerms.all fun x =>
+  Canonical.decode (α := Located (List Nat) RecordTypingReason) (Canonical.encode x).dropLast = none
+#guard recordTerms.all fun x =>
+  (Canonical.shape (Located (List Nat) RecordTypingReason)).accepts (Canonical.toVal x)
+#guard recordCauses.all fun x => Canonical.decode
+  (α := Located (List Nat) (Located (List Nat) RecordTypingReason)) (Canonical.encode x) = some x
+#guard recordCauses.all fun x => Canonical.decode
+  (α := Located (List Nat) (Located (List Nat) RecordTypingReason)) (Canonical.encode x ++ [0]) = none
+#guard recordCauses.all fun x => Canonical.decode
+  (α := Located (List Nat) (Located (List Nat) RecordTypingReason)) (Canonical.encode x).dropLast = none
+#guard recordCauses.all fun x =>
+  (Canonical.shape (Located (List Nat) (Located (List Nat) RecordTypingReason))).accepts
+    (Canonical.toVal x)
 
 #guard formationReasons.all fun x => Canonical.decode (α := FormationReason) (Canonical.encode x) = some x
 #guard formations.all fun x => Canonical.decode (α := FormationRefusal) (Canonical.encode x) = some x
@@ -218,8 +233,10 @@ def printedHead : Effect4.Json → String
 #guard reads.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard builds.all fun x => Canonical.head x == printedHead (Canonical.print x)
 -- A structure's head is its name, which its printed object does not carry: the program's refusal
--- is a `Located` reason (`Data/Located.lean`).
-#guard typings.all fun x => Canonical.head x == "Located" && printedHead (Canonical.print x) == ""
+-- is a `Located` reason (`Data/Located.lean`), named by its site and its reason.
+#guard typings.all fun x =>
+  Canonical.head x == "Effect4.Located(List(Nat), Effect4.Program.TypeReason)" &&
+    printedHead (Canonical.print x) == ""
 
 end RefusalsAcceptance
 
@@ -227,9 +244,9 @@ namespace TupleRefusalAcceptance
 open Effect4 Effect4.Program Effect4.Store
 
 def controls : List TypeReason :=
-  [.tupleTerm ⟨[1, 0], 2, .outOfBounds 2⟩,
-   .tupleTerm ⟨[], 0, .nonTuple (.list .nat)⟩,
-   .tupleCause ⟨[1], ⟨[0], 900719925474099312345678901, .outOfBounds 1⟩⟩]
+  [.tupleTerm ⟨[1, 0], .outOfBounds 2 2⟩,
+   .tupleTerm ⟨[], .nonTuple 0 (.list .nat)⟩,
+   .tupleCause ⟨[1], ⟨[0], .outOfBounds 900719925474099312345678901 1⟩⟩]
 
 #guard controls.all fun reason =>
   Canonical.decode (α := TypeReason) (Canonical.encode reason) = some reason

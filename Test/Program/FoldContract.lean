@@ -286,22 +286,22 @@ def refusalOf (env : TyEnv) (t : Term) : Option TermTypingRefusal :=
 
 -- A fold over a value that is no list.
 #guard match refusalOf [] (fold (n 1) (n 0) (v 0)) with
-  | some (.fold ⟨path, .notList ty⟩) => path == [] && ty == .nat
+  | some ⟨path, .fold (.notList ty)⟩ => path == [] && ty == .nat
   | _ => false
 -- A body whose answer is no subtype of the accumulator's type: the initial value is a number
 -- and the body answers a list.
 #guard match refusalOf [] (fold (natList [1]) (n 0) (one (v 1))) with
-  | some (.fold ⟨path, .bodyNotAccumulator body acc⟩) =>
+  | some ⟨path, .fold (.bodyNotAccumulator body acc)⟩ =>
     path == [] && body == .list .nat && acc == .nat
   | _ => false
 -- An initial value that is no member of the stated type.
 #guard match refusalOf [] (foldAt .string (natList [1]) (n 0) (v 0)) with
-  | some (.fold ⟨path, .initialNotAccumulator initial acc⟩) =>
+  | some ⟨path, .fold (.initialNotAccumulator initial acc)⟩ =>
     path == [] && initial == .nat && acc == .string
   | _ => false
 -- A refusal inside a fold's body is found at the body's own environment, at the body's path.
 #guard match refusalOf [] (fold (natList [1]) (n 0) (item (v 1) 3)) with
-  | some (.tuple ⟨path, _, _⟩) => path == [2]
+  | some ⟨path, .tuple _⟩ => path == [2]
   | _ => false
 -- An accumulator that starts as the empty list needs its stated type: without it the body's
 -- wider list is refused, and with it the fold types.
@@ -487,22 +487,22 @@ def visibleFold (key : Ty) : Api.Program :=
 -- Raw formation refuses both, each at its located path, before normalization.
 #guard match Formation.checkInput (visibleFold .nat) [] with
   | some why =>
-    why.path == ["program", "1", "argument", "0", "term", "0", "0", "accTy", "type", "1"] &&
-      why.reason == .mapKey
+    why.site == ["program", "1", "argument", "0", "term", "0", "0", "accTy", "type", "1"] &&
+      why.reason == .mapKey (.map .nat .nat)
   | none => false
 #guard match Formation.checkInput (hiddenFold .nat) [] with
   | some why =>
-    why.path == ["program", "1", "argument", "0", "op", "term", "0", "0", "0", "0", "accTy",
-      "type", "1"] && why.reason == .mapKey
+    why.site == ["program", "1", "argument", "0", "op", "term", "0", "0", "0", "0", "accTy",
+      "type", "1"] && why.reason == .mapKey (.map .nat .nat)
   | none => false
 -- Ordinary admission refuses both, with the same located refusal.
 #guard match admitProgram (visibleFold .nat) ⟨[], [], []⟩ with
-  | .error (.formation why) => why.reason == .mapKey && why.ty == .map .nat .nat
+  | .error (.formation why) => why.reason == .mapKey (.map .nat .nat)
   | _ => false
 #guard match admitProgram (hiddenFold .nat) ⟨[], [], []⟩ with
   | .error (.formation why) =>
-    why.reason == .mapKey && why.ty == .map .nat .nat &&
-      why.path == ["program", "1", "argument", "0", "op", "term", "0", "0", "0", "0", "accTy",
+    why.reason == .mapKey (.map .nat .nat) &&
+      why.site == ["program", "1", "argument", "0", "op", "term", "0", "0", "0", "0", "accTy",
         "type", "1"]
   | _ => false
 -- Green control: a string key is formed, and both placements are admitted.

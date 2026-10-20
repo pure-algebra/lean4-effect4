@@ -3,7 +3,7 @@
 open Eff_types
 module G = Effect4_gen.Api_gen
 
-type refusal = G.effect4_program_authoring_refusal
+type refusal = (int list, G.reason) G.located
 type term = G.env -> int list -> (Eff_types.Term.t, refusal) result
 type t = G.env -> int list -> (NativeOp.t Eff.t, refusal) result
 
@@ -78,7 +78,7 @@ let row name ~request ~answer ?(error = Ty.Never) ?(cite = "") () : Row.t =
 
 let refusal_text (r : refusal) =
   let at =
-    match r.path with
+    match r.site with
     | [] -> "the root"
     | path -> "node " ^ String.concat "." (List.map string_of_int path)
   in

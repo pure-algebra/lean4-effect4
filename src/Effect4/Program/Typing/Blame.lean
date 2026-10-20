@@ -78,13 +78,14 @@ inductive TypeReason
   /-- The request matched, but an actual substituted row column fails formation. -/
   | instantiatedFormation (row : String) (why : FormationRefusal)
   /-- A failed record operation at an address within the refused term. -/
-  | recordTerm (why : RecordTermRefusal)
-  /-- A failed record operation inside a cause leaf, at two separate addresses. -/
-  | recordCause (why : RecordCauseRefusal)
+  | recordTerm (why : Located (List Nat) RecordTypingReason)
+  /-- A failed record operation inside a cause leaf, at two separate addresses: the leaf's within
+  the cause, then the term's within the leaf. -/
+  | recordCause (why : Located (List Nat) (Located (List Nat) RecordTypingReason))
   /-- A static tuple projection failed at its exact stored index. -/
-  | tupleTerm (why : TupleTermRefusal)
+  | tupleTerm (why : Located (List Nat) TupleTypingReason)
   /-- A static tuple failure inside a cause leaf. -/
-  | tupleCause (why : TupleCauseRefusal)
+  | tupleCause (why : Located (List Nat) (Located (List Nat) TupleTypingReason))
   /-- `fail` at a record type with a field no payload admits (decisions row 120, ruling (a)):
   `error` is the record member of the error column, `path` the field (through nested records)
   and `field` its type, such as `unknown`, a handle or `int`. -/
@@ -101,9 +102,9 @@ inductive TypeReason
   | resultNotSubtype (row : String) (result expected : Ty)
   /-- A list fold has no type, at an address within the refused term (decisions row 228): its
   list is no list, or its initial value or its body is outside the accumulator's type. -/
-  | foldTerm (why : FoldTermRefusal)
+  | foldTerm (why : Located (List Nat) FoldTypingReason)
   /-- A list fold has no type inside a cause leaf, at two separate addresses. -/
-  | foldCause (why : FoldCauseRefusal)
+  | foldCause (why : Located (List Nat) (Located (List Nat) FoldTypingReason))
   /-- A restore site whose saved term is not at `Ty.maskRestore` (decisions row 244): a Boolean,
   for one, is no saved state. `t` is the term's type. -/
   | maskRestoreExpected (t : Ty)

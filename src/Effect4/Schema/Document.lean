@@ -2,6 +2,7 @@ module
 
 public import Effect4.Schema.Annotations
 public import Effect4.Schema.Fold
+public import Effect4.Data.Located
 
 /-!
 # Schema.Document.lean
@@ -443,23 +444,18 @@ inductive DocumentReason where
   | recursiveReference (key : String)
   deriving DecidableEq, Repr
 
-/-- A refusal at the persisted-document boundary: the path from the root, then the reason. -/
-structure DocumentRefusal where
-  path : List String
-  reason : DocumentReason
-  deriving DecidableEq, Repr
+/-- **A refusal at the persisted-document boundary** (`Data/Located.lean`): the reason, at the
+path from the root. -/
+abbrev DocumentRefusal := Located (List String) DocumentReason
 
 namespace DocumentRefusal
 
 /-- A read at the persisted boundary: a value or a located refusal. -/
 abbrev Read := Except DocumentRefusal
 
-/-- Refuse here, at the empty path; `under` prefixes the steps that led here. -/
+/-- Refuse here, at the empty path. A read one step down relocates its refusal by the one prefix
+rule, `Located.under`. -/
 def refuse {α : Type} (reason : DocumentReason) : Read α := .error ⟨[], reason⟩
-
-/-- A read one step down: its refusal's path starts with `step`. -/
-def under {α : Type} (step : String) (x : Read α) : Read α :=
-  x.mapError fun e => { e with path := step :: e.path }
 
 end DocumentRefusal
 

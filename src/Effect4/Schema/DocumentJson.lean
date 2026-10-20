@@ -209,20 +209,20 @@ def field (fs : List (String × Json)) (k : String) : Read Json :=
 /-- A required field read by `f`, its refusals under the field's name. -/
 def fieldAs {α : Type} (fs : List (String × Json)) (k : String) (f : Json → Read α) : Read α := do
   let j ← field fs k
-  under k (f j)
+  (f j).mapError (Located.under [k])
 
 /-- An optional field read by `f`. -/
 def optionalAs {α : Type} (fs : List (String × Json)) (k : String) (f : Json → Read α) :
     Read (Option α) :=
   match List.lookup k fs with
   | none => pure none
-  | some j => some <$> under k (f j)
+  | some j => some <$> (f j).mapError (Located.under [k])
 
 /-- An array, each element read by `f`, its refusals under the element's index. -/
 def eachFrom {α : Type} (f : Json → Read α) : Nat → List Json → Read (List α)
   | _, [] => pure []
   | i, j :: js => do
-    let a ← under (toString i) (f j)
+    let a ← (f j).mapError (Located.under [toString i])
     let as ← eachFrom f (i + 1) js
     pure (a :: as)
 
@@ -282,20 +282,22 @@ def readLiteral (j : Json) : Read LiteralValue := do
     let s ← fieldAs fs "value" asString
     match readInteger s with
     | some i => pure (.bigint i)
-    | none => under "value" (refuse (.notInteger s))
+    | none => (refuse (.notInteger s)).mapError (Located.under ["value"])
   | "boolean" => .boolean <$> fieldAs fs "value" asBool
-  | other => under "type" (refuse (.unknownKind other))
+  | other => (refuse (.unknownKind other)).mapError (Located.under ["type"])
 
 def readEnumValue (j : Json) : Read EnumValue := do
   let fs ← asObject j
   match ← fieldAs fs "type" asString with
   | "string" => .string <$> fieldAs fs "value" asString
   | "number" => .number <$> fieldAs fs "value" readPersistedNumber
-  | other => under "type" (refuse (.unknownKind other))
+  | other => (refuse (.unknownKind other)).mapError (Located.under ["type"])
 
 def readEnumEntry (j : Json) : Read EnumEntry := do
   match ← asArray j with
-  | [name, value] => pure ⟨← under "0" (asString name), ← under "1" (readEnumValue value)⟩
+  | [name, value] =>
+    pure ⟨← (asString name).mapError (Located.under ["0"]),
+      ← (readEnumValue value).mapError (Located.under ["1"])⟩
   | _ => refuse .notArray
 
 def readPropertyKey (j : Json) : Read PropertyKey := do
@@ -304,7 +306,7 @@ def readPropertyKey (j : Json) : Read PropertyKey := do
   | "string" => .string <$> fieldAs fs "value" asString
   | "number" => .number <$> fieldAs fs "value" readPersistedNumber
   | "symbol" => .globalSymbol <$> fieldAs fs "value" fun v => do readSymbol (← asString v)
-  | other => under "type" (refuse (.unknownKind other))
+  | other => (refuse (.unknownKind other)).mapError (Located.under ["type"])
 
 def readCheckAnnotation (rep : Json → Read Representation) (j : Json) :
     Read (CheckRepresentationAnnotationOf Representation) := do
@@ -338,7 +340,8 @@ def readRepresentation : Nat → Json → Read Representation
   | n + 1, j => do
     let fs ← asObject j
     let name ← fieldAs fs "_tag" asString
-    let some tag := RepresentationTag.ofTagName name | under "_tag" (refuse (.unknownTag name))
+    let some tag := RepresentationTag.ofTagName name
+      | (refuse (.unknownTag name)).mapError (Located.under ["_tag"])
     let ann := readAnnotations fs
     let checks := fieldAs fs "checks" (listOf (readCheck n))
     let rep := readRepresentation n
@@ -385,7 +388,8 @@ def readCheck : Nat → Json → Read Check
   | n + 1, j => do
     let fs ← asObject j
     let name ← fieldAs fs "_tag" asString
-    let some tag := CheckTag.ofTagName name | under "_tag" (refuse (.unknownTag name))
+    let some tag := CheckTag.ofTagName name
+      | (refuse (.unknownTag name)).mapError (Located.under ["_tag"])
     let ann := readAnnotations fs
     match tag with
     | .filter =>
@@ -399,7 +403,7 @@ end
 
 def readReferences (rep : Json → Read Representation) (j : Json) : Read (List ReferenceEntry) := do
   let es ← asObject j
-  es.mapM fun (k, v) => do pure ⟨k, ← under k (rep v)⟩
+  es.mapM fun (k, v) => do pure ⟨k, ← (rep v).mapError (Located.under [k])⟩
 
 def readDocument (fuel : Nat) (j : Json) : Read Document := do
   let fs ← asObject j

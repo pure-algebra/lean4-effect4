@@ -64,13 +64,13 @@ module Program :
               string ->
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
                result)
               list ->
               Api_gen.env ->
               int list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               Api_gen.effect4_program_authoring_refusal)
+               (int list, Api_gen.reason) Api_gen.located)
               result
           end
         module Ref :
@@ -78,36 +78,36 @@ module Program :
             val get :
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
                result) ->
               Api_gen.env ->
               int list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               Api_gen.effect4_program_authoring_refusal)
+               (int list, Api_gen.reason) Api_gen.located)
               result
             val make :
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
                result) ->
               Api_gen.env ->
               int list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               Api_gen.effect4_program_authoring_refusal)
+               (int list, Api_gen.reason) Api_gen.located)
               result
             val set :
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
                result) ->
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
                result) ->
               Api_gen.env ->
               int list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               Api_gen.effect4_program_authoring_refusal)
+               (int list, Api_gen.reason) Api_gen.located)
               result
           end
         module Row :
@@ -116,12 +116,12 @@ module Program :
               string ->
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
                result) ->
               Api_gen.env ->
               int list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               Api_gen.effect4_program_authoring_refusal)
+               (int list, Api_gen.reason) Api_gen.located)
               result
             val host :
               string ->
@@ -131,64 +131,64 @@ module Program :
         val and_then :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val app :
           string ->
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
            result)
           list ->
           Api_gen.env ->
           int list ->
-          (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val bind_with :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
             result) ->
            Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val bool :
           bool ->
-          (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val catch_with :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
             result) ->
            Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val elaborate_at :
           Eff_types.Row.t list ->
@@ -196,177 +196,177 @@ module Program :
           (Api_gen.env ->
            int list ->
            (Eff_types.NativeOp.t Eff_types.Eff.t,
-            Api_gen.effect4_program_authoring_refusal)
+            (int list, Api_gen.reason) Api_gen.located)
            result) ->
           (Eff_types.NativeOp.t Eff_types.Eff.t,
-           Api_gen.effect4_program_authoring_refusal)
+           (int list, Api_gen.reason) Api_gen.located)
           result
         val exit_ :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val fail :
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val if_else :
           'a ->
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           (Api_gen.env ->
            int list ->
-           ('b Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('b Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           (Api_gen.env ->
            int list ->
-           ('b Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('b Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('b Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('b Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val loop_with :
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
             result) ->
            Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
             result) ->
            Api_gen.env ->
            int list ->
            (Eff_types.NativeOp.t Eff_types.Eff.t,
-            Api_gen.effect4_program_authoring_refusal)
+            (int list, Api_gen.reason) Api_gen.located)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
             result) ->
            (Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
             result) ->
            Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
             result) ->
            Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
           (Eff_types.NativeOp.t Eff_types.Eff.t,
-           Api_gen.effect4_program_authoring_refusal)
+           (int list, Api_gen.reason) Api_gen.located)
           result
         val nat :
           int ->
-          (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val on_exit_with :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
             result) ->
            Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val select_option_with :
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
             result) ->
            Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val str :
           string ->
-          (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val succeed :
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val suspend :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val sync :
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, Api_gen.effect4_program_authoring_refusal)
+          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val unit :
           Api_gen.env ->
           int list ->
-          (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
           result
         val var :
           string ->
           Api_gen.env ->
           int list ->
-          (Eff_types.Term.t, Api_gen.effect4_program_authoring_refusal)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
           result
       end
     module CauseTerm = Eff_types.CauseTerm

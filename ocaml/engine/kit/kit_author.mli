@@ -140,8 +140,9 @@ val row
 
 (** {1 Building} *)
 
-(** Why elaboration refused, at the address where it did ([Authoring.Refusal]). *)
-type refusal = Effect4_gen.Api_gen.effect4_program_authoring_refusal
+(** Why elaboration refused, at the address where it did ([Authoring.Refusal], a [Located]
+    reason). *)
+type refusal = (int list, Effect4_gen.Api_gen.reason) Effect4_gen.Api_gen.located
 
 val refusal_text : refusal -> string
 

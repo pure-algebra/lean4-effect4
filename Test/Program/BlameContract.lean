@@ -156,7 +156,7 @@ private def unitP : Api.Program := .succeed (.lit .unit)
   = some ⟨[0], .layerReference [0]⟩
 
 #guard Effect4.Codegen.codesOf {}
-    (.instantiatedFormation "Db.get" ⟨["row", "answer"], .map .nat .string, .mapKey⟩) = []
+    (.instantiatedFormation "Db.get" ⟨["row", "answer"], .mapKey (.map .nat .string)⟩) = []
 
 /-! ## Error payloads, refused by name (decisions row 120)
 
