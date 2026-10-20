@@ -2,6 +2,7 @@ import Test.Program.Gen
 import Effect4.Store.Domain.ProgramWire
 import TypeScript.Render
 import Drivers.Styles
+import Compiler.Json
 import Effect4.Codegen.Diagnostics
 import Effect4.Api.Codegen
 import Tools.Code.Module
@@ -19,7 +20,7 @@ generator over every `Eff` constructor the printer accepts), `count` of them at 
 
 Beside each `.ts`, `<name>.json` is the program *the printer kept* — `Api.roundTrip`, Lean's
 own reader after its printer — in the program's one public JSON, the tagged print with each list
-an array (`Tools.Styles.programJson`), whose bytes `ts/eff/json.gen.ts`'s `toJson` writes too.
+an array (`Compiler.programJson`), whose bytes `ts/eff/json.gen.ts`'s `toJson` writes too.
 For a `readable` program that is the program itself (`Effect4.Program.roundTrip_eq`); otherwise
 it is the program the reader gives back for the same bytes: the `daemon` flag of a scoped fork
 and the request of a `unit`-request row are what the printer drops, and no reader of the bytes
@@ -100,7 +101,7 @@ def writeProgram (dir name : String) (p : Eff NativeOp) : IO (Option String) := 
     unless text.toList.all (fun ch => ch.toNat < 128) do
       throw (IO.userError s!"corpus: {name} prints a non-ASCII character")
     IO.FS.writeFile (dir ++ "/" ++ name ++ ".ts") (text ++ "\n")
-    IO.FS.writeBinFile (dir ++ "/" ++ name ++ ".json") (Tools.Styles.programJson kept)
+    IO.FS.writeBinFile (dir ++ "/" ++ name ++ ".json") (Compiler.programJson kept)
     IO.FS.writeBinFile (dir ++ "/" ++ name ++ ".eff") ⟨(Wire.encodeProgram kept).toArray⟩
     -- the module the diagnostics lane checks, as every lane writes it
     writeModule (dir ++ "/modules/" ++ name ++ ".ts") name p

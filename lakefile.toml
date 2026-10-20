@@ -114,6 +114,17 @@ srcDir = "tools"
 globs = ["Tools.+", "Drivers.+", "TestSupport.+"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
+# The compiler's entry point (docs/research/2026-10-20-compiler-entry/README.md, C2): the library
+# function `Compiler.main`, which a project's executable calls by static import, over one
+# application. `check` builds the application's service module and prints its certificate;
+# `emit --target ts` writes the checked emission, the prelude's import closure and a manifest into
+# one folder. A tool root like `Tools`, outside the axiom gate's audit; it declares no `main`.
+[[lean_lib]]
+name = "Compiler"
+srcDir = "tools"
+globs = ["Compiler.+"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
 # The report drivers, compiled (`lake exe <name> …`): the semantics report and its refusal controls
 # (`make gen-semantics`, `make check-semantics`) and the architecture map (`make gen-architecture`).
 # Each loads the environment it reports on at run time, so its own imports are Lean and tool modules.

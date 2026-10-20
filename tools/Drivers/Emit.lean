@@ -1,6 +1,7 @@
 import Tools.Code.Module
 import Tools.View.Program
 import Effect4.Store.Domain.ProgramWire
+import Compiler.Prelude
 
 /-!
 # Drivers.Emit — the code generator's output, as a folder
@@ -10,8 +11,8 @@ import Effect4.Store.Domain.ProgramWire
 Writes what the code generator makes of each program, for a person or an agent to read:
 
     OUT/README.md            the index: each program's type, files, address and checks
-    OUT/prelude/             what the modules import besides `effect`: the generated atoms and the
-                             helpers, copied from `harness/truth`, and `prelude.ts` re-exporting them
+    OUT/prelude/             what the modules import besides `effect`: the prelude's import closure,
+                             copied from `harness/truth` (`Compiler.Prelude.closure`)
     OUT/corpus/NAME.ts       the module (`Tools.Code.Module`): exact imports, a header, Effect's width
     OUT/corpus/NAME.tree.txt the program's tree as the view writes it (`Tools.View.Program.treeText`)
 
@@ -21,9 +22,6 @@ number and verdict in the index is computed here by the core's functions.
 -/
 
 open Tools.Code
-
-/-- The prelude's helper files beside `prelude.ts`. -/
-def preludeFiles : List String := ["prelude-atoms.gen.ts", "records.ts", "tuples.ts", "control.ts"]
 
 /-- One row of the index. -/
 def indexRow (g : Generated) : String :=
@@ -53,11 +51,7 @@ def index (gs : List Generated) : String :=
 def main (args : List String) : IO UInt32 := do
   let [out] := args | IO.eprintln "usage: Emit OUT"; return 2
   let out : System.FilePath := out
-  IO.FS.createDirAll (out / "prelude")
-  for f in preludeFiles do
-    IO.FS.writeFile (out / "prelude" / f) (← IO.FS.readFile ("harness/truth" / f))
-  IO.FS.writeFile (out / "prelude" / "prelude.ts")
-    (String.join (preludeFiles.map fun f => s!"export * from \"./{f}\"\n"))
+  Compiler.Prelude.write (out / "prelude") (← Compiler.Prelude.closure Compiler.Prelude.source)
   let group := "corpus"
   IO.FS.createDirAll (out / group)
   let gs := Effect4.Program.Wire.Corpus.all.map fun (name, p) => (generate Ts.width group name p, p)

@@ -40,6 +40,7 @@ import Test.Codegen.MirrorReaders
 import Test.Codegen.SchemaGenerationCoverage
 import Test.Codegen.SchemaCode
 import Test.Codegen.SurfaceContract
+import Test.Codegen.CompilerEmit
 import Test.Counterexamples.Machine.Semantics.CauseExit
 import Test.Counterexamples.Machine.Semantics.ActionAtRaceAllPremise
 import Test.Counterexamples.Machine.Semantics.InterruptDelivery
