@@ -22,6 +22,10 @@ program can compute a natural past the host's safe bound, which no codec writes.
 outcome forms the two faces agree on 26 executed cases. They differ on two things, the defect
 carrier and the numeric bound. Both are domain decisions, not encoding details.
 
+**After moves J and G (2026-10-20).** The two faces agree on 30 executed cases and differ on
+none. The nine refusals are the five handle answers, the two oversize sums, the sum at the
+bound, and the nested interrupt, which move H reaches. The landings are §11.
+
 ## 2. The principle, as the early notes state it
 
 - Decisions row 13, the schema/program rule. Schema is a data language. Every effectful slot
@@ -250,7 +254,7 @@ comparator's classes over the 40 cases:
 | --- | --- | --- |
 | `equal` | 26 | both executed, the same text |
 | `renamed` | 1 | the same text after one injective fiber renaming, `0` to `31`; one pair, so no general renaming is tested |
-| `differ` | 4 | both executed, different text: the defect carrier |
+| `differ` | 4 | both executed, different text: the defect carrier. After move G all four are `equal` (§8.1) |
 | `refusedBoth` | 7 | five handle answers, where neither face has a codec; two sums past the bound, refused by Lean's codec and by the prelude's arithmetic |
 | `refusedEffect` | 1 | the sum 2^53: Lean's nat wire admits it, the prelude refuses it. After move J it is `refusedBoth` (§8.7) |
 | `refusedLean` | 1 | an interrupted exit inside a success value: the outer strip does not reach it |
@@ -297,6 +301,13 @@ asyncSleep Lean {"_tag":"Die","defect":"asyncFiber"}
 A machine defect has a name on both faces, and rc.112 adds its message. The scoped fork with no
 scope dies on rc.112 with `{"name":"Error","message":"Service not found: effect/Scope"}`, which
 is Lean's `missingService`.
+
+**Landed, move G (2026-10-20, `3197fde57`; `receipt-G.md`).** The codec writes a defect as
+rc.112's `Schema.Defect()` does. A user defect is its number inside `safeBound`, a represented
+error is its raw JSON, and a machine defect is an `Error`'s name and message. `defectWire` is gone
+from the truth harness, which now writes the host's defect by rc.112's own encoder. The four
+cases above are `equal`, and the comparator reads 30 equal, 1 renamed, 8 refused on both faces,
+1 refused by Lean.
 
 ### 8.2 The exact codec refuses an annotated cause
 
@@ -371,6 +382,11 @@ and drops its other fields, so the cross-runtime law is modulo that. And `missin
 stored without the missing key (`serviceLookupK`, `src/Effect4/Program/Compile.lean`). So no
 output function can write rc.112's "Service not found: effect/Scope" from it today.
 
+**Landed, move G.** `Defect.missingService` stores its key, and the message spells it by the
+module's key names (`keySpelling`, now in `Program/Native.lean`), `effect/Scope` for the scope.
+The codec admits the canonical defects only, so `error (tag 7)` is refused and `user 7` is not.
+A finite control reads injectivity over one defect of each form (`Test/Codegen/DataCodec.lean`).
+
 One more thing the probe met: `NatJson.render` answers bytes, and `String.ofList` over them
 splits a non-ASCII character. The text form is `String.fromUTF8!` over the bytes. The map
 representative of the census is string-keyed. A map with another key type is unsupported, and
@@ -407,7 +423,7 @@ value, such as programs, types and refusals.
 | R2 | Does P1, total by refusal and complete against codec admission, enter the registry as a claim with a planned goal? | yes, by a proposed row |
 | R3 | Does the surface carry the exit codec per method, with the declarations? | yes, move F, after A |
 | R4 | A program whose answer is a handle | `refused`, with the tool's carrier wire for it, marked internal |
-| R5 | The defect domain: a payload defect carrying rc.112's raw JSON, or the canonical closed alphabet with an injective encoding | **ruled 2026-10-19 (the owner): "the canonical defect alphabet with an injective encoding, raw for user defects and name-and-message for machine defects, with missingService's key stored"**; the payload defect later, if the machine's own markers must match rc.112's messages exactly |
+| R5 | The defect domain: a payload defect carrying rc.112's raw JSON, or the canonical closed alphabet with an injective encoding | **ruled 2026-10-19 (the owner): "the canonical defect alphabet with an injective encoding, raw for user defects and name-and-message for machine defects, with missingService's key stored"**; the payload defect later, if the machine's own markers must match rc.112's messages exactly. D-G1 (`receipt-G.md`), settled by the coordinator: the key names enter at each wire's encoder and decoder, as landed, so layout and support stay judgments of the type. D-G2: the coordinator regenerated `rocq/Eff_types.v` and compiled the Rocq tree |
 | R6 | Is an exit observed without its annotations, at every depth? | yes, D2 |
 | R7 | One numeric bound, `safeBound`, on both wires and at the observation; and does Lean's machine refuse arithmetic past it, as the prelude does? | **ruled 2026-10-19 (the owner): "one numeric bound, safeBound, on both wires and at the observation, under M2"**; the machine's own refusal past the bound stays M2's decision. D-J1 (`receipt-J.md`), settled by the coordinator under this ruling: a user defect's number is bounded by `safeBound` at the observation too, in move G; an interruptor's fiber id stays the run's numbering |
 | R8 | The first landing's scope: terminal output with expanded declarations, traces deferred to E | yes |
@@ -490,6 +506,14 @@ paused, so each receipt proposes its registry text.
   spelling. The brief recommends the key, with the spelling from the declarations, since the
   key is what the machine has.
 - **Size.** M.
+- **Landed.** 2026-10-20, by one Opus seat in the main checkout from `briefs/G.md`: `3197fde57`
+  (the code) and `d54a9f211` (`receipt-G.md`). `make check-ocaml` and `make check-ts` passed.
+  The coordinator ran `#closure_audit` over the codec's new closures (passed) and regenerated
+  `rocq/Eff_types.v`. The receipt proposes the registry claim `defect-codec` with a planned
+  goal. Still open after it: the frozen packet `Test/contracts/schema-codec.contract.md` states
+  the codec without key names, and it is the owner's packet. The retired truth outputs keep
+  the old spellings until `gen-truth`. The to-do project's typed comparison follows
+  `briefs/todo-after-G.md`.
 
 ### 11.3 The proposed decisions row
 
@@ -504,7 +528,8 @@ M2 (R7, move J). (4) The order: J, G, then H, D, A with C, the native comparison
 ## 12. What this does not establish
 
 - Before move J, no theorem landed. Move J landed two helper lemmas of the claim `decode-iff`
-  and proposed one claim. The to-do probe is eleven requests, and the faces probe is 40
+  and proposed one claim. Move G restated the defect codec's exactness lemmas under the key
+  names and proposed the claim `defect-codec`. Which defects the codec admits has no proof. The to-do probe is eleven requests, and the faces probe is 40
   programs, each on one machine under one host.
 - The fiber renaming is one observed pair, `0` to `31`; no general renaming is tested.
 - No native run printed D1, and no native encoder, decoder or renderer was compared.
