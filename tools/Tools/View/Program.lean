@@ -1,6 +1,6 @@
 import Tools.View.Page
 import Tools.View.Algebra
-import Tools.Code.Module
+import Compiler.Code.Module
 import Effect4.Program.LayerView
 import Effect4.Program.Edit
 import Effect4.Codegen.PrintLeaf

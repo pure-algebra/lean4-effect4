@@ -1,4 +1,4 @@
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 import Tools.ProgramStructure
 import Tools.WireTags
 import Lean

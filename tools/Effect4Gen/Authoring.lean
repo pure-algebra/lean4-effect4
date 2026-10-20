@@ -1,5 +1,5 @@
 import Lean
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 
 /-!
 # Effect4Gen.Authoring — the binder table's two projections

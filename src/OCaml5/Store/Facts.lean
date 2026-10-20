@@ -2,7 +2,7 @@ import Lean
 import OCaml5.Lcnf.Naming
 import Effect4.Store.Domain.Store
 import Effect4.Store.Domain.Genesis
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 
 /-!
 # Shared native store facts

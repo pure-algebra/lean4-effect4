@@ -26,7 +26,7 @@ deriving BEq, Repr, Inhabited, DecidableEq
 def Column.title : Column → String
   | .runtime => "The runtime root · lake library Effect4"
   | .laws => "The proof graph · lake library Effect4Laws"
-  | .tools => "The tool roots · ProofGraph, Conform, Tools, OCaml5, Effect4Gen"
+  | .tools => "The tool roots · ProofGraph, Conform, Tools, Compiler, OCaml5, Effect4Gen"
   | .tests => "The batteries and gates · lake library Test"
   | .ocaml => "The OCaml estate · ocaml/"
   | .ts => "The TypeScript face · ts/eff and the tsgo oracle"
@@ -146,8 +146,10 @@ def areas : List Area := [
   ⟨"tools/Tools", .tools, 2, "Tools", "shared descriptions, stamps, inventory and neutral tool utilities", false, true⟩,
   ⟨"tools/Drivers", .tools, 4, "Drivers", "Effect4 drivers that consume the OCaml5 projection", false, true⟩,
   ⟨"tools/TestSupport", .tools, 2, "TestSupport", "shared immutable fixtures consumed by tooling and batteries; no runtime imports", false, true⟩,
-  ⟨"tools/Tools/Code", .tools, 2, "Tools/Code", "printed TypeScript: the fold of its syntax, the pinned printer and the readable layout as two algebras of it, a generated module's exact imports, header and checks; no view", true, true⟩,
   ⟨"tools/Tools/View", .tools, 2, "Tools/View", "the view: a picture as keyed data, looks as design tokens, the frames of a program built and run with its code, the graph layout, motion as a data join, the laws of its folds", true, true⟩,
+  ⟨"tools/Compiler", .tools, 3, "Compiler", "the compiler's entry point: check, emit and describe over an application or a named group, the one artifact mechanics (module text, header, address, manifest), the prelude's closure; `lake exe effect4` over the tree's groups", false, true⟩,
+  ⟨"tools/Compiler/Code", .tools, 2, "Compiler/Code", "printed TypeScript: the fold of its syntax, the pinned printer and the readable layout as two algebras of it, a generated module's exact imports, address and header block; no view. Below the compiler's other modules, since the view and the tools at layer 2 import it", false, true⟩,
+  ⟨"tools/Compiler/GeneratedStamp.lean", .tools, 2, "Compiler/GeneratedStamp", "the one header line every generator writes, and the layout steps at a generated file's boundary; imported by every generator, so below the compiler's other modules", false, true⟩,
   ⟨"src/OCaml5", .tools, 3, "OCaml5", "the Lean half of the OCaml estate: the `Eff` closed world and emitters, the LCNF → OCaml backend, the OCaml language model, the drivers", false, true⟩,
   ⟨"src/OCaml5/Eff", .tools, 3, "OCaml5/Eff", "the closed world, the emitters, the goldens", true, true⟩,
   ⟨"src/OCaml5/Lcnf", .tools, 3, "OCaml5/Lcnf", "the LCNF → OCaml translator, its types, externs and naming", true, true⟩,
@@ -241,7 +243,8 @@ def accepted : List Accepted := [
   ⟨"tools/Drivers", "Test.Program.QueueDefs", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
   ⟨"tools/Drivers", "Test.Codegen.ServicesPrint", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
   ⟨"tools/Drivers", "Test.Api.HostList", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
-  ⟨"tools/Drivers", "Test.Codegen.SchemaGenerationContract", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩
+  ⟨"tools/Drivers", "Test.Codegen.SchemaGenerationContract", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Compiler/Exe.lean", "Test.Dogfood.Scenario.Todo", "the dogfood to-do is a group of `lake exe effect4` (the entry point's second slice, 2026-10-20)"⟩
 ]
 
 /-- May a module in `a` import a module in `b`? Inside a Lean column, only the same height
@@ -336,7 +339,7 @@ environment with another such module, so the drivers stay out and are measured f
 def roots : List String := [
   "Test", "OCaml5", "ProofGraph.Goal", "ProofGraph.Plan", "ProofGraph.Sketch", "ProofGraph.Search",
   "Tools.ProgramStructure", "Tools.WireTags", "Drivers.Styles",
-  "Tools.ProfileJson", "Tools.GeneratedStamp",
+  "Tools.ProfileJson", "Compiler.GeneratedStamp",
   "Conform.Core.Evidence", "Conform.Core.Obligation", "Conform.Core.Policy",
   "Conform.Core.Report", "Conform.Layout.Build", "Conform.Layout.Check", "Conform.Layout.Laws",
   "Conform.Layout.Layout", "Conform.Layout.Native", "Conform.Layout.Reflect", "Conform.Layout.Types",

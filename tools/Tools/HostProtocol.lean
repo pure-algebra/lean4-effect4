@@ -1,7 +1,7 @@
 import Effect4.Api.HostProtocol
 import Effect4.Program.Profile
 import Lean.Data.Json
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 
 /-! Byte projection of the first-order HostProtocol. Outside the audited runtime graph.
 The schema describes transport structure; Envelope validates row/request/completion meaning. -/

@@ -1,5 +1,5 @@
 import Lean
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 
 /-!
 # Effect4Gen.Atoms — the atom inventory from the constructor list

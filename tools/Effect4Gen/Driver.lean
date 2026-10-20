@@ -167,7 +167,7 @@ def generateArgs (tool : String) (g : Group) (appendGuards : Bool) : Array Strin
 /-- Source headers for the scheduler, parsed by Lean without elaborating the modules.
 Manifest imports own generated modules, including outputs absent during bootstrap. -/
 def sourceGraph (groups : Array Group) : IO Json := do
-  let mut pending := #["Effect4Gen.Exe", "Effect4Gen.CatalogueExe", "Tools.GeneratedStamp"]
+  let mut pending := #["Effect4Gen.Exe", "Effect4Gen.CatalogueExe", "Compiler.GeneratedStamp"]
   for g in groups do pending := pending ++ (g.imports.splitOn ",").toArray
   let mut seen : Array String := #[]
   let mut rows : Array Json := #[]

@@ -1,6 +1,6 @@
 import ProofGraph.Registry
 import Tools.SemanticsDisplay
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 import Effect4.Laws.Auto.Semantics
 import ProofGraph.Axioms
 import ProofGraph.Plan

@@ -16,6 +16,13 @@ raw reconstruction, raw formation, the one whole-program checker, and the declar
 envelope compared with the printer output for the checked type. It keeps all five
 as a certificate indexed by the exact module it read.
 
+A module's file (`ModuleEmission.file`) declares the services of its table's rows after its
+payload classes (`rowServiceDecls`, decisions row 378 (19)). `services` names the rows whose
+services the reconstruction reads first, in `Api.readFile`'s order: none, the default, for the
+envelope that a host wraps (`ModuleEmission.module`), and the table's for a file. A definition
+block, its services and their layers read as the reconstruction reads them, and the envelope
+admits each of their declarations as a plain exported constant, as it admits a layer.
+
 What it does **not** do. There is no widening of a declared type: the comparison is
 equality with `Program.declarationType` of the certificate's own type, since the core has
 no subsumption at a program's top type. Binder and local annotations are still refused by
@@ -83,8 +90,8 @@ printer declares for its program and the key names its table gives: the export n
 leading class declarations read back to exactly those classes (decisions row 120), the last
 declaration is the exported main constant under that name annotated exactly as the printer
 annotates the type under those names (decisions row 378 (22)), and every declaration between is
-a plain layer constant. `none` means the envelope agrees; otherwise the first disagreement,
-named. -/
+a plain exported constant: a layer's, or a definition's, a service's or a row service's in a module
+that declares them. `none` means the envelope agrees; otherwise the first disagreement, named. -/
 def envelopeCheck (name : String) (ty : EffTy) (classes : Classes.Classes) (names : KeyNames)
     (decls : List TypeScript.Decl) : Option SurfaceRefusal :=
   if exportNameSafe name ≠ true then some (.unsafeName name)
@@ -112,11 +119,12 @@ def withAmbient (ambient : List TypeScript.Import) (module : TypeScript.Module) 
     TypeScript.Module :=
   { module with imports := ambient ++ module.imports }
 
-/-- What the reading boundary checked, for exactly this module, table and export name.
-`program`, `typing` and the classes are functions of `module`, so two readings of one module
-are equal. -/
+/-- What the reading boundary checked, for exactly this module, table and export name, and the
+rows whose services the module declares (`services`: none for the envelope that a host wraps,
+the table's for a file). `program`, `typing` and the classes are functions of `module`, so two
+readings of one module are equal. -/
 structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindings.Origin)
-    (ambient : List TypeScript.Import) where
+    (ambient : List TypeScript.Import) (services : RowTable := []) where
   module : TypeScript.Module
   program : NativeEff
   formed : Formation.InputFormed program table
@@ -129,7 +137,7 @@ structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindi
   annotations : annotationRefusal program = none
   bound : SourceBindings.Checked allowed (withAmbient ambient module)
   read : Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
-    NativeOp.param [] module.decls = .ok program
+    NativeOp.param services module.decls = .ok program
   envelope : envelopeCheck name typing.ty classes (nativeSignature table).keyNames module.decls =
     none
 
@@ -148,16 +156,18 @@ def lexicalRefusal (allowed : List Bindings.Origin) (module : TypeScript.Module)
       | none => .lexical
 
 /-- Checked reading: lexical bindings, raw reconstruction, the shared typing certificate,
-and the declaration envelope compared with what the printer emits for the checked type. -/
+and the declaration envelope compared with what the printer emits for the checked type. The
+reconstruction reads the services of `services` first (`Program.readModuleTyped`): none for the
+envelope that a host wraps, the table's for a module's file, as `Api.readFile` reads it. -/
 def admitModule (name : String) (module : TypeScript.Module) (table : RowTable := [])
     (allowed : List Bindings.Origin := effectOrigins)
-    (ambient : List TypeScript.Import := []) :
-    Except SurfaceRefusal (ModuleReading table name allowed ambient) :=
+    (ambient : List TypeScript.Import := []) (services : RowTable := []) :
+    Except SurfaceRefusal (ModuleReading table name allowed ambient services) :=
   match SourceBindings.validate allowed (withAmbient ambient module) with
   | none => .error (lexicalRefusal allowed (withAmbient ambient module))
   | some bound =>
     match hread : Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
-        NativeOp.param [] module.decls with
+        NativeOp.param services module.decls with
     | .error why => .error (.read why)
     | .ok program =>
       match hformed : Formation.checkInput program table with

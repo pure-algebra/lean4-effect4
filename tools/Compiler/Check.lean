@@ -2,7 +2,7 @@ import Compiler.Json
 import Effect4.Program.Authoring.ApplicationService
 import Effect4.Api.Author
 import Effect4.Api.RefusalsDerived
-import Tools.Code.Module
+import Compiler.Code.Module
 
 /-!
 # Compiler.Check — an application checked, and its certificate
@@ -57,6 +57,11 @@ def check (app : Application NativeOp) : Except CheckRefusal Api.Built :=
   | .error (.scope e r) => .error ⟨some e, .scope r⟩
   | .error (.typing e r) => .error ⟨some e, .typing r⟩
   | .ok m => (Api.Author.build m).mapError (⟨none, ·⟩)
+
+/-- **A program checked at the empty application** (`Api.Built.ofProgram`): built, or the build's
+refusal at admission. A program of the wire corpus is one, and so is each program of a group. -/
+def checkProgram (program : NativeEff) : Except CheckRefusal Api.Built :=
+  (Api.Built.ofProgram {} program).mapError fun why => ⟨none, .admission why⟩
 
 /-- **The certificate of a built program**, as `check --json` prints it and `certificate.json`
 holds it: the answer, the error and the keys required, the rows, the services' keys with their

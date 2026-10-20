@@ -163,6 +163,15 @@ srcDir = "tools"
 root = "Tools.Architecture"
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
+# The compiler over the tree's own groups (`lake exe effect4`, the entry point's second slice,
+# docs/research/2026-10-20-compiler-entry/README.md): `Compiler.mainOver` by static import over the
+# wire corpus and the dogfood to-do (tools/Compiler/Exe.lean).
+[[lean_exe]]
+name = "effect4"
+srcDir = "tools"
+root = "Compiler.Exe"
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
 # The live view's driver (slice LV-6): one session request a line on its standard input, each
 # answer's patch rows on its standard output (tools/Drivers/Live.lean).
 [[lean_exe]]

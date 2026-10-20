@@ -17,7 +17,7 @@ The half of the application face that crosses to TypeScript, in the namespace `E
 * `print` / `printDecl` answer TypeScript **syntax** (`TypeScript.Expr`, `ConstDecl`), never
   text. Rendering to bytes is one call to the pinned package — `TypeScript.Render.expr house0 0
   e`, or `TypeScript.Render.module` of a module — and a file writer lays a module out as every
-  lane writes it (`moduleText`, `tools/Tools/Code/Module.lean`). Both stay outside this module on
+  lane writes it (`moduleText`, `tools/Compiler/Code/Module.lean`). Both stay outside this module on
   purpose: Lean's `String` folds reach `Classical.choice`, and this module stays at the library's
   axiom ceiling. No operation of this face returns text.
 * `read`, `readAt`, `readable` and `roundTrip` are the reader and the print image's round trip;
@@ -169,6 +169,11 @@ envelope — a safe export name, the last declaration exported under that name a
 exactly as `printDecl` annotates the checked type, and every earlier declaration a plain
 exported layer constant.
 
+A module's file (`ModuleEmission.file`) declares the services of its table's rows after its
+payload classes. Under `services := table` the reconstruction reads them first, as `readFile`
+does, and then the definition block, its services and their layers. The default, no services,
+reads the envelope that a host wraps, as `readModule` does.
+
 What it does **not** check. It does not widen a declared type: the comparison is equality
 with the printer's own annotation, because the core has no subsumption at a program's top
 type. It admits no binder, return or local annotation; the raw reader still refuses those.
@@ -177,10 +182,10 @@ evidence that the host's namespace is the pinned one. It is neither target type 
 nor execution. -/
 def admitModule (name : String) (module : TypeScript.Module) (table : RowTable := [])
     (allowed : List Effect4.Codegen.Bindings.Origin := Effect4.Codegen.effectOrigins)
-    (ambient : List TypeScript.Import := []) :
+    (ambient : List TypeScript.Import := []) (services : RowTable := []) :
     Except Effect4.Codegen.SurfaceRefusal
-      (Effect4.Codegen.ModuleReading table name allowed ambient) :=
-  Effect4.Codegen.admitModule name module table allowed ambient
+      (Effect4.Codegen.ModuleReading table name allowed ambient services) :=
+  Effect4.Codegen.admitModule name module table allowed ambient services
 
 /-! ## The certified values, printed -/
 

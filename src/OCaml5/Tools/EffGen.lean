@@ -1,4 +1,4 @@
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 import OCaml5.Eff.Emit
 import OCaml5.Eff.Goldens
 import OCaml5.Eff.Metadata

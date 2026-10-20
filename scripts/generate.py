@@ -210,7 +210,7 @@ def derived(out, checking, scratch):
     emitted = scratch / 'derived-emitted'
     for stage_index, rows in enumerate(stages(plan)):
         executables = dict.fromkeys(row['args'][1] for row in rows)
-        needed = dict.fromkeys(['Tools.GeneratedStamp'] + [m for row in rows for m in imports_of(row)])
+        needed = dict.fromkeys(['Compiler.GeneratedStamp'] + [m for row in rows for m in imports_of(row)])
         run(['lake', 'build', *executables, *needed])
         prepared = []
         for row in rows:

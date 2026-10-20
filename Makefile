@@ -118,8 +118,8 @@ build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, E
 WIRE_TAGS := tools/Effect4Gen/wire-tags.json
 
 # What every `scripts/generate.py` group reads besides its own sources: the orchestrator itself and
-# the one header-and-layout module each Lean producer writes through (`Tools.GeneratedStamp`).
-PRODUCER_COMMON := scripts/generate.py scripts/lib/derived_plan.py tools/Tools/GeneratedStamp.lean
+# the one header-and-layout module each Lean producer writes through (`Compiler.GeneratedStamp`).
+PRODUCER_COMMON := scripts/generate.py scripts/lib/derived_plan.py tools/Compiler/GeneratedStamp.lean
 
 # Declaration-site variance, read off the vendored rc.112 sources by a Lean `--run` driver
 # (tooling plan 1.4a). It is an INPUT of `derived` -- the TyView group reads it -- so it is the
@@ -146,7 +146,7 @@ DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.
 # LCNF route or a battery, cannot change a derived output and reruns no group (LC-4). A file added
 # to the closure changes the file that imports it.
 DERIVED_INPUTS := $(shell $(PY) scripts/lean-imports.py --closure --manifest tools/Effect4Gen/manifest.json \
-  Effect4Gen.Exe Effect4Gen.CatalogueExe Tools.GeneratedStamp) lake-manifest.json lean-toolchain
+  Effect4Gen.Exe Effect4Gen.CatalogueExe Compiler.GeneratedStamp) lake-manifest.json lean-toolchain
 DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Json.lean src/Effect4/Store/Domain/Derived/Schema.lean \
   src/Effect4/Store/Domain/Derived/Program.lean src/Effect4/Store/Domain/PinDerived.lean src/Effect4/Api/Derived.lean \
   src/Effect4/Store/Domain/Derived/Value.lean src/Effect4/Api/RefusalsDerived.lean src/Effect4/Api/RunnerDerived.lean \
@@ -282,8 +282,8 @@ ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
 # JSON; the site's shell, its rules and its other pages are the site's (the target `site`).
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
   tools/Tools/SemanticsDocument.lean tools/Tools/Document.lean tools/Tools/Document/Json.lean \
-  $(wildcard tools/Tools/View/*.lean tools/Tools/Graph/*.lean tools/Tools/Code/*.lean) \
-  tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
+  $(wildcard tools/Tools/View/*.lean tools/Tools/Graph/*.lean tools/Compiler/Code/*.lean) \
+  tools/Tools/SemanticsDisplay.lean tools/Compiler/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
   Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain lakefile.toml
 $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LEAN_INPUTS)

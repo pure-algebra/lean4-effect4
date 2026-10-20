@@ -19,6 +19,12 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
   `.lake/effect4/<name>/ts/`. `--emit` selects the kinds; the default is all of them.
 - `describe` prints the manifest that `emit` with the same options would write, and writes nothing.
 
+`Compiler.mainOver groups args` is the same command line over named sources, one chosen by
+`--group NAME` (`lake exe effect4`, `Compiler.Exe`, C2 slice 2). A source is one application, or a
+group of programs, each admitted at the empty application (`Source`). Over a group, `check` prints
+each program's certificate under its name, and `emit` writes one folder with one manifest
+(`Compiler.emitGroup`).
+
 The pins and the prelude are read from the library's checkout, which the project's
 `lake-manifest.json` locates (`libraryRoot`). So the command runs from the project's root, as
 `lake exe` does. The exit code is `0` on success, `1` on a refusal, and `2` on a usage error.
@@ -96,56 +102,124 @@ def readInputs (root : System.FilePath) : IO Inputs := do
     catch _ => pure none
   return { lean, library, effect, tsgo }
 
-/-- `check`: the certificate, or the refusal. -/
-def checkCommand (app : Application NativeOp) (json : Bool) : IO UInt32 := do
-  match check app with
-  | .ok b =>
-    if json then IO.println (jsonText (certificate b))
-    else for line in certificateLines s!"{app.name}: checked; the service {serviceName app}" b do
-      IO.println line
-    return 0
-  | .error why =>
-    if json then IO.println (jsonText why.json) else IO.eprintln ("check: " ++ why.text)
-    return 1
+/-- **What a command runs over**: one application, or a named group of programs, each admitted at
+the empty application (`checkProgram`), as the wire corpus is. -/
+inductive Source where
+  | application (app : Application NativeOp)
+  | programs (name : String) (programs : List (String × NativeEff))
+
+/-- A source's name: the application's, or the group's. It names the default output folder. -/
+def Source.name : Source → String
+  | .application app => app.name
+  | .programs name _ => name
+
+/-- `check`: the certificate, or the refusal. Over a group, each program's, under its name; the
+command refuses when one program refuses. -/
+def checkCommand (source : Source) (json : Bool) : IO UInt32 := do
+  match source with
+  | .application app =>
+    match check app with
+    | .ok b =>
+      if json then IO.println (jsonText (certificate b))
+      else for line in certificateLines s!"{app.name}: checked; the service {serviceName app}" b do
+        IO.println line
+      return 0
+    | .error why =>
+      if json then IO.println (jsonText why.json) else IO.eprintln ("check: " ++ why.text)
+      return 1
+  | .programs _ programs =>
+    let mut refused := false
+    for (name, program) in programs do
+      match checkProgram program with
+      | .ok b =>
+        if json then IO.println (jsonText (.obj [("program", .str name), ("certificate", certificate b)]))
+        else for line in certificateLines s!"{name}: checked" b do IO.println line
+      | .error why =>
+        refused := true
+        if json then IO.println (jsonText (.obj [("program", .str name), ("refused", tree why.why)]))
+        else IO.eprintln (s!"check: the program {name}: " ++ why.text)
+    return if refused then 1 else 0
+
+/-- What an emission is asked for (`Spec`), its prelude's closure and its pins read from the
+library's checkout. -/
+def readSpec (name : String) (command : List String) (kinds : List Kind) : IO Spec := do
+  let root ← libraryRoot
+  let prelude ← Prelude.closure (root / Prelude.source)
+  let inputs ← readInputs root
+  return { name, command, kinds, prelude, inputs }
+
+/-- **A source's emission**, recorded under `command`: an application checked before the library is
+read, then emitted (`emitTs`); a group emitted program by program (`emitGroup`). A refusal is
+text. -/
+def emissionOf (source : Source) (command : List String) (kinds : List Kind) :
+    IO (Except String Emission) := do
+  match source with
+  | .application app =>
+    match check app with
+    | .error why => return .error why.text
+    | .ok b => return (emitTs (← readSpec app.name command kinds) b).mapError (·.text)
+  | .programs name programs =>
+    return (emitGroup (← readSpec name command kinds) programs).mapError (·.text)
 
 /-- `emit` and `describe`: the emission of the options `rest`, recorded under `command`; written
 when `write`, else its manifest printed. -/
-def emitCommand (app : Application NativeOp) (command rest : List String) (write : Bool) :
-    IO UInt32 := do
+def emitCommand (source : Source) (command rest : List String) (write : Bool) : IO UInt32 := do
   let o ← match Options.read rest {} with
     | .ok o => pure o
     | .error why => IO.eprintln s!"{why}; {usage}"; return 2
   unless o.target == some "ts" do
     IO.eprintln s!"--target ts is the one target of this slice; {usage}"
     return 2
-  match check app with
-  | .error why => IO.eprintln ("emit: " ++ why.text); return 1
-  | .ok b =>
-    let root ← libraryRoot
-    let prelude ← Prelude.closure (root / Prelude.source)
-    let inputs ← readInputs root
-    let spec : Spec := { name := app.name, command, kinds := o.kinds, prelude, inputs }
-    match emitTs spec b with
-    | .error why => IO.eprintln ("emit: " ++ why.text); return 1
-    | .ok e =>
-      if write then
-        let out := System.FilePath.mk (o.out.getD s!".lake/effect4/{app.name}/ts")
-        let files := e.files o.kinds
-        Prelude.write out (files.map fun a => (a.path, a.bytes))
-        IO.println (s!"emit: {files.length} files to {out}: " ++
-          ", ".intercalate (Kind.selectable.filterMap fun k =>
-            let n := (files.filter (·.kind.selector == k)).length
-            if n == 0 then none else some s!"{k.name} {n}"))
-      else IO.println (jsonText e.manifest)
-      return 0
+  match ← emissionOf source command o.kinds with
+  | .error why => IO.eprintln ("emit: " ++ why); return 1
+  | .ok e =>
+    if write then
+      let out := System.FilePath.mk (o.out.getD s!".lake/effect4/{source.name}/ts")
+      let files := e.files o.kinds
+      Prelude.write out (files.map fun a => (a.path, a.bytes))
+      IO.println (s!"emit: {files.length} files to {out}: " ++
+        ", ".intercalate (Kind.selectable.filterMap fun k =>
+          let n := (files.filter (·.kind.selector == k)).length
+          if n == 0 then none else some s!"{k.name} {n}"))
+    else IO.println (jsonText e.manifest)
+    return 0
+
+/-- The arguments of the `emit` that a `describe` describes: its first `describe` read as `emit`. -/
+def asEmit : List String → List String
+  | [] => []
+  | "describe" :: rest => "emit" :: rest
+  | a :: rest => a :: asEmit rest
+
+/-- **The command line over a source**: `check`, `emit` or `describe`. `args` are the arguments as
+given, which a header and the manifest record; `rest` are the ones the command reads. -/
+def run (source : Source) (args rest : List String) : IO UInt32 :=
+  match rest with
+  | ["check"] => checkCommand source false
+  | ["check", "--json"] => checkCommand source true
+  | "emit" :: options => emitCommand source args options true
+  | "describe" :: options => emitCommand source (asEmit args) options false
+  | _ => do IO.eprintln usage; return 2
 
 /-- **The compiler's entry point** over one application: `check`, `emit` or `describe`. -/
 def main (app : Application NativeOp) (args : List String) : IO UInt32 :=
-  match args with
-  | ["check"] => checkCommand app false
-  | ["check", "--json"] => checkCommand app true
-  | "emit" :: rest => emitCommand app args rest true
-  | "describe" :: rest => emitCommand app ("emit" :: rest) rest false
-  | _ => do IO.eprintln usage; return 2
+  run (.application app) args args
+
+/-- The group that the first `--group NAME` names, and the arguments without those two. -/
+def takeGroup : List String → Option String × List String
+  | [] => (none, [])
+  | "--group" :: name :: rest => (some name, rest)
+  | a :: rest => match takeGroup rest with
+    | (group, others) => (group, a :: others)
+
+/-- **The compiler over named sources** (`lake exe effect4`): `main`'s command line, with
+`--group NAME` choosing the source of that name. -/
+def mainOver (groups : List Source) (args : List String) : IO UInt32 := do
+  let names := ", ".intercalate (groups.map (·.name))
+  match takeGroup args with
+  | (some name, rest) =>
+    match groups.find? (·.name == name) with
+    | some source => run source args rest
+    | none => IO.eprintln s!"no group is named {name}; the groups are {names}"; return 2
+  | (none, _) => IO.eprintln s!"--group NAME chooses one of {names}; {usage}"; return 2
 
 end Compiler

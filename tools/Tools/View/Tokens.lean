@@ -1,6 +1,6 @@
 import Lean.Data.Json
 import Tools.View.Look
-import Tools.Code.Doc
+import Compiler.Code.Doc
 
 /-!
 # A look as design tokens, and as CSS

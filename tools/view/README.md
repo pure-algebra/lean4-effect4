@@ -150,11 +150,11 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Tools/View/Live.lean` | the live step: one request in, one patch out |
 | `tools/Tools/View/LiveChecks.lean` | the live view's checks at every frame of the view's builds |
 | `tools/Tools/View/Specimen.lean` | the graph specimen |
-| `tools/Tools/Code/Doc.lean` | a document and its layout at a width: groups lie flat when they fit |
+| `tools/Compiler/Code/Doc.lean` | a document and its layout at a width: groups lie flat when they fit |
 | `src/Effect4/Codegen/TsFold.lean` | the fold of TypeScript's syntax: its algebra and uniqueness (generated into the core, group `TsFold`) |
-| `tools/Tools/Code/TypeScript.lean` | printed TypeScript as two algebras of its syntax: the house and the readable layout |
-| `tools/Tools/Code/Module.lean` | a generated module: its exact imports, its header, its checks; the code plane |
-| `tools/Drivers/Emit.lean` | the driver: the generated folder |
+| `tools/Compiler/Code/TypeScript.lean` | printed TypeScript as two algebras of its syntax: the house and the readable layout |
+| `tools/Compiler/Code/Module.lean` | a generated module: its exact imports, its address and header block, its layout; the code plane |
+| `tools/Drivers/Emit.lean` | the driver: the generated folder, each module's reading verdict and the index |
 | `tools/Drivers/View.lean` | the driver: frames to `.draw`, `.svg` and text |
 | `tools/Drivers/Live.lean` | the live driver: session requests in, patch rows out |
 | `draw.c`, `play.c`, `replay.h`, `paint.h` | the replay to PNG or into the terminal (`--kitty`), the window and its live mode, the shared replay, the painter |
@@ -188,7 +188,7 @@ Proved in `tools/Tools/View/`, each resting on `[propext, Quot.sound]` or less:
 - `Retained.of_flatten`, `Retained.apply_diff`: a picture read as objects flattens to the picture,
   and a scene patched by the diff to another flattens to the other.
 - `undo_layout`: undo the breaks a layout took, and the flat print comes back, at every width.
-- `render_eq_expr` (`tools/Tools/Code/TypeScript.lean`): the pinned renderer is the fold of the
+- `render_eq_expr` (`tools/Compiler/Code/TypeScript.lean`): the pinned renderer is the fold of the
   house's algebra of TypeScript's syntax (`renderAlg`).
 - `flat_fold_expr`: the readable layout's fold, laid flat, is the house's. The flat print is a map
   of algebras (`flatHom`), one square for each constructor. These rest on `Classical.choice`

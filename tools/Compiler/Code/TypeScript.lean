@@ -1,4 +1,4 @@
-import Tools.Code.Doc
+import Compiler.Code.Doc
 import Effect4.Codegen.TsFold
 import TypeScript.Render
 

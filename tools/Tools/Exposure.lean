@@ -25,7 +25,7 @@ def pathOf (m : Name) : Option String :=
   | "Effect4" :: _ | "OCaml5" :: _ => some ("src/" ++ "/".intercalate parts ++ ".lean")
   | "Test" :: _ => some ("/".intercalate parts ++ ".lean")
   | "Tools" :: _ | "ProofGraph" :: _ | "Conform" :: _ | "Drivers" :: _ | "Effect4Gen" :: _
-  | "TestSupport" :: _ => some ("tools/" ++ "/".intercalate parts ++ ".lean")
+  | "Compiler" :: _ | "TestSupport" :: _ => some ("tools/" ++ "/".intercalate parts ++ ".lean")
   | _ => none
 
 /-- One import of a user's file that row 332 does not admit. -/

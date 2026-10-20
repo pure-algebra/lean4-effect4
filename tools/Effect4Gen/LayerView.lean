@@ -1,5 +1,5 @@
 import Lean
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 
 /-!
 # Effect4Gen.LayerView — the one-layer view of the program family (R4.2)

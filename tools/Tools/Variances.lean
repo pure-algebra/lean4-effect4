@@ -1,6 +1,6 @@
 import Lean
 import Effect4.Store.Carrier.Digest
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 
 /-!
 # Tools.Variances — declaration-site variance, read off rc.112

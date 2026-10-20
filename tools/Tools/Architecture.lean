@@ -1,5 +1,5 @@
 import Lean
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 import Tools.ArchitectureRoles
 import ProofGraph.Population
 

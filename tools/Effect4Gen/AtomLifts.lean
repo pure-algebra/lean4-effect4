@@ -1,5 +1,5 @@
 import Lean
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 import Effect4.Machine.Term
 import Effect4.Program.AtomInventory
 

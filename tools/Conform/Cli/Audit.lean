@@ -71,7 +71,7 @@ end Config
 
 A report is comparable with another report only when it says what it read. Every file the run
 opened becomes a `Conform.Input` with its SHA-256, computed by the same route the tree's other
-stamps use (`tools/Tools/GeneratedStamp.lean`): `shasum -a 256` over the bytes, no FFI. -/
+stamps use (`tools/Compiler/GeneratedStamp.lean`): `shasum -a 256` over the bytes, no FFI. -/
 
 def sha256 (text : String) : IO String := do
   let out ← try

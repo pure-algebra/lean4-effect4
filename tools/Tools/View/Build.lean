@@ -1,6 +1,6 @@
 import Tools.View.Program
 import Tools.View.Flow
-import Tools.Code.Module
+import Compiler.Code.Module
 import Tools.View.Motion
 import Effect4.Tool.Serve
 

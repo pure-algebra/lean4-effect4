@@ -7,7 +7,7 @@ import TypeScript.Render
 The target lanes ask the one compiler about the spelling that a printed module ships: the type
 printer `Codegen.Types.ofTy`, rendered flat by the pinned package at the house style
 (`TypeScript.Render.type`), as the module writer renders a type (`moduleText`,
-`tools/Tools/Code/Module.lean`). The two producers of the lanes' questions read it,
+`tools/Compiler/Code/Module.lean`). The two producers of the lanes' questions read it,
 `Tools.TyVectors` (the assignability pairs) and `Tools.RowTypes` (the rows' signatures).
 
 `Ty.renderRaw` is no spelling of a shipped module. It prints the type as stored, and the printer

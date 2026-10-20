@@ -1,5 +1,5 @@
 import Lean
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 
 /-!
 # Effect4Gen.View — the relational view of `Ty` (tooling plan 1.4)

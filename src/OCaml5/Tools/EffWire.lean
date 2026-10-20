@@ -1,4 +1,4 @@
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 import Effect4.Store.Domain.ProgramWire
 import Tools.ProgramStructure
 import OCaml5.Eff.Goldens

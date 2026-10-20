@@ -1,4 +1,4 @@
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 import Effect4.Store.Domain.Word
 import Effect4.Store.Domain.Cas
 import Effect4.Store.Domain.Genesis

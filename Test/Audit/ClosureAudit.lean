@@ -3,17 +3,18 @@ import Tools.Semantics
 import Tools.SemanticsDocument
 import Tools.Document.Html
 import ProofGraph.ClosureAudit
+import Compiler.Main
 
 /-!
 # No table bound before a returned closure (`#closure_audit`)
 
-The audit over the code that runs: the core (`Effect4`), the report tools and the proof-graph
-tools. Then the control: a table bound before the closure is refused, and the same table passed
-as data is not (`tools/ProofGraph/ClosureAudit.lean`).
+The audit over the code that runs: the core (`Effect4`), the report tools, the proof-graph
+tools and the compiler's library (`Compiler`). Then the control: a table bound before the closure
+is refused, and the same table passed as data is not (`tools/ProofGraph/ClosureAudit.lean`).
 -/
 
 #guard_msgs (drop info) in
-#closure_audit Effect4 Tools ProofGraph
+#closure_audit Effect4 Tools ProofGraph Compiler
 
 namespace Test.Audit.ClosureAudit
 

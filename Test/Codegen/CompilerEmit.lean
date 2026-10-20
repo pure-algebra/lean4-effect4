@@ -1,13 +1,14 @@
 import Compiler.Main
 import Effect4.Author
+import Test.Dogfood.Scenario.Todo.Data
 
 /-!
 # The compiler's emission, read: one corpus program's folder, and its controls
 
-Readers and controls over `Compiler.emitProgram`, `Compiler.emitTs` and `Compiler.check`
-(`tools/Compiler/`; the entry point's first slice, `docs/research/2026-10-20-compiler-entry/README.md`
-§5 and E3). A battery reads no file, so the prelude's closure and the pins are data here; the IO
-that reads them is `Compiler.Main`'s.
+Readers and controls over `Compiler.emitProgram`, `Compiler.emitTs`, `Compiler.emitGroup` and
+`Compiler.check` (`tools/Compiler/`; the entry point's first two slices,
+`docs/research/2026-10-20-compiler-entry/README.md` §5, E3 and E6). A battery reads no file, so the
+prelude's closure and the pins are data here; the IO that reads them is `Compiler.Main`'s.
 
 - **The folder of the wire corpus's first program**, `p42`, admitted at the empty application:
   its files and their kinds, the manifest read back from its own bytes, the address, the
@@ -18,6 +19,14 @@ that reads them is `Compiler.Main`'s.
   profile. Its twin at `natBound` emits, and its module imports the prelude beside it.
 - **The command's controls**: an entry that the checker refuses is named, `--emit` selects, an
   unknown kind is refused, and an import that leaves the prelude's folder resolves to nothing.
+- **A group**: the wire corpus emitted as one folder with one manifest. The manifest names each
+  program with its address and every file with its SHA-256, and each module is the one its
+  program's own emission writes. The red controls: two programs of one name, and one program above
+  the profile's bound, each refuse the group, by name.
+- **A service module's read-back**: the dogfood to-do's file. Read as the envelope that a host
+  wraps, with no services, the reading boundary refuses it at its first row service. With the
+  table's row services read first, as `Api.readFile` reads them, it admits the file, and the
+  to-do emits.
 
 Every check is a `#guard`, so the rendered bytes stay inside them.
 -/
@@ -122,15 +131,15 @@ def mixed : Application NativeOp :=
   | _, _ => false
 
 -- The manifest records the module's checks the slice owes (formation, typing, the literal profile,
--- the structured read-back) with the lexical one, and that no target compiler and no run were
--- performed.
+-- the reading boundary's admission of the structured module), and that no target compiler and no
+-- run were performed.
 #guard match emitProgram (specOf first.1) first.2 with
   | .ok e =>
     match e.manifest.at? [.key "checks", .key "performed"], e.manifest.at? [.key "checks", .key "notPerformed"] with
     | some (.arr performed), some (.arr skipped) =>
       (performed.filter fun c => isStr "module" (c.at? [.key "kind"])).map
           (fun c => match c.at? [.key "check"] with | some (.str s) => s | _ => "") ==
-        ["formation", "typing", "profile", "readBack", "bindings"] && skipped.length == 2
+        ["formation", "typing", "profile", "readBack"] && skipped.length == 2
     | _, _ => false
   | .error _ => false
 
@@ -193,11 +202,116 @@ def mixed : Application NativeOp :=
   | .error _, .ok o => o.target == some "ts" && o.out == some "ts" && o.kinds == Kind.selectable
   | _, _ => false
 
+-- `--group NAME` is read wherever it stands, and the other arguments keep their order; without it
+-- there is no group. A `describe` records the `emit` that it describes.
+#guard takeGroup ["emit", "--target", "ts", "--group", "corpus", "--out", "o"] ==
+    (some "corpus", ["emit", "--target", "ts", "--out", "o"]) &&
+  takeGroup ["emit", "--target", "ts"] == (none, ["emit", "--target", "ts"]) &&
+  asEmit ["describe", "--group", "corpus", "--target", "ts"] == ["emit", "--group", "corpus", "--target", "ts"]
+
 -- The scan reads re-exports, imports and both quotes, and keeps only relative specifiers; an import
 -- that leaves the prelude's folder resolves to nothing, so `closure` refuses it.
 #guard Prelude.relativeImports
     "export * from \"./a.ts\"\nimport { b } from './b.ts'\nimport \"./c.ts\"\nimport { Effect } from \"effect\"\n" ==
   ["./a.ts", "./c.ts", "./b.ts"]
 #guard Prelude.resolve "prelude.ts" "../outside.ts" == none && Prelude.resolve "sub/x.ts" "../y.ts" == some "y.ts"
+
+/-! ## A group: the wire corpus, with one manifest -/
+
+-- The group's files: the prelude's once, then each program's module, canonical bytes, their tagged
+-- print and its certificate under its name, then one manifest. No program of the wire corpus
+-- declares a data service, so none has a surface.
+#guard match emitGroup (specOf "corpus") Wire.Corpus.all with
+  | .ok e => (e.files Kind.selectable).map (fun (a : Artifact) => (a.path, a.kind)) ==
+      [("prelude/prelude.ts", .prelude), ("prelude/a.ts", .prelude)] ++
+        Wire.Corpus.all.flatMap (fun (name, _) =>
+          [(s!"{name}.gen.ts", .module), (s!"{name}.eff", .canonical), (s!"{name}.eff.json", .canonical),
+           (s!"{name}.certificate.json", .certificate)]) ++ [("manifest.json", .manifest)]
+  | .error _ => false
+
+-- The manifest, read back from its own bytes, names the group and each program in order, with the
+-- SHA-256 of that program's canonical bytes as its address. It names every other file with the
+-- SHA-256 of its bytes, and not itself.
+#guard match emitGroup (specOf "corpus") Wire.Corpus.all with
+  | .ok e =>
+    let files := e.files Kind.selectable
+    match files.find? (fun (a : Artifact) => a.kind == .manifest) with
+    | some m =>
+      match NatJson.parse (m.bytes.data.toList.map UInt8.toNat) with
+      | .ok t =>
+        match t.at? [.key "programs"], t.at? [.key "artifacts"] with
+        | some (.arr programs), some (.arr rows) =>
+          isStr "corpus" (t.at? [.key "group"]) && programs.length == Wire.Corpus.all.length &&
+            (programs.zip Wire.Corpus.all).all (fun (entry, name, _) =>
+              isStr name (entry.at? [.key "module"]) &&
+                (files.find? (fun (a : Artifact) => a.path == s!"{name}.eff")).any fun canonical =>
+                  isStr (sha256Hex canonical.bytes) (entry.at? [.key "address"])) &&
+            rows.length + 1 == files.length &&
+            (files.filter fun (a : Artifact) => a.kind != .manifest).all fun a =>
+              rows.any fun r => isStr a.path (r.at? [.key "path"]) &&
+                isStr (sha256Hex a.bytes) (r.at? [.key "sha256"])
+        | _, _ => false
+      | .error _ => false
+    | none => false
+  | .error _ => false
+
+-- Each program's module in the group is its own emission's module, byte for byte: the group places
+-- the programs' emissions side by side, and one manifest stands for theirs.
+#guard match emitGroup (specOf "corpus") Wire.Corpus.all with
+  | .ok e => Wire.Corpus.all.all fun (name, program) =>
+      match emitProgram (specOf name) program with
+      | .ok single => (single.artifacts.find? (fun (a : Artifact) => a.kind == .module)).any fun m =>
+          (e.artifacts.find? (fun (a : Artifact) => a.path == s!"{name}.gen.ts")).any
+            (·.bytes.data == m.bytes.data)
+      | .error _ => false
+  | .error _ => false
+
+-- red: two programs of one name refuse the group, since their files would share paths.
+#guard match emitGroup (specOf "pair") [("p", Wire.Corpus.p42), ("p", Wire.Corpus.pBind)] with
+  | .error (.duplicate "p") => true
+  | _ => false
+
+-- red: one program above rc112's bound refuses the whole group at the profile, by its name, with
+-- the literal; the program inside the bound beside it writes nothing either.
+#guard match emitGroup (specOf "bound")
+    [("inside", Wire.Corpus.p42), ("above", .succeed (.lit (.nat (rc112.natBound + 1))))] with
+  | .error (.member "above" (.emission (.outsideProfile r))) =>
+    decide (r.reason = .aboveBound (rc112.natBound + 1))
+  | _ => false
+
+/-! ## The read-back of a service module -/
+
+-- The file is the structured module that the dogfood to-do's emission lays out. Each guard builds
+-- it, so its rendered bytes stay inside the guard.
+
+-- red: read as the envelope that a host wraps, with no services, the reading boundary refuses the
+-- file at its first row service, which names no layer path.
+#guard match check Test.Dogfood.Scenario.Todo.application with
+  | .ok b =>
+    match b.typed.emit declaration with
+    | .ok e =>
+      match e.file preludeImport with
+      | .ok file =>
+        match Api.admitModule declaration file b.table (Tools.Code.originsAt preludeImport) with
+        | .error (.read (.shape "module")) => true
+        | _ => false
+      | .error _ => false
+    | .error _ => false
+  | .error _ => false
+
+-- green: with the table's row services read first, as `Api.readFile` reads them, it admits the
+-- file, to exactly the built program; and the to-do emits.
+#guard match check Test.Dogfood.Scenario.Todo.application with
+  | .ok b =>
+    match b.typed.emit declaration with
+    | .ok e =>
+      match e.file preludeImport with
+      | .ok file =>
+        match Api.admitModule declaration file b.table (Tools.Code.originsAt preludeImport) [] b.table with
+        | .ok reading => decide (reading.program = b.program) && (emitTs (specOf "todo") b).toBool
+        | .error _ => false
+      | .error _ => false
+    | .error _ => false
+  | .error _ => false
 
 end Test.Codegen.CompilerEmit

@@ -1,5 +1,5 @@
 import Lean
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 
 /-!
 # Effect4Gen.Fold — the fold of a free object, and the companions of a nested one

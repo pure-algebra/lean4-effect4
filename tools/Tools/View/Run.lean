@@ -1,5 +1,5 @@
 import Tools.View.Program
-import Tools.Code.Module
+import Compiler.Code.Module
 import Tools.View.Decision
 
 /-!
