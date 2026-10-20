@@ -62,6 +62,9 @@ and a document are each a state reached by its journal. The dictionary
 The consolidation order of `coherence.md` §9.1 (row 420): a language that is rational, coherent,
 and compiled as its semantics says. Each move deletes what it replaces.
 
+Now: the to-do as a user's project, outside the library, lowered to OCaml
+(`research/2026-10-19-todo-as-a-user/plan.md`). Its findings may reorder the list below.
+
 1. M1, one located refusal.
 2. M2, one profile judgment at ingress.
 3. M3, one program codec, lowered.

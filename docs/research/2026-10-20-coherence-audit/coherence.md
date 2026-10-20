@@ -194,6 +194,9 @@ reader.
 
 ### 9.1 The consolidation order
 
+First, before item 1: the to-do as a user's project, outside the library
+(`docs/research/2026-10-19-todo-as-a-user/plan.md`). Its findings may reorder this list.
+
 | # | Move | What it collapses or deletes | Size |
 | --- | --- | --- | --- |
 | 1 | **M1, one located refusal** (was release item 8) | `Authoring.Refusal`, `DocumentRefusal`, `FormationRefusal`, item 3b's `ReadFailure`, and the paths in `TermTypingRefusal`'s arms, into `Located Site Reason`; the second prefix rule | S |

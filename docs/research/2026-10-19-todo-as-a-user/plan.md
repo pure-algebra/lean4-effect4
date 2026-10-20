@@ -48,7 +48,9 @@ flowchart LR
   A["1 write it in Lean"] --> B["2 check and run it in Lean"]
   B --> C["3 lower it to OCaml"]
   C --> D["4 run it natively with a host"]
-  D --> E["5 findings"]
+  B --> P["5 print it as Effect TypeScript"]
+  D --> E["6 the file tour and the findings"]
+  P --> E
 ```
 
 1. **Write it in Lean,** as a user: `lake new`, the require, the import, `eff_rows`, `eff do`, the
@@ -62,11 +64,21 @@ flowchart LR
    - the OCaml support it needs.
 4. **Run it natively.** Build one dune executable over an in-memory repository. Run a script of
    requests through it. Compare its answers with the Lean run of the same script.
-5. **Write the findings:** each friction, with its owner in the consolidation order
+5. **Print it as Effect TypeScript** with the library's printer (`Effect4.Emit`; the library's
+   `apps/todo/EmitTodo.lean` shows one way). Check the module with tsgo 7.
+6. **Tour the files, and write the findings.** The owner's aim is to see every file that one
+   program written in Lean produces, to learn what the development experience is. The tour lists
+   each file of the project:
+   - who wrote it: the author, a generator (which one, by which command), or a seam's hand body;
+   - its size in lines;
+   - whether an author reads it, edits it, or never opens it.
+
+   Then the findings: each friction, with its owner in the consolidation order
    (`docs/research/2026-10-20-coherence-audit/coherence.md` §9.1). Likely findings:
    - the hand keys and the typed host (item 9);
    - names that a user should not see (item 10);
-   - error text that names an internal type, such as `Env` (item 1);
+   - error text that names an internal type, such as `Env` (item 9, since `eff_rows` makes the
+     row functions);
    - the missing path to lower code outside the library (a new item).
 
 ## 5. What it does not do
@@ -75,9 +87,11 @@ flowchart LR
   host-lane fixture. Moving their reads to the outside project is a later ruling, made once the
   outside project covers them.
 - It adds no authoring surface other than Lean (row 420).
-- It prints no TypeScript in this pass. The printer's face of the same program is a later pass.
 
 ## 6. Order
 
-It runs after seat M1 lands. Seats run one at a time. The path require builds in this checkout,
-where M1 is building. M1 also fixes error text that the to-do author meets.
+It runs now, before M1, and M1 was stopped before it edited anything (the owner, 2026-10-19). The
+two are not related. M1 changes how a refusal is recorded, while the to-do's author meets Lean's
+own errors and the checker's refusal, which already uses `Located`. The path require builds in this
+checkout, so no other seat builds here while this one runs. Its findings may reorder
+`coherence.md` §9.1.
