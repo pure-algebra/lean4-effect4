@@ -1,19 +1,13 @@
 (* test_eff — the battery of effect4_eff (hand-written).
-   1. Goldens: every goldens/<name>.bin decodes exactly and re-encodes byte for byte, and its JSON
-      print as the tools print it (Lean's `ShapeDoc.printTree`, lowered) reads back to it under
-      Lean's located reader (`ShapeDoc.readLocated`, lowered), or is refused for a natural above
-      the profile's limit; structural corruptions of the bytes
-      are refused. goldens/<name>.json holds the program in `V`'s spelling, which ts/eff's tests
-      read; no OCaml printer of that spelling remains (C6). The
-      `.ty` beside each golden and the verdict column of corpus.txt are Lean's own typing
-      (`typeOf`, `wellTyped`), printed for the record and compared with nothing here: since
-      2026-09-13 the typing has one face, `effTy`, and those files are its expected output,
-      held by `make check-gen`.
+   1. The program codec (Eff_codec: Lean's exact embedding, lowered, over the framing kernel):
+      a constructor tag no program has, a constructor with a missing or an extra argument, and
+      a requirement row out of order are refused at decoding; a negative natural is refused at
+      encoding. The codec's agreement with Lean's own bytes is test_lean_wire's, on the goldens
+      Lean cuts (ocaml/goldens/eff), and its round trip on random programs is prop_wire's.
    2. The wire kernel: nat digits, the bound, UTF-8, refusals.
    Exit status 1 on any failure; the counts are printed last. *)
 
 open Eff_types
-module G = Effect4_gen.Api_gen
 
 let checks = ref 0
 let failures = ref 0
@@ -26,142 +20,21 @@ let check (name : string) (ok : bool) : unit =
     Printf.printf "FAIL: %s\n%!" name)
 ;;
 
-let read_file (path : string) : string =
-  let ic = open_in_bin path in
-  let n = in_channel_length ic in
-  let s = really_input_string ic n in
-  close_in ic;
-  s
-;;
-
-let strip (s : string) : string =
-  let n = ref (String.length s) in
-  while !n > 0 && (s.[!n - 1] = '\n' || s.[!n - 1] = '\r') do
-    decr n
-  done;
-  String.sub s 0 !n
-;;
-
-let goldens = "../goldens/"
-
-let corpus : (string * bool) list =
-  read_file (goldens ^ "corpus.txt")
-  |> String.split_on_char '\n'
-  |> List.filter (fun l -> l <> "")
-  |> List.map (fun l ->
-    match String.split_on_char '\t' l with
-    | [ name; status ] -> name, status = "well-typed"
-    | _ -> failwith ("corpus.txt: bad line " ^ l))
-;;
-
-let golden_bin name = read_file (goldens ^ name ^ ".bin")
-
-(* A program's JSON print (Lean's printer, lowered) reads back to it (Lean's reader, lowered), or
-   is refused for a natural above the profile's limit (2^53 - 1), as pIllTupleAtIndex's index is. *)
-let json_reads_back (p : NativeOp.t Eff.t) : bool =
-  let tree =
-    G.store_shape_doc_print_tree G.run_kit_program_shape (G.run_kit_program_to_val p)
-  in
-  match G.store_shape_doc_read_located G.run_kit_program_shape tree with
-  | Ok v -> G.run_kit_program_of_val v = Some p
-  | Error { Eff_types.Located.reason = G.JsonReason_naturalOutsideProfile _; _ } -> true
-  | Error _ -> false
-;;
-
-let ellipsis (n : int) (s : string) : string =
-  if String.length s <= n then s else String.sub s 0 (n - 1) ^ "\226\128\166"
-;;
-
-(* ---- 1. goldens ---- *)
-
-let () =
-  (* no pinned count: every program corpus.txt names has its bytes, and no bytes are unnamed *)
-  let bins =
-    List.filter
-      (fun f -> Filename.check_suffix f ".bin")
-      (Array.to_list (Sys.readdir goldens))
-  in
-  check
-    (Printf.sprintf "corpus.txt names exactly the %d byte goldens" (List.length bins))
-    (corpus <> []
-     && List.sort compare (List.map (fun (n, _) -> n ^ ".bin") corpus)
-        = List.sort compare bins);
-  Printf.printf
-    "  %-16s %6s %-8s %-10s %-6s %-5s %s\n"
-    "program"
-    "bytes"
-    "decode"
-    "re-encode"
-    "JSON"
-    "Lean"
-    "typeOf";
-  List.iter
-    (fun (name, typed) ->
-       let bin = golden_bin name in
-       let ty = strip (read_file (goldens ^ name ^ ".ty")) in
-       match Eff_wire.decode_program_exact bin with
-       | None ->
-         check (name ^ ": decodes") false;
-         Printf.printf
-           "  %-16s %6d %-8s %-10s %-6s %-5s %s\n"
-           name
-           (String.length bin)
-           "REFUSED"
-           "-"
-           "-"
-           "-"
-           "-"
-       | Some p ->
-         Printf.printf
-           "  %-16s %6d %-8s %-10s %-6s %-5s %s\n"
-           name
-           (String.length bin)
-           "ok"
-           (if Eff_wire.encode_program p = bin then "identical" else "DIFFERS")
-           (if json_reads_back p then "reads" else "DIFFERS")
-           (if typed then "typed" else "ill")
-           (ellipsis 44 ty);
-         check (name ^ ": re-encodes byte for byte") (Eff_wire.encode_program p = bin);
-         check (name ^ ": Lean's JSON print reads back") (json_reads_back p);
-         check
-           (name ^ ": decode reports the whole length as rest")
-           (Eff_wire.decode_program bin = Some (p, String.length bin));
-         check
-           (name ^ ": a trailing byte is refused")
-           (Eff_wire.decode_program_exact (bin ^ "\000") = None);
-         check
-           (name ^ ": a trailing byte is not consumed by decode")
-           (Eff_wire.decode_program (bin ^ "\000") = Some (p, String.length bin));
-         check
-           (name ^ ": truncation is refused")
-           (Eff_wire.decode_program_exact (String.sub bin 0 (String.length bin - 1))
-            = None);
-         let flipped = Bytes.of_string bin in
-         Bytes.set flipped 0 '\004';
-         check
-           (name ^ ": a wrong tag is refused")
-           (Eff_wire.decode_program_exact (Bytes.to_string flipped) = None);
-         let longer = Bytes.of_string bin in
-         Bytes.set longer 8 (Char.chr (Char.code (Bytes.get longer 8) + 1));
-         check
-           (name ^ ": a length past the end is refused")
-           (Eff_wire.decode_program_exact (Bytes.to_string longer) = None))
-    corpus
-;;
+(* ---- 1. the program codec ---- *)
 
 let () =
   let bad_index i =
     Eff_frame.to_string (fun b () -> Eff_frame.emit_ctor b i (fun _ -> ())) ()
   in
-  check "Eff index 27 is refused" (Eff_wire.decode_eff_exact (bad_index 27) = None);
+  check "Eff index 27 is refused" (Eff_codec.decode_program (bad_index 27) = None);
   check
     "Eff index 24 with no payload is refused (provideLayer needs a layer, a flag and a \
      body)"
-    (Eff_wire.decode_eff_exact (bad_index 24) = None);
-  check "Eff index 99 is refused" (Eff_wire.decode_eff_exact (bad_index 99) = None);
+    (Eff_codec.decode_program (bad_index 24) = None);
+  check "Eff index 99 is refused" (Eff_codec.decode_program (bad_index 99) = None);
   check
     "Eff index 17 with no payload is refused (yieldNow needs a nat)"
-    (Eff_wire.decode_eff_exact (bad_index 17) = None);
+    (Eff_codec.decode_program (bad_index 17) = None);
   let yield0 =
     Eff_frame.to_string
       (fun b () -> Eff_frame.emit_ctor b 17 (fun b -> Eff_frame.emit_nat b 0))
@@ -169,7 +42,7 @@ let () =
   in
   check
     "Eff index 17 with a nat is yieldNow 0"
-    (Eff_wire.decode_eff_exact yield0 = Some (Eff.YieldNow 0));
+    (Eff_codec.decode_program yield0 = Some (Eff.YieldNow 0));
   let extra =
     Eff_frame.to_string
       (fun b () ->
@@ -180,10 +53,37 @@ let () =
   in
   check
     "an extra argument inside the frame is refused"
-    (Eff_wire.decode_eff_exact extra = None)
+    (Eff_codec.decode_program extra = None);
+  (* C3: a requirement row's order is Lean's type's. The OCaml list does not carry it, so a row
+     out of order encodes, and its bytes are no program's: the reading refuses them. The control
+     is the same program with its row in order, which reads back. *)
+  let key n s = { ServiceKey.name = n; service = s } in
+  let carrying keys : Eff_codec.program =
+    Eff.Bind
+      ( Eff.Perform
+          (NativeOp.DeferredMakeOf (Ty.ContextOf keys, Ty.Nat), Term.Lit Lit.Unit)
+      , Eff.WithFiber (ActionTerm.Context keys) )
+  in
+  let reads keys =
+    Eff_codec.decode_program (Eff_codec.encode_program (carrying keys))
+    = Some (carrying keys)
+  in
+  check "C3 a requirement row in order reads back" (reads [ key 1 2; key 1 3; key 2 0 ]);
+  check
+    "C3 a requirement row out of order or repeated is refused at decoding"
+    ((not (reads [ key 2 0; key 1 3 ]))
+     && (not (reads [ key 1 3; key 1 2 ]))
+     && not (reads [ key 1 2; key 1 2 ]));
+  check
+    "C3 a negative natural is refused at encoding"
+    (try
+       ignore (Eff_codec.encode_program (Eff.Succeed (Term.Lit (Lit.Nat (-1)))));
+       false
+     with
+     | Invalid_argument _ -> true)
 ;;
 
-(* ---- 4. the wire kernel ---- *)
+(* ---- 2. the wire kernel ---- *)
 
 let () =
   let open Eff_frame in

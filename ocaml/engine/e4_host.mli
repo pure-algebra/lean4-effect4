@@ -83,7 +83,7 @@ module Make (E : E4_engine.ENGINE) : sig
     :  ?table:Row.t list
     -> ?rounds:int
     -> 'st provider
-    -> Eff_wire.program
+    -> Eff_codec.program
     -> fuel:int
     -> 'st
     -> ('st served, load_refusal) result

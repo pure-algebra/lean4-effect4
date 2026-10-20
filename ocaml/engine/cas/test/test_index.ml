@@ -111,8 +111,8 @@ let truncate_file path n =
 
 (* ============================================================ payload helpers *)
 
-let framed = E4_be.framed
-let f_nat n = framed 2 (E4_be.nat_digits n)
+let framed = Eff_frame.framed
+let f_nat n = framed 2 (Eff_frame.nat_digits n)
 let f_bytes s = framed 8 s
 let f_string s = framed 3 s
 let f_list xs = framed 4 (String.concat "" xs)
@@ -121,7 +121,7 @@ let f_some x = framed 7 x
 let f_none = framed 6 ""
 let f_ctor i args = framed 10 (String.concat "" (f_nat i :: args))
 let f_ref kb d = framed 11 (String.make 1 (Char.chr kb) ^ d)
-let f_handle kb n = framed 12 (String.make 1 (Char.chr kb) ^ E4_be.nat_digits n)
+let f_handle kb n = framed 12 (String.make 1 (Char.chr kb) ^ Eff_frame.nat_digits n)
 let d32 tag = String.init 32 (fun i -> Char.chr ((tag + (i * 7)) land 0xff))
 let addr32 tag = E4_addr.Addr.of_digest (d32 tag)
 

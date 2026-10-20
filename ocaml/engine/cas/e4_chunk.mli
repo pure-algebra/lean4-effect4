@@ -35,12 +35,12 @@
    It is NOT a digest and is never an identity (CH5): the chunk's address is `E4_node.address`
    of its node, which is SHA-256 of Lean's canonical bytes and nothing else (brief §2.2).
 
-   Depends on: E4_cas, E4_node, E4_addr, E4_kind, E4_be, E4_sha256 (ocaml/engine, lane M),
+   Depends on: E4_cas, E4_node, E4_addr, E4_kind, Eff_frame, E4_sha256 (ocaml/engine, lane M),
    Eff_frame (ocaml/eff, read-only).
 
    ============================================================================
    The byte grammar of a manifest node (kind 12, `manifest`).  It is ONE `Val` frame tree in
-   the same framing every other payload uses (`E4_be.framed`, Eff_frame's tag alphabet), so
+   the same framing every other payload uses (`Eff_frame.framed`, Eff_frame's tag alphabet), so
    `E4_node.refs` finds every child by the ordinary edge scan and nothing here is a second
    encoding:
 

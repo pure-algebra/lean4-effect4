@@ -623,7 +623,7 @@ let numeric_ingress_check () =
       (En.literal_refusal (E.Eff.Bind (p42, lit (edge + 1))) = above [ 1 ] (edge + 1));
     check
       (prefix ^ "a literal above the profile from the wire, refused")
-      (match Eff_wire.decode_program_exact (Eff_wire.encode_program (lit (edge + 1))) with
+      (match Eff_codec.decode_program (Eff_codec.encode_program (lit (edge + 1))) with
        | Some p -> En.literal_refusal p = above [] (edge + 1)
        | None -> false);
     check

@@ -438,9 +438,11 @@ def shapeCode : Val → Nat
   [(4, 4)]
 -- The service context and the cached fiber context are distinct trees.
 #guard Env.encode (Env.Context.empty : Env.Ctx) ≠ Val.context emptyCtx
--- The hand-written key image writes the bytes the generated OCaml encoder writes
--- (`ocaml/eff/eff_wire.ml` `emit_service_key`, run against the `effect4` switch on
--- 2026-09-07 for the key `{1, 2}`: 74 bytes, listed here), so one decoder serves both.
+-- The hand-written key image writes the bytes the generated OCaml encoder wrote
+-- (`emit_service_key` of `git:11a819b8c:ocaml/eff/eff_wire.ml`, run against the `effect4`
+-- switch on 2026-09-07 for the key `{1, 2}`: 74 bytes, listed here), so one decoder serves both.
+-- Since 2026-10-20 a key inside a program crosses by Lean's own instance, lowered
+-- (`ocaml/eff/eff_image.ml`).
 #guard Env.serviceKeyImage.encode ⟨⟨1⟩, ⟨2⟩⟩ =
   [0x0a, 0, 0, 0, 0, 0, 0, 0, 0x41,
    0x02, 0, 0, 0, 0, 0, 0, 0, 0x00,

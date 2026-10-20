@@ -23,7 +23,7 @@
    PENDING: CAS COMMIT 7 (risk R6, A2 §5.2).  The run-relative payload shapes —
    `checkpoint`/`job`/`tape`/`log` — DO NOT EXIST IN LEAN YET.  So the checkpoint's bytes here
    are an ENGINE-SIDE canonical image: the machine's persistent carriers rendered through the
-   SAME frame grammar `E4_be` and `Eff_frame` use, in the fixed order documented below, under
+   SAME frame grammar `Eff_frame` uses, in the fixed order documented below, under
    a schema node this module mints and marks pending.  THE RULE, written here so it is not
    lost: when CAS commit 7 lands, `image_of_machine`'s encoder is REPLACED by the Lean-blessed
    image, `schema_payload`'s marker becomes the blessed schema's address, and golden G8 pins
@@ -32,7 +32,7 @@
 
    ============================================================================
    THE BYTE TABLE — a checkpoint node's payload (kind 21, `checkpoint`).  One `Val` frame tree
-   in the framing of src/Effect4/Store/Domain/Canonical.lean, written through `E4_be.framed` and
+   in the framing of src/Effect4/Store/Domain/Canonical.lean, written through `Eff_frame.framed` and
    nothing else; the tag alphabet is `Eff_frame`'s (bool 1, nat 2, string 3, list 4, pair 5,
    none 6, some 7, bytes 8, unit 9, ctor 10, ref 11, handle 12).
 
@@ -80,7 +80,7 @@
        [ bytes store_row     ]
 
    ============================================================================
-   Depends on: E4_cas, E4_chunk, E4_node, E4_addr, E4_kind, E4_control, E4_wal, E4_be,
+   Depends on: E4_cas, E4_chunk, E4_node, E4_addr, E4_kind, E4_control, E4_wal,
    E4_sha256, E4_engine (ocaml/engine), Eff_frame (ocaml/eff, read-only).
 
    Behaviours:

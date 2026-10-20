@@ -486,7 +486,7 @@ let () =
     (List.for_all
        (fun (p : Corpora.program) ->
           match p.Corpora.bytes with
-          | Some b -> Eff_wire.encode_program p.Corpora.eff = b
+          | Some b -> Eff_codec.encode_program p.Corpora.eff = b
           | None -> false)
        lean);
   let typed =

@@ -34,8 +34,7 @@ open Conform.Manifest
     | .error e => throw (IO.userError e)
   for (path, key) in [
       ("ocaml/eff/eff_ctors.ml", "let ctor_index_ty : Ty.t -> int ="),
-      ("ocaml/eff/eff_ctors.ml", "let ctor_name_ty : Ty.t -> string ="),
-      ("ocaml/eff/eff_wire.ml", "let rec emit_ty (b : Eff_frame.writer) (v : Ty.t) : unit =")] do
+      ("ocaml/eff/eff_ctors.ml", "let ctor_name_ty : Ty.t -> string =")] do
     let text ← IO.FS.readFile path
     match ocamlMatchArms text key with
     | .error e => throw (IO.userError e)

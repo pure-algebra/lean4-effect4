@@ -181,7 +181,7 @@ let test_head () =
   check
     "H3 the version is the ASCII string \"00000001\""
     (String.sub bytes 7 8 = "00000001" && E4_pack.version = "00000001");
-  check "H4 be64 seg_index = 0" (E4_be.read_be64 bytes 15 = Some 0);
+  check "H4 be64 seg_index = 0" (Eff_frame.read_be64 bytes 15 = Some 0);
   check
     "H5 head_crc is CRC-32 over the 23 bytes before it"
     (E4_crc.read_be32 bytes 23 = Some (E4_crc.sub bytes 0 23));
@@ -189,7 +189,7 @@ let test_head () =
   check
     "H6 the record is 'R' :: be64 len :: digest :: node_bytes :: be32 crc"
     (bytes.[27] = 'R'
-     && E4_be.read_be64 bytes 28 = Some len
+     && Eff_frame.read_be64 bytes 28 = Some len
      && String.sub bytes 36 32 = digest_of body
      && String.sub bytes 68 len = body);
   let hdr = String.sub bytes 27 41 in
@@ -502,7 +502,7 @@ let record_spans b i =
    survives every check but the re-hash.  This is what makes X2(b) a real test. *)
 let repair_crc path ~off =
   let bytes = read_file path in
-  match E4_be.read_be64 bytes (off + 1) with
+  match Eff_frame.read_be64 bytes (off + 1) with
   | None -> ()
   | Some len ->
     let hdr = String.sub bytes off 41 in
@@ -743,7 +743,7 @@ let test_rotation () =
           let b = read_file (E4_pack.seg_path ~dir:d s) in
           String.sub b 0 7 = "E4PACK\000"
           && String.sub b 7 8 = "00000001"
-          && E4_be.read_be64 b 15 = Some s
+          && Eff_frame.read_be64 b 15 = Some s
           && E4_crc.read_be32 b 23 = Some (E4_crc.sub b 0 23))
        segs);
   let rd = E4_pack.open_reader ~dir:d in
@@ -1039,7 +1039,7 @@ let test_length_bounds () =
   List.iter
     (fun delta ->
        let b = Bytes.of_string valid in
-       Bytes.blit_string (E4_be.be64 (max_int - delta)) 0 b (o + 1) 8;
+       Bytes.blit_string (Eff_frame.be64 (max_int - delta)) 0 b (o + 1) 8;
        write_file path (Bytes.to_string b);
        let read, read_at, header, blit, scan, scan_verify = doors () in
        let name = Printf.sprintf "L1 length max_int - %d" delta in

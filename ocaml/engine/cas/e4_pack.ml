@@ -37,7 +37,7 @@ let pack_subdir dir = Filename.concat dir "pack"
 let seg_name i = Printf.sprintf "%06d.pack" i
 let seg_path ~dir seg = Filename.concat (pack_subdir dir) (seg_name seg)
 
-(* A be64 whose top byte is >= 0x40 is at or above 2^62 and E4_be.read_be64 refuses it
+(* A be64 whose top byte is >= 0x40 is at or above 2^62 and Eff_frame.read_be64 refuses it
    (amendment M9, PK5).  On this host `max_int = 2^62 - 1`, so no string the writer can hold
    reaches that bound: PK5 is a READ-side property, and `stage` guards only against a length
    that could not be framed at all. *)
@@ -98,7 +98,7 @@ let head_bytes seg_index =
   let b = Buffer.create head_length in
   Buffer.add_string b magic;
   Buffer.add_string b version;
-  Buffer.add_string b (E4_be.be64 seg_index);
+  Buffer.add_string b (Eff_frame.be64 seg_index);
   let crc = E4_crc.string (Buffer.contents b) in
   Buffer.add_string b (E4_crc.be32 crc);
   Buffer.contents b
@@ -108,7 +108,7 @@ let head_bytes seg_index =
    crc is folded over the four pieces in place. *)
 let add_record buf ~digest ~node_bytes =
   let len = String.length node_bytes in
-  let be = E4_be.be64 len in
+  let be = Eff_frame.be64 len in
   Buffer.add_char buf record_tag;
   Buffer.add_string buf be;
   Buffer.add_string buf digest;
@@ -150,7 +150,7 @@ let check_head src seg =
            version)
     else (
       let want = E4_crc.sub h 0 23 in
-      match E4_be.read_be64 h 15, E4_crc.read_be32 h 23 with
+      match Eff_frame.read_be64 h 15, E4_crc.read_be32 h 23 with
       | Some i, Some c when c = want && i = seg -> Ok ()
       | Some i, Some c when c = want ->
         Error (Printf.sprintf "head says segment %d, the file is %d" i seg)
@@ -235,7 +235,7 @@ let record_span src ~seg ~off ~size : (int * string, header_fault) result =
       if h.[0] <> record_tag
       then Error (Bad_tag (Char.code h.[0]))
       else (
-        match E4_be.read_be64 h 1 with
+        match Eff_frame.read_be64 h 1 with
         | None -> Error Over_limit
         | Some len ->
           if len > size - off - record_overhead then Error Short else Ok (len, h)))

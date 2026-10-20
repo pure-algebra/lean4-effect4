@@ -296,8 +296,9 @@ end
 
 (** {1 Bytes} *)
 
-(** A program from its canonical bytes, exactly ([Eff_wire.decode_eff_exact]). *)
+(** A program from its canonical bytes, exactly: Lean's reading, lowered
+    ([Eff_codec.decode_program], `Wire.decodeProgram`). *)
 val program_of_bytes : string -> program option
 
-(** A program's canonical bytes. *)
+(** A program's canonical bytes ([Eff_codec.encode_program], `Wire.encodeProgram`). *)
 val program_bytes : program -> string

@@ -1,6 +1,6 @@
 (* E4_chunk — see e4_chunk.mli for what this is, its byte grammar and its behaviours. *)
 
-(* E4_be, E4_sha256 — never a second framing writer and never a second hash (brief §2.2). *)
+(* Eff_frame, E4_sha256 — never a second framing writer and never a second hash (brief §2.2). *)
 
 (* ---------------------------------------------------------------- the parameters *)
 
@@ -157,15 +157,18 @@ let group_cut g refs =
   List.rev !out
 ;;
 
-(* ---- the frame layer: E4_be only, never a second writer (brief §2.2) ---- *)
+(* ---- the frame layer: Eff_frame only, never a second writer (brief §2.2) ---- *)
 
-let f_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
-let f_list xs = E4_be.framed Eff_frame.tag_list (String.concat "" xs)
-let f_bytes b = E4_be.framed Eff_frame.tag_bytes b
-let f_ctor i args = E4_be.framed Eff_frame.tag_ctor (String.concat "" (f_nat i :: args))
+let f_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let f_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
+let f_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
+
+let f_ctor i args =
+  Eff_frame.framed Eff_frame.tag_ctor (String.concat "" (f_nat i :: args))
+;;
 
 let f_ref (r : E4_addr.Ref.t) =
-  E4_be.framed
+  Eff_frame.framed
     Eff_frame.tag_ref
     (String.make 1 (Char.chr (E4_kind.byte r.E4_addr.Ref.kind))
      ^ E4_addr.Addr.bytes r.E4_addr.Ref.addr)
@@ -176,10 +179,10 @@ let encode_manifest = function
   | Interior refs -> f_ctor 1 [ f_list (List.map f_ref refs) ]
 ;;
 
-(* One frame reader for this module's own payloads.  It reads frames through E4_be and adds
+(* One frame reader for this module's own payloads.  It reads frames through Eff_frame and adds
    no grammar: a tag it does not expect at a position is a refusal. *)
 let read_ref s pos limit =
-  match E4_be.read_frame s pos limit with
+  match Eff_frame.read_frame s pos limit with
   | Some (tag, ppos, pend, fend) when tag = Eff_frame.tag_ref && pend - ppos = 33 ->
     (match E4_kind.of_byte (Char.code s.[ppos]) with
      | None -> None
@@ -205,14 +208,14 @@ let read_refs_of_kind s pos limit kind =
 
 let decode_manifest bytes =
   let n = String.length bytes in
-  match E4_be.read_frame bytes 0 n with
+  match Eff_frame.read_frame bytes 0 n with
   | Some (tag, ppos, pend, fend) when tag = Eff_frame.tag_ctor && fend = n ->
-    (match E4_be.read_frame bytes ppos pend with
+    (match Eff_frame.read_frame bytes ppos pend with
      | Some (t0, i0, e0, a0) when t0 = Eff_frame.tag_nat ->
-       (match E4_be.nat_of_digits (String.sub bytes i0 (e0 - i0)) with
+       (match Eff_frame.nat_of_digits bytes i0 e0 with
         | None -> None
         | Some idx when idx = 0 || idx = 1 ->
-          (match E4_be.read_frame bytes a0 pend with
+          (match Eff_frame.read_frame bytes a0 pend with
            | Some (tl, lpos, lend, lfend) when tl = Eff_frame.tag_list && lfend = pend ->
              let kind = if idx = 0 then E4_kind.Chunk else E4_kind.Manifest in
              (match read_refs_of_kind bytes lpos lend kind with
@@ -343,7 +346,7 @@ let get_chunk ro r =
   match payload_of ro r E4_kind.Chunk with
   | None -> None
   | Some payload ->
-    (match E4_be.exact_frame payload with
+    (match Eff_frame.exact_frame payload with
      | Some (tag, b) when tag = Eff_frame.tag_bytes -> Some b
      | _ -> None)
 ;;

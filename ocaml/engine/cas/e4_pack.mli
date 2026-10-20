@@ -17,7 +17,7 @@
                    be32 rec_crc                4   CRC-32 over the 41 header bytes ++ node_bytes
 
    Overhead is 45 bytes per node, the head is 27.  `be64` is written and read through
-   `E4_be` (which is `Digits.be64`, `Eff_frame.emit_be64`); this module adds no second
+   `Eff_frame.be64` (`Digits.be64`); this module adds no second
    framing writer and no second hash (brief §2.2).
 
    Why the digest is in the record: without it a rebuild must re-hash every byte of the
@@ -26,7 +26,7 @@
    (L-CAS-6), and no function here answers from the recorded digest alone except the two
    whose names say so (`read_at`, `read_header`, and `scan` without `~verify`).
 
-   Depends on: E4_addr, E4_crc (lane P0), E4_be and E4_sha256 (ocaml/engine, lane M), unix.
+   Depends on: E4_addr, E4_crc (lane P0), Eff_frame and E4_sha256 (ocaml/engine, lane M), unix.
 
    Behaviours:
    PK1 A record's bytes are `'R' :: be64 len :: digest :: node_bytes :: be32 crc`, and

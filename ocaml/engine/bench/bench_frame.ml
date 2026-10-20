@@ -9,11 +9,12 @@
                    in one growable byte buffer;
           sizes    fold the sizes first, then write into one buffer of the exact size.
         Each one's bytes are checked against Eff_val.to_bytes; a mismatch prints DIFFERS.
-     2. The real writer, before and after the change: Eff_val.to_bytes on the same values, and
-        Eff_wire.encode_program on the program goldens (ocaml/eff/goldens) and on deep and
-        balanced program trees. These calls keep their types across the change, so one source
-        measures both: run it at the base, then after.
-   Depends on: effect4_eff (Eff_types, Eff_val, Eff_wire), Unix.
+     2. The real writer, before and after a change: Eff_val.to_bytes on the same values, and
+        Eff_codec.encode_program (Lean's exact embedding, lowered, over Eff_val) on the program
+        goldens (ocaml/eff/goldens) and on deep and balanced program trees. These calls keep
+        their types across a change, so one source measures both: run it at the base, then
+        after. Until 2026-10-20 the program writer was the emitted Eff_codec.encode_program.
+   Depends on: effect4_eff (Eff_types, Eff_val, Eff_codec), Unix.
 
    Properties:
    F1  Every strategy's bytes equal Eff_val.to_bytes on every value measured, or the cell
@@ -343,7 +344,7 @@ let golden_programs () =
       let ic = open_in_bin (Filename.concat goldens f) in
       let s = really_input_string ic (in_channel_length ic) in
       close_in ic;
-      Option.map (fun p -> p, s) (Eff_wire.decode_program_exact s))
+      Option.map (fun p -> p, s) (Eff_codec.decode_program s))
 ;;
 
 (* ------------------------------------------------------------------- the report *)
@@ -375,7 +376,7 @@ let () =
          (cell Enc_reserve.to_bytes)
          (cell Enc_sizes.to_bytes))
     values;
-  Printf.printf "\n2. the real writer: Eff_val.to_bytes and Eff_wire.encode_program\n";
+  Printf.printf "\n2. the real writer: Eff_val.to_bytes and Eff_codec.encode_program\n";
   List.iter
     (fun (label, v) ->
        let us, bytes = best (fun () -> Eff_val.to_bytes v) in
@@ -388,18 +389,18 @@ let () =
     values;
   let programs = golden_programs () in
   let identical =
-    List.for_all (fun (p, s) -> String.equal (Eff_wire.encode_program p) s) programs
+    List.for_all (fun (p, s) -> String.equal (Eff_codec.encode_program p) s) programs
   in
   let total = List.fold_left (fun a (_, s) -> a + String.length s) 0 programs in
   let us, () =
     best (fun () ->
       List.iter
-        (fun (p, _) -> ignore (Sys.opaque_identity (Eff_wire.encode_program p)))
+        (fun (p, _) -> ignore (Sys.opaque_identity (Eff_codec.encode_program p)))
         programs)
   in
   Printf.printf
     "%-36s %10d bytes %12.1f us [%5.0f MB/s] (%d programs, re-encoded %s)\n%!"
-    "Eff_wire.encode_program, goldens"
+    "Eff_codec.encode_program, goldens"
     total
     us
     (mb total us)
@@ -407,10 +408,10 @@ let () =
     (if identical then "byte for byte" else "with a DIFFERENCE");
   List.iter
     (fun (label, p) ->
-       let us, bytes = best (fun () -> Eff_wire.encode_program p) in
+       let us, bytes = best (fun () -> Eff_codec.encode_program p) in
        Printf.printf
          "%-36s %10d bytes %12.1f us [%5.0f MB/s]\n%!"
-         ("Eff_wire.encode_program, " ^ label)
+         ("Eff_codec.encode_program, " ^ label)
          (String.length bytes)
          us
          (mb (String.length bytes) us))

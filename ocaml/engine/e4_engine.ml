@@ -72,7 +72,7 @@ module Make (I : INSTANCE) = struct
   let profile = I.program_rc112
 
   (* EN8: Lean's profile support of the program's literals, lowered. *)
-  let literal_refusal (p : Eff_wire.program) : profile_refusal option =
+  let literal_refusal (p : program) : profile_refusal option =
     I.program_profile_data_literal_refusal profile p
   ;;
 
@@ -102,8 +102,8 @@ module Make (I : INSTANCE) = struct
     }
   ;;
 
-  let of_bytes (b : string) : program option = Eff_wire.decode_program_exact b
-  let load ?table (p : Eff_wire.program) ~(fuel : int) : t = load_program ?table p ~fuel
+  let of_bytes (b : string) : program option = Eff_codec.decode_program b
+  let load ?table (p : program) ~(fuel : int) : t = load_program ?table p ~fuel
   let admits (t : t) (d : decision) : bool = I.admit t.prepared t.m d
 
   (* -- driving -------------------------------------------------------------------- *)
@@ -187,7 +187,7 @@ module Make (I : INSTANCE) = struct
     drive (load_program ?table p ~fuel)
   ;;
 
-  let run ?table (p : Eff_wire.program) ~(fuel : int) : t = run_program ?table p ~fuel
+  let run ?table (p : program) ~(fuel : int) : t = run_program ?table p ~fuel
 
   (* -- the renderers -------------------------------------------------------------- *)
 

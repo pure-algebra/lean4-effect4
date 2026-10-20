@@ -3,8 +3,9 @@
    What it is: `Node.encode` / `Node.decode` (Node.encode (src/Effect4/Store/Domain/Node.lean)) as OCaml,
    plus the edge scan `Val.refs` Val.refs (src/Effect4/Store/Domain/Node.lean), the malformed-ref test Val.malformedRef (src/Effect4/Store/Domain/Node.lean) and the handle
    scan, done as ONE flat frame walk over the payload bytes with no value tree allocated.
-   Knock-on O3 records that the OCaml estate had no node envelope at all: `encode_program`
-   (ocaml/eff/eff_wire.ml:1056-1058) writes *payload* bytes.  This is the envelope around them.
+   Knock-on O3 records that the OCaml estate had no node envelope at all: a program's encoder
+   (`Eff_codec.encode_program`, ocaml/eff/eff_codec.ml) writes *payload* bytes.  This is the
+   envelope around them.
 
      node_bytes := version kind spec payload
      version    := 0x00                    1   Node.encode (src/Effect4/Store/Domain/Node.lean); any other byte is Bad_version
@@ -12,11 +13,11 @@
      spec       := digest                 32   edge 0, at kind `schema` (Node.edges (src/Effect4/Store/Domain/Node.lean))
      payload    := Val.encode v      (varies)  one Eff_frame value tree and nothing else
 
-   There is NO second encoding here (brief §2.2): the frame layer is A1's `E4_be`
+   There is NO second encoding here (brief §2.2): the frame layer is `Eff_frame`
    (`read_be64`, the 9-byte header) and the UTF-8 rule is `Eff_frame.utf8_valid`; this module
    adds the two header bytes, the 32 spec bytes, and the traversal.
 
-   Depends on: E4_kind, E4_addr, E4_be and E4_sha256 (ocaml/engine, lane M), Eff_frame
+   Depends on: E4_kind, E4_addr and E4_sha256 (ocaml/engine, lane M), Eff_frame
    (ocaml/eff, read-only).
 
    Behaviours:
@@ -44,7 +45,7 @@
        for the genesis (kind Schema with the zero spec) and for nothing else
        Node.checkedEdges (src/Effect4/Store/Domain/Node.lean).                                          tested
    ND8 A frame whose be64 length is >= 2^62 is `Host_limit`, never misread (amendment M9;
-       `E4_be.read_be64` refuses, e4_be.mli:58-59, transcribing eff_frame.ml:159-167).  The
+       `Eff_frame.read_be64` refuses, its F10).  The
        OCaml byte language is therefore strictly contained in Lean's, whose `Val.WF` bound is
        2^64 (Val.wf (src/Effect4/Store/Carrier/Val.lean)): every node this host can hold, Lean holds.
                                                                  by construction; tested
@@ -72,8 +73,8 @@
        Lean's Nat is unbounded and a stored node may legitimately carry a 20-digit natural, so
        refusing it here would make this host narrower than Lean for no gain.  A `handle` key
        IS bounded (Host_limit above 2^62-1): a handle is an allocation index of this host's
-       machine. `E4_be.nat_of_digits` (ocaml/engine/bytes/e4_be.ml) delegates to
-       `Eff_frame.decode_nat` (ocaml/eff/eff_frame.ml), which refuses values above max_int.
+       machine. `Eff_frame.nat_of_digits` (ocaml/eff/eff_frame.ml) refuses values above
+       max_int.
    D2  Added beside §1.5's list: `make` (which enforces the 32-byte spec so `edges` is total),
        `scan_payload` / `payload_ok` / `scan_malformed_ref` / `scan_handles` (one traversal for
        lane P4 rather than three), `check_pure` with `pure_refusal`, and `oversize` /

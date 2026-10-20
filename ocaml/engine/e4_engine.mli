@@ -30,7 +30,7 @@
    e4_engine_intf.ml's, which this file includes.  A differential calls both engines through
    {!ENGINE} with one signature -- which is what `test/test_diff.ml` does over every corpus.
 
-   Depends on: E4_engine_intf, Api_engine_inst, effect4_eff (Eff_types, Eff_val, Eff_wire),
+   Depends on: E4_engine_intf, Api_engine_inst, effect4_eff (Eff_types, Eff_val, Eff_codec),
    stdlib.
 
    Behaviours:

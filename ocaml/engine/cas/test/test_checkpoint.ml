@@ -57,13 +57,16 @@ let rm_rf = E4_check.remove_tree
 
 (* ============================================================ frames, by hand *)
 
-let f_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
-let f_bytes b = E4_be.framed Eff_frame.tag_bytes b
-let f_list xs = E4_be.framed Eff_frame.tag_list (String.concat "" xs)
-let f_ctor i args = E4_be.framed Eff_frame.tag_ctor (String.concat "" (f_nat i :: args))
+let f_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let f_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
+let f_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
+
+let f_ctor i args =
+  Eff_frame.framed Eff_frame.tag_ctor (String.concat "" (f_nat i :: args))
+;;
 
 let f_ref (r : E4_addr.Ref.t) =
-  E4_be.framed
+  Eff_frame.framed
     Eff_frame.tag_ref
     (String.make 1 (Char.chr (E4_kind.byte r.E4_addr.Ref.kind))
      ^ E4_addr.Addr.bytes r.E4_addr.Ref.addr)

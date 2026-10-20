@@ -43,7 +43,7 @@
    It is byte-order- and word-size-dependent on purpose: it is a cache, never transferred, never
    hashed, and discarded and rebuilt whenever anything about it fails to match (`load_verdict`).
 
-   Depends on: E4_pack, E4_addr, E4_kind, E4_node, E4_shape, E4_crc, E4_be, unix, bigarray
+   Depends on: E4_pack, E4_addr, E4_kind, E4_node, E4_shape, E4_crc, Eff_frame, unix, bigarray
    (in-stdlib since 4.07; no findlib package and none needed).
 
    Behaviours:

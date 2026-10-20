@@ -2,26 +2,29 @@
    note about CAS commit 7, and its behaviours. *)
 
 open Effect4_engine
-(* E4_be, E4_sha256, E4_engine — the framing, the hash and the drive loop, all A1's. *)
+(* Eff_frame, E4_sha256, E4_engine — the framing, the hash and the drive loop. *)
 
 (* ================================================================ the frame layer *)
 
-(* Writing goes through E4_be and nothing else (brief §2.2: no second encoding is ever
+(* Writing goes through Eff_frame and nothing else (brief §2.2: no second encoding is ever
    hashed).  Reading is one small length-directed walk; `Bad` is the only refusal and every
    entry point turns it into None or an error constructor. *)
 
 exception Bad
 
-let f_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
-let f_bytes b = E4_be.framed Eff_frame.tag_bytes b
-let f_list xs = E4_be.framed Eff_frame.tag_list (String.concat "" xs)
-let f_pair a b = E4_be.framed Eff_frame.tag_pair (a ^ b)
-let f_none = E4_be.framed Eff_frame.tag_none ""
-let f_some x = E4_be.framed Eff_frame.tag_some x
-let f_ctor i args = E4_be.framed Eff_frame.tag_ctor (String.concat "" (f_nat i :: args))
+let f_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let f_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
+let f_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
+let f_pair a b = Eff_frame.framed Eff_frame.tag_pair (a ^ b)
+let f_none = Eff_frame.framed Eff_frame.tag_none ""
+let f_some x = Eff_frame.framed Eff_frame.tag_some x
+
+let f_ctor i args =
+  Eff_frame.framed Eff_frame.tag_ctor (String.concat "" (f_nat i :: args))
+;;
 
 let f_ref (r : E4_addr.Ref.t) =
-  E4_be.framed
+  Eff_frame.framed
     Eff_frame.tag_ref
     (String.make 1 (Char.chr (E4_kind.byte r.E4_addr.Ref.kind))
      ^ E4_addr.Addr.bytes r.E4_addr.Ref.addr)
@@ -47,7 +50,7 @@ let cursor_of s pos stop = { s; pos; stop }
 let at_end c = c.pos >= c.stop
 
 let take c =
-  match E4_be.read_frame c.s c.pos c.stop with
+  match Eff_frame.read_frame c.s c.pos c.stop with
   | None -> raise Bad
   | Some (tag, ppos, pend, fend) ->
     c.pos <- fend;
@@ -61,7 +64,7 @@ let expect tag c =
 
 let rd_nat c =
   let p, e = expect Eff_frame.tag_nat c in
-  match E4_be.nat_of_digits (String.sub c.s p (e - p)) with
+  match Eff_frame.nat_of_digits c.s p e with
   | Some n -> n
   | None -> raise Bad
 ;;

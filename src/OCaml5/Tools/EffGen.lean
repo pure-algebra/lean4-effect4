@@ -14,18 +14,17 @@ Writes into `<outdir>`:
 * `eff_ctors.ml`    — `ctor_index_<t>`, `wire_tag_<t>`, `ctor_name_<t>`, `ctor_names_<t>` per
                       type of the closed world below. The types are the LCNF route's
                       `eff_types.ml`;
-* `eff_wire.ml`     — the canonical byte encoding (`src/Effect4/Store/Domain/Canonical.lean` framing,
-                      constructor tag 10 with the index as a `Nat` frame) and its exact,
-                      length-directed decoder, per type, over the hand-written `Eff_frame`;
 * `eff_native.ml`   — the native alphabet as data: atom names and const-generic metadata,
                       every built-in `NativeOp` value with its `Row`, the empty-table external placeholder, the
                       signature's scope key;
 * `eff_manifest.txt` — one line per family: constructor names, arities and argument carriers;
-* `goldens/<name>.{bin,json,ty}` and `goldens/corpus.txt` — the corpus below, encoded by the
-                      rule the Lean side states (`V.bytes`), printed in `V`'s spelling
-                      (`V.json`, which `ts/eff`'s tests read; no OCaml printer of it remains), and
-                      typed by `Effect4.Program.typeOf` at the native signature. A carrier's JSON
-                      on the OCaml side is Lean's own, lowered (`ShapeDoc.printTree`).
+* `goldens/<name>.{bin,json,ty}` and `goldens/corpus.txt` — the corpus below: its canonical
+                      bytes (`Canonical.encode`, Lean's own encoder), its print in `V`'s spelling
+                      (`V.json`, face 7's fixture format; no OCaml printer of it remains), and its
+                      type by `Effect4.Program.typeOf` at the native signature. A program's bytes
+                      on the OCaml side are Lean's exact embedding, lowered
+                      (`ocaml/eff/eff_image.ml`), and its JSON is Lean's printer, lowered
+                      (`ShapeDoc.printTree`).
 
 What is derived and what is written by hand, precisely:
 
@@ -34,9 +33,8 @@ What is derived and what is written by hand, precisely:
 * every constructor name, order, arity and argument type is read from the environment
   (`InductiveVal.ctors`, `forallTelescope` on each constructor's type);
 * the corpus programs and their `V` conversions are written by hand, but every constructor
-  name in a `V.ctor` is a `` ``double-backtick `` name resolved at elaboration time and its
-  wire tag is looked up at run time in the one assignment (`tools/Effect4Gen/wire-tags.json`,
-  through `OCaml5.Eff.World`) — no tag is typed by hand, and no tag is a declaration position;
+  name in a `V.ctor` is a `` ``double-backtick `` name resolved at elaboration time and checked
+  at run time against the closed world (`OCaml5.Eff.World`); no tag is typed by hand;
 * atom names and const-generic metadata project the complete `NativeAtom` inventory;
   program typing is computed by Lean, with no OCaml typing implementation emitted.
 
@@ -85,14 +83,13 @@ def main (args : List String) : IO Unit := do
     | .ok m => pure m
     | .error message => throw (IO.userError message)
   let families := bs.flatten
-  -- wire tags, by full constructor name, from the one assignment (`World.readBlocks` read
-  -- `tools/Effect4Gen/wire-tags.json`); a structure's tree names the type (`V.struct`),
-  -- normalised here to its one constructor, whose tag is 0
-  let mut idx : NameMap Nat := {}
+  -- the constructors of the closed world, by full name; a structure's tree names the type
+  -- (`V.struct`), normalised here to its one constructor
+  let mut ctors : NameSet := {}
   let mut structCtor : NameMap Name := {}
   for f in families do
     for c in f.ctors do
-      idx := idx.insert c.name c.tag
+      ctors := ctors.insert c.name
     if f.isStruct then structCtor := structCtor.insert f.spec.leanName f.ctors.head!.name
   let norm (n : Name) : Name := (structCtor.find? n).getD n
   let famOf (n : Name) : Option Family := families.find? (·.spec.leanName == n)
@@ -111,22 +108,16 @@ def main (args : List String) : IO Unit := do
   let trees := Corpus.corpus.map fun (nm, p) => (nm, p, effV p)
   for (nm, _, t) in trees do
     for n in t.names do
-      unless idx.contains (norm n) do
+      unless ctors.contains (norm n) do
         throw (IO.userError s!"EffGen: {nm} uses {n}, not a constructor of the closed world")
-  let lookup (n : Name) : Nat := (idx.find? (norm n)).getD 0
-  for (nm, p, t) in trees do
-    unless t.bytes lookup == Effect4.Store.Canonical.encode p do
-      throw (IO.userError s!"EffGen: {nm} hand tree disagrees with Canonical.encode")
   let mut metadataCoverage : NameMap Nat := {}
   let mut metadataLines : List String := []
   for f in Metadata.all do
     for n in f.tree.names do
-      unless idx.contains (norm n) do
+      unless ctors.contains (norm n) do
         throw (IO.userError s!"EffGen: metadata {f.name} uses unknown constructor {n}")
       metadataCoverage := metadataCoverage.insert (norm n)
         ((metadataCoverage.find? (norm n)).getD 0 + 1)
-    unless f.tree.bytes lookup == f.bytes do
-      throw (IO.userError s!"EffGen: metadata {f.name} hand tree disagrees with Canonical.encode")
     let hex := String.join (f.bytes.map fun b =>
       let s := String.ofList (Nat.toDigits 16 b.toNat)
       "".pushn '0' (2 - s.length) ++ s)
@@ -147,7 +138,7 @@ def main (args : List String) : IO Unit := do
   -- `Eff_types` that an `open` of it reads (`typesInterface`)
   let files : List (String × OCaml5.Ml.Module) :=
     [("eff_layout.ml", layoutModule bs), ("eff_ctors.ml", ctorsModule bs),
-     ("eff_wire.ml", wireModule bs), ("eff_subterm.ml", subterm),
+     ("eff_subterm.ml", subterm),
      ("eff_native.ml", nativeModule nul typed fn st)]
   for (file, m) in files do
     let diags := OCaml5.Ml.checkModule m [effTypes]
@@ -161,7 +152,8 @@ def main (args : List String) : IO Unit := do
   let mut corpusLines : Array String := #[]
   let mut coverage : NameMap Nat := {}
   for (nm, p, t) in trees do
-    IO.FS.writeBinFile (out / "goldens" / (nm ++ ".bin")) (ByteArray.mk (t.bytes lookup).toArray)
+    IO.FS.writeBinFile (out / "goldens" / (nm ++ ".bin"))
+      (ByteArray.mk (Effect4.Store.Canonical.encode p).toArray)
     IO.FS.writeFile (out / "goldens" / (nm ++ ".json")) (t.json ++ "\n")
     -- the whole module's check: a program with no block is checked as the checker checks it
     let typed := (Effect4.Program.Checker.checkModule nativeSignature p).toOption

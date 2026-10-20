@@ -3,13 +3,13 @@
 
    What it is: the index of 2026-09-08-cas-repository-algebra.md §3.5 and §6 and of A2 §1.6's
    `E4_index.Subterm`, built from the WIRE.  For a program's canonical bytes — the bytes
-   `ocaml/eff/eff_wire.ml` writes and reads exactly (`encode_program` / `decode_program_exact`,
-   eff_wire.ml:1056-1058) — every subterm at a `ProgPath` occupies a contiguous byte range of
-   the whole, and the subterm's OWN encoding is exactly that slice.  That is `slice_atPath`,
-   proved in Lean over `Val` (repository algebra §2.2, probe 2: `∃ off, (encode v).drop off
-   .take (encode c).length = encode c`); here it is a law this module holds itself to and the
-   test checks on all 37 goldens of `ocaml/eff/goldens` and on every constructor of every
-   family.
+   Lean's exact embedding writes and reads, lowered (`Eff_codec.encode_program` /
+   `decode_program`, `Wire.encodeProgram` / `decodeProgram`) — every subterm at a `ProgPath`
+   occupies a contiguous byte range of the whole, and the subterm's OWN encoding is exactly that
+   slice.  That is `slice_atPath`, proved in Lean over `Val` (repository algebra §2.2, probe 2:
+   `∃ off, (encode v).drop off .take (encode c).length = encode c`); here it is a law this
+   module holds itself to and the test checks on every golden of `ocaml/eff/goldens` and on
+   every constructor of every family.
 
    Where the table comes from.  Amendment M18 rules that the subterm index is
    `TreeSig`-driven, a rose-tree signature the generator emits, retiring M3's hand table.
@@ -20,9 +20,10 @@
    file carried until 2026-09-17 had no row for `provideLayer` and no layer sorts at all; the
    generated one has them because the declarations do.  What the double entry still checks:
    the BYTE side walks the frames of the encoded program by the `children` rows, the VALUE
-   side (`Tree`) walks the decoded `Eff_types` tree by the `child` arms, the two are emitted
-   by separate code from the same declarations, and the test requires them to agree at every
-   node of every golden.  Golden G9 is what will pin both against Lean.
+   side (`Tree`) walks the decoded `Eff_types` tree by the `child` arms and encodes each node by
+   its sort's image, Lean's own, lowered (`Eff_codec.encode_node`).  The rows and the arms are
+   emitted by separate code from the same declarations, and the test requires the two sides to
+   agree at every node of every golden.
 
    THE TWO PATH SPACES (amendment M5, and the reason this module exists at all).  A `ProgPath`
    is a list of child indices in `Node.child`; a `ValPath` is a list of argument indices in the
@@ -32,9 +33,10 @@
    `provideLayer`, `provideService`, `catchIf`, `ifElse`, the layer's `effect`); the generated
    rows state each one, and test S5 prints them.
 
-   Depends on: E4_addr, E4_sha256 (ocaml/engine, lane M), Eff_frame / Eff_types / Eff_wire
-   (ocaml/eff, read-only).  It writes no second framing reader: `Eff_frame.read_frame` and
-   `Eff_frame.read_ctor` are the only decoders it uses, and the value side is `Eff_wire`'s own.
+   Depends on: E4_addr, E4_sha256 (ocaml/engine, lane M), Eff_frame / Eff_types /
+   Eff_subterm / Eff_codec (ocaml/eff, read-only).  It writes no second framing reader:
+   `Eff_frame.read_frame` and `Eff_frame.read_ctor` are the only decoders it uses, and the value
+   side's bytes are Lean's image, lowered (`Eff_codec`).
 
    Behaviours:
    SB1 SLICE (L-SUB-1, `slice_atPath`).  For every entry `e` of `of_program bytes`,
@@ -76,9 +78,10 @@
    D2  §1.6 says `of_program : string -> t` and does not say what a malformed program does.
        `of_program` raises and `of_program_opt` is added (SB7); nothing in this estate should
        be building an index of bytes that are not a program.
-   D3  `Tree` is added: the VALUE side of the index, `Node.child` and the family encoders of
-       `Eff_wire`, as OCaml.  It is the second computation SB1 is checked against, and it is
-       `effSig`'s `children` half (M18), GENERATED (`Eff_subterm`).
+   D3  `Tree` is added: the VALUE side of the index, `Node.child` (GENERATED, `Eff_subterm`)
+       and each sort's canonical bytes (`Eff_codec.encode_node`, Lean's image, lowered).  It is
+       the second computation SB1 is checked against, and it is `effSig`'s `children` half
+       (M18).
    D4  Added beside §1.6's list: `count`, `root`, `bytes`, `slice_of`, `at_val_path`,
        `entries_at_family`, `children`, `arity`, `family_ctor_names`, `prog_of_val`,
        `val_of_prog`, `cid_of_bytes`, and `family_name` / `path_to_string` for messages. *)
@@ -142,7 +145,7 @@ type entry =
 
 type t
 
-(** The program's canonical bytes — `Eff_wire.encode_program`'s output.  Raises
+(** The program's canonical bytes — `Eff_codec.encode_program`'s output.  Raises
     `Invalid_argument` unless the bytes are exactly one well-formed program (SB7, D2). *)
 val of_program : string -> t
 
@@ -175,11 +178,11 @@ val cid_of_bytes : string -> E4_addr.Cid.t
 
 module Tree : sig
   (** `Effect4.Program.Node` (src/Effect4/Program/Node.lean) over `Eff_types`, and
-      the family encoders of `Eff_wire`.  This is the second computation SB1 is checked
+      each sort's canonical bytes (`Eff_codec.encode_node`).  This is the second computation SB1 is checked
       against, and `effSig`'s `children`/`rebuild` half (amendment M18). *)
 
   type node = Eff_subterm.node =
-    | N_eff of Eff_wire.program
+    | N_eff of Eff_codec.program
     | N_stmts of Eff_types.NativeOp.t Eff_types.Stmts.t
     | N_stmt of Eff_types.NativeOp.t Eff_types.Stmt.t
     | N_action of Eff_types.NativeOp.t Eff_types.ActionTerm.t
@@ -200,11 +203,11 @@ module Tree : sig
   (** `Node.at_` (Node.at_ (src/Effect4/Program/Refs.lean)). *)
   val at_ : node -> int list -> node option
 
-  (** The family's own encoder from `Eff_wire`; for `N_eff` at the root it is
-      `Eff_wire.encode_program`. *)
+  (** The node's canonical bytes at its sort (`Eff_codec.encode_node`); for `N_eff` at the
+      root they are `Eff_codec.encode_program`'s. *)
   val encode : node -> string
 
-  (** `Eff_wire.decode_program_exact`, as an `N_eff`. *)
+  (** `Eff_codec.decode_program`, as an `N_eff`. *)
   val of_bytes : string -> node option
 
   (** The number of nodes in the subtree, counting this one: what `count` must equal. *)

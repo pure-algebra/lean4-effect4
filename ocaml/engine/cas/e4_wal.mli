@@ -17,7 +17,7 @@
    defined without it, so the carrier's arrival changes no byte of this file's grammar.
 
    Depends on: E4_crc (the row and header checksums and the be32 field), E4_addr (the job's
-   address), E4_be (be64 — A1's framing; never a second writer), unix.
+   address), Eff_frame (be64; never a second writer), unix.
 
    The grammar (A2 §1.4, transcribed):
 
@@ -88,7 +88,7 @@
        two segments whose indices still meet is recovered rather than refused.  `stage` of a
        `Seal` raises `Invalid_argument`: rotation owns it.
    D3  `job_lo` is eight RAW bytes (the address's last eight), not a be64 number.  A be64 at
-       or above 2^62 is a refusal on this host (E4_be.read_be64, M9), and one address in four
+       or above 2^62 is a refusal on this host (Eff_frame.read_be64, M9), and one address in four
        has its top bit set, so a numeric reading would refuse one job in four.  The field is
        a self-identification guard: a segment under the wrong job's directory is `Wrong_job`.
    D4  `stop` gains `Bad_row`, `Oversize`, `Bad_header` and `Wrong_job` beside §1.4's four.

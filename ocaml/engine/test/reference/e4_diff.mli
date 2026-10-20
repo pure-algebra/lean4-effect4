@@ -112,20 +112,20 @@ module type SIDE = sig
 
   type t
 
-  val load : Eff_wire.program -> fuel:int -> t
+  val load : Eff_codec.program -> fuel:int -> t
   val step : t -> decision -> t
 
   (** @raise E4_clock.Profile_refusal for an Outside_profile host answer. *)
   val project : t -> projection
 
   (** The projection at every position of `replay_steps`: `|tape| + 1` of them. *)
-  val positions : Eff_wire.program -> fuel:int -> decision list -> projection list
+  val positions : Eff_codec.program -> fuel:int -> decision list -> projection list
 
   (** An ADMISSIBLE tape: at each step the next decision is drawn from what this machine
       shows -- its fiber ids, its armed owners, its parked (fiber, token) pairs -- so the
       tape never names something the machine has not minted (D6).  Deterministic in
       [seed]. *)
-  val gen_tape : Eff_wire.program -> fuel:int -> seed:int -> max_len:int -> decision list
+  val gen_tape : Eff_codec.program -> fuel:int -> seed:int -> max_len:int -> decision list
 end
 
 module Of (E : E4_engine.ENGINE) : SIDE with type t = E.t

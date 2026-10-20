@@ -36,8 +36,9 @@
        the field width, nothing else.  This interface is therefore this lane's, written to
        the brief's default polynomial; the choice is recorded above so a later lane can see
        what it must not change (a stored pack is unreadable if it moves).
-   D2  `be32` / `read_be32` / `field_length` live here rather than in A1's `E4_be`.  E4_be
-       carries be64 only (`e4_be.mli:55-83`) and this lane owns no file in `ocaml/engine/`;
+   D2  `be32` / `read_be32` / `field_length` live here rather than in the framing kernel,
+       `Eff_frame`, which carries be64 only (its whole-string face, F10), and this lane owns no
+       file in `ocaml/engine/`;
        the only be32 in the whole CAS grammar is a checksum or a length beside one, so the
        field travels with the checksum that fills it. *)
 

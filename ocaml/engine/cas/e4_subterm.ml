@@ -44,7 +44,7 @@ let prog_of_val (f : family) (c : int) (j : int) : int option =
 
 module Tree = struct
   type node = Eff_subterm.node =
-    | N_eff of Eff_wire.program
+    | N_eff of Eff_codec.program
     | N_stmts of Eff_types.NativeOp.t Eff_types.Stmts.t
     | N_stmt of Eff_types.NativeOp.t Eff_types.Stmt.t
     | N_action of Eff_types.NativeOp.t Eff_types.ActionTerm.t
@@ -55,7 +55,7 @@ module Tree = struct
   let family_of = Eff_subterm.family_of
   let ctor_index = Eff_subterm.ctor_index
   let child = Eff_subterm.child
-  let encode = Eff_subterm.encode
+  let encode = Eff_codec.encode_node
   let witnesses = Eff_subterm.witnesses
 
   (* `Node.at_`. *)
@@ -69,7 +69,7 @@ module Tree = struct
   ;;
 
   let of_bytes (s : string) : node option =
-    match Eff_wire.decode_program_exact s with
+    match Eff_codec.decode_program s with
     | None -> None
     | Some e -> Some (N_eff e)
   ;;
@@ -180,11 +180,12 @@ let build (b : string) : t =
   { t_bytes = b; t_entries = Array.of_list (List.rev !acc) }
 ;;
 
-(* SB7: exactness is the WIRE's own refusal.  `decode_program_exact` is what says these bytes
-   are one program; the walk that follows can then only fail if this module's table and
-   `Eff_wire`'s encoder disagree, which is the failure `Malformed` reports. *)
+(* SB7: exactness is the WIRE's own refusal.  `Eff_codec.decode_program`, Lean's exact
+   reading, lowered, is what says these bytes are one program; the walk that follows can then
+   only fail if this module's table and Lean's encoding disagree, which is the failure
+   `Malformed` reports. *)
 let of_program_opt (b : string) : t option =
-  match Eff_wire.decode_program_exact b with
+  match Eff_codec.decode_program b with
   | None -> None
   | Some _ ->
     (try Some (build b) with

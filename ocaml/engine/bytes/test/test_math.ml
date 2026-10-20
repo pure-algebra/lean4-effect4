@@ -4,16 +4,16 @@
      S*  E4_sha256: the FIPS 180-4 vectors ("", "abc", the 56- and 112-byte messages, one
          million 'a'), the two byte-vector #guards of sha256 (src/Effect4/Store/Carrier/Digest.lean),
          the third `sha256` guard over `Val.encode sampleEntry` — whose input is BUILT here
-         out of E4_be frames from sampleEntry (src/Effect4/Store/Carrier/Val.lean) and checked against that
+         out of Eff_frame frames from sampleEntry (src/Effect4/Store/Carrier/Val.lean) and checked against that
          file's `sampleEntry` encoding guards — the streaming law, and the throughput
          of a 64 MiB buffer.
      H*  E4_hex: the #guards of Digest.ofHex? (src/Effect4/Store/Carrier/Digest.lean) and the two round-trip laws as
          properties over pseudo-random input (a fixed LCG, so the run is reproducible).
-     B*  E4_be: be64/framing/nat-digit laws, the refusals, and the golden bytes of
-         ocaml/eff/goldens (two embedded verbatim, plus every *.bin in that directory when
-         the test can find it).  E4_be forwards to Eff_frame since 2026-10-05: each forward
-         is compared with the transcription it replaced (kept here as `Transcribed`), and
-         `read_be64` with the standard library's big-endian reader.
+     B*  Eff_frame's whole-string face (F10, the face the engine and the store frame by,
+         which E4_be forwarded until 2026-10-20): be64/framing/nat-digit laws, the refusals
+         and their messages, `read_be64` against the standard library's big-endian reader,
+         and the golden bytes of ocaml/eff/goldens (two embedded verbatim, plus every *.bin
+         in that directory when the test can find it).
    Exit code 0 iff every check passed. *)
 
 let failures = ref 0
@@ -91,7 +91,7 @@ let test_hex () =
           empty_hex)
 ;;
 
-(* ============================================================ E4_be *)
+(* ============================================================ Eff_frame's whole-string face *)
 
 (* The two goldens embedded verbatim (ocaml/eff/goldens/{p42,pAcquire}.bin, 2026-09-08). *)
 let golden_p42_hex =
@@ -146,19 +146,22 @@ let goldens_dir () =
   | _ -> walk (Sys.getcwd ())
 ;;
 
+(* A natural's digits, the whole string: the window reader over all of it. *)
+let digits (s : string) : int option = Eff_frame.nat_of_digits s 0 (String.length s)
+
 let check_golden name bytes =
-  match E4_be.exact_frame bytes with
+  match Eff_frame.exact_frame bytes with
   | None -> false
   | Some (tag, payload) ->
-    let reframed = E4_be.framed tag payload in
+    let reframed = Eff_frame.framed tag payload in
     let ok =
       reframed = bytes
-      && String.length payload = String.length bytes - E4_be.header_length
+      && String.length payload = String.length bytes - Eff_frame.header_length
       &&
-      match E4_be.read_frame bytes 0 (String.length bytes) with
+      match Eff_frame.read_frame bytes 0 (String.length bytes) with
       | Some (t, p, e, next) ->
         t = tag
-        && p = E4_be.header_length
+        && p = Eff_frame.header_length
         && e = String.length bytes
         && next = String.length bytes
       | None -> false
@@ -169,53 +172,55 @@ let check_golden name bytes =
 
 let test_be () =
   print_endline
-    "-- E4_be: the framing of Canonical.lean / Wire.lean as eff_frame.ml writes it";
-  check "B2 be64 0 is eight zero bytes" (E4_be.be64 0 = "\000\000\000\000\000\000\000\000");
+    "-- Eff_frame: the framing of Canonical.lean / Wire.lean, its whole-string face";
+  check
+    "B2 be64 0 is eight zero bytes"
+    (Eff_frame.be64 0 = "\000\000\000\000\000\000\000\000");
   check
     "B2 be64 1 / 0x39 / 0x0102030405060708"
-    (E4_be.be64 1 = "\000\000\000\000\000\000\000\001"
-     && E4_be.be64 0x39 = "\000\000\000\000\000\000\000\x39"
-     && E4_be.be64 0x0102030405060708 = "\001\002\003\004\005\006\007\008");
+    (Eff_frame.be64 1 = "\000\000\000\000\000\000\000\001"
+     && Eff_frame.be64 0x39 = "\000\000\000\000\000\000\000\x39"
+     && Eff_frame.be64 0x0102030405060708 = "\001\002\003\004\005\006\007\008");
   check
     "B2 framed 10 \"\" is nine bytes, tag then a zero length"
-    (E4_be.framed 10 "" = "\010\000\000\000\000\000\000\000\000");
+    (Eff_frame.framed 10 "" = "\010\000\000\000\000\000\000\000\000");
   check
     "B2 framed tag p = tag :: be64 (length p) ++ p"
     (let p = "hello" in
-     E4_be.framed 3 p = String.make 1 '\003' ^ E4_be.be64 5 ^ p);
+     Eff_frame.framed 3 p = String.make 1 '\003' ^ Eff_frame.be64 5 ^ p);
   check
     "B2 frame_length n = 9 + n"
-    (E4_be.frame_length 0 = 9 && E4_be.frame_length 65 = 74);
+    (Eff_frame.frame_length 0 = 9 && Eff_frame.frame_length 65 = 74);
   (* be64 round trip *)
   let be_ok = ref true in
   for _ = 1 to 2000 do
     let n = (next_rand () lsl 31) lor next_rand () in
     let n = n land max_int in
-    if E4_be.read_be64 (E4_be.be64 n) 0 <> Some n then be_ok := false
+    if Eff_frame.read_be64 (Eff_frame.be64 n) 0 <> Some n then be_ok := false
   done;
   check "B2 read_be64 (be64 n) = Some n, 2000 random n in 0..max_int" !be_ok;
   check
     "B5 read_be64 refuses a top byte >= 0x40 (a length at or above 2^62)"
-    (E4_be.read_be64 "\x40\000\000\000\000\000\000\000" 0 = None
-     && E4_be.read_be64 "\xff\xff\xff\xff\xff\xff\xff\xff" 0 = None
-     && E4_be.read_be64 "\x3f\xff\xff\xff\xff\xff\xff\xff" 0 = Some max_int);
+    (Eff_frame.read_be64 "\x40\000\000\000\000\000\000\000" 0 = None
+     && Eff_frame.read_be64 "\xff\xff\xff\xff\xff\xff\xff\xff" 0 = None
+     && Eff_frame.read_be64 "\x3f\xff\xff\xff\xff\xff\xff\xff" 0 = Some max_int);
   check
     "B4 read_be64 refuses a truncated window and a negative position"
-    (E4_be.read_be64 "\000\000\000\000\000\000\000" 0 = None
-     && E4_be.read_be64 (E4_be.be64 1) 1 = None
-     && E4_be.read_be64 (E4_be.be64 1) (-1) = None);
+    (Eff_frame.read_be64 "\000\000\000\000\000\000\000" 0 = None
+     && Eff_frame.read_be64 (Eff_frame.be64 1) 1 = None
+     && Eff_frame.read_be64 (Eff_frame.be64 1) (-1) = None);
   check
     "B6 read_be64 refuses extreme positions without overflowing its bounds check"
     (List.for_all
-       (fun pos -> E4_be.read_be64 (E4_be.be64 1) pos = None)
+       (fun pos -> Eff_frame.read_be64 (Eff_frame.be64 1) pos = None)
        [ min_int; -1; max_int - 8; max_int - 1; max_int ]);
   check
     "B4 read_be64 accepts an exact nonzero window"
-    (E4_be.read_be64 ("xx" ^ E4_be.be64 42) 2 = Some 42);
+    (Eff_frame.read_be64 ("xx" ^ Eff_frame.be64 42) 2 = Some 42);
   check
     "B4 be64 raises Invalid_argument on a negative int"
     (try
-       ignore (E4_be.be64 (-1));
+       ignore (Eff_frame.be64 (-1));
        false
      with
      | Invalid_argument _ -> true
@@ -223,10 +228,11 @@ let test_be () =
   (* frames *)
   check
     "B4 read_frame refuses a header shorter than 9 bytes"
-    (E4_be.read_frame "\010\000\000\000\000" 0 5 = None && E4_be.read_frame "" 0 0 = None);
+    (Eff_frame.read_frame "\010\000\000\000\000" 0 5 = None
+     && Eff_frame.read_frame "" 0 0 = None);
   check
     "B6 read_frame refuses invalid and extreme windows without overflowing"
-    (let s = E4_be.framed 9 "" in
+    (let s = Eff_frame.framed 9 "" in
      let positions = [ min_int; -1; 0; 1; 8; 9; 10; max_int - 8; max_int - 1; max_int ] in
      let limits = [ min_int; -1; 0; 1; 8; 9; 10; max_int ] in
      List.for_all
@@ -234,47 +240,47 @@ let test_be () =
           List.for_all
             (fun limit ->
                let expected = if pos = 0 && limit = 9 then Some (9, 9, 9, 9) else None in
-               E4_be.read_frame s pos limit = expected)
+               Eff_frame.read_frame s pos limit = expected)
             limits)
        positions);
   check
     "B4 read_frame accepts an exact embedded window and leaves trailing bytes"
-    (let s = "xx" ^ E4_be.framed 3 "abc" ^ "tail" in
-     E4_be.read_frame s 2 14 = Some (3, 11, 14, 14)
-     && E4_be.read_frame s 2 (String.length s) = Some (3, 11, 14, 14)
-     && E4_be.read_frame s 2 13 = None);
+    (let s = "xx" ^ Eff_frame.framed 3 "abc" ^ "tail" in
+     Eff_frame.read_frame s 2 14 = Some (3, 11, 14, 14)
+     && Eff_frame.read_frame s 2 (String.length s) = Some (3, 11, 14, 14)
+     && Eff_frame.read_frame s 2 13 = None);
   check
     "B4 read_frame refuses a length that runs past the limit"
-    (let f = E4_be.framed 4 "abcd" in
-     E4_be.read_frame f 0 (String.length f - 1) = None);
+    (let f = Eff_frame.framed 4 "abcd" in
+     Eff_frame.read_frame f 0 (String.length f - 1) = None);
   check
     "B4 exact_frame refuses trailing bytes"
-    (E4_be.exact_frame (E4_be.framed 9 "" ^ "\000") = None);
+    (Eff_frame.exact_frame (Eff_frame.framed 9 "" ^ "\000") = None);
   check
     "B4 exact_frame (framed t p) = Some (t, p)"
-    (E4_be.exact_frame (E4_be.framed 12 "\001\007") = Some (12, "\001\007"));
+    (Eff_frame.exact_frame (Eff_frame.framed 12 "\001\007") = Some (12, "\001\007"));
   let frame_ok = ref true in
   for _ = 1 to 1000 do
     let tag = rand 256 in
     let p = rand_bytes (rand 60) in
-    let f = E4_be.framed tag p in
-    if E4_be.exact_frame f <> Some (tag, p) then frame_ok := false;
+    let f = Eff_frame.framed tag p in
+    if Eff_frame.exact_frame f <> Some (tag, p) then frame_ok := false;
     if String.length f <> 9 + String.length p then frame_ok := false
   done;
   check "B2 exact_frame (framed tag p) = Some (tag, p), 1000 random frames" !frame_ok;
   (* nat digits *)
   check
     "B3 nat_digits 0 = \"\", 1 = [1], 255 = [255], 256 = [1;0], 1947 = [0x07;0x9b]"
-    (E4_be.nat_digits 0 = ""
-     && E4_be.nat_digits 1 = "\001"
-     && E4_be.nat_digits 255 = "\xff"
-     && E4_be.nat_digits 256 = "\001\000"
-     && E4_be.nat_digits 1947 = "\x07\x9b");
+    (Eff_frame.nat_digits 0 = ""
+     && Eff_frame.nat_digits 1 = "\001"
+     && Eff_frame.nat_digits 255 = "\xff"
+     && Eff_frame.nat_digits 256 = "\001\000"
+     && Eff_frame.nat_digits 1947 = "\x07\x9b");
   let nat_ok = ref true in
   for _ = 1 to 2000 do
     let n = (next_rand () lsl 31) lor next_rand () land max_int in
-    if E4_be.nat_of_digits (E4_be.nat_digits n) <> Some n then nat_ok := false;
-    let d = E4_be.nat_digits n in
+    if digits (Eff_frame.nat_digits n) <> Some n then nat_ok := false;
+    let d = Eff_frame.nat_digits n in
     if String.length d > 0 && String.unsafe_get d 0 = '\000' then nat_ok := false
   done;
   check
@@ -282,12 +288,12 @@ let test_be () =
     !nat_ok;
   check
     "B4 nat_of_digits refuses a leading zero digit"
-    (E4_be.nat_of_digits "\000\017" = None && E4_be.nat_of_digits "\000" = None);
+    (digits "\000\017" = None && digits "\000" = None);
   check
     "B5 nat_of_digits refuses nine digits and eight with a top byte >= 0x40"
-    (E4_be.nat_of_digits (String.make 9 '\001') = None
-     && E4_be.nat_of_digits ("\x40" ^ String.make 7 '\000') = None
-     && E4_be.nat_of_digits ("\x3f" ^ String.make 7 '\xff') = Some max_int);
+    (digits (String.make 9 '\001') = None
+     && digits ("\x40" ^ String.make 7 '\000') = None
+     && digits ("\x3f" ^ String.make 7 '\xff') = Some max_int);
   check
     "B6 the readers are total on 300 random strings, positions and limits"
     (let ok = ref true in
@@ -296,10 +302,10 @@ let test_be () =
        let pos = rand 40 - 5 in
        let lim = rand 40 - 5 in
        try
-         ignore (E4_be.read_frame s pos lim);
-         ignore (E4_be.read_be64 s pos);
-         ignore (E4_be.nat_of_digits s);
-         ignore (E4_be.exact_frame s)
+         ignore (Eff_frame.read_frame s pos lim);
+         ignore (Eff_frame.read_be64 s pos);
+         ignore (digits s);
+         ignore (Eff_frame.exact_frame s)
        with
        | _ -> ok := false
      done;
@@ -315,7 +321,7 @@ let test_be () =
     (String.length pacq = 168 && check_golden "pAcquire" pacq);
   check
     "B1 both goldens are ctor frames (tag 10, Canonical.lean's constructor tag)"
-    (match E4_be.exact_frame p42, E4_be.exact_frame pacq with
+    (match Eff_frame.exact_frame p42, Eff_frame.exact_frame pacq with
      | Some (10, _), Some (10, _) -> true
      | _ -> false);
   match goldens_dir () with
@@ -344,101 +350,7 @@ let test_be () =
       (!bad = [] && files <> [])
 ;;
 
-(* ============================================================ E4_be forwards to Eff_frame *)
-
-(* The framing layer as E4_be transcribed it until 2026-10-05.  It is the reference of the
-   delegation: each forward must answer as the body it replaced, exceptions included.
-   Nothing but this test uses it. *)
-module Transcribed = struct
-  let header_length = 9
-
-  let be64 (n : int) : string =
-    if n < 0 then invalid_arg "E4_be.be64: negative";
-    let b = Bytes.create 8 in
-    for i = 0 to 7 do
-      Bytes.unsafe_set b i (Char.unsafe_chr ((n lsr (8 * (7 - i))) land 0xff))
-    done;
-    Bytes.unsafe_to_string b
-  ;;
-
-  let read_be64 (s : string) (pos : int) : int option =
-    if pos < 0 || pos > String.length s - 8
-    then None
-    else if Char.code (String.unsafe_get s pos) >= 0x40
-    then None
-    else (
-      let n = ref 0 in
-      for i = 0 to 7 do
-        n := (!n lsl 8) lor Char.code (String.unsafe_get s (pos + i))
-      done;
-      Some !n)
-  ;;
-
-  let framed (tag : int) (payload : string) : string =
-    if tag < 0 || tag > 255 then invalid_arg "E4_be.framed: tag is not a byte";
-    let n = String.length payload in
-    let b = Bytes.create (header_length + n) in
-    Bytes.unsafe_set b 0 (Char.unsafe_chr tag);
-    for i = 0 to 7 do
-      Bytes.unsafe_set b (1 + i) (Char.unsafe_chr ((n lsr (8 * (7 - i))) land 0xff))
-    done;
-    Bytes.blit_string payload 0 b header_length n;
-    Bytes.unsafe_to_string b
-  ;;
-
-  let read_frame (s : string) (pos : int) (limit : int) : (int * int * int * int) option =
-    if pos < 0 || limit < pos || limit > String.length s || limit - pos < header_length
-    then None
-    else (
-      match read_be64 s (pos + 1) with
-      | None -> None
-      | Some len ->
-        let start = pos + header_length in
-        if len > limit - start
-        then None
-        else Some (Char.code (String.unsafe_get s pos), start, start + len, start + len))
-  ;;
-
-  let exact_frame (s : string) : (int * string) option =
-    match read_frame s 0 (String.length s) with
-    | Some (tag, p, e, next) when next = String.length s ->
-      Some (tag, String.sub s p (e - p))
-    | _ -> None
-  ;;
-
-  let nat_digits (n : int) : string =
-    if n < 0 then invalid_arg "E4_be.nat_digits: negative";
-    let rec count m acc = if m = 0 then acc else count (m lsr 8) (acc + 1) in
-    let k = count n 0 in
-    let b = Bytes.create k in
-    let rec fill m i =
-      if i >= 0
-      then (
-        Bytes.unsafe_set b i (Char.unsafe_chr (m land 0xff));
-        fill (m lsr 8) (i - 1))
-    in
-    fill n (k - 1);
-    Bytes.unsafe_to_string b
-  ;;
-
-  let nat_of_digits (s : string) : int option =
-    let len = String.length s in
-    if len = 0
-    then Some 0
-    else if len > 8
-    then None
-    else if String.unsafe_get s 0 = '\000'
-    then None
-    else if len = 8 && Char.code (String.unsafe_get s 0) >= 0x40
-    then None
-    else (
-      let n = ref 0 in
-      for i = 0 to len - 1 do
-        n := (!n lsl 8) lor Char.code (String.unsafe_get s i)
-      done;
-      Some !n)
-  ;;
-end
+(* ============================================================ the kernel's reader and refusals *)
 
 (* An answer, or the message of the Invalid_argument a call raised: two calls compare by `=`. *)
 let outcome f =
@@ -458,99 +370,36 @@ let native_read_be64 (s : string) (pos : int) : int option =
     else Some (Int64.to_int n))
 ;;
 
-let edge_ints =
-  [ min_int
-  ; min_int + 1
-  ; -65536
-  ; -256
-  ; -1
-  ; 0
-  ; 1
-  ; 255
-  ; 256
-  ; 65535
-  ; 65536
-  ; 1 lsl 61
-  ; max_int - 1
-  ; max_int
-  ]
-;;
-
-let random_int () =
-  let n = (next_rand () lsl 31) lor next_rand () land max_int in
-  let n = n lsr rand 62 in
-  if rand 4 = 0 then -n else n
-;;
-
-let test_be_delegation () =
-  print_endline
-    "-- E4_be forwards to Eff_frame: each forward against the transcription it replaced";
-  let same_on ints f g =
-    List.for_all (fun n -> outcome (fun () -> f n) = outcome (fun () -> g n)) ints
-  in
-  let randoms = List.init 2000 (fun _ -> random_int ()) in
+let test_be_reference () =
+  print_endline "-- Eff_frame: read_be64 against the standard library, and the refusals";
   check
-    "B1 be64 = the transcription, on 14 edge ints and 2000 random ints of both signs"
-    (same_on edge_ints E4_be.be64 Transcribed.be64
-     && same_on randoms E4_be.be64 Transcribed.be64);
-  check
-    "B1 nat_digits = the transcription, on the same ints"
-    (same_on edge_ints E4_be.nat_digits Transcribed.nat_digits
-     && same_on randoms E4_be.nat_digits Transcribed.nat_digits);
-  (* B7: the guards stay because Eff_frame answers a refused input in its own way. *)
-  check
-    "B7 nat_digits (-1) raises E4_be's own message; Eff_frame's message is another"
-    (outcome (fun () -> E4_be.nat_digits (-1)) = Error "E4_be.nat_digits: negative"
-     && outcome (fun () -> Eff_frame.nat_digits (-1))
-        = Error "Eff_frame.nat_digits: negative");
-  check
-    "B7 be64 (-1) raises E4_be's own message; Eff_frame.emit_be64 writes eight bytes for \
-     it"
-    (outcome (fun () -> E4_be.be64 (-1)) = Error "E4_be.be64: negative"
-     && String.length (Eff_frame.to_string Eff_frame.emit_be64 (-1)) = 8);
-  check
-    "B7 framed (-1) and framed 256 raise E4_be's own message; Eff_frame.emit_frame \
-     raises Char.chr's"
-    (outcome (fun () -> E4_be.framed (-1) "x") = Error "E4_be.framed: tag is not a byte"
-     && outcome (fun () -> E4_be.framed 256 "x") = Error "E4_be.framed: tag is not a byte"
-     && outcome (fun () ->
-          Eff_frame.to_string (fun b s -> Eff_frame.emit_frame b 256 s) "x")
-        = Error "Char.chr");
-  let tags = [ min_int; -1; 0; 1; 9; 12; 255; 256; max_int ] in
-  let framed_ok = ref true in
-  for k = 0 to 199 do
-    let payload = rand_bytes (k mod 70) in
-    List.iter
-      (fun tag ->
-         if
-           outcome (fun () -> E4_be.framed tag payload)
-           <> outcome (fun () -> Transcribed.framed tag payload)
-         then framed_ok := false)
-      tags
-  done;
-  check
-    "B1 framed = the transcription, 200 payloads x 9 tags (four of them not bytes)"
-    !framed_ok;
-  (* the readers, on random strings and on real frames with bytes around them *)
+    "B7 nat_digits, be64 and framed refuse with the kernel's own messages, before any \
+     byte"
+    (outcome (fun () -> Eff_frame.nat_digits (-1))
+     = Error "Eff_frame.nat_digits: negative"
+     && outcome (fun () -> Eff_frame.be64 (-1)) = Error "Eff_frame.be64: negative"
+     && outcome (fun () -> Eff_frame.framed (-1) "x")
+        = Error "Eff_frame.framed: tag is not a byte"
+     && outcome (fun () -> Eff_frame.framed 256 "x")
+        = Error "Eff_frame.framed: tag is not a byte");
   let strings =
     List.init 256 (fun k -> rand_bytes (k mod 32))
     @ List.init 100 (fun k ->
       rand_bytes (k mod 3)
-      ^ Transcribed.framed (rand 256) (rand_bytes (k mod 20))
+      ^ Eff_frame.framed (rand 256) (rand_bytes (k mod 20))
       ^ rand_bytes (k mod 4))
     @ [ "\x40" ^ String.make 16 '\000'
       ; String.make 17 '\xff'
       ; "\x3f" ^ String.make 16 '\xff'
       ]
   in
-  let be_ok = ref true
-  and frame_ok = ref true
-  and exact_ok = ref true
-  and native_ok = ref true in
+  let native_ok = ref true in
   List.iter
     (fun s ->
        let len = String.length s in
-       let positions =
+       List.iter
+         (fun pos ->
+            if Eff_frame.read_be64 s pos <> native_read_be64 s pos then native_ok := false)
          [ min_int
          ; -1
          ; 0
@@ -564,87 +413,28 @@ let test_be_delegation () =
          ; len + 1
          ; max_int - 8
          ; max_int
-         ]
-       in
-       let limits = [ min_int; -1; 0; 8; 9; 10; len - 1; len; len + 1; max_int ] in
-       List.iter
-         (fun pos ->
-            if E4_be.read_be64 s pos <> Transcribed.read_be64 s pos then be_ok := false;
-            if E4_be.read_be64 s pos <> native_read_be64 s pos then native_ok := false;
-            List.iter
-              (fun limit ->
-                 if E4_be.read_frame s pos limit <> Transcribed.read_frame s pos limit
-                 then frame_ok := false)
-              limits)
-         positions;
-       if E4_be.exact_frame s <> Transcribed.exact_frame s then exact_ok := false)
+         ])
     strings;
   check
-    "B1 read_be64 = the transcription, 359 strings x 13 positions (extremes included)"
-    !be_ok;
-  check
-    "B5 read_be64 = the standard library's big-endian reader with the 0 .. max_int bound"
+    "B5 read_be64 = the standard library's big-endian reader with the 0 .. max_int \
+     bound, 359 strings x 13 positions (extremes included)"
     !native_ok;
-  check
-    "B1 read_frame = the transcription, 359 strings x 13 positions x 10 limits"
-    !frame_ok;
-  check "B1 exact_frame = the transcription, on the same strings" !exact_ok;
-  check
-    "B4 exact_frame refuses trailing bytes and a truncated frame, and accepts the frame"
-    (let f = E4_be.framed 7 "payload" in
-     E4_be.exact_frame f = Some (7, "payload")
-     && E4_be.exact_frame (f ^ "\000") = None
-     && E4_be.exact_frame (String.sub f 0 (String.length f - 1)) = None
-     && E4_be.exact_frame "" = None);
-  (* nat_of_digits: every digit string of at most two bytes, then longer ones *)
-  let digits_ok = ref (E4_be.nat_of_digits "" = Transcribed.nat_of_digits "") in
-  for a = 0 to 255 do
-    let one = String.make 1 (Char.chr a) in
-    if E4_be.nat_of_digits one <> Transcribed.nat_of_digits one then digits_ok := false;
-    for b = 0 to 255 do
-      let two = one ^ String.make 1 (Char.chr b) in
-      if E4_be.nat_of_digits two <> Transcribed.nat_of_digits two then digits_ok := false
-    done
-  done;
-  check
-    "B1 nat_of_digits = the transcription, on all 65 793 digit strings of at most two \
-     bytes"
-    !digits_ok;
-  let long_ok = ref true in
-  for k = 0 to 2999 do
-    let s = rand_bytes (k mod 11) in
-    (* a third of them start with a zero digit, a third with a top byte at the bound *)
-    let s =
-      if s = ""
-      then s
-      else (
-        match k mod 3 with
-        | 0 -> s
-        | 1 -> "\000" ^ String.sub s 1 (String.length s - 1)
-        | _ ->
-          String.make 1 (Char.chr (0x3e + rand 4)) ^ String.sub s 1 (String.length s - 1))
-    in
-    if E4_be.nat_of_digits s <> Transcribed.nat_of_digits s then long_ok := false
-  done;
-  check
-    "B1 nat_of_digits = the transcription, 3000 random digit strings of 0 to 10 bytes"
-    !long_ok;
   check
     "B5 nat_of_digits at the bound: eight digits below 0x40 read, at 0x40 refused, nine \
      refused"
-    (E4_be.nat_of_digits ("\x3f" ^ String.make 7 '\xff') = Some max_int
-     && E4_be.nat_of_digits ("\x40" ^ String.make 7 '\000') = None
-     && E4_be.nat_of_digits (String.make 9 '\001') = None
-     && E4_be.nat_of_digits (String.make 70000 '\001') = None)
+    (digits ("\x3f" ^ String.make 7 '\xff') = Some max_int
+     && digits ("\x40" ^ String.make 7 '\000') = None
+     && digits (String.make 9 '\001') = None
+     && digits (String.make 70000 '\001') = None)
 ;;
 
 (* ============================================================ E4_sha256 *)
 
-(* The value frames of src/Effect4/Store/Carrier/Val.lean, built out of E4_be — the tags are
+(* The value frames of src/Effect4/Store/Carrier/Val.lean, built out of Eff_frame — the tags are
    Canonical.lean's (2 nat, 3 string, 10 constructor). *)
-let v_nat n = E4_be.framed 2 (E4_be.nat_digits n)
-let v_str s = E4_be.framed 3 s
-let v_ctor i args = E4_be.framed 10 (v_nat i ^ String.concat "" args)
+let v_nat n = Eff_frame.framed 2 (Eff_frame.nat_digits n)
+let v_str s = Eff_frame.framed 3 s
+let v_ctor i args = Eff_frame.framed 10 (v_nat i ^ String.concat "" args)
 
 (* sampleEntry = .ctor 0 [.str "Effect", .str "gen", .ctor 0 [], .nat 1947]
    (sampleEntry (src/Effect4/Store/Carrier/Val.lean)). *)
@@ -798,7 +588,7 @@ let bench_sha256 () =
 let () =
   test_hex ();
   test_be ();
-  test_be_delegation ();
+  test_be_reference ();
   test_sha256 ();
   bench_sha256 ();
   Printf.printf

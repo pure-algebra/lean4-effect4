@@ -1,6 +1,6 @@
 ; The engine's measurements that no lane owns: probes that settle a representation decision.
 ;   bench_frame  phase 5: three ways to write a nested frame of the canonical wire, checked
-;                against Eff_val.to_bytes, and the real writer (Eff_val, Eff_wire) on values
+;                against Eff_val.to_bytes, and the real writer (Eff_val, Eff_codec) on values
 ;                and programs, so one source measures before and after a change.
 ; Executables, not tests: a bench is a measurement, not a gate, so `dune test` does not run it.
 

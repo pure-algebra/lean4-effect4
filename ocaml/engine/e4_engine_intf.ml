@@ -8,7 +8,7 @@
    declaration and its documentation is written here and nowhere else.  The component's header,
    with its behaviours EN1-EN9, stays in e4_engine.mli.
 
-   Depends on: effect4_eff (Eff_types, Eff_wire), effect4_clock (E4_clock).
+   Depends on: effect4_eff (Eff_types, Eff_codec), effect4_clock (E4_clock).
 
    Behaviours:
    EI1 Each module type is declared once.  e4_engine.ml includes this module and e4_engine.mli
@@ -378,7 +378,7 @@ module type ENGINE = sig
       [ProfileData.literalRefusal], lowered. [None] when the profile supports every natural
       literal the program states; otherwise the first literal above the bound, at the address
       of its node (EN8). A host driver asks it before {!load}. *)
-  val literal_refusal : Eff_wire.program -> profile_refusal option
+  val literal_refusal : program -> profile_refusal option
 
   (** A host's answer at ingress (decisions row 394 (1), EN9): [None] when it crosses. It is
       [Not_a_value] when its value tree ([answerTree], lowered) is no Lean value
@@ -389,13 +389,14 @@ module type ENGINE = sig
 
   (** {2 Loading} *)
 
-  (** A program from its canonical bytes, exactly ([Eff_wire.decode_program_exact]). *)
+  (** A program from its canonical bytes, exactly: Lean's reading, lowered
+      ([Eff_codec.decode_program], `Wire.decodeProgram`). *)
   val of_bytes : string -> program option
 
   (* [?table] is the program's row table (`Api.Built.table`); [[]] when omitted, for a program
      with no host row. Every step reads it. *)
   val load_program : ?table:Row.t list -> program -> fuel:int -> t
-  val load : ?table:Row.t list -> Eff_wire.program -> fuel:int -> t
+  val load : ?table:Row.t list -> program -> fuel:int -> t
 
   (** {2 Driving} *)
 
@@ -434,7 +435,7 @@ module type ENGINE = sig
   (** `Api.run`'s tape, `[evaluate root; flush]` (run (src/Effect4/Api.lean)). *)
   val drive : t -> t
 
-  val run : ?table:Row.t list -> Eff_wire.program -> fuel:int -> t
+  val run : ?table:Row.t list -> program -> fuel:int -> t
   val run_program : ?table:Row.t list -> program -> fuel:int -> t
 
   (** The GENERATED `Effect4.Api.run`, unwrapped, answering only its outcome: the W1 bench
