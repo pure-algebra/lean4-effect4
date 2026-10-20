@@ -1,7 +1,7 @@
 # The compiler's entry point: what a compile is here, and what other compilers teach
 
 Status: review, 2026-10-20, before any slice. Amended the same day: the code read (§4.1, §9), the
-decisions (§7), the architecture pass (§11). The owner asked for a step back. It covers the
+decisions (§7), the architecture pass (§11), and Codex's review of that pass (§7, §11.1). The owner asked for a step back. It covers the
 basic operations and whether they accord with the algebra and the style. It asks what the
 commands should be, and what metadata a compile should write. Not the to-do's entry point: the library's.
 
@@ -151,20 +151,40 @@ writes the same bytes, as the to-do's lowering already does.
 
 ## 7. Decisions, with recommendations
 
-Each decision is one line to answer. The recommendation comes first, then its reason.
+Each decision is one line to answer. The recommendation comes first, then its reason. The rows
+were amended on 2026-10-20 after Codex's review of the architecture pass (§11.1).
 
 | # | Decision | Recommendation | Why |
 | --- | --- | --- | --- |
-| E1 | the executable's name | `effect4`, a `lean_exe` under `tools/Compiler/` | `eff` is the native tool; the package is `effect4` |
-| E2 | lowering as an `emit` target | yes: `--target ocaml` calls the one lowering function, which `lcnfgen` calls too, with a derived recipe | one lowering, two callers; the estate keeps `roots.json`; a user program derives its roots from its host |
-| E3 | the manifest's fields | the §5 shape plus `inputs`: the import closure with each module's digest, and the pins | rustc's `dep-info` and OCaml's `cmt_imports`; a program recompiles when its address or an input changes |
-| E4 | where outputs live | `--out DIR`, default `.lake/effect4/<M>/<target>/`; the folder is self-contained: the prelude is copied in, and the module imports `./prelude/prelude.ts` | PureScript's output folder; the prelude's home stops mattering to printed text; a project promotes what it ships |
-| E5 | the prelude's home | `ts/prelude/` (five files); the session protocol in `ts/protocol/` (13 files) | product modules leave a folder named for a retired lane; under E4 the move changes no printed module |
-| E6 | the corpus producers | one: `effect4 emit` over a group; `Truth.lean --corpus`, `Drivers.Corpus` and `Drivers.Emit` become callers or go; the hand programs move to `Test/Corpus/Programs.lean` | five printers of programs today (§11, C2); the corpus is a fixture, and its producer is the compiler |
-| E7 | the order | C3's deletions once M1 lands; then C2's first slice, `check` and `emit --target ts` with the manifest, in `tools/Compiler/`; then C1's moves under E4; then `--target ocaml`, `run`, `inspect`, `describe`, `conform` | the deletions touch no path; the entry point is a new folder; the moves wait for E4, so the printed import changes once |
+| E1 | the entry point's shape and name | a library entry, `Effect4.Compiler.main : Application → List String → IO UInt32`, that a project's `lean_exe` calls in two lines; the tree's `lake exe effect4` is that main over the in-tree groups | evaluating a loaded declaration needs `unsafe` (Codex's loader probe, the trust rule); `Effect4Gen.CatalogueExe` and the to-do's `Main.lean` are the precedent |
+| E2 | lowering as an `emit` target | yes, by running `lcnfgen` as a subprocess with the derived recipe; the project's exe does not link `Lean` | one lowering function; the to-do already runs the generated command |
+| E3 | the manifest's fields | the §5 shape plus `inputs` (the import closure's digests, the pins) and `checks`: per artifact, what each check establishes and its limit | rustc's `dep-info`, OCaml's `cmt_imports`; the surface is typed by tsgo and run by no gate since 2026-10-18 |
+| E4 | where outputs live | `--out DIR`, default `.lake/effect4/<M>/<target>/`, self-contained: the prelude's import closure copied in; the module imports `./prelude/prelude.ts` | the to-do's module imports `../../lean4-effect4/harness/truth/prelude.ts` today; the closure is nine files until E7 (1) cuts the re-export, then five |
+| E5 | the prelude's home | `ts/prelude/` (five files), with the generated protocol projection (`protocol.gen.ts`, `tape.schema.json`) beside it | product modules leave a folder named for a retired lane; the move waits for E4 |
+| E6 | the corpus producers | one artifact mechanics (module text, header, address, manifest) under `Compiler.Emit`, called by `Drivers.Corpus`, `Truth.lean` and `Drivers.Emit`; their observations stay distinct; the two to-do wrappers go | only the two wrappers repeat the whole chain; `Drivers.Corpus` writes rejected programs as controls, and `Truth.lean` writes run expectations |
+| E7 | the order | (1) the safe deletions, with the one-line re-export cut; (2) C2's first slice; (3) C1's moves under E4, over the twelve owners Codex listed; (4) `--target ocaml`, `run`, `inspect`, `describe`, `conform`; the to-do's `Main.lean` keeps its run modes until `run` lands | the deletions touch no path; the entry point is a library module; the moves wait for E4 |
+| E8 | the TypeScript session protocol's hand implementation (13 files, 68 KB) | the owner's call: after `apps/todo` goes, its only consumers are its own tests; the generated projection stays | `docs/core/host-boundary.md` owns the lane; a TypeScript host is a user's project, and the to-do's runner does not use it |
 
-On a yes, C3's deletions land as one commit. Then C2's first slice runs as one seat in the main
-checkout after M1. That slice deletes `apps/todo` in its commit.
+E7 (1), the safe deletions, measured by Git object size on 2026-10-20:
+
+| Group | Files | Bytes | Why it is safe |
+| --- | --- | --- | --- |
+| the keyed lane in `harness/truth/session/` | 9 | 194,973 | `prelude.ts` re-exports `hostProtocol` and `hostTransition` from it, and nothing imports those two names; the cut is one line |
+| `apps/todo` | 7 | 36,824 | the retired host-protocol lane's front; `EmitTodo.lean` is the second hand pipeline; it is the only importer of the keyed recorder |
+| `ts/eff/probe` | 38 | 75,238 | two design probes of 2026-10-16; their notes keep the Git citation |
+| `tools/ModuleSurvey` | 3 | 20,045 | a survey of 2026-10-08, run by nothing |
+| `harness/schema-generation` and `harness/schema-host` | 13 | 40,285 | the schema-ts lane, retired on 2026-10-18 with its code kept until better checks |
+| total | 70 | 367,365 | — |
+
+The owner's pick: the seven packet folders (27 files, 92,548 bytes). With them go `ts/release`,
+their Effect 4.0.1 install (2 files), and `harness/ts_packet.py` with its test (2 files). The
+2026-10-12 probe note proposed to keep and wire them. They are the only host runs of Pull,
+Channel, the Ref catalogue and three wrong-helper controls, about 30 s in all. The recommendation
+is to delete them: the 2026-10-18 retirement wants few lanes and better checks, and `conform` at the pin is
+that check. The alternative is one `make` lane over the seven runners.
+
+On a yes, E7 (1) lands as one commit. Then C2's first slice runs as one seat in the main checkout
+after M2. That slice deletes `EmitTodo.lean` and the to-do's `Print.lean`.
 
 ## 9. The prior art, each against our semantics
 
@@ -517,9 +537,31 @@ The numbers are `git ls-files` and `git log -1` on the same day.
 The proof graph is three quarters of `src`. That is the product's shape, not a disorder; it
 stays. `docs/research` is the sweep of 2026-10-20, awaiting the owner's yes.
 
-C3 runs first, once M1 lands: M1 edits `Produce.lean` in two of the probe folders. C2's first
-slice follows in `tools/Compiler/`, a new folder. C1 follows E4, so the printed import changes
-once. Then the entry point's remaining commands land in the new layout.
+C3 runs first, as E7 (1) with the owner's pick, since M1 has landed. C2's first slice follows in
+`tools/Compiler/`, a new folder. C1 follows E4, so the printed import changes once. Then the
+entry point's remaining commands land in the new layout.
+
+### 11.1 Codex's review of the pass, folded
+
+On 2026-10-20 Codex rewrote the card report in the session's scratch folder
+(`architecture-review-2026-10-20.html`), keeping the original beside it. Its evidence folder,
+`architecture-review-evidence-2026-10-20/`, holds three sub-reviews, retained probes and a source
+index at `e68887701`. Nothing of it is in the tree. Each finding, checked against the tree the same day:
+
+| Codex's finding | Verdict | What changes |
+| --- | --- | --- |
+| the eight folders hold 38 files, not 36; `Test/` is 5,326 KB by Git object size, not 6,316 | accepted | the numbers in §7 and above |
+| `prelude.ts` re-exports `hostProtocol` and `hostTransition` from the keyed protocol; copying five prelude files fails under Bun, the nine-file closure passes 88 cases, and a mutated `succ` fails one | accepted as a fact; nothing imports the two names, so the fix is the one-line cut | E4's closure; E7 (1) |
+| `apps/todo/server.ts` imports the keyed recorder, bindings and protocol | accepted; the same deletion | — |
+| a loaded declaration's value needs `unsafe` (`evalConstCheck`); `lcnfgen` reads IR, not values | accepted | E1 and E2 reshaped: a library `main`, static import |
+| the five producers do not repeat five calls; only the two to-do wrappers do; `Drivers.Corpus` writes unchecked diagnostics with rejected programs; `Truth.lean` writes run expectations and `corpus.json` is a manifest already | accepted | E6 narrowed; C2's problem restated |
+| deleting the to-do's `Main.lean` removes its run modes | accepted | E7: it becomes two lines and keeps its modes until `run` |
+| C1 omits `ts_packet.py`, its test, and twelve owners: the `PreludeAtoms` manifest path, the Makefile's path sets, the protocol writer, `Drivers.Emit`'s copy, `Drivers.Corpus`'s tsconfig, tsdiag's policy against files outside `harness/truth`, the target lane's queries, the reader recipe, `corpora.ml`'s fallback, the codec lane, the registers | accepted | C1's cost is that list, not seventeen lines |
+| the surface is typed by tsgo and run by no gate since the keyed lane's retirement (`SurfaceContract`) | accepted | E3's `checks` field |
+| "absence from a default gate does not establish safe deletion": retain the seven packets, schema-generation, ModuleSurvey | not taken as a rule: unreached code goes (the owner), and the 2026-10-18 retirement kept code only until better checks; taken case by case | §7: the safe table and the owner's pick |
+| C4 is navigation, not depth; Laws imports `ProofGraph` at nine sites; `Conform` imports `OCaml5`; `TestSupport` is shared data | accepted | C4 stays after C2 and opens with that dependency review |
+| C5: reuse `batteries-touched`'s selection and the architecture map; no second registry | accepted | C5 as written |
+| C2 survives, narrower: artifact assembly, placement and provenance behind one entry; acceptance policies stay distinct | accepted | E6; the top recommendation stands |
 
 ## 8. Sources
 
