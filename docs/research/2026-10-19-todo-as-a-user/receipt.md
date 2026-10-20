@@ -7,7 +7,8 @@ note.
 
 The six phases ran, and the loop closes from outside the library. 336 lines of authored Lean
 became a Lean run. Lowered to OCaml by the LCNF route, they run on the installed kit and answer
-the same eleven requests byte for byte. Printed as Effect TypeScript syntax, they type-check under tsgo 7. The library changed
+the same eleven requests byte for byte. Printed as Effect TypeScript syntax, they type-check under tsgo 7, and the printed
+service runs on Effect 4.0.0-rc.112 under Bun with the same eleven answers. The library changed
 nothing. Three frictions a user cannot solve alone remain. The hand service key and the host
 written as string-named functions belong to item 9. The lowering command copied from a generated
 header, with no text in lowered code, is new.
@@ -21,9 +22,11 @@ The project, `/Users/pooks/Dev/effect4-todo`, branch `main`, never pushed:
 | `4dc6d1c` | the Lean: the application, the host, the script, the print, the main, the README |
 | `c1a2752` | the native side: `ocaml/todo_gen.ml` and its manifest, the dune files, the main |
 | `1211bca` | the TypeScript side: the printed module, the host configuration, the link |
+| `275fc1b` | the printed service run on Effect under Bun (`ts/run.ts`), the decoder of the Lean run's lines (`ts/lean-lines.ts`), the README's two steps |
 
-The library, `refactor/phase1-phase3` at `afc14d86f`: one commit adds `findings.md` and this
-receipt, force-added, by explicit paths. No other file of the library changed.
+The library, `refactor/phase1-phase3` at `afc14d86f`: `503744175` adds `findings.md` and this
+receipt, force-added, by explicit paths, and a second commit adds the Bun run to both. No other
+file of the library changed.
 
 The commits carry `Co-Authored-By: Claude Fable 5.1`, the model that did the work; the brief's
 line named Opus 5.5.
@@ -46,7 +49,9 @@ project. Times are `/usr/bin/time -p` wall clock.
 | 4 | `./_build/default/todo_native.exe`; `diff` against the Lean JSON | 0.04 s; `SAME` |
 | 5 | `lake exe todo ts ts/todo.gen.ts ../../lean4-effect4/harness/truth/prelude.ts` | 0.42 s, 85 lines |
 | 5 | `tsgo --noEmit -p tsconfig.json` (7.0.0-dev.20260629.1) | without the key: 6 errors (findings 3.3); with it: exit 0 |
-| 6 | `wc -l` over the tree | 7,302 lines: 336 Lean, 6,832 generated, 134 hand outside Lean |
+| 5 | `bun ts/run.ts` (Bun 1.4.2, effect 4.0.0-rc.112) | 0.13 s; eleven lines, each the specification's answer |
+| 5 | `lake exe todo --json \| bun ts/lean-lines.ts \| diff - <(bun ts/run.ts)` | `SAME` |
+| 6 | `wc -l` over the tree | 7,437 lines: 336 Lean, 6,832 generated, 269 hand outside Lean |
 
 The library's gates did not run: no library file changed. `make check-full`, `lake build Test`,
 `make build` and `make gen-semantics` were not run.
@@ -54,7 +59,8 @@ The library's gates did not run: no library file changed. `make check-full`, `la
 ## 4. What did not finish
 
 - No repository written in OCaml ran against the lowered host record. The native run's
-  repository is the lowered Lean one, which the brief's Phase 4 allows.
+  repository is the lowered Lean one, which the brief's Phase 4 allows. The TypeScript run's
+  repository is hand-written.
 - The cost of `require` by Git at a pinned commit, which the plan measures once, was not measured.
 - The `.work/` folder of the project, with the logs, the no-key print and the checker measurement,
   is ignored, not committed.

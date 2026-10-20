@@ -1,7 +1,8 @@
 # The to-do as a user's project: findings
 
 Status: findings, 2026-10-19. The project is `/Users/pooks/Dev/effect4-todo`, its own Git
-repository at `1211bca`, written against the library at `afc14d86f` on `refactor/phase1-phase3`.
+repository at its fourth commit, written against the library at `afc14d86f` on
+`refactor/phase1-phase3`.
 The plan is `plan.md` beside this note, and the receipt is `receipt.md`.
 
 ## 1. The one thing to know
@@ -9,7 +10,8 @@ The plan is `plan.md` beside this note, and the receipt is `receipt.md`.
 The whole loop works from outside the library. The author wrote 336 lines of Lean. They became a
 Lean run of eleven requests. They lowered to an OCaml file of 6,305 lines. It runs the same
 script on the native kit with the same eleven answers byte for byte. They printed as 85 lines of
-Effect TypeScript syntax that tsgo 7 accepts. Three frictions stand between a user and that loop.
+Effect TypeScript syntax that tsgo 7 accepts. That module ran on Effect 4.0.0-rc.112 under Bun
+with the same eleven answers. Three frictions stand between a user and that loop.
 The rows need a hand key before the module printed as TypeScript syntax binds them. The host is
 four functions named by string spellings. The lowering command copies 37 type names from a
 generated header, and lowered code cannot build text.
@@ -27,6 +29,7 @@ flowchart LR
   B --> P["lake exe todo ts"]
   P --> T["ts/todo.gen.ts (generated)"]
   T --> C["tsgo --noEmit"]
+  T --> E["bun ts/run.ts: the run on Effect"]
 ```
 
 Every file of the project, with who wrote it and what an author does with it.
@@ -51,6 +54,8 @@ Every file of the project, with who wrote it and what an author does with it.
 | `ts/tsconfig.json` | the author, copied from the library's `ts/eff/tsconfig.json` | 15 | edits it |
 | `ts/node_modules` | the author: a link to the library's `ts/eff/node_modules` | 0 | never opens it |
 | `ts/todo.gen.ts` | the printer, by `lake exe todo ts` | 85 | reads it, never edits it |
+| `ts/run.ts` | the author: the repository in TypeScript and the script on the printed service | 82 | reads and edits it |
+| `ts/lean-lines.ts` | the author: the Lean run's value trees decoded to plain values | 53 | edits it |
 
 The totals, from `wc -l` over the tree:
 
@@ -58,10 +63,11 @@ The totals, from `wc -l` over the tree:
 | --- | --- |
 | Lean the author wrote | 336 |
 | Generated | 6,832 |
-| Hand lines outside Lean | 134 |
-| All files | 7,302 |
+| Hand lines outside Lean | 269 |
+| All files | 7,437 |
 
-The Lean is 4.6 percent of the project's lines. The generated OCaml is 86 percent.
+The Lean is 4.5 percent of the project's lines. The generated OCaml is 85 percent. Of the hand
+lines outside Lean, 135 are the TypeScript run and its decoder, written after the brief's phases.
 
 ### 2.1 The builds, measured
 
@@ -81,6 +87,8 @@ built in its own checkout.
 | The native run | `./_build/default/todo_native.exe` | 0.04 s |
 | The TypeScript print | `lake exe todo ts …` | 0.42 s |
 | The TypeScript check | `tsgo --noEmit -p tsconfig.json` | 0.16 s, exit 0 |
+| The run on Effect | `bun ts/run.ts` | 0.13 s under Bun 1.4.2, effect 4.0.0-rc.112 |
+| The three-way comparison | `lake exe todo --json \| bun ts/lean-lines.ts \| diff - <(bun ts/run.ts)` | `SAME`, eleven lines |
 
 The first build failed on the author's own file (finding 7), so two numbers stand for it. Lake
 rebuilt nothing in the library's checkout at any build.
@@ -273,7 +281,16 @@ add("") -> (Val.ctor 1 [(Val.ctor 0 [(Val.list [(Val.ctor 0 [(Val.ctor 2 [(Val.s
 ```
 
 The JSON form is the same tree with `_ctor` keys. `NatJson.render` answers `List Nat`, bytes, so
-the author converts with `String.ofList` and `Char.ofNat`.
+the author converts with `String.ofList` and `Char.ofNat`. The Effect program answers plain
+values, so a comparison with the Lean run needs a decoder of the image. The author wrote one,
+`ts/lean-lines.ts`, 53 lines. A success is `_ctor` 0. A record is a names list beside a values
+list. A failure's reason is a tagged pair or a record. The decoded lines read as a person
+expects:
+
+```
+add("") -> fail ["EmptyTitle","a title is required"] | [2,[[1,"milk",false]]]
+complete(7) -> fail {"_tag":"NotFound","id":7} | [4,[[1,"milk",true],[2,"eggs",false],[3,"tea",false]]]
+```
 
 The owner: item 5 (M8, one observation and one check). What a run answers has one printer, and
 no reading for a person.
@@ -374,12 +391,15 @@ should call the kit's, not carry a second.
   `Kit.Json`. The lowered reactor is a value of the kit's reactor type with no adapter. The
   eleven answers equalled Lean's on the first run.
 - The print. One call wrote the service module, and tsgo accepted it once the key was there.
+- The run on Effect. The printed service ran under Bun with `Layer.succeed(RepoKey, repository)`
+  over a repository of 30 lines. Its eleven answers equalled the Lean run's on the first run.
 
 ## 5. What this does not establish
 
 - No OCaml-written repository ran: the native run's repository is the lowered Lean one. A host
-  written to the lowered record is the library's lane, not this project's.
+  written to the lowered record is the library's lane, not this project's. The TypeScript run's
+  repository is hand-written, in `ts/run.ts`.
 - The cost of requiring the library by Git at a pinned commit was not measured.
 - The measurements are one run each on one machine with the library built; the lowering's
   import time is the first run's.
-- Nothing here is a theorem. The agreement of the two runs is a finite probe of eleven requests.
+- Nothing here is a theorem. The agreement of the three runs is a finite probe of eleven requests.
