@@ -25,7 +25,7 @@ and a document are each a state reached by its journal. The dictionary
   host's rows with `eff_rows` and write programs with `eff do`. The checker types a program, or
   refuses at a located place. `Effect4.Api.run` runs it. The worked example is the to-do
   (`Test/Dogfood/Scenario/Todo/`). Today a service key and a typed host are still written by hand
-  (release item 7).
+  (item 9 of the order below).
 - **TypeScript.** The printer writes a program and its services as Effect TypeScript, checked
   against rc.112 by tsgo 7 (`make check-ts`). The readers read the printed fragment back, with any
   binder names (`ts/eff/read.ts`, `src/Effect4/Codegen/Read.lean`). `ts/eff` writes the tagged
@@ -33,7 +33,8 @@ and a document are each a state reached by its journal. The dictionary
   layer.
 - **The tool.** `Effect4.Tool.serve` is one transition over a workspace. Two drivers serve it:
   `tools/Drivers/Workspace.lean` in Lean, and `eff tool` or `eff mcp` in the OCaml kit, over the
-  lowered `serveTree`. An agent writes programs as JSON today (release items 4 and 5).
+  lowered `serveTree`. It is for introspection and analysis: it reads, checks, views and explores
+  a program written in Lean (row 420).
 - **OCaml.** `ocaml/` holds the lowered machine, the engine, the kit (`eff check`, `run`,
   `explore`, `serve`, `tool`, `mcp`) and the store. It ships as opam packages with a facade and a
   public-name manifest (`ocaml/gen/public-names.tsv`). `make check-ocaml` checks it.
@@ -52,33 +53,36 @@ and a document are each a state reached by its journal. The dictionary
   tool's state renamed from "session" to "workspace".
 - Row 418 adopted the author-first release track.
 - Release item 3 landed. The public JSON is the tagged print with arrays (D2). Both readers take
-  any binder names, renamed to the printer's (`Rename.expr`).
+  any binder names, renamed to the printer's (`Rename.expr`, row 419).
+- Row 420: programs are written in Lean, and the tools are for introspection and analysis. The
+  agent-text work stops, and the consolidation resumes.
 
 ## Next, in order
 
-The release track of `coherence.md` §9.1 (row 418). The first release is Lean authoring, the
-TypeScript face, and the tool over MCP.
+The consolidation order of `coherence.md` §9.1 (row 420): a language that is rational, coherent,
+and compiled as its semantics says. Each move deletes what it replaces.
 
-Done: 1, this page; 2, the typed-editing concept's prose (`docs/core/semantics.md` §2.11); 3, the
-TypeScript slice (seats 3a and 3b).
-
-4. Agent text in: `open` and `fill` take Effect TypeScript text through the reader.
-5. The reply diet, and one field name per idea.
-6. One check, one observation, one command face (row 414 (3)).
-7. The host seam from `eff_rows`: the typed interface, the host record and its reactor.
-8. One located refusal (the audit's M1).
-9. One profile judgment at ingress (M2).
+1. M1, one located refusal.
+2. M2, one profile judgment at ingress.
+3. M3, one program codec, lowered.
+4. M4, one type spelling, then E6: `Nat` and `Int` exact in OCaml.
+5. M8, one observation, one check, the kit's commands as queries (row 414 (3)).
+6. M9, the typing rule as two tables, in three stages.
+7. M7's rest: the old readers go, then a fold for `Shape`.
+8. M5, one journal construction, without the store's part.
+9. The typed host interface from `eff_rows` (F3).
 10. A public-name manifest for Lean.
+11. M10, carriers as rows, one machine, then the run layer over it.
 
-After the release, the estate track of `coherence.md` §9.2: the host protocol, the cross-runtime
-test, the carriers and E6, the run layer, the store.
+Deferred (`coherence.md` §9.2): the host protocol and the cross-runtime test, the store and the
+log, the carrier packages, and the exchange.
 
 ## What the owner must decide
 
-- **Before the release items** (`coherence.md` §10):
-  - S-2, whether the generated host interface is public, before item 7;
-  - D3, the native profile, before item 9.
-- **After the release** (row 418 (5)):
+- **Before the moves that need them** (`coherence.md` §10):
+  - D3, the native profile, before item 2;
+  - S-2, whether the generated host interface is public, before item 9.
+- **With the deferred work** (rows 418 (5) and 420 (5)):
   - D1 and S-1, on the store and the log;
   - D4, on the drive after a refused reply;
   - D5, on abandon.

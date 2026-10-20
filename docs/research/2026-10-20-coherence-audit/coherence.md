@@ -5,7 +5,7 @@ Status: research note, the one entry for the coherence work of 2026-10-19. Base:
 `vocabulary.md`), which it replaces, and it corrects them where a pressure test found them wrong.
 It takes one more input: a second read by another session
 (`docs/research/2026-10-19-second-read-authoring-release.md`). The owner adopted its author-first
-order on 2026-10-19.
+order on 2026-10-19, and replaced it the same day with the consolidation order (row 420).
 
 ## 1. The one thing to know
 
@@ -13,7 +13,8 @@ There are two halves, and they are one construction. An author holds a document 
 by actions. A run holds a machine and changes it by commands. Each is a state reached by its
 journal (K5). In a run, the host answers the program's questions and the tape answers the
 runtime's choices. Every seam is one of these roles, declared once in Lean. Most drift is a role
-written a second time by hand. The first release serves the author; the estate's steps follow it.
+written a second time by hand. Programs are written in Lean, and the tools introspect and analyse
+them (row 420).
 
 ## 2. The run's half
 
@@ -71,8 +72,8 @@ Three things follow:
   `docs/core/semantics.md`. Its section is not written yet. Its prose is written now; its claims
   move when semantics generation resumes.
 
-Agents write text, not JSON (adopted 2026-10-19). An agent writes Effect TypeScript in the printed
-fragment. The reader turns it into `Eff` data, and JSON stays the wire.
+An author, a person or an agent, writes the program in Lean (row 420). The tools read, check, view
+and explore it, and JSON is their wire.
 
 ## 4. The algebra under it
 
@@ -108,7 +109,7 @@ A host may implement any row, in any language. Four limits hold:
 2. A closure never crosses the host boundary (row 381 (3)).
 3. A reply is applied at most once. Exactly-once external work is not promised (dictionary §3.7).
 4. A retired call does no host cleanup (`RetiredCall`, `src/Effect4/Api/HostSession.lean`). The
-   host is not told that its call was abandoned. Decision D5 rules abandon, after the release.
+   host is not told that its call was abandoned. Decision D5 rules abandon, with the deferred protocol.
 
 ## 6. Runtimes and their agreement
 
@@ -157,7 +158,7 @@ The first sketch of this model was too simple in nine places.
 | --- | --- | --- | --- |
 | F1 | A run has two outside inputs, not one: the host's replies and the tape's choices | `Command`; `Api.TestClock` | §2 shows both |
 | F2 | The journal belongs to the run, not to the host session | `Run`, `Session` | the dictionary's host session entry is corrected |
-| F3 | The to-do's typed host is a hand copy of `eff_rows`, in Lean: `Todo`, `SqlTag`, `Host`, row names as strings | `Test/Dogfood/Scenario/Todo/Typed.lean`; tied only by `#guard`s | `eff_rows` generates the typed interface (release item 7) |
+| F3 | The to-do's typed host is a hand copy of `eff_rows`, in Lean: `Todo`, `SqlTag`, `Host`, row names as strings | `Test/Dogfood/Scenario/Todo/Typed.lean`; tied only by `#guard`s | `eff_rows` generates the typed interface (§9.1 item 9) |
 | F4 | The host session is spelled once per runtime: Lean's `HostSession`; none in OCaml, where `E4_host` restates `driveFrom`; hand TypeScript in `harness/truth/session` | `ocaml/engine/e4_host.ml`; `keyed-recorder.ts`, `keyed-protocol.ts` | one Lean definition, lowered or printed (estate track) |
 | F5 | Lowered code does no I/O, so a platform seam needs plans and readers | `E4_checkpoint`'s streaming closure (CP9) reads as it walks | a plan of operations for writes; a reader that asks for bytes; measured before the store moves |
 | F6 | The engine's carrier table is outside Lean, with no contracts | `ocaml/engine/externs.txt`, 52 rows | it becomes type rows (the audit's M10) |
@@ -167,95 +168,96 @@ The first sketch of this model was too simple in nine places.
 
 ## 9. The plan
 
-Two tracks, in this order. The release track comes first (the owner, 2026-10-19). The two tracks
-replace four earlier orders: the audit's M1 to M11, `seams.md`'s S1 to S4,
-`one-service-many-backings.md`'s B1 to B7, and this list's first version. Each item deletes what it
-replaces.
+The owner ruled on 2026-10-19 (row 420): programs are written in Lean, and the tools are for
+introspection and analysis. The goal is a language that is rational, coherent, and compiled as its
+semantics says. The plan is the audit's consolidation moves (`README.md` §4), in one order. It
+replaces the author-first release track of row 418. That track had replaced four earlier orders:
+the audit's M1 to M11, `seams.md`'s S1 to S4, `one-service-many-backings.md`'s B1 to B7, and this
+list's first version. Each item deletes what it replaces.
 
 Done: the vocabulary, in the dictionary (`5418973ea`, `c92fe3633`) and the workspace rename
 (`a12b2bbd2`). Left: three deep-core comments and one `#guard`, with the next edit of their files.
-Row 418 records this plan. Release item 1, `docs/STATE.md` as one page, is done. Item 2 is
-done too: `docs/core/semantics.md` §2.11 holds the typed-editing concept, as prose.
+Row 418's items 1 to 3 are done too. `docs/STATE.md` is one page, and `docs/core/semantics.md`
+§2.11 holds the typed-editing concept, as prose.
 
-Item 3 is done in two parts. Seat 3a made the tagged print with arrays the one public JSON
-(`e826c8ac1`, `a2cfa8de5`; `receipt-item3a.md`). Seat 3b made both readers take any binder names
-(`c8b6d5ad6`, `f519aed3c`; `receipt-item3b.md`). The reader reads the printer's text as it
+The TypeScript slice landed in two parts. Seat 3a made the tagged print with arrays the one public
+JSON (`e826c8ac1`, `a2cfa8de5`; `receipt-item3a.md`). Seat 3b made both readers take any binder
+names (`c8b6d5ad6`, `f519aed3c`; `receipt-item3b.md`). The reader reads the printer's text as it
 stands, and any other text after the renaming of its binders (`Rename.expr`). Law 11 keeps its
-statement. Law 12 holds under that normaliser, as a disjunction. Left from item 3: the three
+statement. Law 12 holds under that normaliser, as a disjunction. Left from it: the three
 `lastIndexOf` resolvers of `read.ts`, `oxc.ts` and `ck.ts` as one helper, with the next edit of
 `ck.ts`.
 
-### 9.1 The release track
+Stopped by row 420 (3): release item 4 (agent text in) and item 5 (the reply diet). Item 3b's
+open item 2, the typed reader's order, closes with item 4. Only printed text reaches the typed
+reader.
 
-The first release is Lean authoring, the TypeScript face, and the tool over MCP (`eff mcp`, in the
-kit).
+### 9.1 The consolidation order
 
-| # | Item | What it cuts or replaces | Size |
+| # | Move | What it collapses or deletes | Size |
 | --- | --- | --- | --- |
-| 1 | **`docs/STATE.md` as one page, true at HEAD**: the faces, how each is used, this plan, the owner's open decisions | about 400 lines of the entry point | XS |
-| 2 | **The author's half in the documents**: the typed-editing concept's prose (row 414 (5)) | nothing; it places the audit's lc-1, lc-2, lc-5 and lc-7 | S |
-| 3 | **The TypeScript slice, ahead of E6**: `ts/eff` reads and writes the canonical tagged print; `toJson` writes what `open` reads; binders named by scope in `ts/eff/read.ts` and `src/Effect4/Codegen/Read.lean` | `V.json` and `OCaml5.Eff.V`'s conversions (part of M7); the `a0` rule | M |
-| 4 | **Agent text in**: `open` and `fill` take Effect TypeScript text through the reader; `describe` serves the catalogue; the typed reader renames, then erases, then reads (item 3b's open item 2) | nothing; it adds the face the ergonomics probe asked for | S |
-| 5 | **The reply diet, and one field name per idea** (A4; the slices plan's decision 9) | the repeated bytes; one of the two fill alphabets | S |
-| 6 | **One check, one observation, one command face** (row 414 (3); M8; A6, with R2's A7.1) | `Api.check`, `Api.explain`, `Run.Kit.check`, `Run.Kit.admit` and `Run.Preview.admit` as separate entries; `Run.observe`, `Run.work`, `machineViewOf`; `Kit_serve`'s execution | M |
-| 7 | **The host seam from `eff_rows`**: the typed interface, the host record and its reactor; keys by name; a row method given an extra argument names the expected type `Env`, an internal type, and should name the row's arity | `Todo/Typed.lean`, `REPO`, the README's hand keys | M |
-| 8 | **M1, one located refusal** | nine records and a prefix rule | S |
-| 9 | **M2, one profile judgment at ingress** | `E4_engine.check_answer`; the A1.1 defect on `eff`, which ships the tool; with R2's A5.2 | S to M |
-| 10 | **A public-name manifest for Lean**: each name of the entry modules taught, internal or test-only; `Effect4.Author` re-exports the taught ones | `Program.Edit` and `Program.SketchWire` from the entry; the extra run and check entries, marked internal | S |
+| 1 | **M1, one located refusal** (was release item 8) | `Authoring.Refusal`, `DocumentRefusal`, `FormationRefusal`, item 3b's `ReadFailure`, and the paths in `TermTypingRefusal`'s arms, into `Located Site Reason`; the second prefix rule | S |
+| 2 | **M2, one profile judgment at ingress** (was item 9; with R2's A5.2) | `CodecProfile.carries`, `natLiteralsInProfile`, `E4_engine.check_answer` and the emitted literal walk; the A1.1 defect on `eff` | S to M |
+| 3 | **M3, one program codec, lowered** | `OCaml5.Eff.wireModule`, `ocaml/eff/eff_wire.ml` (1,267 generated lines), the 89 `.bin` goldens | M |
+| 4 | **M4, one type spelling, then E6**: `Nat` and `Int` exact in OCaml | `OCaml5.Lcnf.ClockFlow` (605 lines), the clock rows, the saturating `Lcnf_nat` bodies | M |
+| 5 | **M8, one observation, one check, the kit's commands as queries** (was item 6; row 414 (3); A6, with R2's A7.1) | `Api.check`, `Api.explain`, `Run.Kit.check`, `Run.Kit.admit` and `Run.Preview.admit` as separate entries; `Run.observe`, `Run.work`, `machineViewOf`; `Kit_serve`'s execution | M |
+| 6 | **M9, the typing rule as two tables**, in three stages | most of `Annotate.lean` and of `annotate_eq_table`'s induction; then `EditSession` | L |
+| 7 | **M7's rest: the old readers go, then a fold for `Shape`** | `readIn` and its siblings, `Agrees` and the binary64 families; the hand triples of `src/Effect4/Tool/Methods.lean` | M |
+| 8 | **M5, one journal construction**, without the store's part | six spellings of a state reached by its journal, into `Replayed`; about eight append laws | M |
+| 9 | **The typed host interface from `eff_rows`** (F3; was item 7): the host record and its reactor, keys by name. A row method given an extra argument should name its arity, not the internal type `Env` | `Todo/Typed.lean`, `REPO`, the README's hand keys | M |
+| 10 | **A public-name manifest for Lean** (was item 10): each name of the entry modules taught, internal or test-only | `Program.Edit` and `Program.SketchWire` from the entry; the extra run and check entries, marked internal | S |
+| 11 | **M10, carriers as rows, one machine, then the run layer over it** | `ocaml/engine/externs.txt` outside Lean; the hand machine and its drive | L |
 
 ```mermaid
 flowchart LR
-  I1["1 STATE.md"] --> I4["4 agent text in"]
-  I3["3 TypeScript slice"] --> I4
-  I4 --> I5["5 reply diet"]
-  I5 --> I6["6 one check, one view"]
-  I8["8 M1 Located"] --> I6
-  I9["9 M2 profile"] --> I6
-  I7["7 eff_rows host seam"] --> I10["10 Lean names"]
-  I6 --> I10
-  I2["2 author's concept"] --> I10
-  I10 --> R["first release"]
+  M1["1 M1 one located refusal"] --> M2["2 M2 one profile judgment"]
+  M2 --> M4["4 M4 one spelling, then E6"]
+  M3["3 M3 codec, lowered"] --> M4
+  M1 --> M9["6 M9 two tables"]
+  M1 --> M5["8 M5 one journal"]
+  M8["5 M8 one check, one view"] --> M10["11 M10 carriers as rows"]
+  M4 --> M10
+  M8 --> N["10 Lean names"]
+  F3["9 eff_rows host seam"] --> N
+  M7["7 M7 Shape fold"]
 ```
 
-The TypeScript slice moving ahead of E6 changes the order that row 417 (5) set for the repair wave.
+Items 1 to 4 come first, since E6 removes the one place where OCaml computes another answer than
+Lean: a saturating `Nat`. Row 417 (5) set that order for the repair wave, and row 418 (3) had put
+the TypeScript slice ahead of it.
 
-### 9.2 The estate track, after the first release
+### 9.2 Deferred (rows 418 (5) and 420 (5))
 
-1. **The host protocol from the journal.** One Lean definition of the wire messages, lowered for
-   OCaml and printed for TypeScript. `E4_host`'s copy and the hand keyed protocol go. D4 and D5 are
-   ruled when it starts.
-2. **The cross-runtime test.** The to-do service as one Effect layer per runtime, one script
-   through each.
-3. **Carriers.** E6; packages for SHA-256, CRC and hex; the byte kernel as a row with a control;
-   M3 and M4.
-4. **The run layer, lowered** (M10).
-5. **The store over the platform seam** (M5's store part, M6, M11). D1 and S-1 are ruled when it
+1. **The host protocol from the journal** (F4), and the cross-runtime test. D4 and D5 are ruled when
+   it starts.
+2. **The store over the platform seam**: M5's store part, M6 and M11. D1 and S-1 are ruled when it
    starts.
-6. **The rest of the Lean moves**: M7's fold for `Shape`, and M9. Then the exchange natively (the
-   slices plan's X1) and MCP 2026-07-28 (X2).
+3. **Carrier packages** for SHA-256, CRC and hex, and the byte kernel as a row with a control, with
+   M10.
+4. **The exchange natively** (the slices plan's X1) and MCP 2026-07-28 (X2).
 
-The rest of the repair wave follows the release: R2's A4.1 and A9.1, and R3.
+The rest of the repair wave follows the order: R2's A4.1 and A9.1, and R3.
 
 ## 10. What the owner decides
 
 | Id | Question | State | When |
 | --- | --- | --- | --- |
-| D2 | The public JSON's lists | decided 2026-10-19: arrays; `Canonical.print` becomes the array print (probe: `probes/d2/`) | release item 3 |
-| D3 | The native profile after E6 | open; recommended: the profile is a datum the run is checked against at ingress | before release item 9 |
-| S-2 | Is the generated host interface public? | open; recommended: yes | before release item 7 |
-| D1 | The log: harden it, or one commit construction | deferred past the first release (the owner, 2026-10-19) | estate item 5 |
-| S-1 | Is the store's on-disk format meaning? | deferred with D1 | estate item 5 |
-| D4 | The drive after a refused reply | deferred with the protocol; recommended: the OCaml rule, written once in Lean | estate item 1 |
-| D5 | Abandon, and whether a host is told | deferred past the first release (the owner, 2026-10-19) | estate item 1 |
-| — | Law 12 after item 3b: the landed disjunction, or option B (one-sided, on a smaller readable domain) | decided 2026-10-19: the landed disjunction; option B's corner is an ill-typed program at the native signature (`receipt-item3b.md`) | release item 3 |
-| — | What text an agent writes | adopted: Effect TypeScript in the printed fragment, through the reader. Weighed again on 2026-10-19 against Lean `eff do` text, and kept. A cold Lean process that imports `Effect4.Author` takes 1.5 s and 1.5 GB, and the kit cannot elaborate. tsgo checks the agent's text in its own terms, and Lean stays the surface of an author with the toolchain | release item 4 |
-| — | What the first release is | adopted: Lean authoring, the TypeScript face, the tool over MCP | §9.1 |
+| D2 | The public JSON's lists | decided 2026-10-19: arrays; `Canonical.print` becomes the array print (probe: `probes/d2/`) | done, the TypeScript slice |
+| D3 | The native profile after E6 | open; recommended: the profile is a datum the run is checked against at ingress | before item 2, M2 |
+| S-2 | Is the generated host interface public? | open; recommended: yes | before item 9 |
+| D1 | The log: harden it, or one commit construction | deferred (the owner, 2026-10-19) | §9.2 item 2 |
+| S-1 | Is the store's on-disk format meaning? | deferred with D1 | §9.2 item 2 |
+| D4 | The drive after a refused reply | deferred with the protocol; recommended: the OCaml rule, written once in Lean | §9.2 item 1 |
+| D5 | Abandon, and whether a host is told | deferred (the owner, 2026-10-19) | §9.2 item 1 |
+| — | Law 12 after item 3b: the landed disjunction, or option B (one-sided, on a smaller readable domain) | decided 2026-10-19: the landed disjunction; option B's corner is an ill-typed program at the native signature (`receipt-item3b.md`); row 419 | done |
+| — | What text an author writes | ruled 2026-10-19 (row 420): Lean. The tools are for introspection and analysis | done |
+| — | What the first release is | set aside by row 420; the plan is the consolidation order | §9.1 |
 
 D1 to D5 are the audit's (`README.md` §7).
 
 ## 11. How we work while this churns
 
-- **Frozen until the first release.** The store: R1's repairs stand, with no second log, no
+- **Frozen while §9.2 is deferred.** The store: R1's repairs stand, with no second log, no
   lowering and no format change. The bridge: no process-boundary protocol, and
   `apps/todo/server.ts` keeps its recorder. `Run.Tree`, preview and explore stay internal to the
   tool's `preview` query and `eff explore`; they are not taught.
