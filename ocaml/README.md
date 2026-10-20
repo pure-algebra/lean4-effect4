@@ -63,7 +63,7 @@ The Lean half, `src/OCaml5/`:
 `tools/Drivers/Truth.lean` writes (`make gen-truth-corpus`). The engine differential's cross face
 reads its Lean runs from `Test/Corpus/corpus.json` and reports them without gating. The
 Lean-vs-rc.112 exit differential over that corpus was deleted on 2026-10-20
-(`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`).
+(`git:8e93a284f:harness/truth/run-truth.ts`).
 
 ## Building
 
