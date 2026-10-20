@@ -183,7 +183,9 @@ def areas : List Area := [
   ⟨"ts/eff", .ts, 0, "ts/eff", "the `Eff` IR as a TypeScript library: `read.ts` by hand, the nodes, JSON, profile, forms and wire generated; `ingest/` the foreign recognizers", false, true⟩,
   ⟨"tools/target", .ts, 0, "tools/target", "the tsgo oracle: assignability, rows and atoms against the exports, the profile", false, true⟩,
   -- host gates, scripts, promoted results
-  ⟨"harness", .host, 0, "harness", "the host gates: the truth differential (Lean against rc.112), the Schema host, tsdiag, the generation fixtures", false, true⟩,
+  ⟨"ts/prelude", .ts, 0, "ts/prelude", "the host of every printed module: the prelude, its generated atoms, and the generated host-protocol projection", false, true⟩,
+  ⟨"Test/Corpus", .tests, 0, "Test/Corpus", "the truth corpus as fixtures: the manifest and the 93 printed programs that the target and reader lanes read", true, true⟩,
+  ⟨"tools/tsdiag", .ts, 0, "tools/tsdiag", "the diagnostics lane: tsgo's refusals of the printed corpus against the checker's, as a report", false, true⟩,
   ⟨"scripts", .host, 0, "scripts", "the check and generate scripts the Makefile runs", false, true⟩,
   ⟨"tools/view", .host, 0, "tools/view", "the view's C host: the replay (`draw`), the window (`play`, on SDL3), the painter (`paint.h`), and the one command `v`", false, true⟩,
   ⟨"generated", .host, 0, "generated", "the promoted TSVs: the corpus index, assignability, row citations, tsdiag, the runtime census, the proof shape", false, true⟩,
@@ -226,7 +228,20 @@ structure Accepted where
 deriving Repr, Inhabited
 
 def accepted : List Accepted := [
-  ⟨"tools/Drivers", "Test.Program.Gen", "the corpus generator is the input of `Tools.Corpus` (ARCHITECTURE.md, the Tools row)"⟩
+  ⟨"tools/Drivers", "Test.Program.Gen", "the corpus generator is the input of `Tools.Corpus` (ARCHITECTURE.md, the Tools row)"⟩,
+  ⟨"tools/Drivers", "Test.Counterexamples.Machine.Semantics.InterruptEscape", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Codegen.TermRows", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Program.MaskContract", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Program.BoundsControls", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Program.QueueMask", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Program.SemaphoreScenarios", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Program.PoolPublicData", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Program.DefinitionsControls", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Program.InvokeControls", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Program.QueueDefs", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Codegen.ServicesPrint", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Api.HostList", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
+  ⟨"tools/Drivers", "Test.Codegen.SchemaGenerationContract", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩
 ]
 
 /-- May a module in `a` import a module in `b`? Inside a Lean column, only the same height

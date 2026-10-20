@@ -21,7 +21,7 @@
  *  - each atom agrees with `nativeAtom` on the values `typeOf` admits — naturals, booleans,
  *    pairs. The table below holds fixed cases, the one thing about the atoms still written
  *    by hand. Until 2026-10-20 the truth runner's `selfTest` evaluated it before any program
- *    ran and refused an atom of the profile with no case (`git:8e93a284f:harness/truth/run-truth.ts`).
+ *    ran and refused an atom of the profile with no case (`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`).
  *    That runner is deleted; the target lane runs the table, with both refusals
  *    (`tools/target/prelude.test.ts`, owner, 2026-10-20);
  *  - `pred` is Lean's truncated subtraction, `pred(0) = 0` (by construction);
@@ -72,7 +72,7 @@ export type Num = number
 /** The table of fixed cases for the atoms. `atom` is the name in `nativeAtom`, or the list
  * fold's head, that the case exercises. The deleted truth runner checked the atom names against
  * the profile's own atom set (`ts/eff/profile.gen.ts`, cut from `nativeAtom` — DI-40), so an
- * atom appended in Lean could not stay untested here (`git:8e93a284f:harness/truth/run-truth.ts`).
+ * atom appended in Lean could not stay untested here (`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`).
  * `strings` was untested until that check existed. The target lane runs the table and that check
  * (`tools/target/prelude.test.ts`, owner, 2026-10-20). */
 /** Whether a call refuses at the profile's bound: the prelude throws `ProfileRefusal`. */
@@ -240,7 +240,7 @@ export const L = {
 // Where it is applied *relative to the tape*: outside `recorded`, so the tape row keeps the
 // raw diagnostics (the outer `_tag`) it has always kept and its bytes do not move. The tape
 // and the program could not disagree, because the deleted truth runner's `taggedPair` was this
-// same `pairOf` (`git:8e93a284f:harness/truth/run-truth.ts`).
+// same `pairOf` (`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`).
 
 /** DB-15's `prod string string` on the host: the two-element tuple `pair` builds. */
 export type Pair = readonly [string, string]
@@ -373,7 +373,7 @@ export const toPair = (e: unknown): Pair => {
 
 /** The recording seam. Each package call posts its operation, request and exit raw to the sink.
  * The truth runner installed a sink for the duration of one run until 2026-10-20
- * (`git:8e93a284f:harness/truth/run-truth.ts`); nothing installs one now, so `recorded` posts nothing. */
+ * (`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`); nothing installs one now, so `recorded` posts nothing. */
 export interface TapeCall { readonly op: string; readonly request: ReadonlyArray<unknown>; readonly exit: Exit.Exit<unknown, unknown> }
 // One seam per process, not per module instance: a runner that imports this file directly and
 // the generated modules that import the copy beside them must see the same sink.

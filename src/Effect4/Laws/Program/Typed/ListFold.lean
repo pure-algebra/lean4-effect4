@@ -29,7 +29,7 @@ table at every world, or the source's at a world tied to it (`TyDecls.Within`). 
 
 What it does not establish. Nothing about a module that uses the fold. No agreement with a
 target: that a printed fold computes the model's answer on a host is a finite check
-(`harness/truth`). No statement about a body that the checker refuses. No fairness and no
+(`git:c78fa6691:harness/truth`). No statement about a body that the checker refuses. No fairness and no
 progress of a scheduler. The faces of a fold inside an operation's binder term are the state
 plan's T5.
 

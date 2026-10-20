@@ -32,7 +32,7 @@ What this file holds:
 - a restore under a masked caller, which is the identity.
 
 It establishes no agreement with a target. The truth lane runs two of the programs on the pin
-(`harness/truth/Truth.lean`), and `Test/Program/MaskEngine.lean` binds the engine's fixture.
+(`tools/Drivers/Truth.lean`), and `Test/Program/MaskEngine.lean` binds the engine's fixture.
 -/
 
 set_option autoImplicit false

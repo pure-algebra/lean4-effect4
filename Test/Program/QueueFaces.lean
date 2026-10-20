@@ -45,7 +45,7 @@ rule of decisions row 256 too: that rule's difference was in the readiness probe
 and in the rate limiter's request, not in this module's steps (seat T5's measure). Five whole
 modules over the operations were type-checked under tsgo 7 and run on rc.112 by the truth
 lane: `pQueueWake`, `pQueueFull`, `pQueueInterrupted`, `pQueueMasked` and `pQueueOrder`
-(`harness/truth/Truth.lean`, whose corpus they stay in). The rendered bytes stay inside each
+(`tools/Drivers/Truth.lean`, whose corpus they stay in). The rendered bytes stay inside each
 guard.
 -/
 

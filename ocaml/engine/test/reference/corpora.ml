@@ -136,7 +136,7 @@ let goldens () : program list * load_report =
 
 (* ==================================================================== the truth corpus *)
 
-(* The members of harness/truth/corpus.json, in its order.  A program of that corpus is a
+(* The members of Test/Corpus/corpus.json, in its order.  A program of that corpus is a
    TypeScript declaration; its canonical bytes live elsewhere, so this list is the index
    and {!truth} is the join with the two byte sources. *)
 let truth_names : string list =
@@ -243,7 +243,7 @@ type truth_expect =
 
 let truth_expectations () : (truth_expect list, string) result =
   match find_path ~env:"E4_TRUTH_CORPUS" [ "Test"; "Corpus"; "corpus.json" ] with
-  | None -> Error "harness/truth/corpus.json not found from the cwd"
+  | None -> Error "Test/Corpus/corpus.json not found from the cwd"
   | Some path ->
     (match Yojson.Safe.from_string (read_file path) with
      | exception Yojson.Json_error m -> Error m

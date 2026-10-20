@@ -45,7 +45,7 @@ kept a Boolean literal's type on the target (the retired compiler control
 
 **Waits on:** R10 (DI-89's `all`). It waited on R4's faces part until the literal rule: the
 printed request now type-checks on the target, and the truth program `pRateRequest` agrees with
-rc.112 (`harness/truth/Truth.lean`).
+rc.112 (`tools/Drivers/Truth.lean`).
 -/
 
 set_option autoImplicit false

@@ -16,7 +16,7 @@ This group closes that row. One export per atom: the body is the `prelude` colum
 `NativeAtom.spec` (`src/Effect4/Program/NativeAtom.lean`), so the face carries the citation the
 table carries. `prelude.ts` re-exports every name and keeps the hand-written self-test table.
 Its runner refused an atom of the generated profile that had no case in it. The runner was deleted
-on 2026-10-20 (`git:8e93a284f:harness/truth/run-truth.ts`). Since then the target lane runs the
+on 2026-10-20 (`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`). Since then the target lane runs the
 table and that refusal (`tools/target/prelude.test.ts`, owner, 2026-10-20).
 
     lake exe effect4gen-catalogue PreludeAtoms --group PreludeAtoms

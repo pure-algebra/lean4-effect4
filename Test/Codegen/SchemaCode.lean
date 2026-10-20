@@ -12,7 +12,7 @@ over a rendered `String` reaches `Classical.choice`.
 
 That each code builds the Schema whose representation is its input is checked at rc.112, not
 here: `make check-schema-codec` compares every generated Schema of the codec corpus with
-rc.112's revival of Lean's document (`harness/truth/schema-codec/check.ts`).
+rc.112's revival of Lean's document (`ts/eff/test/codec/check.ts`).
 -/
 
 namespace Test.Codegen.SchemaCode

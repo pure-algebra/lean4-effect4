@@ -25,7 +25,7 @@ holds it, and where the battery is.
 | 3 | the TypeScript printer-image reader | `ts/eff/read.ts`: a third implementation of face 2's relation, in the target language | tested (byte equality against Lean-cut oracles over the generated corpus), reproduced (its head union is generated, so `tsc` holds head coverage) | `ts/eff/read.ts`, `ts/eff/check.ts`; `ts/eff/test/read.test.ts`, `tables.test.ts`; `make check-ts` |
 | 4 | the foreign recognizer `ck` | `ts/eff/ingest/ck.ts` over the TypeScript compiler API: an island recognizer of a sub-language of rc.112 | tested (agreement with face 5; equality with Lean where an oracle exists) | `ts/eff/ingest/ck.ts`; `ts/eff/ingest/test/foreign.test.ts`, `gate.test.ts`, `refusals.test.ts` |
 | 5 | the foreign recognizer `oxc` | `ts/eff/ingest/oxc.ts` over oxc 0.147.0, sharing **no** recognition code with face 4 | tested (the same) | `ts/eff/ingest/oxc.ts`; the same batteries |
-| 6 | the canonical wire | the byte encoding of a program, in three implementations: `Effect4.Program.Wire`, `ts/eff/wire.gen.ts`, `ocaml/eff/eff_wire.ml` | proved (`decode_encode`, `decode_exact`, `encode_injective`), reproduced (goldens), tested | `src/Effect4/Store/Domain/ProgramWire.lean` (namespace `Effect4.Program.Wire`; moved at `05417cc6` from `git:f7d22703:src/Effect4/Program/Wire.lean`); `ocaml/goldens/eff`; `ts/eff/test/wire.test.ts`, `ocaml/eff/test/test_lean_wire.ml`, `prop_wire.ml` |
+| 6 | the canonical wire | the byte encoding of a program, in three implementations: `Effect4.Program.Wire`, `ts/eff/wire.gen.ts`, `ocaml/eff/eff_image.ml` through `ocaml/eff/eff_codec.ml` (Lean's own embedding, lowered; M3, 2026-10-20) | proved (`decode_encode`, `decode_exact`, `encode_injective`), reproduced (goldens), tested | `src/Effect4/Store/Domain/ProgramWire.lean` (namespace `Effect4.Program.Wire`; moved at `05417cc6` from `git:f7d22703:src/Effect4/Program/Wire.lean`); `ocaml/goldens/eff`; `ts/eff/test/wire.test.ts`, `ocaml/eff/test/test_lean_wire.ml`, `prop_wire.ml` |
 | 7 | the JSON projection | the same program as JSON: the tagged print, each list an array (D2, decided 2026-10-19). `ShapeDoc.printTree` rendered by `NatJson.render`, `Canonical.print` on the binary64 tree, and `toJson` of `ts/eff/json.gen.ts` write the same bytes. The positional `V` spelling keeps one internal implementation, `OCaml5.Eff.effV.json`, which cuts `ocaml/eff/goldens/<name>.json`, until F1; no test reads those files | tested (`ts/eff/check.ts` in `make check-ts` compares `toJson` with the Lean-cut tagged oracles; its red control is `ts/eff/test/check.test.ts`), reproduced (`ts/eff/json.gen.ts` by `make check-gen`) | `src/Effect4/Store/Domain/ShapeJson.lean`; `tools/Drivers/Corpus.lean`; `ts/eff/json.gen.ts`, `ts/eff/check.ts` |
 | 8 | the executed image on rc.112 | the truth harness: the printed module *run* under the pinned host, its exit and observable schedule compared with the Lean machine's | tested (a bounded differential over a frozen corpus), reproduced (the gate regenerates the modules, the result and the tapes and compares bytes), stamped | `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth`; `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:scripts/check-truth.py`; the `#guard`s of `tools/Drivers/Truth.lean` |
 | 9 | the OCaml conformance face | `ocaml/eff`: generated families, wire and JSON implementations; core typing verdicts retained as goldens, with no independent OCaml type checker | reproduced (goldens), tested (`dune-tests`) | `ocaml/eff/`; `make check-ocaml` (which took over `git:c67ff096:scripts/check-ocaml.sh`'s `dune-tests` at `b2f6aef1`); `src/OCaml5/Tools/EffGen.lean` |
@@ -319,7 +319,7 @@ Precisely, for each of the families the closed world names:
 
 - **structure**: the OCaml types are generated from `OCaml5.Eff.World`, so a constructor or a
   field that moves in Lean moves there or the generator refuses;
-- **bytes**: `eff_wire.ml` must produce the bytes `Effect4.Program.Wire` produces, on the
+- **bytes**: the lowered codec, `eff_image.ml` through `eff_codec.ml`, must produce the bytes `Effect4.Program.Wire` produces, on the
   goldens `src/OCaml5/Tools/EffWire.lean` cuts (`ocaml/goldens/eff`), and must decode them
   back exactly;
 - **JSON**: `eff_json.ml` must produce the bytes `OCaml5.Eff.effV.json` produces;
@@ -604,7 +604,7 @@ What this changes in the packet above, and nothing else:
   tag no longer discriminates. The helpers keep no arbitrary TypeScript refinement.
 - **The truth claim (§4).** The truth corpus gains `pRateRequest` and `pDeferredGate`
   (`tools/Drivers/Truth.lean`). The runner's import header names every atom of the generated
-  profile (`git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). It also names the twelve printed helpers that are no
+  profile (`git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:git:9c197bb67:harness/truth/run-truth.ts`). It also names the twelve printed helpers that are no
   atom. So a new atom needs no edit of the header. The lane's compiler controls gain two files.
   `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/literals.typecheck.ts` holds the literal rule's assertions and refusals.
   `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/queue-steps.typecheck.ts` holds the Queue module's six printed steps, each at
@@ -667,7 +667,7 @@ What this changes in the packet above, and nothing else:
 
 - **Quantifier 6 of §4, amended: both faces write a fiber under its number in the recorder's
   order.** The recorder numbers a fiber when it first sees it (`see`,
-  `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). Lean's reduction reads the same order from its own rows
+  `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:git:9c197bb67:harness/truth/run-truth.ts`). Lean's reduction reads the same order from its own rows
   (`numbering`, `tools/Drivers/Truth.lean`). A fiber's number is the rank of its first sight: a
   `forked` row that names it as the child, or a `started` row. Before this amendment the Lean
   face wrote the machine's ids, which follow the allocation order.
@@ -714,7 +714,7 @@ What this changes in the packet above, and nothing else:
 - **Quantifier 5 of §4, amended.** The runner's exit column compares the fork entry on both
   faces: the exit of `Api.run` with the exit of rc.112's fork run. Its sync column compares
   the sync entry on both faces, as before. Until this amendment the exit column took rc.112's
-  sync exit whenever the Lean sync run settled (`main`, `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). That
+  sync exit whenever the Lean sync run settled (`main`, `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:git:9c197bb67:harness/truth/run-truth.ts`). That
   rule is right only for a program whose two entries give one exit. It also reported a
   disagreement of the fork entry as a note.
 - **The truth claim (§4) gains two programs**: `pSemaphoreProtected` and

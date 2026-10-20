@@ -110,7 +110,7 @@ def pCatch : Eff NativeOp :=
 `Scope.close` on that handle with a reified exit. Spelled as the pair rather than
 `acquireRelease`: `acquireRelease` binds the resource and the exit, so its release cannot be
 `interruptAll`, which wants a list of fibers and a fiber id. (`acquireRelease` compiles since
-V1, 2026-09-07; its own fixtures are `harness/truth/Truth.lean`'s `pAcquire` and
+V1, 2026-09-07; its own fixtures are `tools/Drivers/Truth.lean`'s `pAcquire` and
 `pAcquireClosed`, outside this byte-pinned corpus.) -/
 def pScope : Eff NativeOp :=
   .scoped (.bind (.perform (.scopeMake .parallel) (.lit .unit))

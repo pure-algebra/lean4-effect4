@@ -156,7 +156,7 @@ open Effect4.Program.Profile
 /-! ### The relations, against the stores a real run leaves
 
 The tree's own resource program at this model's target (`Test/Api/AcquireHandleContract.lean`,
-`harness/truth/Truth.lean`'s `acquireHandleTable`): acquire under a scope, read, then close on
+`tools/Drivers/Truth.lean`'s `acquireHandleTable`): acquire under a scope, read, then close on
 scope exit. One external handle is allocated, which is the model's one slot. -/
 
 def resourceTable : RowTable :=

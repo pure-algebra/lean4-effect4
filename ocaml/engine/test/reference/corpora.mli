@@ -16,9 +16,9 @@
                semantics.
      truth     ocaml/goldens/eff/*.hex -- 8 programs whose bytes were cut by LEAN's own
                `Program.Wire` (eff/README.md), i.e. the cross-face oracle, plus the two
-               members of harness/truth/corpus.json that have a `.bin` under
+               members of Test/Corpus/corpus.json that have a `.bin` under
                ocaml/eff/goldens and no `.hex` (pTwo, pAcquire).  The recorded
-               `run`/`runSync` of harness/truth/corpus.json is read beside them
+               `run`/`runSync` of Test/Corpus/corpus.json is read beside them
                ({!truth_expectations}) so the engines can be compared with the LEAN side
                and not only with each other.
      lean      {!lean_corpus} -- the printed corpus `make corpus` writes under
@@ -69,7 +69,7 @@ type load_report =
 (** The byte goldens of ocaml/eff/goldens. *)
 val goldens : unit -> program list * load_report
 
-(** The members of harness/truth/corpus.json, by name. *)
+(** The members of Test/Corpus/corpus.json, by name. *)
 val truth_names : string list
 
 (** The truth corpus: the programs whose canonical bytes exist, the report, and the names of
@@ -85,7 +85,7 @@ type truth_expect =
   ; te_success_nat : int option (** `run.exit.success` when it is a plain number *)
   }
 
-(** harness/truth/corpus.json's recorded runs, or why the file was not read. *)
+(** Test/Corpus/corpus.json's recorded runs, or why the file was not read. *)
 val truth_expectations : unit -> (truth_expect list, string) result
 
 (** The printed Lean corpus with Lean's verdicts (X1, X2). *)

@@ -37,7 +37,7 @@ template parameter and an unlowered form.
 
 What this module states: the code's text. That the code builds the Schema whose representation
 is the input is checked, not proved: `make check-schema-codec` revives each case's document at
-rc.112 and compares the representations (`harness/truth/schema-codec/check.ts`).
+rc.112 and compares the representations (`ts/eff/test/codec/check.ts`).
 -/
 
 set_option autoImplicit false

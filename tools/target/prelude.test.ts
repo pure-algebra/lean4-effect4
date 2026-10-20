@@ -8,7 +8,7 @@ import { query, type Query } from "./oracle.ts"
 
 // The prelude's table of fixed cases (`selfTestCases`, `ts/prelude/prelude.ts`) runs here, in the
 // target lane (owner, 2026-10-20). It refuses as the deleted truth runner's `selfTest` refused
-// (`git:8e93a284f:harness/truth/run-truth.ts`): a case whose answer is not its expected value,
+// (`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`): a case whose answer is not its expected value,
 // and an atom of the profile (`atomNames`, `ts/eff/profile.gen.ts`) that no case exercises.
 type Case = (typeof selfTestCases)[number]
 const failures = (cases: ReadonlyArray<Case>): string[] => cases.flatMap(({ name, apply, expected }) => {

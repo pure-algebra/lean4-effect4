@@ -27,7 +27,7 @@ discipline (`Val.keys`) is the carrier's `handles` read through `Handle.ofCode`.
 
 The snapshot and a list of exits are distinct on purpose: rc.112's `fiber.children` is a
 `Set` (`internal/effect.ts:534`, `:703-704`), an exit list is an array, and the truth wire
-renders them differently (`harness/truth/Truth.lean`); review R5 refused the collapse. The
+renders them differently (`tools/Drivers/Truth.lean`); review R5 refused the collapse. The
 U0 rows for improper tails are gone with the arms that could spell them.
 -/
 

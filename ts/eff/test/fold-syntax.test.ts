@@ -31,7 +31,7 @@ describe("the list fold's source syntax", () => {
         body: app("add", v(1), app("add", v(2), v(0))) } } })
   })
   test("a fold inside a fold: the inner names are two levels above the outer ones", () => {
-    // The truth program `pFold` (`harness/truth/Truth.lean`), as Lean prints it.
+    // The truth program `pFold` (`tools/Drivers/Truth.lean`), as Lean prints it.
     const parsed = readTypeScript(
       "Effect.flatMap(Effect.succeed(2), (a0) => Effect.flatMap(Effect.succeed(cons(succ(a0), cons(a0, nil()))), (a1) => Effect.succeed(fold(a1, a0, (a2, a3) => add(a2, fold(a1, a3, (a4, a5) => add(a4, sub(a5, a3))))))))")
     const inner: Term = { _tag: "fold", accTy: null, list: v(1), init: v(3), body: app("add", v(4), app("sub", v(5), v(3))) }

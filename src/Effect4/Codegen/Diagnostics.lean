@@ -21,7 +21,7 @@ whose predicted codes are absent (`refused-other`) may be explained by a later r
 same program; a checker that recovers past its first refusal would make the comparison exact.
 A reason with no codes is either a restriction of this machine that TypeScript does not share
 (the error alphabet, `errorNotAdmitted`) or a refusal the printer never lets reach the host. The
-lane `make check-tsdiag` (`harness/tsdiag/run-tsdiag.mjs`) is what keeps the table honest: it
+lane `make check-tsdiag` (`tools/tsdiag/run-tsdiag.mjs`) is what keeps the table honest: it
 reports, per corpus program, whether the observed codes meet the predicted ones, and it fails
 on the one direction that must never happen, a program this checker types that TypeScript
 refuses.
@@ -34,7 +34,7 @@ namespace Effect4.Codegen
 open Effect4.Program
 
 /-- The host compiler and its options: the part of the fold that is not the program. The
-defaults are the truth harness's options (`harness/truth/tsconfig.json`) under the pinned
+defaults are the truth harness's options (`git:9c197bb67:harness/truth/tsconfig.json`) under the pinned
 native compiler. -/
 structure HostConfig where
   compiler : String := "tsgo"

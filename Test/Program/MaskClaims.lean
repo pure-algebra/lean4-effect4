@@ -18,7 +18,7 @@ Every pin of rendered text is inside a `#guard`: a definition that folds over a 
 string reaches `Classical.choice`.
 
 It establishes no agreement with a target. tsgo 7 checks the printed modules in the truth
-lane (`harness/truth/Truth.lean`, `pMaskWait` and `pMaskedRestore`). The same lane checks the
+lane (`tools/Drivers/Truth.lean`, `pMaskWait` and `pMaskedRestore`). The same lane checks the
 alias in its annotated positions: `git:fa7bdc304:harness/truth/mask.typecheck.ts` copied three
 modules that this battery pins. The lane was retired on 2026-10-18 and deleted on 2026-10-20.
 -/
@@ -57,7 +57,7 @@ def maskAroundWait : Src NativeOp := eff do
   Api.readable p && decide (Api.roundTrip p = .ok p)
 
 -- An annotated position prints the alias's name: the type's target names the prelude's alias
--- for the restore function's type (`harness/truth/prelude.ts`, `MaskRestore`).
+-- for the restore function's type (`ts/prelude/prelude.ts`, `MaskRestore`).
 #guard ((buildOf (mk s1)).bind fun p => (Api.printModule "main" p).map fun m =>
     String.join (m.decls.map (TypeScript.Render.decl house0))) = some
   "export const main: Effect.Effect<readonly [MaskRestore, MaskRestore], never, never> = Effect.flatMap(Effect.uninterruptibleMask((a0) => Effect.succeed(a0)), (a0) => Effect.flatMap(Effect.uninterruptible(Effect.uninterruptibleMask((a1) => Effect.succeed(a1))), (a1) => Effect.succeed(tuple(a0, a1))))\n"

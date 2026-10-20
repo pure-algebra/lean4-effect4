@@ -34,7 +34,7 @@ structure Header where
 deriving DecidableEq, Repr
 
 /-- The header's binding under its former name. Callers outside the files of the session note's
-slice DM3 read it: `harness/truth/session/Session.lean` and `step_profile`
+slice DM3 read it: `git:9455bff50:harness/truth/session/Session.lean` and `step_profile`
 (`src/Effect4/Laws/Run.lean`). It goes when they move. -/
 abbrev Header.profile (header : Header) : String := header.binding
 

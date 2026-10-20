@@ -22,7 +22,7 @@
                   then say whether a carrier law broke.
 
    The corpora (`Corpora`): the 37 byte goldens, the truth corpus (the Lean-cut wire
-   goldens of harness/truth/corpus.json plus its two members that only have a `.bin`), and
+   goldens of Test/Corpus/corpus.json plus its two members that only have a `.bin`), and
    the Lean corpus -- the programs `make corpus` prints under `.lake/corpus` from Lean's
    own seeded generator (`Test.Program.Gen`, 400 at depth 4, plus the wire corpus), as the
    bytes `Wire.encodeProgram` cut, well typed and ill-typed alike with Lean's verdict
@@ -360,7 +360,7 @@ let tapes_for_bytes_random (p : Corpora.program) : (int * E4_diff.decision list)
    failure of the engine. *)
 let cross_face (progs : Corpora.program list) =
   print_endline "";
-  print_endline "== the cross face: the engines against harness/truth/corpus.json ==";
+  print_endline "== the cross face: the engines against Test/Corpus/corpus.json ==";
   match Corpora.truth_expectations () with
   | Error m -> note ("corpus.json not read: " ^ m)
   | Ok es ->

@@ -14,7 +14,7 @@ one term of the tree, against the function the model checks it against. `take` a
 the list first, as `get` does, where the model wrote the count first.
 
 It establishes no agreement with a target. The truth lane runs one printed fold on the pin
-(`harness/truth/Truth.lean`, the program `pFold`).
+(`tools/Drivers/Truth.lean`, the program `pFold`).
 -/
 
 namespace Effect4.Test.FoldContract

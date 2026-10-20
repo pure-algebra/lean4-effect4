@@ -24,9 +24,9 @@ DB-09's amendment splits a target profile into three parts with three kinds of c
    values. Functions and propositions live **here**, where DB-09's amendment allows them
    ("functions in checking and semantic code are allowed; functions in canonical programs are
    not").
-3. **`Binding`** — the runtime adapter and its evidence: `harness/truth/prelude.ts`, the
+3. **`Binding`** — the runtime adapter and its evidence: `ts/prelude/prelude.ts`, the
    recorder's tapes, the differentials, the finite host tests. **Not in this module and not in
-   this slice**; S6b is where a binding meets `harness/truth/Truth.lean`.
+   this slice**; S6b is where a binding meets `tools/Drivers/Truth.lean`.
 
 This module owns 1 and 2, and two small models of 2 that show the laws are inhabited and are
 not vacuous. It owns no adapter, no tape, no third package.
@@ -131,7 +131,7 @@ end ProfileData
 /-- The first target profile: `effect@4.0.0-rc.112` on the pinned host (DB-09).
 
 `natBound` is JavaScript's `Number.MAX_SAFE_INTEGER`, `2^53 - 1`: above it the host's `+`
-stops being exact (`harness/truth/prelude.ts`, `add`), which is the arithmetic DI-56 rules on.
+stops being exact (`ts/prelude/prelude.ts`, `add`), which is the arithmetic DI-56 rules on.
 
 `admittedForms` records the runner's invocation routes (DI-61): asynchronous built-ins
 and external rows admit both spellings, while synchronous rows retain `perform` only.
@@ -139,7 +139,7 @@ The shared production dispatcher and its independent route matrix establish this
 (`src/Effect4/Program/Compile.lean`; `Test/Program/InvocationContract.lean`).
 
 `adapters` names the prelude exports the eight canonical package rows are bound to
-(`src/Effect4/Program/Packages.lean`; `harness/truth/prelude.ts`, its `Sql`, `Kv`, `SqlHandle`
+(`src/Effect4/Program/Packages.lean`; `ts/prelude/prelude.ts`, its `Sql`, `Kv`, `SqlHandle`
 and `KvHandle` members). `imports` is that file's own import list. -/
 def rc112 : ProfileData where
   name := "effect@4.0.0-rc.112"
@@ -194,7 +194,7 @@ structure HostSpec (HostState HostVal : Type) where
   RowStep : Row → Val → HostState → Completion Val Err Defect FiberId Ann → HostState → Prop
   /-- The observation the differential compares under: what a run's stores and the host's state
   must agree on. The comparator's own losses are named where it lives
-  (`harness/truth/run-truth.ts`), not here. -/
+  (`git:9c197bb67:harness/truth/run-truth.ts`), not here. -/
   observe : Stores → HostState → Prop
 
 /-- The two general laws a specification owes. Each is earned by a fixture in
@@ -408,8 +408,8 @@ mutate-then-fail transition is reached by the third call. -/
 def quota : Nat := 2
 
 /-- `acquire : unit → handle`. Its shape is the tree's own resource fixture
-(`Test/Api/AcquireHandleContract.lean`, `harness/truth/Truth.lean`'s `acquireHandleTable`),
-whose adapter is `Host.acquire` in `harness/truth/prelude.ts`. -/
+(`Test/Api/AcquireHandleContract.lean`, `tools/Drivers/Truth.lean`'s `acquireHandleTable`),
+whose adapter is `Host.acquire` in `ts/prelude/prelude.ts`. -/
 def acquireRow : Row where
   name := "acquire"
   spelling := "Host.acquire"
@@ -423,9 +423,9 @@ def acquireRow : Row where
 /-- `use : handle → nat`. It fails when the budget is spent — *after* it has charged the call,
 which is the transition DB-07 is about.
 
-This is a **stricter** row than the tree's `read` (`harness/truth/Truth.lean`'s
+This is a **stricter** row than the tree's `read` (`tools/Drivers/Truth.lean`'s
 `acquireHandleTable`): `read` exists to observe release and answers `1` on a closed resource
-(`harness/truth/prelude.ts`, `Host.read`), so it is not a `use` in this model's sense and this
+(`ts/prelude/prelude.ts`, `Host.read`), so it is not a `use` in this model's sense and this
 model does not specify it. -/
 def useRow : Row where
   name := "use"
@@ -439,7 +439,7 @@ def useRow : Row where
 
 /-- `release : handle → unit`. Releasing an acquired resource twice completes with Die,
 matching the selected Host.close binding's thrown Error category and projected message
-(harness/truth/prelude.ts). Never-acquired handles are malformed at the boundary. -/
+(ts/prelude/prelude.ts). Never-acquired handles are malformed at the boundary. -/
 def releaseRow : Row where
   name := "release"
   spelling := "Host.release"
@@ -469,7 +469,7 @@ The adapter's Error object and stack are not canonical program data. S2 owns Def
 def closedUse : Defect := .error (.text "resource used after release")
 
 /-- The selected Host.close binding throws Error with this message on a second close
-(harness/truth/prelude.ts). Its modeled category is Die, never an unanswered call. -/
+(ts/prelude/prelude.ts). Its modeled category is Die, never an unanswered call. -/
 def doubleRelease : Defect := .error (.text "resource released twice")
 
 /-- The host's state: one slot per `acquire` in allocation order, `true` while the resource is

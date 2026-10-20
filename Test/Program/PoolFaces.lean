@@ -41,7 +41,7 @@ Placement. Finite controls of `read_print` and `read_exact` (R8's top nodes,
 `src/Effect4/Laws/Codegen/ReadPrint.lean` and `src/Effect4/Laws/Codegen/Read.lean`) on Pool's
 operations and step terms. Every guard is one program. None states target typing or a host
 run. Each printed module of the truth lane is type-checked under tsgo 7 and run on rc.112 there
-(`harness/truth/Truth.lean`). The rendered bytes stay inside each guard. The helpers are those
+(`tools/Drivers/Truth.lean`). The rendered bytes stay inside each guard. The helpers are those
 of `Test/Program/SemaphoreFaces.lean`, by import: the printer's and the reader's verdicts, a
 node at bound names, and a step's row.
 -/

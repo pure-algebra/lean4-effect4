@@ -112,7 +112,7 @@
 ;               is compared; the tapes are drawn from the oracle as it runs, so they are
 ;               admissible by construction.  It also discharges lane C's OWED FB1, records
 ;               why DF-3 is not run, and reports the engines against
-;               harness/truth/corpus.json.  Paths are found by an ancestor walk from the
+;               Test/Corpus/corpus.json.  Paths are found by an ancestor walk from the
 ;               cwd — $E4_EFF_GOLDENS, $E4_HEX_GOLDENS, $E4_TRUTH_CORPUS and
 ;               $E4_LEAN_CORPUS (the directory) override.
 ;               `effect4_gen` is named here and NOWHERE in the library: the third engine

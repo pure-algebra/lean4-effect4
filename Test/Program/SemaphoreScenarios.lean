@@ -56,7 +56,7 @@ Placement. Each scenario is a finite control of the proposed claim `semaphore-ex
 program. The cases P1, P3 and P9 are the finite controls of row 259's reading of the machine
 (concept `reactive-scheduling`, requirement R12). Every guard is one run on one schedule. None
 proves delivery, a cancellation law, a law of the wake across visits or liveness, and none is a
-host run: the host runs are the truth lane's (`harness/truth/Truth.lean`).
+host run: the host runs are the truth lane's (`tools/Drivers/Truth.lean`).
 -/
 
 set_option autoImplicit false

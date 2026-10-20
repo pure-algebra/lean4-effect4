@@ -61,10 +61,10 @@ and `{"interrupt":who|null}`. Annotations are dropped.
 History. Until 2026-10-20 this file was the Lean face of the rc.112 truth differential: the
 manifest also carried each module's text, the sync run, the observable schedule under the
 recorder's fiber numbers and the machine's events, and the runner
-(`git:8e93a284f:harness/truth/run-truth.ts`) ran every module on rc.112 and compared. The owner
+(`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`) ran every module on rc.112 and compared. The owner
 retired the differential from the gates on 2026-10-18 and deleted it on 2026-10-20: the
 comparison, the recorded results, the tapes, the ledgers and the release lane
-(`git:fa7bdc304:harness/truth/Truth.lean`). The fixtures' docstrings below keep that history:
+(`git:fa7bdc304:tools/Drivers/Truth.lean`). The fixtures' docstrings below keep that history:
 where one names an rc.112 run, a recorder row, a schedule or the runner's columns, it records the
 retired differential's evidence.
 
@@ -626,7 +626,7 @@ def lateSeen : Src NativeOp := eff do
   return tuple [exit, helper]
 
 /-- **A fiber that the recorder sees late, named in an exit**: the differential's control of the
-recorder's fiber numbers in an exit (`numbering`, `git:fa7bdc304:harness/truth/Truth.lean`). The
+recorder's fiber numbers in an exit (`numbering`, `git:fa7bdc304:tools/Drivers/Truth.lean`). The
 manifest now writes the machine's ids. The helper is the machine's fiber `1`: a
 detached fork with a deferred start, so it has no `forked` row, and the recorder first sees it
 at its first run. The waiter and its interruptor start at once: the machine's fibers `2` and
@@ -649,7 +649,7 @@ The probes `poisonNoHandler` and `closeInterruptedMidFinalizer` of seat A401
 truth programs of items 1 and 2 of `docs/research/2026-10-12-probe-alignment-plans.md`. The
 release lane read the same program on 4.0.1 (`git:fa7bdc304:scripts/check-truth-release.py`).
 Where the machine follows 4.0.1, the rc.112 lane signed the program (`LATEST` in
-`git:8e93a284f:harness/truth/run-truth.ts`). -/
+`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`). -/
 
 open Effect4.Program.Authoring in
 /-- The source of `poisonNoHandler`. -/
@@ -800,7 +800,7 @@ root yields four times. Under the sync entry it therefore settles before the wal
 exit than the fork run's, and both faces give each of the two exits. They are the lane's first
 programs whose two entries settle on two exits. The runner's exit column compares the fork
 entry on both faces, and the sync pair has its own column (`main`,
-`git:8e93a284f:harness/truth/run-truth.ts`; decisions row 279, point 1). Until 2026-10-06 that
+`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`; decisions row 279, point 1). Until 2026-10-06 that
 column took rc.112's sync exit whenever the sync run settled, and it was red for these two
 programs. The two red rows of that rule are in
 `docs/research/2026-10-06-seat-semw-evidence/README.md`. In a
@@ -1306,7 +1306,7 @@ E2): a payload through the type-directed codec (`Schema.encode`), under the one 
 its objects' keys in UTF-8 byte order (`leanJson`). That is the JSON rc.112 writes for the
 printed class's instance (`Data.Error`'s `toJSON`, `{ ...plainArgs, ...this }`,
 `vendor/effect-4.0.0-rc.112/src/internal/core.ts:602-604`), which the deleted runner sorted the
-same way (`git:8e93a284f:harness/truth/run-truth.ts`). Any other error, and a payload the codec does
+same way (`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`). Any other error, and a payload the codec does
 not write (a `number`, `null`, `undefined` or byte field), is `errJson`'s. -/
 def errJsonAt (names : KeyNames) (errorTy : Option Ty) : Err → J
   | .payload p =>

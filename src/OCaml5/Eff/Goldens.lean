@@ -432,7 +432,7 @@ def pIllInterruptor : P := .failCause (.interrupt (some (.lit (.bool true))))
 
 /-- The join (2026-09-07): a layer of every constructor, provided to a body that reads a
 service and provides one; the keys are the truth fixtures' spellings
-(`harness/truth/Truth.lean`: codes 4 `nat`, 5 `bool` at `nativeServiceTy`). -/
+(`tools/Drivers/Truth.lean`: codes 4 `nat`, 5 `bool` at `nativeServiceTy`). -/
 def kA : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
 def kB : ServiceKey := ⟨⟨5⟩, ⟨4⟩⟩
 def kC : ServiceKey := ⟨⟨6⟩, ⟨5⟩⟩

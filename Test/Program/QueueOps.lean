@@ -772,7 +772,7 @@ end Typing
 
 The section "A bounded queue" of `README.md` shows this program. It is the scenario R2 with
 another name for the worker, so its tree is R2's: the program `pQueueWake` of the truth lane
-(`harness/truth/Truth.lean`). -/
+(`tools/Drivers/Truth.lean`). -/
 
 /-- The README's example, as the README writes it. -/
 def handoff : Src NativeOp := eff do

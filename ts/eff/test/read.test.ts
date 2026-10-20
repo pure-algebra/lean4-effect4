@@ -514,7 +514,7 @@ describe("layer references", () => {
     },
   )
 
-  // pDiamond of `harness/truth/Truth.lean`: one layer, provided twice through a `merge`. The
+  // pDiamond of `tools/Drivers/Truth.lean`: one layer, provided twice through a `merge`. The
   // merge's left child is at [1, 0, 0, 0, 0] — root bind → child 1 provideService → child 0
   // bind → child 0 provideLayer → child 0 merge → child 0 — so that is the hoisted target.
   const diamond = [

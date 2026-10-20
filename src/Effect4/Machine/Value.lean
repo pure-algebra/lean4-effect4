@@ -31,7 +31,7 @@ carrier's `handle` frame (tag 12) with a kind byte from `HandleKind`; the byte t
 separate from `Store.Kind`, which numbers *content* kinds, because a handle is not content
 and no node carries one (`src/Effect4/Store/Carrier/Val.lean`). Distinct kinds stay distinct: the typing
 (`Program/Typed.lean` `Val.hasTy`), the key discipline (`Machine/Handles.lean` `Val.keys`)
-and the truth wire (`harness/truth/Truth.lean`) all read the kind.
+and the truth wire (`tools/Drivers/Truth.lean`) all read the kind.
 
 A *record* — an exit, a cause, a reason, a context — is ordinary first-order data and is
 written at the generated rule (`src/Effect4/Store/Domain/Derived/Program.lean`): a structure is

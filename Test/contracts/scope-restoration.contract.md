@@ -142,7 +142,7 @@ remain visible even when existing Cause.combine deduplicates the restored
 cause. A singleton empty failure takes the failure arm; multiple empty
 failures can fold to void and therefore take successful restoration.
 
-`git:945f7292ac609a421cff44efb4203264283d4bdf:harness/trace/scope-restoration.mjs` accepts an explicit installed package
+`git:945f7292ac609a421cff44efb4203264283d4bdf:git:606918eb7:harness/trace/scope-restoration.mjs` accepts an explicit installed package
 directory, checks the package version and all four source/runtime digests
 before importing executable Effect code, and checks both vendored sources.
 It makes real interruptUnsafe requests while the fiber is masked, observes
@@ -164,7 +164,7 @@ terminal outcome are checked.
 ```text
 lake env lean Test/Counterexamples/Machine/Runtime/ScopeRestorationBoundary.lean
 lake env lean Test/Machine/Runtime/ScopeRestorationContract.lean
-node harness/trace/scope-restoration.mjs /path/to/node_modules/effect
+node git:606918eb7:harness/trace/scope-restoration.mjs /path/to/node_modules/effect
 ```
 
 Allowed transitive axioms for all new public and private declarations,

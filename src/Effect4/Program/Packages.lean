@@ -44,7 +44,7 @@ def all : List Package :=
 read under, so an external index *they* emit is a position in this concatenation. It is not
 "the canonical table" (DI-22, `docs/DESIGN-ISSUES.md`): an external index is a position in
 whichever `RowTable` is supplied beside the program to `Api` — its link table — and this is
-one such table. Each truth fixture's per-package table (`harness/truth/Truth.lean`,
+one such table. Each truth fixture's per-package table (`tools/Drivers/Truth.lean`,
 `hostInputs`) is another, and a published program carries the link table it was written
 against (DI-05). The two conventions the register called live were always this one; they
 coincide on the sqlite rows only because that package is first here.

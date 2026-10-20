@@ -260,7 +260,7 @@ structure AtomRow where
   target (`Wide`, decisions row 256). -/
   constGeneric : Bool
   /-- The atom's body in the TypeScript prelude: the text after `export const <name> = `.
-  `harness/truth/prelude-atoms.gen.ts` is this column, one line per atom. The bodies of `pair`
+  `ts/prelude/prelude-atoms.gen.ts` is this column, one line per atom. The bodies of `pair`
   and `tuple` name `Wide`, the one shared type of that file's preamble
   (`tools/Effect4Gen/PreludeAtoms.lean`, `render`): a number or a Boolean type in an immediate
   slot widens, and a string literal keeps its literal type (decisions row 256).

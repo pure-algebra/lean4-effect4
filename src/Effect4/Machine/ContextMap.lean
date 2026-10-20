@@ -540,7 +540,7 @@ purpose: a machine value alphabet has one carrier, and code identity is what `ge
 
 /-- `ServiceKey` (`Machine/Key.lean`) at the generated rule: the pair of the two one-field
 structures, each `ctor 0 [nat]` (the generator's own instance for the same declaration writes
-`ctor 0 [ctor 0 [nat], ctor 0 [nat]]`, `ocaml/eff/eff_wire.ml` `emit_service_key`). -/
+`ctor 0 [ctor 0 [nat], ctor 0 [nat]]`, the lowered codec, `ocaml/eff/eff_image.ml`). -/
 def serviceKeyImage : Image ServiceKey :=
   (Image.ctor2 (Image.nat.ctor1 0) (Image.nat.ctor1 0) 0).equiv
     (fun p => ⟨⟨p.1⟩, ⟨p.2⟩⟩) (fun k => (k.name.value, k.service.value))

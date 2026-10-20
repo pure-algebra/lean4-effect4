@@ -25,7 +25,7 @@ other scenarios, and the first two at a message type of strings.
 Placement. Each scenario is a finite control of the proposed claim `queue-expansion-agrees`
 (concept `translation-simulation`, requirement R10), on the side of the operations' use in a
 program. Every guard is one run. None proves delivery, a cancellation law or liveness, and none
-is a host run: the host runs are the truth lane's (`harness/truth/Truth.lean`).
+is a host run: the host runs are the truth lane's (`tools/Drivers/Truth.lean`).
 -/
 
 set_option autoImplicit false

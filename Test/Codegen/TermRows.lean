@@ -697,7 +697,7 @@ type (`git:fa7bdc304:harness/truth/literals.typecheck.ts` held the rule's contro
 
 /-- The rate limiter's request, four times in a row on one window cell. The window admits three
 requests. The answer is `[first decision, fourth decision, admitted, rejected, used]`. The brief
-names this request as a truth program: it is `pRateRequest` (`harness/truth/Truth.lean`), and
+names this request as a truth program: it is `pRateRequest` (`tools/Drivers/Truth.lean`), and
 its printed module runs on rc.112 with the machine's answer. Until the literal rule of decisions
 row 256, tsgo 7 refused its type at the request's two arms, and the truth lane held it out. -/
 def fourRequests : Src NativeOp :=
@@ -717,7 +717,7 @@ def fourRequests : Src NativeOp :=
 #guard readsBack fourRequests
 
 /-- The probe's offer step, twice on the Queue's first state with no taker: the truth program
-`pQueueOffer` (`harness/truth/Truth.lean`). The first step's answer is the hint to signal, which
+`pQueueOffer` (`tools/Drivers/Truth.lean`). The first step's answer is the hint to signal, which
 is absent. The program answers `[a hint was due, the buffer's length, the head index]`. Its cell
 holds the probe's whole state record, whose type names `Deferred<void, never>`; it makes no
 `Deferred`, so its module prints today. -/
