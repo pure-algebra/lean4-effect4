@@ -33,3 +33,8 @@ answerIsFiber refused
 answerIsRef refused
 answerIsDeferred refused
 answerIsScope refused
+boundNat {"_tag":"Success","value":9007199254740991}
+exactBound REFUSED Error: outside the integer profile: 9007199254740992
+overNat REFUSED Error: outside the integer profile: 9007199254740992
+overInt REFUSED Error: outside the integer profile: 9007199254740992
+nestedInterrupt {"_tag":"Success","value":{"_tag":"Failure","cause":[{"_tag":"Interrupt","fiberId":35}]}}

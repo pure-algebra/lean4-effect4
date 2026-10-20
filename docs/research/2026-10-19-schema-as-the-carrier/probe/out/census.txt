@@ -23,4 +23,4 @@ Option: 2 constructors: none, some
 Val: 14 constructors: unit, bool, nat, str, bytes, list, pair, none, some, ctor, ref, handle, negInt, float
   witnessed 11: unit, nat, negInt, bool, str, some, none, list, ctor, pair, handle
   missing 3: bytes, ref, float
-universe: 61 constructors over 7 sorts; cases: 35
+universe: 61 constructors over 7 sorts; cases: 40

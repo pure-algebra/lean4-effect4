@@ -33,3 +33,8 @@ answerIsFiber refused
 answerIsRef refused
 answerIsDeferred refused
 answerIsScope refused
+boundNat {"_tag":"Success","value":9007199254740991}
+exactBound {"_tag":"Success","value":9007199254740992}
+overNat refused
+overInt refused
+nestedInterrupt refused

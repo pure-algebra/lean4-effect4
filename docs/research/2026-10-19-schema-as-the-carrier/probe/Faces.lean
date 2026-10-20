@@ -87,7 +87,16 @@ def cases : List Case :=
   , ⟨"answerIsFiber", fork (succeed unit), false⟩
   , ⟨"answerIsRef", Ref.make (nat 1), false⟩
   , ⟨"answerIsDeferred", Deferred.make .nat .never, false⟩
-  , ⟨"answerIsScope", Scope.make .sequential, false⟩ ]
+  , ⟨"answerIsScope", Scope.make .sequential, false⟩
+  -- the review's controls (docs/research/2026-10-19-schema-as-the-carrier-review/README.md)
+  , ⟨"boundNat", succeed (Atom.add (nat (2 ^ 53 - 2)) (nat 1)), false⟩
+  , ⟨"exactBound", succeed (Atom.add (nat (2 ^ 53 - 1)) (nat 1)), false⟩
+  , ⟨"overNat", succeed (Atom.add (nat (2 ^ 53 - 1)) (nat 2)), false⟩
+  , ⟨"overInt", succeed (Atom.plus (nat (2 ^ 53 - 1)) (nat 1)), false⟩
+  , ⟨"nestedInterrupt", eff do
+      let f ← fork sleeping
+      let _ ← withFiber (Action.interrupt f)
+      exit (join f), false⟩ ]
 
 /-! ## The observation -/
 

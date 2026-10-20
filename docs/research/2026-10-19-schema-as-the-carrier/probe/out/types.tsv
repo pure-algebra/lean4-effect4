@@ -33,3 +33,8 @@ answerIsFiber	Fiber.Fiber<void, never>	never	run
 answerIsRef	Ref.Ref<number>	never	run
 answerIsDeferred	Deferred.Deferred<number, never>	never	run
 answerIsScope	Scope.Scope	never	run
+boundNat	number	never	run
+exactBound	number	never	run
+overNat	number	never	run
+overInt	Int	never	run
+nestedInterrupt	Exit.Exit<void, never>	never	run

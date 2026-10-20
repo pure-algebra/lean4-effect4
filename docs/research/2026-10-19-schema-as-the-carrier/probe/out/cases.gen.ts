@@ -1,6 +1,6 @@
 // Each case's exit Schema as a JSON codec, written by Faces.lean. Do not edit.
 import { Schema } from "effect"
-export const order = ["successUnit", "successNat", "successIntNegative", "successIntNonNegative", "successBool", "successString", "successSome", "successNone", "successList", "successPair", "successTuple", "successRecord", "successRecordOptional", "successMap", "successUnion", "successExitOfFail", "successExitOfSucceed", "successCause", "failString", "failNat", "failTagged", "failRecord", "dieNat", "dieString", "interruptNoOne", "exitOfInterrupt", "forkFailJoin", "forkDieJoin", "forkInterruptJoin", "forkScopedNoScope", "asyncSleep", "answerIsFiber", "answerIsRef", "answerIsDeferred", "answerIsScope"]
+export const order = ["successUnit", "successNat", "successIntNegative", "successIntNonNegative", "successBool", "successString", "successSome", "successNone", "successList", "successPair", "successTuple", "successRecord", "successRecordOptional", "successMap", "successUnion", "successExitOfFail", "successExitOfSucceed", "successCause", "failString", "failNat", "failTagged", "failRecord", "dieNat", "dieString", "interruptNoOne", "exitOfInterrupt", "forkFailJoin", "forkDieJoin", "forkInterruptJoin", "forkScopedNoScope", "asyncSleep", "answerIsFiber", "answerIsRef", "answerIsDeferred", "answerIsScope", "boundNat", "exactBound", "overNat", "overInt", "nestedInterrupt"]
 export const refused = ["forkScopedNoScope", "answerIsFiber", "answerIsRef", "answerIsDeferred", "answerIsScope"]
 export const cases: Record<string, { codec: unknown; sync: boolean }> = {
   "successUnit": { codec: Schema.toCodecJson(Schema.Exit(Schema.Void, Schema.Never, Schema.Defect())), sync: false },
@@ -32,5 +32,10 @@ export const cases: Record<string, { codec: unknown; sync: boolean }> = {
   "forkFailJoin": { codec: Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.String, Schema.Defect())), sync: false },
   "forkDieJoin": { codec: Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.Never, Schema.Defect())), sync: false },
   "forkInterruptJoin": { codec: Schema.toCodecJson(Schema.Exit(Schema.Void, Schema.Never, Schema.Defect())), sync: false },
-  "asyncSleep": { codec: Schema.toCodecJson(Schema.Exit(Schema.Void, Schema.Never, Schema.Defect())), sync: true }
+  "asyncSleep": { codec: Schema.toCodecJson(Schema.Exit(Schema.Void, Schema.Never, Schema.Defect())), sync: true },
+  "boundNat": { codec: Schema.toCodecJson(Schema.Exit(Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), Schema.Never, Schema.Defect())), sync: false },
+  "exactBound": { codec: Schema.toCodecJson(Schema.Exit(Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), Schema.Never, Schema.Defect())), sync: false },
+  "overNat": { codec: Schema.toCodecJson(Schema.Exit(Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), Schema.Never, Schema.Defect())), sync: false },
+  "overInt": { codec: Schema.toCodecJson(Schema.Exit(Schema.Number.check(Schema.isInt()), Schema.Never, Schema.Defect())), sync: false },
+  "nestedInterrupt": { codec: Schema.toCodecJson(Schema.Exit(Schema.Exit(Schema.Void, Schema.Never, Schema.Defect()), Schema.Never, Schema.Defect())), sync: false }
 }
