@@ -289,6 +289,9 @@ First, before item 1: the to-do as a user's project, outside the library
   and C2's second slice hand back and merge. Then value linkage (4b), then `run`, then M8 as
   amended. M9, M7, M5, items 9 and 10 and M10 follow in this table's order. Each brief is drawn
   from §4 of the audit and from §9.3 here, and lands no shape that §9.3 amends unamended.
+- **After `run`** (the owner, 2026-10-20, evening; row 430): the user side first. That is the to-do end
+  to end, a user's README and the rough edges the seats listed. The chain continues as one background
+  seat at a time, 4b first.
 
 ```mermaid
 flowchart LR

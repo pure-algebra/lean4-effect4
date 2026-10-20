@@ -23,8 +23,10 @@ and a document are each a state reached by its journal. The dictionary
 
 - **Lean authoring.** Import `Effect4.Author`, or `Effect4` for everything (row 332). Declare a
   host's rows with `eff_rows` and write programs with `eff do`. The checker types a program, or
-  refuses at a located place. `Effect4.Api.run` runs it. The worked example is the to-do
-  (`Test/Dogfood/Scenario/Todo/`). Today a service key and a typed host are still written by hand
+  refuses at a located place. A project's executable calls `Compiler.main` over its
+  application: `check`, `emit --target ts`, `describe` and `run` (rows 425, 429, 430). The worked
+  example is the to-do, a user's project outside the tree; the in-tree one is
+  `Test/Dogfood/Scenario/Todo/`. Today a service key and a typed host are still written by hand
   (item 9 of the order below).
 - **TypeScript.** The printer writes a program and its services as Effect TypeScript, checked
   against rc.112 by tsgo 7 (`make check-ts`). The readers read the printed fragment back, with any
@@ -56,6 +58,13 @@ and a document are each a state reached by its journal. The dictionary
   any binder names, renamed to the printer's (`Rename.expr`, row 419).
 - Row 420: programs are written in Lean, and the tools are for introspection and analysis. The
   agent-text work stops, and the consolidation resumes.
+- 2026-10-20: M1, M2 and M3 landed (rows 422, 423, 426), and the harness folder dissolved (row
+  427). The compiler's entry point landed in three slices (rows 425, 429, 430): `check`, `emit`,
+  `describe` and `run`.
+- The shape review of the consolidation (`coherence.md` §9.3, row 428): every move's model
+  confirmed, five briefs amended, value linkage added as item 4b.
+- The owner's order of the evening (row 430): the user side first; the consolidation chain
+  continues as one background seat at a time.
 
 ## Next, in order
 
@@ -63,14 +72,16 @@ The consolidation order of `coherence.md` §9.1 (row 420): a language that is ra
 and compiled as its semantics says. Each move deletes what it replaces.
 
 Done on 2026-10-20: the to-do as a user's project (`research/2026-10-19-todo-as-a-user/receipt.md`),
-M1 (`be13aee02`) and M2 (`44083456f`). Now: the compiler's entry point, first slice
-(`research/2026-10-20-compiler-entry/README.md` §7).
+M1, M2, M3, C1 and the compiler's entry point in three slices
+(`research/2026-10-20-compiler-entry/README.md` §7). Running: M4 with E6. Next: 4b, then the user
+side first, with the chain as one background seat (row 430).
 
 1. M1, one located refusal: landed.
 2. M2, one profile judgment at ingress: landed.
-3. M3, one program codec, lowered.
-4. M4, one type spelling, then E6: `Nat` and `Int` exact in OCaml.
-5. M8, one observation, one check, the kit's commands as queries (row 414 (3)).
+3. M3, one program codec, lowered: landed.
+4. M4, one type spelling, then E6: `Nat` and `Int` exact in OCaml: running.
+4b. Value linkage between artifacts: a Lean declaration is lowered into one artifact (§9.3).
+5. M8, one observation, one check, the kit's commands as queries (row 414 (3); amended, row 428).
 6. M9, the typing rule as two tables, in three stages.
 7. M7's rest: the old readers go, then a fold for `Shape`.
 8. M5, one journal construction, without the store's part.
