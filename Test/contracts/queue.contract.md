@@ -172,7 +172,7 @@ The laws state no run: no delivery, no order across steps, no cancellation law, 
 **Connector 7.** The evidence is finite, in three lanes.
 
 - `Test/Program/QueueFaces.lean` pins the printed text of one use of each operation, and each text reads back.
-- `harness/truth/Truth.lean` runs five programs over the operations on Effect 4.0.0-rc.112.
+- `tools/Drivers/Truth.lean` runs five programs over the operations on Effect 4.0.0-rc.112.
   They are `pQueueWake`, `pQueueFull`, `pQueueInterrupted`, `pQueueMasked` and `pQueueOrder`.
   Each printed module type-checks under tsgo 7.
   Each run agrees with the Lean machine on its exit, its compared schedule rows and its sync exit.

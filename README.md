@@ -77,7 +77,7 @@ spent its budget of 1000 commands.
 To emit TypeScript, check the program with `Api.author src`, then call `t.emit name`. The
 emission's file `e.file "./prelude.ts"` holds the module's imports, written from Lean data
 (`ModuleEmission.file`, `src/Effect4/Codegen/Checked.lean`). The prelude it imports is
-`harness/truth/prelude.ts`. Lay the file out with `Tools.Code.moduleText`
+`ts/prelude/prelude.ts`. Lay the file out with `Tools.Code.moduleText`
 (`tools/Tools/Code/Module.lean`), as every lane writes it.
 
 ## The application face
@@ -241,7 +241,7 @@ The worker waits first, and the offer's posted helper wakes it.
 An operation mints the name of each of its binders, so it captures no name of its caller.
 Each operation prints as its expansion over `Ref.modify`, `Deferred` and `Effect.forkDetach`, and reads back.
 The printed program agrees with Effect 4.0.0-rc.112 on its exit and on its compared schedule rows.
-That run is the program `pQueueWake` of `harness/truth/Truth.lean`.
+That run is the program `pQueueWake` of `tools/Drivers/Truth.lean`.
 `Test/Program/QueueOps.lean` holds this example, and `Test/contracts/queue.contract.md` states what is proved and what is open.
 
 ## A semaphore
@@ -273,7 +273,7 @@ The protected form is one mask over the take, the hook and the body.
 An operation mints the name of each of its binders, so it captures no name of its caller.
 Each operation prints as its expansion over `Ref.modify`, `Deferred` and `Effect.forkDetach`, and reads back.
 The printed program agrees with Effect 4.0.0-rc.112 on its exit and on its compared schedule rows.
-That run is the program `pSemaphoreHandoff` of `harness/truth/Truth.lean`.
+That run is the program `pSemaphoreHandoff` of `tools/Drivers/Truth.lean`.
 `Test/Program/SemaphoreOps.lean` holds this example, and `Test/contracts/semaphore.contract.md` states what is proved and what is open.
 
 ## A pool
@@ -306,7 +306,7 @@ The protected form is one mask over the lease, the hook and the body.
 An operation mints the name of each of its binders, so it captures no name of its caller.
 Each operation prints as its expansion over `Ref.modify`, `Deferred` and `Effect.forkDetach`, and reads back.
 Ten cases over these operations agree with Effect 4.0.0-rc.112 on their exits and on their compared schedule rows.
-They are the programs `pPoolReuse` to `pPoolClosing` of `harness/truth/Truth.lean`, and this example is not one of them.
+They are the programs `pPoolReuse` to `pPoolClosing` of `tools/Drivers/Truth.lean`, and this example is not one of them.
 The close of the pin's own `Pool` does not wait for a borrowed item: decisions row 268 signs that difference.
 `Test/Program/PoolOps.lean` holds this example, and `Test/contracts/pool.contract.md` states what is proved and what is open.
 

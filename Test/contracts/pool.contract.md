@@ -29,7 +29,7 @@ whole run.
 | `Test/Program/PoolOps.lean` | tested: the refusal of a size of zero, each operation's own binders, the hygiene controls and the typing examples, each with a red control |
 | `Test/Program/PoolTraces.lean` | tested: nine traces on the Lean machine, each with its positive control and a fault that fails the promised property |
 | `Test/Program/PoolFaces.lean` | tested: each case, one use of each operation and each step term print and read back |
-| ten programs of `harness/truth/Truth.lean` | tested on rc.112 under bun 1.4.2: each agrees with the Lean machine on its exit, its compared rows and its sync exit. Each module type-checks under tsgo 7.0.0-dev.20260629.1 |
+| ten programs of `tools/Drivers/Truth.lean` | tested on rc.112 under bun 1.4.2: each agrees with the Lean machine on its exit, its compared rows and its sync exit. Each module type-checks under tsgo 7.0.0-dev.20260629.1 |
 
 ## Authority and owned surface
 
@@ -269,7 +269,7 @@ is a number: H is 9, A is 1, B is 2 and L is 5.
 **Each case runs on three faces.** The Lean machine runs the ten in the battery. The generated
 engine runs the same ten programs, on both carriers
 (`ocaml/engine/test/pool/test_pool.ml`). rc.112 runs their printed modules in the truth lane
-(`harness/truth/Truth.lean`). Each face gives one answer for each case. Each is one schedule.
+(`tools/Drivers/Truth.lean`). Each face gives one answer for each case. Each is one schedule.
 
 **The two entries of a host run.** Five programs settle on one exit under the fork entry and
 under the sync entry. PP7 and the closing pool end the sync entry in the `AsyncFiberError`

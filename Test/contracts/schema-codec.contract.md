@@ -47,7 +47,7 @@ Option uses `None` or `Some/value`. Result uses `Failure/failure` or
 Cause is an ordered array of `Fail/error`, `Die/defect`, and `Interrupt/fiberId`
 objects; an absent interruptor uses JSON null.
 
-Closed machine defect payloads retain the JSON data in `harness/truth/Truth.lean`.
+Closed machine defect payloads retain the JSON data in `tools/Drivers/Truth.lean`.
 Arbitrary host exceptions and runtime objects have no promised inverse into the closed
 machine alphabet. The host check compares representative JSON images, not a general
 semantic equivalence between host objects and machine values.

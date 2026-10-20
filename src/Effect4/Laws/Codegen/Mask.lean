@@ -30,7 +30,7 @@ first claim, and no behaviour of a target in either. **No equality with the nati
 the printed form is the program's own expansion, three checkpoints longer than the native
 mask, and it is not the native mask at the two checkpoints of its entry. Its agreement with a
 named release on a named observation is not stated here: the truth lane's programs are finite
-checks (`harness/truth/Truth.lean`, `pMaskWait` and `pMaskedRestore`). The form's contract has
+checks (`tools/Drivers/Truth.lean`, `pMaskWait` and `pMaskedRestore`). The form's contract has
 one premise for its clients: nothing is acquired or registered before the body begins.
 
 Consumers. The checked module production and reading (`ModuleEmission`, `admitModule`) read
@@ -318,7 +318,7 @@ passes of the machine, from `saved_mask_restoration`.
 
 It does not establish equality with the native spelling, and it states no agreement with a
 named release: that the compiled form and the pin's printed form answer one observation is a
-finite check (`harness/truth/Truth.lean`, `pMaskWait` and `pMaskedRestore`), and the cuts at
+finite check (`tools/Drivers/Truth.lean`, `pMaskWait` and `pMaskedRestore`), and the cuts at
 the two checkpoints on the pin are Codex's runs. That the form spends three operations more
 than the native mask is measured, not proved (`Test/Program/MaskContract.lean`, S8). The
 form's contract has one premise for its clients: nothing is acquired or registered before the

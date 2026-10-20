@@ -27,7 +27,7 @@ change. The packet states no law of a whole run.
 | `Test/Program/SemaphoreOps.lean` | tested: the forms that never wait, each operation's own binders, the hygiene controls and the typing examples, each with a red control |
 | `Test/Program/SemaphoreTraces.lean` | tested: eight traces on the Lean machine, each with its positive control and a fault that fails the promised property |
 | `Test/Program/SemaphoreFaces.lean` | tested: each scenario, one use of each operation and each step term print and read back |
-| ten programs of `harness/truth/Truth.lean` | tested on rc.112 under bun 1.4.2: each agrees with the Lean machine on its exit, its compared rows and its sync exit. Each module type-checks under tsgo 7.0.0-dev.20260629.1 |
+| ten programs of `tools/Drivers/Truth.lean` | tested on rc.112 under bun 1.4.2: each agrees with the Lean machine on its exit, its compared rows and its sync exit. Each module type-checks under tsgo 7.0.0-dev.20260629.1 |
 
 ## Authority and owned surface
 
@@ -145,7 +145,7 @@ Effect's answer
 (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-05-claude-lead/module-cards/semaphore-probes/semaphore-wake.rc112.out`).
 
 **The cases on the pinned host.** The truth lane runs ten programs of the operations on
-rc.112 (`harness/truth/Truth.lean`). They are P2, P3 and P7, P1 and P4 in two forms each, and
+rc.112 (`tools/Drivers/Truth.lean`). They are P2, P3 and P7, P1 and P4 in two forms each, and
 three more scenarios. The three are the forms that never wait, the masked caller and the
 README's example. P9 has no host run: its yield is a decision of a tape. P1 and P4 run as
 the batteries write them, and in a joined form, where the root joins the waiting fibers. As

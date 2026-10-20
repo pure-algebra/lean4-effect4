@@ -27,7 +27,7 @@ holds it, and where the battery is.
 | 5 | the foreign recognizer `oxc` | `ts/eff/ingest/oxc.ts` over oxc 0.147.0, sharing **no** recognition code with face 4 | tested (the same) | `ts/eff/ingest/oxc.ts`; the same batteries |
 | 6 | the canonical wire | the byte encoding of a program, in three implementations: `Effect4.Program.Wire`, `ts/eff/wire.gen.ts`, `ocaml/eff/eff_wire.ml` | proved (`decode_encode`, `decode_exact`, `encode_injective`), reproduced (goldens), tested | `src/Effect4/Store/Domain/ProgramWire.lean` (namespace `Effect4.Program.Wire`; moved at `05417cc6` from `git:f7d22703:src/Effect4/Program/Wire.lean`); `ocaml/goldens/eff`; `ts/eff/test/wire.test.ts`, `ocaml/eff/test/test_lean_wire.ml`, `prop_wire.ml` |
 | 7 | the JSON projection | the same program as JSON: the tagged print, each list an array (D2, decided 2026-10-19). `ShapeDoc.printTree` rendered by `NatJson.render`, `Canonical.print` on the binary64 tree, and `toJson` of `ts/eff/json.gen.ts` write the same bytes. The positional `V` spelling keeps one internal implementation, `OCaml5.Eff.effV.json`, which cuts `ocaml/eff/goldens/<name>.json`, until F1; no test reads those files | tested (`ts/eff/check.ts` in `make check-ts` compares `toJson` with the Lean-cut tagged oracles; its red control is `ts/eff/test/check.test.ts`), reproduced (`ts/eff/json.gen.ts` by `make check-gen`) | `src/Effect4/Store/Domain/ShapeJson.lean`; `tools/Drivers/Corpus.lean`; `ts/eff/json.gen.ts`, `ts/eff/check.ts` |
-| 8 | the executed image on rc.112 | the truth harness: the printed module *run* under the pinned host, its exit and observable schedule compared with the Lean machine's | tested (a bounded differential over a frozen corpus), reproduced (the gate regenerates the modules, the result and the tapes and compares bytes), stamped | `harness/truth/`; `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:scripts/check-truth.py`; the `#guard`s of `harness/truth/Truth.lean` |
+| 8 | the executed image on rc.112 | the truth harness: the printed module *run* under the pinned host, its exit and observable schedule compared with the Lean machine's | tested (a bounded differential over a frozen corpus), reproduced (the gate regenerates the modules, the result and the tapes and compares bytes), stamped | `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth`; `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:scripts/check-truth.py`; the `#guard`s of `tools/Drivers/Truth.lean` |
 | 9 | the OCaml conformance face | `ocaml/eff`: generated families, wire and JSON implementations; core typing verdicts retained as goldens, with no independent OCaml type checker | reproduced (goldens), tested (`dune-tests`) | `ocaml/eff/`; `make check-ocaml` (which took over `git:c67ff096:scripts/check-ocaml.sh`'s `dune-tests` at `b2f6aef1`); `src/OCaml5/Tools/EffGen.lean` |
 
 **Not a face of this layer.** The runtime coverage census is the traceability matrix for
@@ -260,7 +260,7 @@ measurement the mode publishes. Evidence: tested.
 ## 4. The truth claim, and its quantifiers
 
 The claim held by face 8 is bounded on five axes, and every one of them is part of it
-(DI-23; the same text is in `harness/truth/Truth.lean`'s tape section).
+(DI-23; the same text is in `tools/Drivers/Truth.lean`'s tape section).
 
 1. **Single-fiber.** A tape is the list of package-row completions rc.112 gave one program on
    one run, consumed in file order. It is a faithful oracle only while every row of a program
@@ -275,7 +275,7 @@ The claim held by face 8 is bounded on five axes, and every one of them is part 
 3. **A pinned host.** `effect@4.0.0-rc.112` and `@effect/sql-sqlite-bun@4.0.0-rc.112` on bun;
    `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:scripts/check-truth.py` refuses to run without them. The claim is about those bytes.
 4. **A hand corpus and a generated one.** The hand corpus is listed in
-   `harness/truth/Truth.lean`, which cuts `harness/truth/corpus.json`; the program count is
+   `tools/Drivers/Truth.lean`, which cuts `Test/Corpus/corpus.json`; the program count is
    that file's `programs` length, and no gate compares this sentence to it, so read the file
    for the count of the day (34 on 2026-09-13). The programs that perform package rows have
    tapes; the gate re-records them on every run and refuses a byte that moved, so a committed
@@ -292,7 +292,7 @@ The claim held by face 8 is bounded on five axes, and every one of them is part 
    run's, and the sync run's with rc.112's sync run's (amended 2026-10-06, decisions row
    279). Schedules are
    compared row by row with `scheduled` rows dropped on both faces, over the reduced alphabet
-   `harness/truth/Truth.lean` (`reduce`) states: a fork appears when the runner can observe it
+   `tools/Drivers/Truth.lean` (`reduce`) states: a fork appears when the runner can observe it
    (an immediate child at its first step, a scheduled non-daemon child at the parent's next
    primitive; a scheduled daemon fork on neither face), and the observation of a run ends when
    the queue is quiet after the root's exit, as `Api.run`'s flush rounds do (DI-75). Nothing
@@ -307,7 +307,7 @@ The claim held by face 8 is bounded on five axes, and every one of them is part 
 Since DI-59 a sixth quantifier is worth stating with them: **one error value.** A row whose
 declared error column is the DB-15 pair projects at the adapter, before the printed program
 sees it, so the value a printed handler observes, the value on the tape and the value the Lean
-machine replays are one value (`harness/truth/prelude.ts` `toPair`; the recorder's
+machine replays are one value (`ts/prelude/prelude.ts` `toPair`; the recorder's
 `taggedPair` is the same function).
 
 ---
@@ -514,7 +514,7 @@ The owner ruled a fast cutover. What this changes in the packet above, and nothi
   the code `E-NODE` (`ts/eff/ingest/test/foreign.test.ts`).
 - **The truth claim (§4).** The prelude exports no function name. A printed term calls the atoms
   alone, so one printed term means one function at every row's shape. This closes finding F3 of
-  `harness/truth/prelude.ts`.
+  `ts/prelude/prelude.ts`.
 - **Not established.** A row's type arguments stay spelled at one instance: `Deferred.make` at
   any other instance is refused by name (`PrintRefusal.typeSpelling`). A fold with a stated
   type, and a loop with a stated cursor type, print and do not read back. No law states target
@@ -603,7 +603,7 @@ What this changes in the packet above, and nothing else:
   Boolean singleton type, or a brand, in a direct slot is lost on the target. A Boolean tuple
   tag no longer discriminates. The helpers keep no arbitrary TypeScript refinement.
 - **The truth claim (§4).** The truth corpus gains `pRateRequest` and `pDeferredGate`
-  (`harness/truth/Truth.lean`). The runner's import header names every atom of the generated
+  (`tools/Drivers/Truth.lean`). The runner's import header names every atom of the generated
   profile (`git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). It also names the twelve printed helpers that are no
   atom. So a new atom needs no edit of the header. The lane's compiler controls gain two files.
   `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/literals.typecheck.ts` holds the literal rule's assertions and refusals.
@@ -642,11 +642,11 @@ What this changes in the packet above, and nothing else:
   it types or not, and the checker refuses a saved term of another type. `read_print` and
   `read_exact` keep their statements.
 - **The saved state's type on the target.** The prelude's alias `MaskRestore` is the printed
-  form of `Ty.maskRestore` (`harness/truth/prelude.ts`). The compiler control
+  form of `Ty.maskRestore` (`ts/prelude/prelude.ts`). The compiler control
   `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/mask.typecheck.ts` checks the alias in annotated positions, with its
   refusals.
 - **The truth claim (§4).** The truth corpus gains `pInterruptedWait`, `pMaskWait` and
-  `pMaskedRestore` (`harness/truth/Truth.lean`). The row `resumed k` has one meaning on both
+  `pMaskedRestore` (`tools/Drivers/Truth.lean`). The row `resumed k` has one meaning on both
   sides: a fiber that the trace last showed parked runs again, whatever woke it. Before this
   amendment Lean's reduction wrote the row for a token's resume alone, and the recorder wrote
   it for every restart. No earlier program woke a parked fiber by an interrupt. The repair
@@ -668,7 +668,7 @@ What this changes in the packet above, and nothing else:
 - **Quantifier 6 of §4, amended: both faces write a fiber under its number in the recorder's
   order.** The recorder numbers a fiber when it first sees it (`see`,
   `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). Lean's reduction reads the same order from its own rows
-  (`numbering`, `harness/truth/Truth.lean`). A fiber's number is the rank of its first sight: a
+  (`numbering`, `tools/Drivers/Truth.lean`). A fiber's number is the rank of its first sight: a
   `forked` row that names it as the child, or a `started` row. Before this amendment the Lean
   face wrote the machine's ids, which follow the allocation order.
 - **Where the two orders differ.** They differ when the recorder sees a fiber late. A
@@ -685,7 +685,7 @@ What this changes in the packet above, and nothing else:
   `pQueueWake`, `pQueueFull`, `pQueueInterrupted`, `pQueueMasked` and `pQueueOrder`. The
   sixth, `pLateSeen`, is the control of the renaming in an exit. On every other program of
   the lane the numbering is the allocation order, and a guard measures that. The two
-  exceptions are pinned (`lateSights`, `harness/truth/Truth.lean`).
+  exceptions are pinned (`lateSights`, `tools/Drivers/Truth.lean`).
 - **The generated corpus takes the same reduction.** Three of its 400 programs take other
   fiber numbers: `g102`, `g204` and `g246`. Two cells of `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/corpus-results.tsv`
   move, the Lean schedule of `g102` and the Lean exit of `g246`. No outcome moves.
@@ -704,7 +704,7 @@ What this changes in the packet above, and nothing else:
   *Tested*: the six new programs agree with Lean on every field of the build ledger, on
   rc.112 and on 4.0.1. *Tested*: the generated corpus matches its committed results on 400
   programs, with 25 registered disagreements. *Tested* by guards of
-  `harness/truth/Truth.lean`: an exchange of two fiber numbers is no difference, and two
+  `tools/Drivers/Truth.lean`: an exchange of two fiber numbers is no difference, and two
   rows that change places differ after the renaming.
 
 ## Amendment, 2026-10-06: each entry's exit is compared with the same entry's (decisions row 279)
@@ -747,7 +747,7 @@ What this changes in the packet above, and nothing else:
   `pPoolClosing`. Both faces run the module's expansion, whose close waits. No program calls
   rc.112's own `Pool`, so the signed difference of decisions row 268 keeps none out.
 - **Three programs are pinned in their sync run alone** (`lateSightsSync`,
-  `harness/truth/Truth.lean`): `pPoolWaiters`, `pPoolLateWake` and `pPoolWake`. The sync
+  `tools/Drivers/Truth.lean`): `pPoolWaiters`, `pPoolLateWake` and `pPoolWake`. The sync
   entry does not flush a child's dispatcher. So the Lean face's rows of the sync run never
   show a helper that a child posts, and they show the later helper of the root's close. The
   lane compares no schedule of the sync entry. Their fork runs are in the
@@ -765,7 +765,7 @@ What this changes in the packet above, and nothing else:
   *Tested*: the generated corpus matches its results on 400 programs, with 25 registered
   disagreements, and no cell of its results moves. *Tested*: the build ledger holds 73
   programs, and the ten new ones agree with Lean on every field, on rc.112 and on 4.0.1.
-  *Tested* by guards of `harness/truth/Truth.lean`: each of the three sync exits is one text
+  *Tested* by guards of `tools/Drivers/Truth.lean`: each of the three sync exits is one text
   under the machine's ids and under the sync run's numbers, and the sync run of every other
   program of Pool is in the allocation order.
 
