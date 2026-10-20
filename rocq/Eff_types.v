@@ -475,7 +475,7 @@ Inductive defect : Set :=
 | Defect_notImplemented : defect
 | Defect_asyncFiber : defect
 | Defect_badName : defect
-| Defect_missingService : defect
+| Defect_missingService : service_key -> defect
 | Defect_user : int -> defect
 | Defect_error : err -> defect.
 
