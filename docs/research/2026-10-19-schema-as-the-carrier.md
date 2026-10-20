@@ -252,7 +252,7 @@ comparator's classes over the 40 cases:
 | `renamed` | 1 | the same text after one injective fiber renaming, `0` to `31`; one pair, so no general renaming is tested |
 | `differ` | 4 | both executed, different text: the defect carrier |
 | `refusedBoth` | 7 | five handle answers, where neither face has a codec; two sums past the bound, refused by Lean's codec and by the prelude's arithmetic |
-| `refusedEffect` | 1 | the sum 2^53: Lean's nat wire admits it, the prelude refuses it |
+| `refusedEffect` | 1 | the sum 2^53: Lean's nat wire admits it, the prelude refuses it. After move J it is `refusedBoth` (§8.7) |
 | `refusedLean` | 1 | an interrupted exit inside a success value: the outer strip does not reach it |
 
 So 31 cases executed on both faces, 27 of them equal and 4 different, and 9 were refused on at
@@ -350,6 +350,11 @@ review's programs show all three. `2^53-1 + 1` encodes in Lean and is refused by
 both wires, and one judgment at ingress and at the observation, is §9.1 item 2, M2. This note
 inherits it.
 
+**Landed, move J (2026-10-19, `04fa8d57c`; `receipt-J.md`).** The nat wire refuses past
+`safeBound`, as the int wire does, and the codec's laws keep their statements. The comparator
+reads `exactBound` as `refusedBoth`: 26 equal, 1 renamed, 4 differ, 8 refused on both faces, 1
+refused by Lean. The codec lane reads both faces refusing 2^53 and writing 2^53 minus 1.
+
 ### 8.8 The annotation normaliser must be recursive
 
 The first draft's `bare` stripped the outer cause. `exit (join f)` of an interrupted child
@@ -404,7 +409,7 @@ value, such as programs, types and refusals.
 | R4 | A program whose answer is a handle | `refused`, with the tool's carrier wire for it, marked internal |
 | R5 | The defect domain: a payload defect carrying rc.112's raw JSON, or the canonical closed alphabet with an injective encoding | **ruled 2026-10-19 (the owner): "the canonical defect alphabet with an injective encoding, raw for user defects and name-and-message for machine defects, with missingService's key stored"**; the payload defect later, if the machine's own markers must match rc.112's messages exactly |
 | R6 | Is an exit observed without its annotations, at every depth? | yes, D2 |
-| R7 | One numeric bound, `safeBound`, on both wires and at the observation; and does Lean's machine refuse arithmetic past it, as the prelude does? | **ruled 2026-10-19 (the owner): "one numeric bound, safeBound, on both wires and at the observation, under M2"**; the machine's own refusal past the bound stays M2's decision |
+| R7 | One numeric bound, `safeBound`, on both wires and at the observation; and does Lean's machine refuse arithmetic past it, as the prelude does? | **ruled 2026-10-19 (the owner): "one numeric bound, safeBound, on both wires and at the observation, under M2"**; the machine's own refusal past the bound stays M2's decision. D-J1 (`receipt-J.md`), settled by the coordinator under this ruling: a user defect's number is bounded by `safeBound` at the observation too, in move G; an interruptor's fiber id stays the run's numbering |
 | R8 | The first landing's scope: terminal output with expanded declarations, traces deferred to E | yes |
 | R9 | The public shape: `terminal`, `refused` and `live` as three cases, with the text profile of move C | yes |
 
@@ -440,6 +445,10 @@ paused, so each receipt proposes its registry text.
 - **The reach.** The codec is not in the lowered closure (`ocaml/gen/api_gen.mli` names no
   `schema_codec` root), so no OCaml regeneration. The gate is `check-ts`.
 - **Size.** S.
+- **Landed.** 2026-10-19, by one Opus seat in the main checkout from `briefs/J.md`: `04fa8d57c`
+  (the code) and `fc9eb07c8` (`receipt-J.md`). `make check-ts` passed. The receipt proposes the
+  registry claim `nat-codec-admission` with the planned goal `isCodecValue_nat_iff`, and names
+  three texts that still say "above 2^53" and stay true. D-J1 is settled in §10.
 
 ### 11.2 Move G: the canonical defect alphabet, encoded as Effect writes a defect
 
@@ -449,7 +458,7 @@ paused, so each receipt proposes its registry text.
   `error e` with `e` neither `tag _` nor `boom`, or a machine defect. `tag n` is `user n`, and
   `boom` is `badName`, as `ofError` already says (`src/Effect4/Machine/Alphabets.lean`). Codec
   admission requires the canonical form.
-- **The encoding.** `user n` is the number `n`. `error (text s)` is the string `s`. `error
+- **The encoding.** `user n` is the number `n`, under `safeBound` (D-J1, §10). `error (text s)` is the string `s`. `error
   (tagged t m)` is the array `[t, m]`. `error (payload p)` is `{"payload": hex}`. A machine
   defect is `{"name": N, "message": M}`. `asyncFiber` is rc.112's `AsyncFiberError` with its
   message, pinned by line. `missingService key` is `Error` with "Service not found: " and the
@@ -494,8 +503,9 @@ M2 (R7, move J). (4) The order: J, G, then H, D, A with C, the native comparison
 
 ## 12. What this does not establish
 
-- No theorem landed. The to-do probe is eleven requests, and the faces probe is 40 programs,
-  each on one machine under one host.
+- Before move J, no theorem landed. Move J landed two helper lemmas of the claim `decode-iff`
+  and proposed one claim. The to-do probe is eleven requests, and the faces probe is 40
+  programs, each on one machine under one host.
 - The fiber renaming is one observed pair, `0` to `31`; no general renaming is tested.
 - No native run printed D1, and no native encoder, decoder or renderer was compared.
 - The census counts constructors. The arms that branch on a value are counted by hand in §8.
