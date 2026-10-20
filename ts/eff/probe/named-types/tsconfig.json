@@ -1,5 +1,5 @@
 {
-  "//": "The compiler options of the printed modules (harness/truth/tsconfig.json). Each case file names the diagnostic codes it expects in its first line; run.ts compares.",
+  "//": "The compiler options of the printed modules (HostConfig.pinned, src/Effect4/Codegen/Diagnostics.lean). Each case file names the diagnostic codes it expects in its first line; run.ts compares.",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",

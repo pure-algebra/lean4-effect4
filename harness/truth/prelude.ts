@@ -19,9 +19,10 @@
  *    handler, the recorded tape row and the Lean machine all observe one value (tested:
  *    `docs/research/2026-09-09-seat-host-face-probes.ts`);
  *  - each atom agrees with `nativeAtom` on the values `typeOf` admits — naturals, booleans,
- *    pairs (tested: `run-truth.ts` `selfTest` evaluates the table below against fixed cases
- *    before any program runs; the table is the one thing about the atoms still written by
- *    hand, and `run-truth.ts` refuses an atom of the profile that has no case in it);
+ *    pairs. The table below holds fixed cases, the one thing about the atoms still written
+ *    by hand. Until 2026-10-20 the truth runner's `selfTest` evaluated it before any program
+ *    ran and refused an atom of the profile with no case (`git:8e93a284f:harness/truth/run-truth.ts`).
+ *    That runner is deleted, and no lane evaluates the table now;
  *  - `pred` is Lean's truncated subtraction, `pred(0) = 0` (by construction);
  *  - no function name: a read-modify-write row's function is printed as a function of the
  *    cell's current value, `Ref.update(a0, (a1) => succ(a1))` (the state plan's T5,
@@ -67,10 +68,11 @@ export type MaskRestore = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Ef
 export type Int = number
 export type Num = number
 
-/** The table the runner's self-test walks. `atom` is the name in `nativeAtom`, or the list
- * fold's head, that the case exercises: `run-truth.ts` checks the atom names against the profile's own
- * atom set (`ts/eff/profile.gen.ts`, cut from `nativeAtom` — DI-40), so an atom appended in
- * Lean cannot stay untested here. `strings` was untested until that check existed. */
+/** The table of fixed cases for the atoms. `atom` is the name in `nativeAtom`, or the list
+ * fold's head, that the case exercises. The deleted truth runner checked the atom names against
+ * the profile's own atom set (`ts/eff/profile.gen.ts`, cut from `nativeAtom` — DI-40), so an
+ * atom appended in Lean could not stay untested here (`git:8e93a284f:harness/truth/run-truth.ts`).
+ * `strings` was untested until that check existed. No lane reads the table since 2026-10-20. */
 /** Whether a call refuses at the profile's bound: the prelude throws `ProfileRefusal`. */
 const refusedAt = (call: () => unknown): string => {
   try { call(); return "answered" } catch (e) { return e instanceof Atoms.ProfileRefusal ? "refused" : "threw" }
@@ -235,8 +237,8 @@ export const L = {
 //
 // Where it is applied *relative to the tape*: outside `recorded`, so the tape row keeps the
 // raw diagnostics (the outer `_tag`) it has always kept and its bytes do not move. The tape
-// and the program cannot disagree, because `run-truth.ts`'s `taggedPair` is this same
-// `pairOf`.
+// and the program could not disagree, because the deleted truth runner's `taggedPair` was this
+// same `pairOf` (`git:8e93a284f:harness/truth/run-truth.ts`).
 
 /** DB-15's `prod string string` on the host: the two-element tuple `pair` builds. */
 export type Pair = readonly [string, string]
@@ -367,11 +369,12 @@ export const toPair = (e: unknown): Pair => {
   return p
 }
 
-/** The recording seam. `run-truth.ts` installs a sink for the duration of one run; each
- * package call posts its operation, request and exit raw, and the runner wires them. */
+/** The recording seam. Each package call posts its operation, request and exit raw to the sink.
+ * The truth runner installed a sink for the duration of one run until 2026-10-20
+ * (`git:8e93a284f:harness/truth/run-truth.ts`); nothing installs one now, so `recorded` posts nothing. */
 export interface TapeCall { readonly op: string; readonly request: ReadonlyArray<unknown>; readonly exit: Exit.Exit<unknown, unknown> }
-// One seam per process, not per module instance: the runner imports this file directly while
-// the generated modules import the copy beside them, and both must see the same sink.
+// One seam per process, not per module instance: a runner that imports this file directly and
+// the generated modules that import the copy beside them must see the same sink.
 export const tape: { sink: ((call: TapeCall) => void) | null } =
   ((globalThis as Record<string, unknown>)["~effect4/tape"] ??= { sink: null }) as { sink: ((call: TapeCall) => void) | null }
 const recorded = <A, E, R>(op: string, request: ReadonlyArray<unknown>, effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>

@@ -14,8 +14,9 @@ left *unwritten*, and the failure was a red harness rather than a generated file
 This group closes that row. One export per atom: the body is the `prelude` column of
 `NativeAtom.row` (`src/Effect4/Machine/Term.lean`), the doc is the `cite` column of
 `NativeAtom.spec` (`src/Effect4/Program/NativeAtom.lean`), so the face carries the citation the
-table carries. `prelude.ts` re-exports every name and keeps the hand-written self-test table;
-`run-truth.ts` still refuses an atom of the generated profile that has no case in it.
+table carries. `prelude.ts` re-exports every name and keeps the hand-written self-test table.
+Its runner refused an atom of the generated profile that had no case in it. The runner was deleted
+on 2026-10-20 (`git:8e93a284f:harness/truth/run-truth.ts`), and no lane evaluates the table now.
 
     lake exe effect4gen-catalogue PreludeAtoms --group PreludeAtoms
       --imports Effect4.Program.NativeAtom --out harness/truth/prelude-atoms.gen.ts
@@ -105,8 +106,8 @@ def render (head : String) : List String :=
   , "//   " ++ head
   , "//"
   , "// One export per atom of the alphabet (`Effect4.Program.NativeAtom`). `prelude.ts`"
-  , "// re-exports every name below and keeps the hand-written self-test table that exercises"
-  , "// them; `run-truth.ts` refuses an atom of the generated profile that has no case there."
+  , "// re-exports every name below and keeps the hand-written table of fixed cases for them;"
+  , "// no lane evaluates that table since the truth runner's deletion on 2026-10-20."
   , "import { Cause, Deferred, Exit, Option, Ref } from \"effect\""
   , ""
   , "/** The two query inputs advertised by NativeAtom (`Effect4.Program.queryReasons?`): a"

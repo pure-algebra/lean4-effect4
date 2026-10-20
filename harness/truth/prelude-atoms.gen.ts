@@ -4,8 +4,8 @@
 //   lake exe effect4gen-catalogue PreludeAtoms --group PreludeAtoms --imports Effect4.Program.NativeAtom --out harness/truth/prelude-atoms.gen.ts
 //
 // One export per atom of the alphabet (`Effect4.Program.NativeAtom`). `prelude.ts`
-// re-exports every name below and keeps the hand-written self-test table that exercises
-// them; `run-truth.ts` refuses an atom of the generated profile that has no case there.
+// re-exports every name below and keeps the hand-written table of fixed cases for them;
+// no lane evaluates that table since the truth runner's deletion on 2026-10-20.
 import { Cause, Deferred, Exit, Option, Ref } from "effect"
 
 /** The two query inputs advertised by NativeAtom (`Effect4.Program.queryReasons?`): a

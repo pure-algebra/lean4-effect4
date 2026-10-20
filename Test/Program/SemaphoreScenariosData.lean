@@ -499,13 +499,13 @@ is a child: A's hook releases. So the sync entry ends before the walk, and the r
 it reads between the release and the walk. Where the root releases, the two entries give one
 answer.
 
-The truth lane's exit column compares the fork run's exit with the pin's sync exit whenever the
-sync run settles (`harness/truth/run-truth.ts`). So P1 and P4 are no programs of that lane: on
-each entry the two faces give one exit, and the column is red
-(`docs/research/2026-10-06-seat-semw-evidence/README.md`). The lane runs the joined forms
+The truth lane's exit column compared the fork run's exit with the pin's sync exit whenever the
+sync run settled (`git:8e93a284f:harness/truth/run-truth.ts`). So P1 and P4 were no programs of
+that lane: on each entry the two faces give one exit, and the column was red
+(`docs/research/2026-10-06-seat-semw-evidence/README.md`). The lane ran the joined forms
 instead. A joined form's root joins the waiting fibers and does not yield four times. Its sync
-entry cannot settle, because the helper is on a child's dispatcher, and the lane then compares
-the fork entry. -/
+entry cannot settle, because the helper is on a child's dispatcher, and the lane then compared
+the fork entry. The lane was deleted on 2026-10-20. -/
 
 /-- The root's exit under the sync entry, at the truth lane's fuel. -/
 def syncExitOf (src : Src NativeOp) : Option ExitV :=

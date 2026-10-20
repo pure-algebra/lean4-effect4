@@ -961,9 +961,10 @@ def todoPairs : List (String × String × Scenario.Todo.Repo) :=
   , ("todo/toggling-once", "todo/toggling-twice", Scenario.Todo.stocked) ]
 
 /-- **The per-run checks of the to-do's service runs** (decisions row 378 (20), slice E4). Each
-input is the recording of a to-do script that `harness/truth/service/run-todo.ts` made on the
-emitted service, replayed against the script's program (`replayedOf`). For each run: whether the
-replayed journal is the script's, whether the run is settled (funded, at rest, driven by a host),
+input is the recording of a to-do script that the service runner, deleted on 2026-10-20
+(`git:8e93a284f:harness/truth/service/run-todo.ts`), made on the emitted service, replayed
+against the script's program (`replayedOf`). For each run: whether the replayed journal is the
+script's, whether the run is settled (funded, at rest, driven by a host),
 and whether it conforms to the application's protocols (`Effect4.Run.conforms`). For each pair of
 `todoPairs` that the inputs hold: whether both runs agree with the reference model, the model's
 state threaded from the first to the second (`Effect4.Run.agrees`). The decisions are the shared

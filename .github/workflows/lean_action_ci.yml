@@ -7,9 +7,10 @@ name: Lean Action CI
 #
 #   build        the proofs: the core and the law graph (`make build`), and the tool roots
 #   lean-gates   the Lean-side gates: the native conformance, the generated files' drift, the
-#                semantics report's refusals, the documents' references, the checkers' self-tests
-#   ts-gates     the outside oracles in TypeScript: Effect rc.112's runtime (truth, the corpus,
-#                the schema codec) and tsgo 7 (the printed target, the reader, the diagnostics)
+#                documents' references, the checkers' self-tests
+#   ts-gates     the outside oracles in TypeScript (`make check-ts`): tsgo 7 (the printed target,
+#                the reader, the diagnostics, the ingest smoke) and Effect rc.112's runtime (the
+#                service identity)
 #   ocaml-gates  the OCaml route: the LCNF faces re-cut and held, the OCaml lane, the compiler
 #   site         the documentation site (decisions row 363), deployed when the secrets are set
 #
@@ -61,8 +62,8 @@ jobs:
           fetch-depth: 0 # a document's `git:<rev>:<path>` citation resolves against the history
       - uses: ./.github/actions/lean
       - run: make doctor
-      - name: Native conformance, generated drift, the semantics refusals, the documents, the checkers' self-tests
-        run: make check-native check-gen check-semantics check-docs check-tools
+      - name: Native conformance, generated drift, the documents, the checkers' self-tests
+        run: make check-native check-gen check-docs check-tools
 
   ts-gates:
     needs: build
@@ -77,8 +78,8 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
           node-version: ${{ env.NODE_VERSION }}
       - run: make doctor
-      - name: Effect rc.112's runtime and tsgo 7 against the tree
-        run: make check-truth check-corpus check-schema-codec check-target check-ts-reader check-tsdiag check-ingest-smoke
+      - name: Effect rc.112's runtime and tsgo 7 against the tree (tsgo, target, ts-reader, tsdiag, ingest-smoke, service-identity)
+        run: make check-ts
 
   ocaml-gates:
     needs: build
@@ -152,7 +153,7 @@ jobs:
       - name: Every generated group re-cut from scratch, host-cut groups included, and compared
         run: make build check-gen-full
 
-  nightly-host:
+  nightly-census:
     if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -161,12 +162,8 @@ jobs:
       - uses: ./.github/actions/lean
         with:
           save: "true"
-      - uses: ./.github/actions/typescript
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-          node-version: ${{ env.NODE_VERSION }}
-      - name: The host protocol and the runtime census
-        run: make build check-host-protocol check-census
+      - name: The runtime census
+        run: make build check-census
 
   nightly-schema:
     if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
@@ -177,18 +174,8 @@ jobs:
       - uses: ./.github/actions/lean
         with:
           save: "true"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Install the pinned Schema host profile (TypeScript 7.0.2, the language service)
-        run: npm ci --prefix harness/schema-host --no-audit --no-fund
-      - name: The Schema slice on the pinned host (generation and tag pins)
-        env:
-          EFFECT4_EFFECT_NODE_MODULES: ${{ github.workspace }}/harness/schema-host/node_modules
-        run: make build check-schema-ts check-schema-pins
+      - name: The Schema tag pins against the vendored rc.112 source
+        run: make build check-schema-pins
 
   proof-replay:
     if: github.event_name == 'schedule' && github.event.schedule == '17 4 * * 1'

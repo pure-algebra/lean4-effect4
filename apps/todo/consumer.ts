@@ -3,10 +3,11 @@
  * service's layer. It provides the surface's layer (`TodoAppLive`), which decodes each method's
  * arguments at entry by their Schemas and dies on a failed decode (CR-4; decisions row 373 (11)).
  * The layer reads the repository's service from its context, so a program here requires the
- * repository's key until a repository is provided. tsgo 7 type-checks this file against the
- * emitted module and its surface, which `EmitTodo.lean` writes into the application's work
- * folder. The front (`server.ts`) serves its programs over SQLite, and the keyed lane's runner
- * performs the to-do's scripts on them (`harness/truth/service/run-todo.ts`). */
+ * repository's key until a repository is provided. The keyed lane type-checked this file with
+ * tsgo 7 against the emitted module and its surface, which `EmitTodo.lean` writes into the
+ * application's work folder, and its runner performed the to-do's scripts on them. That lane was
+ * deleted on 2026-10-20 (`git:8e93a284f:harness/truth/service/run-todo.ts`). The front
+ * (`server.ts`) serves its programs over SQLite. */
 import { Effect, Layer } from "effect"
 import { NotFound, TodoApp, TodoRepo } from "./.work/todo.gen.ts"
 import { TodoAppLive, TodoAppSchemas } from "./.work/todo.surface.gen.ts"

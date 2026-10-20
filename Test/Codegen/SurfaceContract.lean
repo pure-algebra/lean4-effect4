@@ -10,8 +10,10 @@ entry's input. Each guard below is a finite evaluation that no theorem covers, o
 Every pin is the rendered bytes of `TypeScript.Render`, inlined in the guard, since a battery
 definition over a rendered `String` reaches `Classical.choice`.
 
-What runs the surface is rc.112, and what types it is tsgo 7: `make check-host-protocol` emits the
-to-do's surface, type-checks it with its consumer and runs the consumer through its layer.
+What ran the surface was rc.112, and what typed it was tsgo 7: the keyed host lane emitted the
+to-do's surface, type-checked it with its consumer and ran the consumer through its layer
+(`git:8e93a284f:scripts/check-host-protocol.py`). The lane was retired on 2026-10-18 and deleted
+on 2026-10-20, so no gate runs the surface now.
 -/
 
 namespace Test.Codegen.SurfaceContract

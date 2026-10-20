@@ -1,5 +1,5 @@
 {
-  "//": "The printed modules' options (harness/truth/tsconfig.json). `paths` lets the generated prelude, which imports `effect`, resolve it from ts/eff's install. Each case file names its expected error codes in its first line; run.ts compares.",
+  "//": "The printed modules' options (HostConfig.pinned, src/Effect4/Codegen/Diagnostics.lean). `paths` lets the generated prelude, which imports `effect`, resolve it from ts/eff's install. Each case file names its expected error codes in its first line; run.ts compares.",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",

@@ -27,8 +27,8 @@ Beside them stands `OUT/todo.table.json`: the application's name, its row table 
 (`apps/todo/server.ts`) records each host call by its row's position in that table. It writes the
 table into each session's header, and the checker (`apps/todo/Check.lean`) compares it whole.
 
-Two consumers run the file. The keyed lane's runner performs the to-do's scripts on it
-(`harness/truth/service/run-todo.ts`, slice E4). The front serves it over SQLite (slice V4).
+The front serves the file over SQLite (slice V4). The keyed lane's runner performed the to-do's
+scripts on it until 2026-10-20 (`git:8e93a284f:harness/truth/service/run-todo.ts`, slice E4).
 -/
 
 open Effect4 Effect4.Program Effect4.Program.Authoring Effect4.Codegen

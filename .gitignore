@@ -36,18 +36,14 @@ skills-lock.json
 # (check-schema-annotations, check-schema-effectful-field,
 # check-schema-typescript-generation, check-internal-citations and their two
 # gate tests) — so this hides only new, untracked harness work such as
-# harness/trace/. `harness/truth/` (the Lean-vs-rc.112 exit differential, 2026-09-04)
-# is tracked; its bun install and its copy of the archived trace lane are not.
+# harness/trace/. `harness/truth/` (the truth corpus and the prelude of the printed
+# modules; its rc.112 differential was deleted on 2026-10-20) is tracked; its link to
+# the one bun install is not.
 /harness/*
 !/harness/truth/
 !/harness/schema-host/
 !/harness/tsdiag/
 /harness/truth/node_modules
-/harness/truth/archive/
-/harness/truth/lean.out.log
-/harness/truth/lean.err.log
-/harness/truth/truth-check-*/
-/harness/truth/corpus-check/
 
 # The TypeScript estate (`ts/`) is tracked; its installs are not.
 /ts/**/node_modules

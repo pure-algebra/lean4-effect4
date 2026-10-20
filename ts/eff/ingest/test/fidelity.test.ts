@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test"
 import { sourceModule } from "../fidelity/source.ts"
-import { compareObserved } from "../fidelity/roundtrip.ts"
+import { compareObserved } from "../fidelity/compare.ts"
 import type { Observed } from "../fidelity/fidelity-contract.ts"
 const observed = (exit: unknown, schedule: string[] = ["started 0", "exited 0 success"], parked = false): Observed => ({ status: "observed", effect: "4.0.0-rc.112", timeoutMs: 300, observation: { exit, schedule, parked } })
 test("fidelity compares payloads and schedules, and cannot-run never agrees", () => {

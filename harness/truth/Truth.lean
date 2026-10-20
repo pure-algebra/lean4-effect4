@@ -59,12 +59,13 @@ and `{"interrupt":who|null}`. Annotations are dropped.
 
 History. Until 2026-10-20 this file was the Lean face of the rc.112 truth differential: the
 manifest also carried each module's text, the sync run, the observable schedule under the
-recorder's fiber numbers and the machine's events, and `harness/truth/run-truth.ts` ran every
-module on rc.112 and compared. The owner retired the differential from the gates on 2026-10-18
-and deleted it on 2026-10-20: the comparison, the recorded results, the tapes, the ledgers and
-the release lane (`git:fa7bdc304:harness/truth/Truth.lean`). The fixtures' docstrings below keep
-that history: where one names an rc.112 run, a recorder row, a schedule or the runner's
-columns, it records the retired differential's evidence.
+recorder's fiber numbers and the machine's events, and the runner
+(`git:8e93a284f:harness/truth/run-truth.ts`) ran every module on rc.112 and compared. The owner
+retired the differential from the gates on 2026-10-18 and deleted it on 2026-10-20: the
+comparison, the recorded results, the tapes, the ledgers and the release lane
+(`git:fa7bdc304:harness/truth/Truth.lean`). The fixtures' docstrings below keep that history:
+where one names an rc.112 run, a recorder row, a schedule or the runner's columns, it records the
+retired differential's evidence.
 
 Why one file: a `--run` tool can import only Lake modules, so the library half (`OCaml5.Truth`,
 everything above `main`) and the thin driver (`main`) share this file. The library half is pure;
@@ -647,7 +648,7 @@ The probes `poisonNoHandler` and `closeInterruptedMidFinalizer` of seat A401
 truth programs of items 1 and 2 of `docs/research/2026-10-12-probe-alignment-plans.md`. The
 release lane read the same program on 4.0.1 (`git:fa7bdc304:scripts/check-truth-release.py`).
 Where the machine follows 4.0.1, the rc.112 lane signed the program (`LATEST` in
-`harness/truth/run-truth.ts`). -/
+`git:8e93a284f:harness/truth/run-truth.ts`). -/
 
 open Effect4.Program.Authoring in
 /-- The source of `poisonNoHandler`. -/
@@ -798,9 +799,10 @@ root yields four times. Under the sync entry it therefore settles before the wal
 exit than the fork run's, and both faces give each of the two exits. They are the lane's first
 programs whose two entries settle on two exits. The runner's exit column compares the fork
 entry on both faces, and the sync pair has its own column (`main`,
-`harness/truth/run-truth.ts`; decisions row 279, point 1). Until 2026-10-06 that column took
-rc.112's sync exit whenever the sync run settled, and it was red for these two programs. The
-two red rows of that rule are in `docs/research/2026-10-06-seat-semw-evidence/README.md`. In a
+`git:8e93a284f:harness/truth/run-truth.ts`; decisions row 279, point 1). Until 2026-10-06 that
+column took rc.112's sync exit whenever the sync run settled, and it was red for these two
+programs. The two red rows of that rule are in
+`docs/research/2026-10-06-seat-semw-evidence/README.md`. In a
 joined form the root joins the waiting fibers, and its sync entry ends in the
 `AsyncFiberError` defect. -/
 
@@ -1302,9 +1304,9 @@ def exitJson (names : KeyNames) (fiber : Nat → Nat) : ExitV → J
 E2): a payload through the type-directed codec (`Schema.encode`), under the one key `payload`,
 its objects' keys in UTF-8 byte order (`leanJson`). That is the JSON rc.112 writes for the
 printed class's instance (`Data.Error`'s `toJSON`, `{ ...plainArgs, ...this }`,
-`vendor/effect-4.0.0-rc.112/src/internal/core.ts:602-604`), which `run-truth.ts` sorts the same
-way. Any other error, and a payload the codec does not write (a `number`, `null`, `undefined`
-or byte field), is `errJson`'s. -/
+`vendor/effect-4.0.0-rc.112/src/internal/core.ts:602-604`), which the deleted runner sorted the
+same way (`git:8e93a284f:harness/truth/run-truth.ts`). Any other error, and a payload the codec does
+not write (a `number`, `null`, `undefined` or byte field), is `errJson`'s. -/
 def errJsonAt (names : KeyNames) (errorTy : Option Ty) : Err → J
   | .payload p =>
     match errorTy.bind fun t => Effect4.Schema.encode names t p.val with

@@ -41,18 +41,11 @@ workspace package and its pinned catalog or lockfile. V3 is input data only; the
 uses v4 units. A corroborated lift requires the two complete verdicts to agree.
 Performance observations are separate from deterministic report rows.
 
-\`bun ts/eff/ingest/cli.ts roundtrip PATH --root PROJECT --out OUTPUT\` runs v4
-lifts through the original module and the Lean API's printed declaration. Use
-\`--census FILES_JSONL --root FOLDLAB\` for the saved census. It uses the existing
-program wire decoder and \`Api.printDecl\`, with the existing truth recorder on
-both sides. No JSON parser or alternate renderer is introduced in Lean.
-Foreign imports, nonempty requirements and programs without an inferred type are
-reported separately as not attempted. V3 inputs are never executed. Every attempted
-unit retains its source, reprint and observations; mismatches and failed executions
-remain visible. A failed child cannot reuse an earlier result. The default fiber
-deadline is 300 ms, and module initialization has a separate process deadline.
-Exit status 2 includes failed execution or no eligible attempt; neither is agreement.
-\`bun ts/eff/ingest/check-fidelity.ts\` tests real execution, exclusions and a poisoned rerun.
+The round-trip tool ran each v4 lift's original module and its reprint on rc.112 through the
+truth runner. It was deleted with that runner on 2026-10-20
+(\`git:8e93a284f:ts/eff/ingest/fidelity/roundtrip.ts\`). Its comparison of two observations
+stays in \`ts/eff/ingest/fidelity/compare.ts\`, and the unit selection in
+\`ts/eff/ingest/fidelity/source.ts\`. \`ts/eff/ingest/test/fidelity.test.ts\` tests both.
 
 Regenerate this file with \`bun ts/eff/ingest/render-readme.ts\`; \`--check\` verifies drift.
 The following tables are generated from the profile, forms and taxonomy.
