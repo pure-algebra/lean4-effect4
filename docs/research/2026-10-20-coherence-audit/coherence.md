@@ -198,7 +198,7 @@ kit).
 | 4 | **Agent text in**: `open` and `fill` take Effect TypeScript text through the reader; `describe` serves the catalogue; the typed reader renames, then erases, then reads (item 3b's open item 2) | nothing; it adds the face the ergonomics probe asked for | S |
 | 5 | **The reply diet, and one field name per idea** (A4; the slices plan's decision 9) | the repeated bytes; one of the two fill alphabets | S |
 | 6 | **One check, one observation, one command face** (row 414 (3); M8; A6, with R2's A7.1) | `Api.check`, `Api.explain`, `Run.Kit.check`, `Run.Kit.admit` and `Run.Preview.admit` as separate entries; `Run.observe`, `Run.work`, `machineViewOf`; `Kit_serve`'s execution | M |
-| 7 | **The host seam from `eff_rows`**: the typed interface, the host record and its reactor; keys by name | `Todo/Typed.lean`, `REPO`, the README's hand keys | M |
+| 7 | **The host seam from `eff_rows`**: the typed interface, the host record and its reactor; keys by name; a row method given an extra argument names the expected type `Env`, an internal type, and should name the row's arity | `Todo/Typed.lean`, `REPO`, the README's hand keys | M |
 | 8 | **M1, one located refusal** | nine records and a prefix rule | S |
 | 9 | **M2, one profile judgment at ingress** | `E4_engine.check_answer`; the A1.1 defect on `eff`, which ships the tool; with R2's A5.2 | S to M |
 | 10 | **A public-name manifest for Lean**: each name of the entry modules taught, internal or test-only; `Effect4.Author` re-exports the taught ones | `Program.Edit` and `Program.SketchWire` from the entry; the extra run and check entries, marked internal | S |
@@ -248,7 +248,7 @@ The rest of the repair wave follows the release: R2's A4.1 and A9.1, and R3.
 | D4 | The drive after a refused reply | deferred with the protocol; recommended: the OCaml rule, written once in Lean | estate item 1 |
 | D5 | Abandon, and whether a host is told | deferred past the first release (the owner, 2026-10-19) | estate item 1 |
 | — | Law 12 after item 3b: the landed disjunction, or option B (one-sided, on a smaller readable domain) | decided 2026-10-19: the landed disjunction; option B's corner is an ill-typed program at the native signature (`receipt-item3b.md`) | release item 3 |
-| — | What text an agent writes | adopted: Effect TypeScript in the printed fragment, through the reader | release item 4 |
+| — | What text an agent writes | adopted: Effect TypeScript in the printed fragment, through the reader. Weighed again on 2026-10-19 against Lean `eff do` text, and kept. A cold Lean process that imports `Effect4.Author` takes 1.5 s and 1.5 GB, and the kit cannot elaborate. tsgo checks the agent's text in its own terms, and Lean stays the surface of an author with the toolchain | release item 4 |
 | — | What the first release is | adopted: Lean authoring, the TypeScript face, the tool over MCP | §9.1 |
 
 D1 to D5 are the audit's (`README.md` §7).
