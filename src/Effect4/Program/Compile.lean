@@ -325,7 +325,7 @@ inductive EffName
   | mergeContexts
   /-- `Effect.service(key)` read the fiber context, the value: the lookup, or the host throw
   as a defect (`Context.getUnsafe`, `internal/effect.ts:2134`, re-entered at `:670-674` —
-  `Defect.missingService`, the machine's one name for it). -/
+  `Defect.missingService key`, the machine's one name for it, with the key it looked up). -/
   | serviceLookup (key : ServiceKey)
   /-- `Context.make(key, value)` over a leaf's answer (`Layer.ts:1440`), or `Context.empty()`
   in place of it (`:1515`). -/
@@ -983,13 +983,15 @@ def bindServiceK (key : Option ServiceKey) (v : Val) : NCode :=
   | none => Prim.success (builtContext Env.Context.empty)
 
 /-- `Effect.service(key)` on the fiber context: the value, or the host throw as a defect
-(`Context.getUnsafe`, `internal/effect.ts:2134`; `Defect.missingService`). -/
+(`Context.getUnsafe`, `internal/effect.ts:2134`; `Defect.missingService`). The defect stores the
+key it looked up, as rc.112's message names it (`Context.ts:1591-1601`; the owner's ruling R5,
+2026-10-19). -/
 def serviceLookupK (key : ServiceKey) (v : Val) : NCode :=
   match Val.context? v with
   | some ctx =>
     match ctx.services.getV key with
     | some value => Prim.success value
-    | none => Prim.failure (Cause.die Defect.missingService)
+    | none => Prim.failure (Cause.die (Defect.missingService key))
   | none => badShape
 
 /-! ## Generators: the statement walker behind `iterNext` -/
@@ -1744,7 +1746,8 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
   encodeFiber := id
   stackAnnotations := stackAnnotationsOf
   asyncFiberError := Defect.asyncFiber
-  missingScope := Defect.missingService
+  -- `forkScoped` with no ambient scope: the scope's key is the one missing
+  missingScope := Defect.missingService Env.scopeKey
 
 /-- Native source callbacks construct their code from the exits visible when
 invoked (`internal/effect.ts:767-777,814-822`). Eager action bodies and the scoped

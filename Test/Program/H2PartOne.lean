@@ -63,22 +63,23 @@ theorem user_current_code_admitted (root : ProgramSource) (w : W) (ty : EffTy) (
     TypedProg root w ty (.pure (.failure (Cause.die (.user payload)))) :=
   TypedProg.pure (user_die_admitted w ty payload)
 
-theorem missingService_admitted_at_any_type (w : W) (ty : EffTy) :
-    ExitOk w ty (.failure (Cause.die .missingService)) :=
+theorem missingService_admitted_at_any_type (w : W) (ty : EffTy) (key : ServiceKey) :
+    ExitOk w ty (.failure (Cause.die (.missingService key))) :=
   strongExit_of_clean w ty _ rfl
-    (ordinary_die_shape ty .missingService (by intro h; cases h) (by intro h; cases h))
+    (ordinary_die_shape ty (.missingService key) (by intro h; cases h) (by intro h; cases h))
 
 theorem missingService_empty_admitted (w : W) :
-    ExitOk w (EffTy.pure .unit) (.failure (Cause.die .missingService)) :=
-  missingService_admitted_at_any_type w _
+    ExitOk w (EffTy.pure .unit) (.failure (Cause.die (.missingService nativeScopeKey))) :=
+  missingService_admitted_at_any_type w _ _
 
 theorem missingService_nonempty_admitted (w : W) :
     ExitOk w ⟨.unit, .never, Env.Requirement.single nativeScopeKey⟩
-      (.failure (Cause.die .missingService)) := missingService_admitted_at_any_type w _
+      (.failure (Cause.die (.missingService nativeScopeKey))) :=
+  missingService_admitted_at_any_type w _ _
 
-theorem missingService_current_code_admitted (root : ProgramSource) (w : W) (ty : EffTy) :
-    TypedProg root w ty (.pure (.failure (Cause.die .missingService))) :=
-  TypedProg.pure (missingService_admitted_at_any_type w ty)
+theorem missingService_current_code_admitted (root : ProgramSource) (w : W) (ty : EffTy)
+    (key : ServiceKey) : TypedProg root w ty (.pure (.failure (Cause.die (.missingService key)))) :=
+  TypedProg.pure (missingService_admitted_at_any_type w ty key)
 
 theorem interrupt_admitted (w : W) (ty : EffTy) (who : Option FiberId) :
     ExitOk w ty (.failure (Cause.interrupt who)) := by
@@ -163,7 +164,8 @@ theorem interrupt_admitted :
   trivial
 
 theorem missingService_admitted :
-    RacePayload (program : ProgramSource) world (race (Cause.die .missingService)) unitTy := by
+    RacePayload (program : ProgramSource) world
+      (race (Cause.die (.missingService nativeScopeKey))) unitTy := by
   apply new_admitted
   apply strongExit_of_clean world unitTy _ rfl
   intro reason member
@@ -215,7 +217,7 @@ open Effect4.Program.Typed.Contracts
 /-- The proposed full exclusion, retained here only to expose its transport obligation. -/
 def fullForbidden (ty : EffTy) : Reason Err Defect FiberId Ann → Bool
   | .die defect _ => defect == .badName || defect == .notImplemented ||
-      (defect == .missingService && ty.requires == Env.Requirement.empty)
+      (defect matches .missingService _ && ty.requires == Env.Requirement.empty)
   | _ => false
 
 def FullNoShapeDefect (ty : EffTy) : ExitV → Prop
@@ -227,7 +229,7 @@ def FullExitOk (w : W) (ty : EffTy) (ex : ExitV) : Prop :=
 
 def inner : EffTy := ⟨.never, .never, Env.Requirement.single nativeScopeKey⟩
 def outer : EffTy := EffTy.pure .unit
-def missing : CauseV := Cause.die .missingService
+def missing : CauseV := Cause.die (.missingService nativeScopeKey)
 def name : EffName := .abort
 def saved : RSaved := ⟨.pure (.success .unit), [], false, none, false⟩
 
@@ -262,7 +264,8 @@ theorem loop_kept_admitted (src : ProgramSource) (w : W) :
 
 theorem input_ok (w : W) : FullExitOk w inner (.failure missing) :=
   ⟨fitsExit_of_clean w inner missing rfl
-    (ordinary_die_shape inner .missingService (fun h => nomatch h) (fun h => nomatch h)), rfl⟩
+    (ordinary_die_shape inner (.missingService nativeScopeKey) (fun h => nomatch h)
+      (fun h => nomatch h)), rfl⟩
 
 theorem provenance : InterruptProvenance saved := by
   constructor

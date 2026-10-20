@@ -391,7 +391,7 @@ def serviceLookupR (key : ServiceKey) (v : Val) : RProgram :=
   | some ctx =>
     match ctx.services.getV key with
     | some value => .pure (.success value)
-    | none => .pure (.failure (Cause.die Defect.missingService))
+    | none => .pure (.failure (Cause.die (Defect.missingService key)))
   | none => .pure badShapeExit
 
 /-- `buildWithMemoMap` (`Layer.ts:756-765`): `provideService(CurrentMemoMap)` around the build

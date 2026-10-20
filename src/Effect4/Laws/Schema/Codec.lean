@@ -10,8 +10,10 @@ Concept: Exact Codecs & Data Plane Embeddings.
 Claims: `decode-encode`, `decode-iff` and `record-codec-layout`; requirements R2 and R3.
 The data-language JSON codec brief places the helpers and their consumers before implementation.
 
-`decode_iff` states exactness modulo `Codec.normJ` for every type.
+`decode_iff` states exactness modulo `Codec.normJ` for every type and every table of key names.
 Both public operations normalize that type before interpreting its wire layout.
+The key names reach only the defect's encoder and decoder (`Codec.encodeDefect`); every law here
+holds for each table (the owner's ruling R5, move G).
 Exact value recovery requires executable codec admission.
 Subtype agreement also requires `Codec.Compatible`; the test claims no completeness for compatibility.
 
@@ -32,44 +34,45 @@ namespace Effect4.Schema.Codec
 open Effect4 Effect4.Program Effect4.Machine
 
 /-- Prepared encoding serves `decode-encode` and `decode-iff` without changing value admission. -/
-theorem Prepared.encode_agrees {source : Ty} (prepared : Prepared source) (v : Val) :
-    prepared.encode v = Effect4.Schema.encode source v := by
+theorem Prepared.encode_agrees {source : Ty} (prepared : Prepared source) (names : KeyNames)
+    (v : Val) : prepared.encode names v = Effect4.Schema.encode names source v := by
   unfold Prepared.encode
   rw [prepared.interpreter_eq, prepared.normal_eq]
   rfl
 
 /-- Prepared decoding serves `decode-iff`; the cached interpreter remains bound to its source. -/
-theorem Prepared.decode_agrees {source : Ty} (prepared : Prepared source) (j : Json) :
-    prepared.decode j = Effect4.Schema.decode source j := by
+theorem Prepared.decode_agrees {source : Ty} (prepared : Prepared source) (names : KeyNames)
+    (j : Json) : prepared.decode names j = Effect4.Schema.decode names source j := by
   unfold Prepared.decode
   rw [prepared.interpreter_eq, prepared.normal_eq]
   rfl
 
 /-- Prepared codec admission serves the checked domain of `decode-encode`. -/
-theorem Prepared.isValue_agrees {source : Ty} (prepared : Prepared source) (v : Val) :
-    prepared.isValue v = Effect4.Schema.Codec.isValue source v := by
+theorem Prepared.isValue_agrees {source : Ty} (prepared : Prepared source) (names : KeyNames)
+    (v : Val) : prepared.isValue names v = Effect4.Schema.Codec.isValue names source v := by
   unfold Prepared.isValue Effect4.Schema.Codec.isValue
   rw [Prepared.encode_agrees]
   rfl
 
 /-- The original encode-first admission policy; used by existing checked-domain laws. -/
-theorem isValue_policy (t : Ty) (v : Val) :
-    isValue t v =
-      (match encodeRaw (layout t.normalize) v with
+theorem isValue_policy (names : KeyNames) (t : Ty) (v : Val) :
+    isValue names t v =
+      (match encodeRaw names (layout t.normalize) v with
       | none => false
-      | some j => Val.hasTy v t.normalize && decide (decodeRaw (layout t.normalize) j = some v)) := by
+      | some j => Val.hasTy v t.normalize &&
+          decide (decodeRaw names (layout t.normalize) j = some v)) := by
   change (if Val.hasTy v t.normalize then
-    (match encodeRaw (layout t.normalize) v with
+    (match encodeRaw names (layout t.normalize) v with
     | none => none
-    | some j => if decodeRaw (layout t.normalize) j = some v then some j else none)
+    | some j => if decodeRaw names (layout t.normalize) j = some v then some j else none)
     else none).isSome = _
   cases Val.hasTy v t.normalize with
-  | false => cases encodeRaw (layout t.normalize) v <;> rfl
+  | false => cases encodeRaw names (layout t.normalize) v <;> rfl
   | true =>
-    cases encodeRaw (layout t.normalize) v with
+    cases encodeRaw names (layout t.normalize) v with
     | none => rfl
     | some j =>
-      by_cases hd : decodeRaw (layout t.normalize) j = some v
+      by_cases hd : decodeRaw names (layout t.normalize) j = some v
       · simp only [hd, ↓reduceIte, decide_true]
         rfl
       · simp only [hd, ↓reduceIte, decide_false]
@@ -134,105 +137,113 @@ theorem wire_type (t : Ty) : (wire t).type = t := by
   | _ => rfl
 
 /-- The option decoder's outer equation, used by the unchanged raw codec laws. -/
-theorem decodeRaw_option (t : Ty) (j : Json) :
-    decodeRaw (.option t) j =
+theorem decodeRaw_option (names : KeyNames) (t : Ty) (j : Json) :
+    decodeRaw names (.option t) j =
       if fields? j ["_tag"] = some [.str "None"] then some .none
       else (do
         let p ← payload? j "Some" "value"
-        (decodeRaw t p).map Store.Val.some) := rfl
+        (decodeRaw names t p).map Store.Val.some) := rfl
 
-theorem decodeRaw_except (e a : Ty) (j : Json) :
-    decodeRaw (.except e a) j =
+theorem decodeRaw_except (names : KeyNames) (e a : Ty) (j : Json) :
+    decodeRaw names (.except e a) j =
       if let some p := payload? j "Failure" "failure" then
-        (decodeRaw e p).map (fun v => .ctor 0 [v])
+        (decodeRaw names e p).map (fun v => .ctor 0 [v])
       else (do
         let p ← payload? j "Success" "success"
-        (decodeRaw a p).map (fun v => .ctor 1 [v])) := rfl
+        (decodeRaw names a p).map (fun v => .ctor 1 [v])) := rfl
 
-theorem decodeRaw_exitOf (a e : Ty) (j : Json) :
-    decodeRaw (.exitOf a e) j =
+theorem decodeRaw_exitOf (names : KeyNames) (a e : Ty) (j : Json) :
+    decodeRaw names (.exitOf a e) j =
       if let some p := payload? j "Success" "value" then
-        (decodeRaw a p).map (fun v => .ctor 0 [v])
+        (decodeRaw names a p).map (fun v => .ctor 0 [v])
       else (do
         let p ← payload? j "Failure" "cause"
-        (decodeCause (decodeRaw e) p).map Val.exitErr) := rfl
+        (decodeCause names (decodeRaw names e) p).map Val.exitErr) := rfl
 
-theorem decodeRaw_union (a b : Ty) (j : Json) :
-    decodeRaw (.union a b) j =
-      match (decodeRaw a j).filter (fun v => Val.hasTy v a) with
+theorem decodeRaw_union (names : KeyNames) (a b : Ty) (j : Json) :
+    decodeRaw names (.union a b) j =
+      match (decodeRaw names a j).filter (fun v => Val.hasTy v a) with
       | some v => some v
-      | none => (decodeRaw b j).filter (fun v => Val.hasTy v b && !Val.hasTy v a) := by
-  change (match (decodeRaw a j).filter (fun v => Val.hasTy v (wire a).type) with
+      | none => (decodeRaw names b j).filter (fun v => Val.hasTy v b && !Val.hasTy v a) := by
+  change (match (decodeRaw names a j).filter (fun v => Val.hasTy v (wire a).type) with
     | some v => some v
-    | none => (decodeRaw b j).filter (fun v => Val.hasTy v (wire b).type && !Val.hasTy v (wire a).type)) = _
+    | none => (decodeRaw names b j).filter
+        (fun v => Val.hasTy v (wire b).type && !Val.hasTy v (wire a).type)) = _
   rw [wire_type, wire_type]
 
-theorem encodeRaw_union (a b : Ty) (v : Val) :
-    encodeRaw (.union a b) v =
-      if Val.hasTy v a then encodeRaw a v
-      else if Val.hasTy v b then encodeRaw b v else none := by
-  change (if Val.hasTy v (wire a).type then encodeRaw a v
-    else if Val.hasTy v (wire b).type then encodeRaw b v else none) = _
+theorem encodeRaw_union (names : KeyNames) (a b : Ty) (v : Val) :
+    encodeRaw names (.union a b) v =
+      if Val.hasTy v a then encodeRaw names a v
+      else if Val.hasTy v b then encodeRaw names b v else none := by
+  change (if Val.hasTy v (wire a).type then encodeRaw names a v
+    else if Val.hasTy v (wire b).type then encodeRaw names b v else none) = _
   rw [wire_type, wire_type]
 
-theorem decodeRaw_record (fields : List (String × Bool × Ty)) (j : Json) :
-    decodeRaw (.record fields) j =
-      (objectRead (named (fields.map fun f => (f.1, decodeRaw f.2.2))) j).map Record.frame := by
+theorem decodeRaw_record (names : KeyNames) (fields : List (String × Bool × Ty)) (j : Json) :
+    decodeRaw names (.record fields) j =
+      (objectRead (named (fields.map fun f => (f.1, decodeRaw names f.2.2))) j).map
+        Record.frame := by
   unfold decodeRaw wire
   rw [cata_ty_record]
   simp only [wireAlgebra, List.map_map, Function.comp_def, prodMapSnd]
 
-theorem encodeRaw_record (fields : List (String × Bool × Ty)) (v : Val) :
-    encodeRaw (.record fields) v = (do
+theorem encodeRaw_record (names : KeyNames) (fields : List (String × Bool × Ty)) (v : Val) :
+    encodeRaw names (.record fields) v = (do
       let es ← Record.entries v
-      let js ← objectValues (named (fields.map fun f => (f.1, encodeRaw f.2.2))) es
+      let js ← objectValues (named (fields.map fun f => (f.1, encodeRaw names f.2.2))) es
       pure (.obj js)) := by
   unfold encodeRaw wire
   rw [cata_ty_record]
   simp only [wireAlgebra, List.map_map, Function.comp_def, prodMapSnd]
 
-theorem decodeRaw_map (key value : Ty) (j : Json) :
-    decodeRaw (.map key value) j = if key = .string then
-      (objectRead (fun _ => decodeRaw value) j).map Map.write else none := by
+theorem decodeRaw_map (names : KeyNames) (key value : Ty) (j : Json) :
+    decodeRaw names (.map key value) j = if key = .string then
+      (objectRead (fun _ => decodeRaw names value) j).map Map.write else none := by
   change (if (wire key).type = .string then
-    (objectRead (fun _ => decodeRaw value) j).map Map.write else none) = _
+    (objectRead (fun _ => decodeRaw names value) j).map Map.write else none) = _
   rw [wire_type]
 
-theorem encodeRaw_map (key value : Ty) (v : Val) :
-    encodeRaw (.map key value) v = if key = .string then (do
+theorem encodeRaw_map (names : KeyNames) (key value : Ty) (v : Val) :
+    encodeRaw names (.map key value) v = if key = .string then (do
       let es ← Map.read v
-      let js ← objectValues (fun _ => encodeRaw value) es
+      let js ← objectValues (fun _ => encodeRaw names value) es
       pure (.obj js)) else none := by
   change (if (wire key).type = .string then (do
     let es ← Map.read v
-    let js ← objectValues (fun _ => encodeRaw value) es
+    let js ← objectValues (fun _ => encodeRaw names value) es
     pure (Json.obj js)) else none) = _
   rw [wire_type]
 
-theorem decodeRaw_tuple (items : List Ty) (j : Json) :
-    decodeRaw (.tuple items) j = match j with
-      | .arr js => (positions (items.map decodeRaw) js).map Val.list
+theorem decodeRaw_tuple (names : KeyNames) (items : List Ty) (j : Json) :
+    decodeRaw names (.tuple items) j = match j with
+      | .arr js => (positions (items.map (decodeRaw names)) js).map Val.list
       | _ => none := by
-  change (cata_ty wireAlgebra (.tuple items)).decode j = _
+  change (cata_ty wireAlgebra (.tuple items)).decode names j = _
   rw [cata_ty_tuple]
   change (match j with
-    | .arr js => (positions ((items.map (cata_ty wireAlgebra)).map Wire.decode) js).map Val.list
+    | .arr js =>
+      (positions ((items.map (cata_ty wireAlgebra)).map fun w : Wire => w.decode names) js).map
+        Val.list
     | _ => none) = _
-  have hm : (items.map (cata_ty wireAlgebra)).map Wire.decode = items.map decodeRaw := by
+  have hm : (items.map (cata_ty wireAlgebra)).map (fun w : Wire => w.decode names) =
+      items.map (decodeRaw names) := by
     rw [List.map_map]
     rfl
   rw [hm]
 
-theorem encodeRaw_tuple (items : List Ty) (v : Val) :
-    encodeRaw (.tuple items) v = match v with
-      | .list vs => (positions (items.map encodeRaw) vs).map Json.arr
+theorem encodeRaw_tuple (names : KeyNames) (items : List Ty) (v : Val) :
+    encodeRaw names (.tuple items) v = match v with
+      | .list vs => (positions (items.map (encodeRaw names)) vs).map Json.arr
       | _ => none := by
-  change (cata_ty wireAlgebra (.tuple items)).encode v = _
+  change (cata_ty wireAlgebra (.tuple items)).encode names v = _
   rw [cata_ty_tuple]
   change (match v with
-    | .list vs => (positions ((items.map (cata_ty wireAlgebra)).map Wire.encode) vs).map Json.arr
+    | .list vs =>
+      (positions ((items.map (cata_ty wireAlgebra)).map fun w : Wire => w.encode names) vs).map
+        Json.arr
     | _ => none) = _
-  have hm : (items.map (cata_ty wireAlgebra)).map Wire.encode = items.map encodeRaw := by
+  have hm : (items.map (cata_ty wireAlgebra)).map (fun w : Wire => w.encode names) =
+      items.map (encodeRaw names) := by
     rw [List.map_map]
     rfl
   rw [hm]
@@ -484,77 +495,51 @@ theorem decodeErr_normJ (j : Json) : decodeErr (normJ j) = decodeErr j := by
       rw [hab, decodeErr_obj_two, decodeErr_obj_two]
   | _ => rfl
 
-/-- An object of two or more entries is no defect image. -/
-theorem decodeDefect_obj_two (e f : String × Json) (r : List (String × Json)) :
-    decodeDefect (.obj (e :: f :: r)) = none := by
+/-- `N_J` keeps a list's strings and its other values apart: the strings read alike. A step of
+the claim `decode-iff`; its consumer is `fieldStrs?_normJ`. -/
+theorem strs?_map_normJ : ∀ l : List Json, strs? (l.map normJ) = strs? l
+  | [] => rfl
+  | x :: xs => by
+    cases x with
+    | str s =>
+      show (strs? (xs.map normJ)).map (s :: ·) = (strs? xs).map (s :: ·)
+      rw [strs?_map_normJ xs]
+    | arr js =>
+      rw [List.map_cons, normJ_arr]
+      rfl
+    | obj es =>
+      rw [List.map_cons, normJ_obj]
+      rfl
+    | null => rfl
+    | bool b => rfl
+    | number f => rfl
+
+/-- An object's named string fields read alike from the object and its key-sorted form. A step of
+`decode-iff`; its consumer is `machineObject?_normJ`. -/
+theorem fieldStrs?_normJ (j : Json) (ks : List String) :
+    (fields? (normJ j) ks).bind strs? = (fields? j ks).bind strs? := by
+  rw [fields?_normJ]
+  cases fields? j ks with
+  | none => rfl
+  | some l => exact strs?_map_normJ l
+
+/-- The machine-defect reader reads an object and its key-sorted form alike. A step of
+`decode-iff`; its consumer is `decodeDefect_normJ`. -/
+theorem machineObject?_normJ (names : KeyNames) (j : Json) :
+    machineObject? names (normJ j) = machineObject? names j := by
+  unfold machineObject?
+  rw [fieldStrs?_normJ]
+
+/-- **The defect decoder reads `N_J`'s quotient**: a defect's JSON and its key-sorted form decode
+alike, under every table of key names. A step of `decode-iff`, through `decodeReason_normJ`. -/
+theorem decodeDefect_normJ (names : KeyNames) (j : Json) :
+    decodeDefect names (normJ j) = decodeDefect names j := by
   unfold decodeDefect
-  split
-  · rename_i heq
-    exact nomatch heq
-  · rename_i heq
-    exact nomatch heq
-  · rename_i heq
-    exact nomatch heq
-  · rename_i heq
-    exact nomatch heq
-  · rename_i heq
-    exact nomatch heq
-  · rename_i heq
-    exact nomatch heq
-  · rfl
+  rw [decodeErr_normJ, machineObject?_normJ]
 
-/-- An object of one entry named neither `user` nor `error` is no defect image. -/
-theorem decodeDefect_obj_other {k : String} (hu : k ≠ "user") (he : k ≠ "error") (y : Json) :
-    decodeDefect (.obj [(k, y)]) = none := by
-  unfold decodeDefect
-  split
-  · rename_i heq
-    exact nomatch heq
-  · rename_i heq
-    exact nomatch heq
-  · rename_i heq
-    exact nomatch heq
-  · rename_i heq
-    exact nomatch heq
-  · rename_i heq
-    injection heq with heq
-    injection heq with heq
-    injection heq with hk _
-    exact absurd hk hu
-  · rename_i heq
-    injection heq with heq
-    injection heq with heq
-    injection heq with hk _
-    exact absurd hk he
-  · rfl
-
-theorem decodeDefect_normJ (j : Json) : decodeDefect (normJ j) = decodeDefect j := by
-  cases j with
-  | obj es =>
-    rw [normJ_obj]
-    match es with
-    | [] => rfl
-    | [(k, x)] =>
-      show decodeDefect (.obj [(k, normJ x)]) = decodeDefect (.obj [(k, x)])
-      by_cases hu : k = "user"
-      · subst hu
-        show (nat? (normJ x)).map Defect.user = (nat? x).map Defect.user
-        rw [nat?_normJ]
-      · by_cases he : k = "error"
-        · subst he
-          show (decodeErr (normJ x)).map Defect.error = (decodeErr x).map Defect.error
-          rw [decodeErr_normJ]
-        · rw [decodeDefect_obj_other hu he, decodeDefect_obj_other hu he]
-    | e1 :: e2 :: rest =>
-      obtain ⟨a, b, r, hab⟩ := sortE_two e1 e2 rest
-      rw [hab, decodeDefect_obj_two, decodeDefect_obj_two]
-  | arr js =>
-    rw [normJ_arr]
-    rfl
-  | _ => rfl
-
-theorem decodeReason_normJ (dec : Json → Option Val) (hdec : ∀ j, dec (normJ j) = dec j)
-    (j : Json) : decodeReason dec (normJ j) = decodeReason dec j := by
+theorem decodeReason_normJ (names : KeyNames) (dec : Json → Option Val)
+    (hdec : ∀ j, dec (normJ j) = dec j) (j : Json) :
+    decodeReason names dec (normJ j) = decodeReason names dec j := by
   unfold decodeReason
   rw [payload?_normJ, payload?_normJ, payload?_normJ]
   cases payload? j "Fail" "error" with
@@ -573,15 +558,16 @@ theorem decodeReason_normJ (dec : Json → Option Val) (hdec : ∀ j, dec (normJ
         cases p <;> rfl
       | none => rfl
 
-theorem decodeCause_normJ (dec : Json → Option Val) (hdec : ∀ j, dec (normJ j) = dec j)
-    (j : Json) : decodeCause dec (normJ j) = decodeCause dec j := by
+theorem decodeCause_normJ (names : KeyNames) (dec : Json → Option Val)
+    (hdec : ∀ j, dec (normJ j) = dec j) (j : Json) :
+    decodeCause names dec (normJ j) = decodeCause names dec j := by
   cases j with
   | arr rs =>
     rw [normJ_arr]
-    show ((rs.map normJ).mapM (decodeReason dec)).map (fun rs => (⟨rs⟩ : CauseV)) =
-      (rs.mapM (decodeReason dec)).map (fun rs => (⟨rs⟩ : CauseV))
+    show ((rs.map normJ).mapM (decodeReason names dec)).map (fun rs => (⟨rs⟩ : CauseV)) =
+      (rs.mapM (decodeReason names dec)).map (fun rs => (⟨rs⟩ : CauseV))
     rw [mapM_map_comp]
-    simp only [decodeReason_normJ dec hdec]
+    simp only [decodeReason_normJ names dec hdec]
   | obj es =>
     rw [normJ_obj]
     rfl
@@ -695,7 +681,8 @@ theorem number?_normJ (j : Json) : number? (normJ j) = number? j := by
 
 /-- **The decoder reads `N_J`'s quotient** (every arm, the cause, reason, defect and error
 decoders included): a JSON and its key-sorted form decode alike. -/
-theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decodeRaw t j := by
+theorem decodeRaw_normJ (names : KeyNames) :
+    ∀ (t : Ty) (j : Json), decodeRaw names t (normJ j) = decodeRaw names t j := by
   intro t
   induction t with
   | unit => intro j; cases j <;> rfl
@@ -712,14 +699,16 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
       cases payload? j "Some" "value" with
       | none => rfl
       | some p =>
-        show (decodeRaw t (normJ p)).map Store.Val.some = (decodeRaw t p).map Store.Val.some
+        show (decodeRaw names t (normJ p)).map Store.Val.some =
+          (decodeRaw names t p).map Store.Val.some
         rw [ih]
   | list t ih =>
     intro j
     cases j with
     | arr js =>
       rw [normJ_arr]
-      show ((js.map normJ).mapM (decodeRaw t)).map Val.list = (js.mapM (decodeRaw t)).map Val.list
+      show ((js.map normJ).mapM (decodeRaw names t)).map Val.list =
+        (js.mapM (decodeRaw names t)).map Val.list
       rw [mapM_map_comp]
       simp only [ih]
     | obj es => rw [normJ_obj]; rfl
@@ -733,8 +722,8 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
       | [] => rfl
       | [_] => rfl
       | [jx, jy] =>
-        show (do let x ← decodeRaw a (normJ jx); let y ← decodeRaw b (normJ jy); return Val.list [x, y]) =
-          (do let x ← decodeRaw a jx; let y ← decodeRaw b jy; return Val.list [x, y])
+        show (do let x ← decodeRaw names a (normJ jx); let y ← decodeRaw names b (normJ jy); return Val.list [x, y]) =
+          (do let x ← decodeRaw names a jx; let y ← decodeRaw names b jy; return Val.list [x, y])
         rw [iha, ihb]
       | _ :: _ :: _ :: _ => rfl
     | obj es => rw [normJ_obj]; rfl
@@ -744,12 +733,12 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
     rw [decodeRaw_except, decodeRaw_except, payload?_normJ, payload?_normJ]
     cases payload? j "Failure" "failure" with
     | some p =>
-      show (decodeRaw e (normJ p)).map _ = (decodeRaw e p).map _
+      show (decodeRaw names e (normJ p)).map _ = (decodeRaw names e p).map _
       rw [ihe]
     | none =>
       cases payload? j "Success" "success" with
       | some p =>
-        show (decodeRaw a (normJ p)).map _ = (decodeRaw a p).map _
+        show (decodeRaw names a (normJ p)).map _ = (decodeRaw names a p).map _
         rw [iha]
       | none => rfl
   | exitOf a e iha ihe =>
@@ -757,20 +746,20 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
     rw [decodeRaw_exitOf, decodeRaw_exitOf, payload?_normJ, payload?_normJ]
     cases payload? j "Success" "value" with
     | some p =>
-      show (decodeRaw a (normJ p)).map _ = (decodeRaw a p).map _
+      show (decodeRaw names a (normJ p)).map _ = (decodeRaw names a p).map _
       rw [iha]
     | none =>
       cases payload? j "Failure" "cause" with
       | some p =>
-        show (decodeCause (decodeRaw e) (normJ p)).map Val.exitErr =
-          (decodeCause (decodeRaw e) p).map Val.exitErr
-        rw [decodeCause_normJ (decodeRaw e) ihe]
+        show (decodeCause names (decodeRaw names e) (normJ p)).map Val.exitErr =
+          (decodeCause names (decodeRaw names e) p).map Val.exitErr
+        rw [decodeCause_normJ names (decodeRaw names e) ihe]
       | none => rfl
   | causeOf e ih =>
     intro j
-    show (decodeCause (decodeRaw e) (normJ j)).map Val.exitErr =
-      (decodeCause (decodeRaw e) j).map Val.exitErr
-    rw [decodeCause_normJ (decodeRaw e) ih]
+    show (decodeCause names (decodeRaw names e) (normJ j)).map Val.exitErr =
+      (decodeCause names (decodeRaw names e) j).map Val.exitErr
+    rw [decodeCause_normJ names (decodeRaw names e) ih]
   | union a b iha ihb =>
     intro j
     rw [decodeRaw_union, decodeRaw_union, iha, ihb]
@@ -795,8 +784,8 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
     cases j with
     | arr js =>
       rw [normJ_arr]
-      change (positions (items.map decodeRaw) (js.map normJ)).map Val.list =
-        (positions (items.map decodeRaw) js).map Val.list
+      change (positions (items.map (decodeRaw names)) (js.map normJ)).map Val.list =
+        (positions (items.map (decodeRaw names)) js).map Val.list
       congr 1
       apply positions_normJ
       intro dec hd j
@@ -1135,30 +1124,103 @@ theorem decodeErr_exact {j : Json} {e : Err} (h : decodeErr j = some e) : encode
   · obtain ⟨n, hn, rfl⟩ := Option.map_eq_some_iff.mp h
     exact (nat?_exact hn).symm
 
-theorem decodeDefect_exact {j : Json} {d : Defect} (h : decodeDefect j = some d) :
-    encodeDefect d = j := by
-  unfold decodeDefect at h
+/-- A list that reads as strings is those strings. A step of `decode-iff`; its consumer is
+`machineObject?_exact`. -/
+theorem strs?_exact : ∀ (l : List Json) (ss : List String), strs? l = some ss →
+    l = ss.map Json.str := by
+  intro l
+  induction l with
+  | nil =>
+    intro ss h
+    cases h
+    rfl
+  | cons x xs ih =>
+    intro ss h
+    cases x with
+    | str s =>
+      obtain ⟨tail, ht, rfl⟩ := Option.map_eq_some_iff.mp h
+      rw [ih tail ht]
+      rfl
+    | arr js => exact nomatch h
+    | obj es => exact nomatch h
+    | null => exact nomatch h
+    | bool b => exact nomatch h
+    | number f => exact nomatch h
+
+/-- The names of an `Error`'s two entries, in the byte order: `message` sorts first. -/
+theorem key_message : Field.ltKey (keyBytes "message") (keyBytes "name") = true ∧
+    Field.ltKey (keyBytes "name") (keyBytes "message") = false := by decide +kernel
+
+/-- `N_J` at an `Error`'s object, in both orders: one normal form, `errorJson`'s own. A step of
+`decode-iff`; its consumer is `machineObject?_exact`. -/
+theorem normJ_errorJson_orders (name message : String) :
+    normJ (errorJson name message) = errorJson name message ∧
+      normJ (.obj [("name", .str name), ("message", .str message)]) = errorJson name message := by
+  rw [errorJson, normJ_obj, normJ_obj]
+  simp only [List.map_cons, List.map_nil, sortE, List.foldl_cons, List.foldl_nil, insertE,
+    key_message.1, key_message.2, ↓reduceIte]
+  exact ⟨rfl, rfl⟩
+
+/-- What the machine-defect reader reads is the encoding of what it answers: its re-encode
+guard. A step of `decode-iff`; its consumer is `machineObject?_exact`. -/
+theorem machineDefect?_exact {names : KeyNames} {name message : String} {d : Defect}
+    (h : machineDefect? names name message = some d) :
+    encodeDefect names d = some (errorJson name message) := by
+  unfold machineDefect? at h
+  have found := List.find?_some h
+  exact of_decide_eq_true found
+
+/-- An `Error`'s object that the machine-defect reader reads is, modulo `N_J`, the encoding of the
+defect it answers. A step of `decode-iff`; its consumer is `decodeDefect_exact`. -/
+theorem machineObject?_exact {names : KeyNames} {j : Json} {d : Defect}
+    (h : machineObject? names j = some d) :
+    ∃ j', encodeDefect names d = some j' ∧ normJ j' = normJ j := by
+  unfold machineObject? at h
   split at h
-  · cases h
-    rfl
-  · cases h
-    rfl
-  · cases h
-    rfl
-  · cases h
-    rfl
-  · obtain ⟨n, hn, rfl⟩ := Option.map_eq_some_iff.mp h
-    rw [nat?_exact hn]
-    rfl
-  · obtain ⟨e, he, rfl⟩ := Option.map_eq_some_iff.mp h
-    rw [← decodeErr_exact he]
-    rfl
+  · rename_i message name hfs
+    obtain ⟨l, hl, hs⟩ := Option.bind_eq_some_iff.mp hfs
+    have hstr : l = [.str message, .str name] := strs?_exact l [message, name] hs
+    subst hstr
+    refine ⟨errorJson name message, machineDefect?_exact h, ?_⟩
+    rcases fields?_two (by decide) hl with rfl | rfl
+    · rfl
+    · rw [(normJ_errorJson_orders name message).1, (normJ_errorJson_orders name message).2]
   · exact nomatch h
 
-theorem decodeReason_exact (dec : Json → Option Val) (enc : Val → Option Json)
+/-- **What decodes as a defect re-encodes to the same JSON, modulo `N_J`**, under every table of
+key names: a user defect inside the bound, a represented error (`decodeErr_exact`), and a machine
+defect's `Error` object in either order (`machineObject?_exact`). A step of `decode-iff`, through
+`decodeReason_exact`. -/
+theorem decodeDefect_exact (names : KeyNames) {j : Json} {d : Defect}
+    (h : decodeDefect names j = some d) :
+    ∃ j', encodeDefect names d = some j' ∧ normJ j' = normJ j := by
+  unfold decodeDefect at h
+  split at h
+  · rename_i n hn
+    split at h
+    · rename_i hb
+      cases h
+      refine ⟨Arch.Json.ofNat n, ?_, ?_⟩
+      · simp only [encodeDefect, if_pos hb]
+      · rw [show Arch.Json.ofNat n = j from decodeErr_exact hn]
+    · exact nomatch h
+  · exact nomatch h
+  · rename_i tag message hn
+    cases h
+    exact ⟨encodeErr (.tagged tag message), rfl, by rw [decodeErr_exact hn]⟩
+  · rename_i s hn
+    cases h
+    exact ⟨encodeErr (.text s), rfl, by rw [decodeErr_exact hn]⟩
+  · rename_i p hn
+    cases h
+    exact ⟨encodeErr (.payload p), rfl, by rw [decodeErr_exact hn]⟩
+  · exact machineObject?_exact h
+
+theorem decodeReason_exact (names : KeyNames) (dec : Json → Option Val)
+    (enc : Val → Option Json)
     (hex : ∀ j v, dec j = some v → ∃ j', enc v = some j' ∧ normJ j' = normJ j)
-    (j : Json) (r : Reason Err Defect FiberId Ann) (h : decodeReason dec j = some r) :
-    ∃ j', encodeReason enc r = some j' ∧ normJ j' = normJ j := by
+    (j : Json) (r : Reason Err Defect FiberId Ann) (h : decodeReason names dec j = some r) :
+    ∃ j', encodeReason names enc r = some j' ∧ normJ j' = normJ j := by
   unfold decodeReason at h
   split at h
   · rename_i p hp
@@ -1177,9 +1239,12 @@ theorem decodeReason_exact (dec : Json → Option Val) (enc : Val → Option Jso
   · split at h
     · rename_i p hp
       obtain ⟨d, hd, rfl⟩ := Option.map_eq_some_iff.mp h
-      refine ⟨tagged "Die" "defect" (encodeDefect d), rfl, ?_⟩
-      rw [decodeDefect_exact hd]
-      exact normJ_tagged_of_payload (by decide) key_defect.1 key_defect.2 hp rfl
+      obtain ⟨jd, he, hn⟩ := decodeDefect_exact names hd
+      refine ⟨tagged "Die" "defect" jd, ?_,
+        normJ_tagged_of_payload (by decide) key_defect.1 key_defect.2 hp hn⟩
+      show (encodeDefect names d).map (tagged "Die" "defect") = _
+      rw [he]
+      rfl
     · split at h
       · rename_i p hp
         split at h
@@ -1192,22 +1257,22 @@ theorem decodeReason_exact (dec : Json → Option Val) (enc : Val → Option Jso
           exact normJ_tagged_of_payload (by decide) key_fiberId.1 key_fiberId.2 hp rfl
       · exact nomatch h
 
-theorem decodeCause_exact (dec : Json → Option Val) (enc : Val → Option Json)
+theorem decodeCause_exact (names : KeyNames) (dec : Json → Option Val) (enc : Val → Option Json)
     (hex : ∀ j v, dec j = some v → ∃ j', enc v = some j' ∧ normJ j' = normJ j)
-    (j : Json) (c : CauseV) (h : decodeCause dec j = some c) :
-    ∃ j', encodeCause enc c = some j' ∧ normJ j' = normJ j := by
+    (j : Json) (c : CauseV) (h : decodeCause names dec j = some c) :
+    ∃ j', encodeCause names enc c = some j' ∧ normJ j' = normJ j := by
   cases j with
   | arr rs =>
-    have h' : (rs.mapM (decodeReason dec)).map (fun rs => (⟨rs⟩ : CauseV)) = some c := h
-    cases hm : rs.mapM (decodeReason dec) with
+    have h' : (rs.mapM (decodeReason names dec)).map (fun rs => (⟨rs⟩ : CauseV)) = some c := h
+    cases hm : rs.mapM (decodeReason names dec) with
     | none => rw [hm] at h'; exact nomatch h'
     | some l =>
       rw [hm] at h'
       cases h'
-      obtain ⟨js', he, hn⟩ := mapM_exact (decodeReason dec) (encodeReason enc)
-        (decodeReason_exact dec enc hex) rs l hm
+      obtain ⟨js', he, hn⟩ := mapM_exact (decodeReason names dec) (encodeReason names enc)
+        (decodeReason_exact names dec enc hex) rs l hm
       refine ⟨.arr js', ?_, ?_⟩
-      · show (l.mapM (encodeReason enc)).map Json.arr = some (.arr js')
+      · show (l.mapM (encodeReason names enc)).map Json.arr = some (.arr js')
         rw [he]
         rfl
       · rw [normJ_arr, normJ_arr, hn]
@@ -1356,8 +1421,8 @@ theorem objectRead_exact (dec : String → Json → Option Val) (enc : String �
 is where the canonical-branch repair is read: a value read off the second branch is not a member
 of the first, so the encoder sends it to the second (the arm without the repair fails here: the red
 control `codec_not_exact` in `Test/Codegen/SchemaGenerationContract.lean`). -/
-theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = some v →
-    ∃ j', encodeRaw t v = some j' ∧ normJ j' = normJ j := by
+theorem decodeRaw_exact (names : KeyNames) : ∀ (t : Ty) (j : Json) (v : Val),
+    decodeRaw names t j = some v → ∃ j', encodeRaw names t v = some j' ∧ normJ j' = normJ j := by
   intro t
   induction t with
   | unit =>
@@ -1392,8 +1457,8 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
       | none => rw [hp] at h; exact nomatch h
       | some p =>
         rw [hp] at h
-        have h' : (decodeRaw t p).map Store.Val.some = some v := h
-        cases hd : decodeRaw t p with
+        have h' : (decodeRaw names t p).map Store.Val.some = some v := h
+        cases hd : decodeRaw names t p with
         | none => rw [hd] at h'; exact nomatch h'
         | some x =>
           rw [hd] at h'
@@ -1401,22 +1466,22 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
           obtain ⟨jx, he, hn⟩ := ih p x hd
           refine ⟨tagged "Some" "value" jx, ?_, normJ_tagged_of_payload (by decide)
             key_value.1 key_value.2 hp hn⟩
-          show (encodeRaw t x).map (tagged "Some" "value") = _
+          show (encodeRaw names t x).map (tagged "Some" "value") = _
           rw [he]
           rfl
   | list t ih =>
     intro j v h
     cases j with
     | arr js =>
-      have h' : (js.mapM (decodeRaw t)).map Val.list = some v := h
-      cases hm : js.mapM (decodeRaw t) with
+      have h' : (js.mapM (decodeRaw names t)).map Val.list = some v := h
+      cases hm : js.mapM (decodeRaw names t) with
       | none => rw [hm] at h'; exact nomatch h'
       | some vs =>
         rw [hm] at h'
         cases h'
-        obtain ⟨js', he, hn⟩ := mapM_exact (decodeRaw t) (encodeRaw t) ih js vs hm
+        obtain ⟨js', he, hn⟩ := mapM_exact (decodeRaw names t) (encodeRaw names t) ih js vs hm
         refine ⟨.arr js', ?_, ?_⟩
-        · show (vs.mapM (encodeRaw t)).map Json.arr = some (.arr js')
+        · show (vs.mapM (encodeRaw names t)).map Json.arr = some (.arr js')
           rw [he]
           rfl
         · rw [normJ_arr, normJ_arr, hn]
@@ -1427,12 +1492,12 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
     | arr js =>
       match js, h with
       | [jx, jy], h =>
-        have h' : (do let x ← decodeRaw a jx; let y ← decodeRaw b jy; return Val.list [x, y]) =
+        have h' : (do let x ← decodeRaw names a jx; let y ← decodeRaw names b jy; return Val.list [x, y]) =
           some v := h
-        cases hx : decodeRaw a jx with
+        cases hx : decodeRaw names a jx with
         | none => rw [hx] at h'; exact nomatch h'
         | some x =>
-          cases hy : decodeRaw b jy with
+          cases hy : decodeRaw names b jy with
           | none => rw [hx, hy] at h'; exact nomatch h'
           | some y =>
             rw [hx, hy] at h'
@@ -1440,7 +1505,7 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
             obtain ⟨jx', hex, hnx⟩ := iha jx x hx
             obtain ⟨jy', hey, hny⟩ := ihb jy y hy
             refine ⟨.arr [jx', jy'], ?_, ?_⟩
-            · show (do let jx ← encodeRaw a x; let jy ← encodeRaw b y; return Json.arr [jx, jy]) = _
+            · show (do let jx ← encodeRaw names a x; let jy ← encodeRaw names b y; return Json.arr [jx, jy]) = _
               rw [hex, hey]
               rfl
             · rw [normJ_arr, normJ_arr, List.map_cons, List.map_cons, List.map_cons,
@@ -1454,7 +1519,7 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
     rw [decodeRaw_except] at h
     split at h
     · rename_i p hp
-      cases hd : decodeRaw e p with
+      cases hd : decodeRaw names e p with
       | none => rw [hd] at h; exact nomatch h
       | some x =>
         rw [hd] at h
@@ -1462,15 +1527,15 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
         obtain ⟨jx, he, hn⟩ := ihe p x hd
         refine ⟨tagged "Failure" "failure" jx, ?_, normJ_tagged_of_payload (by decide)
           key_failure.1 key_failure.2 hp hn⟩
-        show (encodeRaw e x).map (tagged "Failure" "failure") = _
+        show (encodeRaw names e x).map (tagged "Failure" "failure") = _
         rw [he]
         rfl
     · cases hp : payload? j "Success" "success" with
       | none => rw [hp] at h; exact nomatch h
       | some p =>
         rw [hp] at h
-        have h' : (decodeRaw a p).map (fun v => Val.ctor 1 [v]) = some v := h
-        cases hd : decodeRaw a p with
+        have h' : (decodeRaw names a p).map (fun v => Val.ctor 1 [v]) = some v := h
+        cases hd : decodeRaw names a p with
         | none => rw [hd] at h'; exact nomatch h'
         | some x =>
           rw [hd] at h'
@@ -1478,7 +1543,7 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
           obtain ⟨jx, he, hn⟩ := iha p x hd
           refine ⟨tagged "Success" "success" jx, ?_, normJ_tagged_of_payload (by decide)
             key_success.1 key_success.2 hp hn⟩
-          show (encodeRaw a x).map (tagged "Success" "success") = _
+          show (encodeRaw names a x).map (tagged "Success" "success") = _
           rw [he]
           rfl
   | exitOf a e iha ihe =>
@@ -1486,7 +1551,7 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
     rw [decodeRaw_exitOf] at h
     split at h
     · rename_i p hp
-      cases hd : decodeRaw a p with
+      cases hd : decodeRaw names a p with
       | none => rw [hd] at h; exact nomatch h
       | some x =>
         rw [hd] at h
@@ -1494,37 +1559,40 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
         obtain ⟨jx, he, hn⟩ := iha p x hd
         refine ⟨tagged "Success" "value" jx, ?_, normJ_tagged_of_payload (by decide)
           key_value.1 key_value.2 hp hn⟩
-        show (encodeRaw a x).map (tagged "Success" "value") = _
+        show (encodeRaw names a x).map (tagged "Success" "value") = _
         rw [he]
         rfl
     · cases hp : payload? j "Failure" "cause" with
       | none => rw [hp] at h; exact nomatch h
       | some p =>
         rw [hp] at h
-        have h' : (decodeCause (decodeRaw e) p).map Val.exitErr = some v := h
-        cases hd : decodeCause (decodeRaw e) p with
+        have h' : (decodeCause names (decodeRaw names e) p).map Val.exitErr = some v := h
+        cases hd : decodeCause names (decodeRaw names e) p with
         | none => rw [hd] at h'; exact nomatch h'
         | some c =>
           rw [hd] at h'
           cases h'
-          obtain ⟨jc, he, hn⟩ := decodeCause_exact (decodeRaw e) (encodeRaw e) ihe p c hd
+          obtain ⟨jc, he, hn⟩ :=
+            decodeCause_exact names (decodeRaw names e) (encodeRaw names e) ihe p c hd
           refine ⟨tagged "Failure" "cause" jc, ?_, normJ_tagged_of_payload (by decide)
             key_cause.1 key_cause.2 hp hn⟩
           show (causeImage.ofVal (causeImage.toVal c)).bind
-            (fun c => (encodeCause (encodeRaw e) c).map (tagged "Failure" "cause")) = _
+            (fun c => (encodeCause names (encodeRaw names e) c).map (tagged "Failure" "cause")) = _
           rw [Store.Image.ofVal_toVal, Option.bind_some, he]
           rfl
   | causeOf e ih =>
     intro j v h
-    have h' : (decodeCause (decodeRaw e) j).map Val.exitErr = some v := h
-    cases hd : decodeCause (decodeRaw e) j with
+    have h' : (decodeCause names (decodeRaw names e) j).map Val.exitErr = some v := h
+    cases hd : decodeCause names (decodeRaw names e) j with
     | none => rw [hd] at h'; exact nomatch h'
     | some c =>
       rw [hd] at h'
       cases h'
-      obtain ⟨jc, he, hn⟩ := decodeCause_exact (decodeRaw e) (encodeRaw e) ih j c hd
+      obtain ⟨jc, he, hn⟩ :=
+        decodeCause_exact names (decodeRaw names e) (encodeRaw names e) ih j c hd
       refine ⟨jc, ?_, hn⟩
-      show (causeImage.ofVal (causeImage.toVal c)).bind (fun c => encodeCause (encodeRaw e) c) = _
+      show (causeImage.ofVal (causeImage.toVal c)).bind
+        (fun c => encodeCause names (encodeRaw names e) c) = _
       rw [Store.Image.ofVal_toVal, Option.bind_some]
       exact he
   | union a b iha ihb =>
@@ -1552,10 +1620,10 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
     rw [decodeRaw_record] at h
     obtain ⟨es, hes, rfl⟩ := Option.map_eq_some_iff.mp h
     have hx := objectRead_exact
-      (named (fields.map fun f => (f.1, decodeRaw f.2.2)))
-      (named (fields.map fun f => (f.1, encodeRaw f.2.2)))
-      (named_exact (fun f : Bool × Ty => decodeRaw f.2)
-        (fun f : Bool × Ty => encodeRaw f.2) fields ih) j es hes
+      (named (fields.map fun f => (f.1, decodeRaw names f.2.2)))
+      (named (fields.map fun f => (f.1, encodeRaw names f.2.2)))
+      (named_exact (fun f : Bool × Ty => decodeRaw names f.2)
+        (fun f : Bool × Ty => encodeRaw names f.2) fields ih) j es hes
     obtain ⟨hnd, js, he, hn⟩ := hx
     refine ⟨.obj js, ?_, hn⟩
     rw [encodeRaw_record, entries_frame es hnd, Option.bind_eq_bind, Option.bind_some, he]
@@ -1567,7 +1635,7 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
     · rw [if_pos hk] at h
       obtain ⟨es, hes, rfl⟩ := Option.map_eq_some_iff.mp h
       obtain ⟨_, js, he, hn⟩ := objectRead_exact
-        (fun _ => decodeRaw value) (fun _ => encodeRaw value) (fun _ => ih) j es hes
+        (fun _ => decodeRaw names value) (fun _ => encodeRaw names value) (fun _ => ih) j es hes
       refine ⟨.obj js, ?_, hn⟩
       rw [encodeRaw_map, if_pos hk, Map.read_write, Option.bind_eq_bind, Option.bind_some, he]
       rfl
@@ -1579,10 +1647,11 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
     cases j with
     | arr js =>
       obtain ⟨vs, hvs, rfl⟩ := Option.map_eq_some_iff.mp h
-      obtain ⟨js', he, hn⟩ := positions_exact decodeRaw encodeRaw items ih js vs hvs
+      obtain ⟨js', he, hn⟩ :=
+        positions_exact (decodeRaw names) (encodeRaw names) items ih js vs hvs
       refine ⟨.arr js', ?_, ?_⟩
       · rw [encodeRaw_tuple]
-        change (positions (items.map encodeRaw) vs).map Json.arr = _
+        change (positions (items.map (encodeRaw names)) vs).map Json.arr = _
         rw [he]
         rfl
       · rw [normJ_arr, normJ_arr, hn]
@@ -1597,31 +1666,32 @@ namespace Effect4.Schema
 open Effect4.Program Effect4.Machine
 
 /-- The original checked-encoding policy; serves the unchanged exact embedding laws. -/
-theorem encode_policy (t : Ty) (v : Val) :
-    encode t v =
+theorem encode_policy (names : KeyNames) (t : Ty) (v : Val) :
+    encode names t v =
       (if Val.hasTy v t.normalize then
-        match Codec.encodeRaw (Codec.layout t.normalize) v with
+        match Codec.encodeRaw names (Codec.layout t.normalize) v with
         | none => none
-        | some j => if Codec.decodeRaw (Codec.layout t.normalize) j = some v then some j else none
+        | some j =>
+          if Codec.decodeRaw names (Codec.layout t.normalize) j = some v then some j else none
       else none) := rfl
 
 /-- The original membership-filtered decoding policy; serves the unchanged exact embedding laws. -/
-theorem decode_policy (t : Ty) (j : Json) :
-    decode t j = (Codec.decodeRaw (Codec.layout t.normalize) j).filter
+theorem decode_policy (names : KeyNames) (t : Ty) (j : Json) :
+    decode names t j = (Codec.decodeRaw names (Codec.layout t.normalize) j).filter
       (fun v => Val.hasTy v t.normalize) := rfl
 
 /-- The exact three checks behind a successful encoding. -/
-theorem encode_eq_some {t : CTy} {v : Val} {j : Json} :
-    encode t.toRaw v = some j ↔
-      Val.hasTy v t.toRaw = true ∧ Codec.encodeRaw (Codec.layout t.toRaw) v = some j ∧
-        Codec.decodeRaw (Codec.layout t.toRaw) j = some v := by
+theorem encode_eq_some {names : KeyNames} {t : CTy} {v : Val} {j : Json} :
+    encode names t.toRaw v = some j ↔
+      Val.hasTy v t.toRaw = true ∧ Codec.encodeRaw names (Codec.layout t.toRaw) v = some j ∧
+        Codec.decodeRaw names (Codec.layout t.toRaw) j = some v := by
   have hn : t.toRaw.normalize = t.toRaw := t.property
   rw [encode_policy, hn]
   constructor
   · intro h
     split at h
     · rename_i ht
-      cases he : Codec.encodeRaw (Codec.layout t.toRaw) v with
+      cases he : Codec.encodeRaw names (Codec.layout t.toRaw) v with
       | none => rw [he] at h; exact nomatch h
       | some k =>
         rw [he] at h
@@ -1638,20 +1708,23 @@ theorem encode_eq_some {t : CTy} {v : Val} {j : Json} :
     rw [if_pos hd]
 
 /-- Executable admission is exactly the successful domain of the checked encoder. -/
-theorem encode_isSome_iff {t : CTy} {v : Val} :
-    (encode t.toRaw v).isSome = true ↔ Ty.isCodecValue t.toRaw v = true := by
+theorem encode_isSome_iff {names : KeyNames} {t : CTy} {v : Val} :
+    (encode names t.toRaw v).isSome = true ↔ Ty.isCodecValue names t.toRaw v = true := by
   rfl
 
 /-- S-3 totality on the checked JSON value domain. Type support alone is insufficient. -/
-theorem encode_of_hasTy {t : CTy} {v : Val} (_h : Val.hasTy v t.toRaw = true)
-    (admitted : Ty.isCodecValue t.toRaw v = true) : (encode t.toRaw v).isSome = true :=
+theorem encode_of_hasTy {names : KeyNames} {t : CTy} {v : Val}
+    (_h : Val.hasTy v t.toRaw = true)
+    (admitted : Ty.isCodecValue names t.toRaw v = true) :
+    (encode names t.toRaw v).isSome = true :=
   (encode_isSome_iff (t := t)).mpr admitted
 
 /-- Every successful encoding recovers exactly, including its original constructor tags: the
-retraction half of exactness (`decode_iff`). At every type: `encode` and `decode` normalize it
-alike, so no canonicity is needed (until row 128's commit this was stated at `CTy`). -/
-theorem decode_of_encode {t : Ty} {v : Val} {j : Json}
-    (h : encode t v = some j) : decode t j = some v := by
+retraction half of exactness (`decode_iff`). At every type and every table of key names: `encode`
+and `decode` normalize the type alike, so no canonicity is needed (until row 128's commit this was
+stated at `CTy`). -/
+theorem decode_of_encode {names : KeyNames} {t : Ty} {v : Val} {j : Json}
+    (h : encode names t v = some j) : decode names t j = some v := by
   rw [encode_policy] at h
   rw [decode_policy]
   split at h
@@ -1666,82 +1739,89 @@ theorem decode_of_encode {t : Ty} {v : Val} {j : Json}
   · exact nomatch h
 
 /-- **Exactness of the JSON pair, modulo `N_J`** (decisions row 128): a JSON the checked decoder
-reads is, up to the order of object entries, the checked encoder's image of the value it returns. -/
-theorem encode_of_decode {t : Ty} {j : Json} {v : Val} (h : decode t j = some v) :
-    ∃ j', encode t v = some j' ∧ Codec.normJ j' = Codec.normJ j := by
+reads is, up to the order of object entries, the checked encoder's image of the value it returns.
+It holds under every table of key names. -/
+theorem encode_of_decode {names : KeyNames} {t : Ty} {j : Json} {v : Val}
+    (h : decode names t j = some v) :
+    ∃ j', encode names t v = some j' ∧ Codec.normJ j' = Codec.normJ j := by
   rw [decode_policy] at h
   obtain ⟨hd, hv⟩ := Option.filter_eq_some_iff.mp h
-  obtain ⟨j', he, hn⟩ := Codec.decodeRaw_exact _ j v hd
+  obtain ⟨j', he, hn⟩ := Codec.decodeRaw_exact names _ j v hd
   refine ⟨j', ?_, hn⟩
-  have hround : Codec.decodeRaw (Codec.layout t.normalize) j' = some v := by
+  have hround : Codec.decodeRaw names (Codec.layout t.normalize) j' = some v := by
     rw [← Codec.decodeRaw_normJ, hn, Codec.decodeRaw_normJ]
     exact hd
   show (if Val.hasTy v t.normalize then
-      (match Codec.encodeRaw (Codec.layout t.normalize) v with
+      (match Codec.encodeRaw names (Codec.layout t.normalize) v with
         | none => none
-        | some j => if Codec.decodeRaw (Codec.layout t.normalize) j = some v then some j else none)
+        | some j =>
+          if Codec.decodeRaw names (Codec.layout t.normalize) j = some v then some j else none)
     else none) = some j'
   rw [if_pos hv, he]
-  show (if Codec.decodeRaw (Codec.layout t.normalize) j' = some v then some j' else none) = some j'
+  show (if Codec.decodeRaw names (Codec.layout t.normalize) j' = some v then some j' else none) =
+    some j'
   rw [if_pos hround]
 
 /-- **The JSON pair is an exact embedding modulo `N_J`** (decisions row 128; `AGENTS.md`'s exact
 embedding with the normaliser `Codec.normJ`): a JSON decodes to a value exactly when it is that
-value's encoding up to the order of object entries. -/
-theorem decode_iff {t : Ty} {j : Json} {v : Val} :
-    decode t j = some v ↔ ∃ j', encode t v = some j' ∧ Codec.normJ j' = Codec.normJ j := by
+value's encoding up to the order of object entries. It holds under every table of key names. -/
+theorem decode_iff {names : KeyNames} {t : Ty} {j : Json} {v : Val} :
+    decode names t j = some v ↔ ∃ j', encode names t v = some j' ∧ Codec.normJ j' = Codec.normJ j := by
   constructor
   · exact encode_of_decode
   · rintro ⟨j', he, hn⟩
-    have h : (Codec.decodeRaw (Codec.layout t.normalize) j').filter
+    have h : (Codec.decodeRaw names (Codec.layout t.normalize) j').filter
         (fun v => Val.hasTy v t.normalize) = some v := decode_of_encode he
-    show (Codec.decodeRaw (Codec.layout t.normalize) j).filter
+    show (Codec.decodeRaw names (Codec.layout t.normalize) j).filter
       (fun v => Val.hasTy v t.normalize) = some v
     rw [← Codec.decodeRaw_normJ, ← hn, Codec.decodeRaw_normJ]
     exact h
 
 /-- S-3 round trip without an arbitrary default JSON inhabitant or a failing `get!`. -/
-theorem decode_encode {t : CTy} {v : Val} (h : Val.hasTy v t.toRaw = true)
-    (admitted : Ty.isCodecValue t.toRaw v = true) :
-    (encode t.toRaw v).bind (decode t.toRaw) = some v := by
+theorem decode_encode {names : KeyNames} {t : CTy} {v : Val} (h : Val.hasTy v t.toRaw = true)
+    (admitted : Ty.isCodecValue names t.toRaw v = true) :
+    (encode names t.toRaw v).bind (decode names t.toRaw) = some v := by
   have total := encode_of_hasTy (t := t) h admitted
-  cases he : encode t.toRaw v with
+  cases he : encode names t.toRaw v with
   | none => rw [he] at total; exact nomatch total
   | some j => rw [Option.bind_some]; exact decode_of_encode he
 
 /-- S-3 successful decoding implies canonical type membership, without a support premise. -/
-theorem hasTy_decode {t : CTy} {j : Json} {v : Val}
-    (h : decode t.toRaw j = some v) : Val.hasTy v t.toRaw = true := by
+theorem hasTy_decode {names : KeyNames} {t : CTy} {j : Json} {v : Val}
+    (h : decode names t.toRaw j = some v) : Val.hasTy v t.toRaw = true := by
   have hn : t.toRaw.normalize = t.toRaw := t.property
   rw [decode_policy, hn] at h
   exact (Option.filter_eq_some_iff.mp h).2
 
 /-- S-3 subtype agreement for a shared JSON layout. This includes literal refinements
 through products, options, arrays, Results, Exits and Causes. Union selectors are retained. -/
-theorem encode_sub {s t : CTy} {v : Val}
+theorem encode_sub {names : KeyNames} {s t : CTy} {v : Val}
     (hsub : Ty.sub s.toRaw t.toRaw = true) (hv : Val.hasTy v s.toRaw = true)
     (compatible : Codec.Compatible s.toRaw t.toRaw) :
-    encode t.toRaw v = encode s.toRaw v := by
+    encode names t.toRaw v = encode names s.toRaw v := by
   have hs : s.toRaw.normalize = s.toRaw := s.property
   have hn : t.toRaw.normalize = t.toRaw := t.property
   have ht := hasTy_sub s.toRaw t.toRaw v [] hsub hv
   simp only [encode_policy, hs, hn, hv, ht, ↓reduceIte]
   rw [show Codec.layout s.toRaw = Codec.layout t.toRaw from compatible]
 
-/-- Admitted encodings cannot identify distinct values at one type. -/
-theorem encode_injective {t : CTy} {v w : Val} {j : Json}
-    (hv : encode t.toRaw v = some j) (hw : encode t.toRaw w = some j) : v = w := by
+/-- Admitted encodings cannot identify distinct values at one type, under one table of key
+names: a defect inside an exit or a cause included (`Codec.encodeDefect`). -/
+theorem encode_injective {names : KeyNames} {t : CTy} {v w : Val} {j : Json}
+    (hv : encode names t.toRaw v = some j) (hw : encode names t.toRaw w = some j) : v = w := by
   exact Option.some.inj ((decode_of_encode hv).symm.trans (decode_of_encode hw))
 
 /-- All strings cross the JSON boundary, not merely the finite examples in the battery. -/
-theorem encode_string (s : String) : encode .string (.str s) = some (.str s) := by
+theorem encode_string (names : KeyNames) (s : String) :
+    encode names .string (.str s) = some (.str s) := by
   change (if some (Val.str s : Val) = some (.str s) then some (Json.str s) else none) = _
   rw [if_pos rfl]
 
-theorem encode_bool (b : Bool) : encode .bool (.bool b) = some (.bool b) := by
+theorem encode_bool (names : KeyNames) (b : Bool) :
+    encode names .bool (.bool b) = some (.bool b) := by
   change (if some (Val.bool b : Val) = some (.bool b) then some (Json.bool b) else none) = _
   rw [if_pos rfl]
 
-theorem encode_unit : encode .unit .unit = some .null := rfl
+theorem encode_unit (names : KeyNames) : encode names .unit .unit = some .null := rfl
 
 end Effect4.Schema

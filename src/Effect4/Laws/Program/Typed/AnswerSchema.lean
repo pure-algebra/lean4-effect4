@@ -24,19 +24,19 @@ set_option autoImplicit false
 namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 
-/-- A successful decode passes the shape check at the decoded type. -/
-theorem hasTy_of_decode {t : Ty} {j : Json} {v : Val} (h : Schema.decode t j = some v) :
-    Val.hasTy v t = true := by
-  have normal : Schema.decode (CTy.ofRaw t).toRaw j = some v := by
-    show Schema.decode t.normalize j = some v
+/-- A successful decode passes the shape check at the decoded type, under any key names. -/
+theorem hasTy_of_decode {names : KeyNames} {t : Ty} {j : Json} {v : Val}
+    (h : Schema.decode names t j = some v) : Val.hasTy v t = true := by
+  have normal : Schema.decode names (CTy.ofRaw t).toRaw j = some v := by
+    show Schema.decode names t.normalize j = some v
     rw [Schema.decode_policy, Ty.normalize_idem]
     exact h
   rw [← hasTy_normalize]
   exact Schema.hasTy_decode normal
 
 /-- **A decoded value at a shape-decided type fits it**, at every world. -/
-theorem fits_of_decode (w : World) {t : Ty} {j : Json} {v : Val} (decided : shapeDecides t = true)
-    (h : Schema.decode t j = some v) : Fits w v t :=
+theorem fits_of_decode (w : World) {names : KeyNames} {t : Ty} {j : Json} {v : Val}
+    (decided : shapeDecides t = true) (h : Schema.decode names t j = some v) : Fits w v t :=
   fits_of_hasTy_shapeDecides w t decided v [] (hasTy_of_decode h)
 
 /-- An exit the shape check admits at shape-decided columns, with a shape-free cause, is typed. -/
@@ -66,9 +66,9 @@ theorem exitOk_of_hasTy (w : World) {ty : EffTy} {ex : ExitV} {allocated : List 
 
 /-- **A decoded exit is typed when its cause is shape-free**: the codec represents every exit, the
 membership check on top is `NoShapeDefect`. -/
-theorem exitOk_of_decode (w : World) {ty : EffTy} {j : Json} {ex : ExitV}
+theorem exitOk_of_decode (w : World) {names : KeyNames} {ty : EffTy} {j : Json} {ex : ExitV}
     (answer : shapeDecides ty.answer = true) (error : shapeDecides ty.error = true)
-    (decoded : Schema.decode (.exitOf ty.answer ty.error) j = some (reifyExitVal ex))
+    (decoded : Schema.decode names (.exitOf ty.answer ty.error) j = some (reifyExitVal ex))
     (shape : NoShapeDefect ty ex) : ExitOk w ty ex :=
   exitOk_of_hasTy w answer error (hasTy_of_decode decoded) shape
 
@@ -76,9 +76,9 @@ theorem exitOk_of_decode (w : World) {ty : EffTy} {j : Json} {ex : ExitV}
 at its exit type, a shape-free cause. The session's correlation of the reply to that token is the
 host boundary's, not this theorem's. -/
 theorem answerOk_of_decode {w : World} {m : RState} {target : FiberId} {token : Nat} {ty : EffTy}
-    {j : Json} {ex : ExitV} (declared : w.Θ target token = some ty)
+    {names : KeyNames} {j : Json} {ex : ExitV} (declared : w.Θ target token = some ty)
     (answer : shapeDecides ty.answer = true) (error : shapeDecides ty.error = true)
-    (decoded : Schema.decode (.exitOf ty.answer ty.error) j = some (reifyExitVal ex))
+    (decoded : Schema.decode names (.exitOf ty.answer ty.error) j = some (reifyExitVal ex))
     (shape : NoShapeDefect ty ex) :
     AnswerOk w m (.answerAsync target token (.ofExit ex)) :=
   fun _ => ⟨ty, declared, exitOk_of_decode w answer error decoded shape⟩
@@ -86,11 +86,11 @@ theorem answerOk_of_decode {w : World} {m : RState} {target : FiberId} {token : 
 /-- **The answer edit keeps the typed configuration** for a decoded, shape-free answer at a
 declared token (`edit_answer` with `answerOk_of_decode`). -/
 theorem decodedAnswer_keeps (root : ProgramSource) (rootTy : EffTy) {w : World} {m : RState}
-    {target : FiberId} {token : Nat} {ty : EffTy} {j : Json} {ex : ExitV}
+    {target : FiberId} {token : Nat} {ty : EffTy} {names : KeyNames} {j : Json} {ex : ExitV}
     (typed : MachineTyped root rootTy w m) (stuck : m.stuck = none)
     (declared : w.Θ target token = some ty)
     (answer : shapeDecides ty.answer = true) (error : shapeDecides ty.error = true)
-    (decoded : Schema.decode (.exitOf ty.answer ty.error) j = some (reifyExitVal ex))
+    (decoded : Schema.decode names (.exitOf ty.answer ty.error) j = some (reifyExitVal ex))
     (shape : NoShapeDefect ty ex) :
     ∃ w', w.leHost w' ∧
       (letI := termEvaluatorFor root.program

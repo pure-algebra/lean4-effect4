@@ -3137,11 +3137,11 @@ theorem service_arm {available : Env.Requirement} {key : ServiceKey} (hfuel : p.
           · intro r hr
             simp only [Cause.die, List.mem_singleton] at hr
             subst hr
-            decide
+            exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
         · intro r hr
           simp only [Cause.die, List.mem_singleton] at hr
           subst hr
-          decide
+          exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
   · cases exit with
     | success value => exact Bool.noConfusion absent
     | failure cause =>

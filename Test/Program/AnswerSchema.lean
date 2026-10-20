@@ -36,9 +36,9 @@ theorem columns_decided : shapeDecides ty.answer = true ∧ shapeDecides ty.erro
 
 theorem exit_not_decided : shapeDecides exitTy = false := rfl
 
-theorem ok_encodes : ∃ j, Schema.encode exitTy (reifyExitVal okExit) = some j := ⟨_, rfl⟩
-theorem fail_encodes : ∃ j, Schema.encode exitTy (reifyExitVal failExit) = some j := ⟨_, rfl⟩
-theorem bad_encodes : ∃ j, Schema.encode exitTy (reifyExitVal badExit) = some j := ⟨_, rfl⟩
+theorem ok_encodes : ∃ j, Schema.encode [] exitTy (reifyExitVal okExit) = some j := ⟨_, rfl⟩
+theorem fail_encodes : ∃ j, Schema.encode [] exitTy (reifyExitVal failExit) = some j := ⟨_, rfl⟩
+theorem bad_encodes : ∃ j, Schema.encode [] exitTy (reifyExitVal badExit) = some j := ⟨_, rfl⟩
 
 theorem fail_shapeFree : NoShapeDefect ty failExit := by
   intro r hr
@@ -61,7 +61,7 @@ theorem ok_admitted (w : W) (m : RState) (target : FiberId) (token : Nat)
   exact answerOk_of_decode declared rfl rfl (Schema.decode_of_encode hj) trivial
 
 /-- **The internal defect is represented**: it decodes from its own encoding. -/
-theorem bad_decodes : ∃ j, Schema.decode exitTy j = some (reifyExitVal badExit) := by
+theorem bad_decodes : ∃ j, Schema.decode [] exitTy j = some (reifyExitVal badExit) := by
   obtain ⟨j, hj⟩ := bad_encodes
   exact ⟨j, Schema.decode_of_encode hj⟩
 

@@ -33,11 +33,11 @@ example (c : LatchCell) (alloc : List String) :
   Modeled.member LatchCell c alloc
 
 -- Reader: the cell survives JSON and back; its codec premise is decided at the value.
-example : ((encode (CTy.ofRaw (Modeled.ty (α := LatchCell))).toRaw
+example : ((encode [] (CTy.ofRaw (Modeled.ty (α := LatchCell))).toRaw
       ((Modeled.image LatchCell).toVal cell)).bind
-      (decode (CTy.ofRaw (Modeled.ty (α := LatchCell))).toRaw)).bind
+      (decode [] (CTy.ofRaw (Modeled.ty (α := LatchCell))).toRaw)).bind
       (Modeled.image LatchCell).ofVal = some cell :=
-  Modeled.codec_roundtrip LatchCell cell (by decide)
+  Modeled.codec_roundtrip LatchCell cell (names := []) (by decide)
 
 -- The derived type: fields in canonical order, under their spellings.
 #guard Modeled.ty (α := LatchCell) == .record [("label", false, .option .string),
@@ -50,7 +50,7 @@ example : ((encode (CTy.ofRaw (Modeled.ty (α := LatchCell))).toRaw
       .list [.ctor 0 [.list [.str "hint", .str "id"], .list [.nat 5, .nat 4]]]]]
 
 -- Control: the codec premise is false for a natural above 2^53, which inhabits `nat`.
-#guard !Ty.isCodecValue (CTy.ofRaw (Modeled.ty (α := Nat))).toRaw
+#guard !Ty.isCodecValue [] (CTy.ofRaw (Modeled.ty (α := Nat))).toRaw
   ((Modeled.image Nat).toVal (2^53 + 1))
 
 end Test.Schema.Modeled

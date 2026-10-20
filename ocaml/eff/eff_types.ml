@@ -335,7 +335,7 @@ module Defect = struct
     | NotImplemented
     | AsyncFiber
     | BadName
-    | MissingService
+    | MissingService of ServiceKey.t
     | User of int
     | Error of Err.t
 end

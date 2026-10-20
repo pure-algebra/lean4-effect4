@@ -194,7 +194,7 @@ theorem compilesBlk_service {Ïƒ : Type} (host : Effects.Comodel (RowSig table) Ï
     have h3 : ReachesC host root 1 (fiberOf (.success (.context ctx)) K1 i) s r
         (fiberOf (Prim.ofExit (match ctx.services.getV key with
           | some v => .success v
-          | none => .failure (Cause.die Defect.missingService))) K i) s r ctx ctx := by
+          | none => .failure (Cause.die (Defect.missingService key)))) K i) s r ctx ctx := by
       refine ReachesC.step ?_ rfl (by intros; intro h; cases h) r
       rw [step_success_onSuccess]
       change LocalStep.running (fiberOf (serviceLookupK key (.context ctx)) K i) s = _

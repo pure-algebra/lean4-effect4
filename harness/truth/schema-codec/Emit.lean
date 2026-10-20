@@ -4,7 +4,8 @@ import Effect4.Codegen.SchemaCode
 /-! Emit fresh public codec results for the bounded rc.112 comparison, and each case's typed
 Schema as the code printer writes it (`Codegen.SchemaCode.ofTy`, CR-4): the checker reads these
 Schemas and writes none by hand. `unlowered` lists any case whose type has no code; the checker
-refuses a nonempty list. -/
+refuses a nonempty list. The codec runs under the lane's key names (`names`): a missing service's
+defect spells its key as a module that names it would. -/
 open Effect4 Effect4.Program
 
 namespace SchemaCodecHost
@@ -25,6 +26,34 @@ private def slotTy : Ty := .record [("slot", true, .unit)]
 private def tripleTy : Ty := .tuple [.nat, .string, .bool]
 private def nestedTy : Ty := .record [("rows", false, .map .string
   (.tuple [personTy, .option .nat, .bool]))]
+
+/-- The lane's key names: one named key. The scope's key and an unnamed key are the two other keys
+of the defect cases (the owner's ruling R5, move G). -/
+def todoKey : ServiceKey := ⟨⟨7⟩, ⟨8⟩⟩
+def names : KeyNames := [(todoKey, "TodoRepo")]
+
+/-- A cause of one `Die` reason, without annotations. -/
+private def dies (d : Machine.Defect) : Store.Val := Machine.Val.exitErr ⟨[.die d .empty]⟩
+
+/-- A record error inside a promoted defect: the payload form of a represented error. -/
+private def payloadDefects : List (String × Ty × Store.Val) :=
+  ((Machine.Payload.image.ofVal (record [("_tag", .str "NotFound"), ("id", .nat 9)])).map
+    fun p => ("defectPayload", Ty.causeOf .never, dies (.error (.payload p)))).toList
+
+/-- One case per canonical defect form, each in a cause (the owner's ruling R5, move G): a user
+defect, the three represented errors, and the machine defects, with a missing service at the
+scope's key, at the named key and at an unnamed key. -/
+def defectCases : List (String × Ty × Store.Val) := [
+  ("defectUser", .causeOf .never, dies (.user 7)),
+  ("defectText", .causeOf .never, dies (.error (.text "boom"))),
+  ("defectTagged", .causeOf .never, dies (.error (.tagged "SqlError" "no such table")))] ++
+  payloadDefects ++ [
+  ("defectAsyncFiber", .causeOf .never, dies .asyncFiber),
+  ("defectMissingScope", .causeOf .never, dies (.missingService Machine.Env.scopeKey)),
+  ("defectMissingNamed", .causeOf .never, dies (.missingService todoKey)),
+  ("defectMissingUnnamed", .causeOf .never, dies (.missingService ⟨⟨5⟩, ⟨6⟩⟩)),
+  ("defectNotImplemented", .causeOf .never, dies .notImplemented),
+  ("defectBadName", .causeOf .never, dies .badName)]
 
 /-- Additive cases keep the existing codec corpus as an independent input. -/
 def cases : List (String × Ty × Store.Val) := [
@@ -50,7 +79,7 @@ def cases : List (String × Ty × Store.Val) := [
     .list [record [("slot", .unit)], mapValue [("a-b", .none), ("__proto__", .some (.str "ok"))],
       .list []]),
   -- the nat wire's bound, `safeBound` (the owner's ruling R7): both faces write it
-  ("natAtBound", .nat, .nat (2 ^ 53 - 1))]
+  ("natAtBound", .nat, .nat (2 ^ 53 - 1))] ++ defectCases
 
 /-- Duplicate-key cases retain Lean's entry-list input before host object conversion. -/
 def refusals : List (String × Ty × Json) := [
@@ -80,7 +109,13 @@ def refusals : List (String × Ty × Json) := [
   ("numberPositiveInfinity", .number, .number Float64.posInfinity),
   ("numberNegativeInfinity", .number, .number Float64.negInfinity),
   ("recordDuplicate", personTy, .obj [("name", .str "Ada"), ("name", .str "Grace")]),
-  ("mapDuplicate", .map .string .nat, .obj [("x", Arch.Json.ofNat 1), ("x", Arch.Json.ofNat 2)])]
+  ("mapDuplicate", .map .string .nat, .obj [("x", Arch.Json.ofNat 1), ("x", Arch.Json.ofNat 2)]),
+  -- A defect outside the canonical alphabet: rc.112's `Schema.Defect()` reads any JSON, so these
+  -- are boundary differences, which the checker names (move G).
+  ("defectLegacyUser", .causeOf .never, .arr [.obj [("_tag", .str "Die"),
+    ("defect", .obj [("user", Arch.Json.ofNat 7)])]]),
+  ("defectForeignError", .causeOf .never, .arr [.obj [("_tag", .str "Die"),
+    ("defect", .obj [("message", .str "boom"), ("name", .str "Error")])]])]
 
 /-- Values with no admitted numeric JSON image, including the two inexact magnitudes.
 The host cannot carry either inexact integer before encoding; it already rounds the value. -/
@@ -100,7 +135,10 @@ def encodingRefusals : List (String × Ty × Store.Val) := [
   ("numberInexactNegative", .number, .negInt (2 ^ 53)),
   ("numberNaN", .number, .float 0x7FF8000000000000),
   ("numberPositiveInfinity", .number, .float 0x7FF0000000000000),
-  ("numberNegativeInfinity", .number, .float 0xFFF0000000000000)]
+  ("numberNegativeInfinity", .number, .float 0xFFF0000000000000),
+  -- one numeric bound at the observation (R7; D-J1): a user defect past `safeBound` has no image,
+  -- while rc.112's `Schema.Defect()` writes any number (a boundary difference, move G)
+  ("defectUserAboveBound", .causeOf .never, dies (.user (2 ^ 53)))]
 
 /-- An object of named expressions, its names plain: every case name is an identifier. -/
 def namedObject (entries : List (String × TypeScript.Expr)) : TypeScript.Expr :=
@@ -128,18 +166,19 @@ def main (args : List String) : IO Unit := do
   let existing := (Test.Codegen.SchemaGenerationContract.codecCases ++ numeric).map
     fun (name, t, v, _) => (name, t, v)
   let entries ← (existing ++ SchemaCodecHost.cases).mapM fun (name, t, v) => do
-    let some j := Ty.encode t v | throw (IO.userError ("codec refused " ++ name))
+    let some j := Ty.encode SchemaCodecHost.names t v
+      | throw (IO.userError ("codec refused " ++ name))
     pure (name, j)
   let refusals := SchemaCodecHost.refusals.map fun (name, t, j) =>
-    (name, Json.obj [("input", j), ("refused", .bool (Ty.decode t j).isNone)])
+    (name, Json.obj [("input", j), ("refused", .bool (Ty.decode SchemaCodecHost.names t j).isNone)])
   -- jsonSource transports binary64 data by bits. JSON text would erase negative zero.
   let numericDecodings := numeric.map fun (name, t, v, input) =>
     let prepared := Schema.Codec.prepare t
-    let decoded := prepared.decode input
+    let decoded := prepared.decode SchemaCodecHost.names input
     (name, Json.obj [("input", input), ("decoded", .bool (decoded == some v)),
-      ("reencoded", (decoded.bind prepared.encode).getD .null)])
+      ("reencoded", (decoded.bind (prepared.encode SchemaCodecHost.names)).getD .null)])
   let encodingRefusals := SchemaCodecHost.encodingRefusals.map fun (name, t, v) =>
-    (name, Json.bool (Ty.encode t v).isNone)
+    (name, Json.bool (Ty.encode SchemaCodecHost.names t v).isNone)
   let encodingTypes := (existing ++ SchemaCodecHost.cases).map fun (name, t, _) => (name, t)
   let refusalTypes := SchemaCodecHost.refusals.map fun (name, t, _) => (name, t)
   let encodingRefusalTypes := SchemaCodecHost.encodingRefusals.map fun (name, t, _) => (name, t)

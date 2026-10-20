@@ -440,7 +440,8 @@ def interpR (root : NativeEff) (table : RowTable := []) : RInterp where
   encodeFiber := id
   stackAnnotations := stackAnnotationsOf
   asyncFiberError := .asyncFiber
-  missingScope := .missingService
+  -- `forkScoped` with no ambient scope: the scope's key is the one missing
+  missingScope := .missingService Env.scopeKey
 
 /-- Generator/loop callbacks see the current construction view before their
 inline-exit test. Addressed eager bodies still use their captured point. -/

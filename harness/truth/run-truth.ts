@@ -75,10 +75,11 @@
  *    `compareSchedules` is called on `hostFork` alone);
  *  - exact over the recorded observation: success values and every ordered failure reason
  *    are compared as JSON, modulo the order of an object's keys, including defect and
- *    interrupt payloads. Numeric user defects
- *    retain their natural value, text/pair error defects retain their error value, and
- *    AsyncFiberError keeps its explicit marker. Other host objects remain diagnostic text;
- *    equality of that text does not establish equality of arbitrary runtime objects;
+ *    interrupt payloads. A defect is written on both faces as rc.112's `Schema.Defect()`
+ *    writes the thrown value (the owner's ruling R5, move G; `Truth.lean` `defectJson`): a
+ *    user defect as its number, a text or pair error defect as its raw JSON, and an `Error`
+ *    (AsyncFiberError, a missing service) as its name and message. An object the machine
+ *    never throws has no Lean image, so it agrees with no Lean defect;
  *  - one pair for a host error, and it is the adapter's: a row whose error column is the
  *    DB-15 pair projects at the adapter (`prelude.ts` `toPair`, DI-59), so the program's own
  *    handler, the tape row and the Lean machine observe one value; this file's `taggedPair`
@@ -409,7 +410,7 @@ class Recorder {
   reasonJson(reason: any): Json {
     switch (reason._tag) {
       case "Fail": return { fail: this.wire(reason.error) }
-      case "Die": return { die: defectWire(reason.defect) }
+      case "Die": return { die: encodeDefect(reason.defect) }
       case "Interrupt": {
         // The interruptor is a number on both faces: a fiber of this run is named by its
         // index (the machine's numbering); any other number is the number the cause carries
@@ -434,23 +435,26 @@ const describe = (value: unknown): string => {
   try { return JSON.stringify(value) ?? String(value) } catch { return String(value) }
 }
 
-/** S2's represented defect image. The adapter already projects SQL failures through
- * pairOf; a raw object here stays diagnostic rather than acquiring an invented Err value. */
-const defectWire = (defect: unknown): Json => {
-  if (Cause.isAsyncFiberError(defect)) return "asyncFiber"
-  // A service the program asks for and nothing provides: rc.112 dies with an `Error` whose
-  // message names the key (`internal/effect.ts`, `Service not found: <key>`); the machine dies
-  // with `Defect.missingService`, which carries no key. One value on both faces, as the
-  // generated corpus needs (its programs ask for services the empty context never provides).
-  if (defect instanceof Error && defect.message.startsWith("Service not found")) return "missingService"
-  // Machine.Defect.user / Truth.defectJson retain a natural defect as numeric data.
-  if (typeof defect === "number" && Number.isSafeInteger(defect) && defect >= 0 && !Object.is(defect, -0)) return { user: defect }
-  if (typeof defect === "string") return { error: defect }
-  if (Array.isArray(defect) && defect.length === 2 && typeof defect[0] === "string" && typeof defect[1] === "string") {
-    return { error: [defect[0], defect[1]] }
-  }
-  return describe(defect)
+/** A defect as rc.112 itself encodes it: `Schema.toCodecJson(Schema.Defect())` writes an `Error`
+ * as its name and message and any other value as its own JSON
+ * (`vendor/effect-4.0.0-rc.112/src/SchemaTransformation.ts:1121-1136`). The Lean face writes the
+ * machine's canonical defects in the same form (`Truth.lean` `defectJson`, the codec's
+ * `encodeDefect`; the owner's ruling R5, move G), so no projection stands between the faces. */
+const encodeDefect = (defect: unknown): Json =>
+  Schema.encodeUnknownSync(Schema.toCodecJson(Schema.Defect()))(defect) as Json
+
+/** rc.112's `AsyncFiberError` as its defect codec writes it: a tagged error's name is its tag
+ * (`internal/core.ts:617`), and the constructor sets the message (`internal/effect.ts:6190-6195`).
+ * The Lean face writes the machine's `asyncFiber` defect so. `selfTestDivergence` reads it
+ * against the defect of a real `runSyncExit` of a parked fiber. */
+const asyncFiberDefect: Json = {
+  name: "AsyncFiberError",
+  message: "An asynchronous Effect was executed with Effect.runSync"
 }
+
+/** Whether a wired defect is the AsyncFiberError, on either face. */
+const isAsyncFiberDefect = (defect: Json | undefined): boolean =>
+  defect !== undefined && deepEqual(defect, asyncFiberDefect)
 
 /** The `(tag, message)` pair of DB-15 for a value in error position (ruling G1, 2026-09-09).
  * **One rule, one function**: this is the adapter's own `pairOf` (`prelude.ts`, DI-59), so
@@ -593,7 +597,8 @@ const runSyncEntry = async (main: any): Promise<Observation> => {
   tape.sink = null
   const root = [...recorder.index.entries()].find(([, idx]) => idx === 0)?.[0] as FiberLike | undefined
   const rootExit = root !== undefined && recorder.exits.has(0) ? recorder.exitJson(recorder.exits.get(0)) : null
-  const settledLater = exitKindOf(wired) === "die" && (wired as any).failure.reasons.some((r: any) => r.die === "asyncFiber")
+  const settledLater = exitKindOf(wired) === "die" &&
+      (wired as any).failure.reasons.some((r: any) => isAsyncFiberDefect(r.die))
     ? rootExit
     : null
   return {
@@ -682,14 +687,19 @@ interface Comparison { agree: boolean; note: string }
 const failureReasons = (exit: Json | null): Array<Record<string, Json>> =>
   (((exit as any)?.failure?.reasons ?? []) as Array<Record<string, Json>>)
 
+/** A represented error defect, as both faces write it (the codec's `encodeErr` forms): a string,
+ * a pair of strings, or the one-key payload object. */
+const isRepresentedErrorDefect = (defect: Json | undefined): boolean =>
+  typeof defect === "string" ||
+  (Array.isArray(defect) && defect.length === 2 && defect.every((part) => typeof part === "string")) ||
+  (defect !== null && typeof defect === "object" && !Array.isArray(defect) &&
+    Object.keys(defect).length === 1 && typeof defect["payload"] === "string")
+
 const hasRepresentedErrorDefect = (exit: Json | null): boolean =>
-  failureReasons(exit).some((reason) => {
-    const defect = reason.die
-    return defect !== null && typeof defect === "object" && !Array.isArray(defect) && "error" in defect
-  })
+  failureReasons(exit).some((reason) => isRepresentedErrorDefect(reason.die))
 
 const isAsyncFiberExit = (exit: Json | null): boolean =>
-  failureReasons(exit).some((reason) => reason.die === "asyncFiber")
+  failureReasons(exit).some((reason) => isAsyncFiberDefect(reason.die))
 
 /** Exact observed causes whenever either face claims a represented error defect. This
  * runs before Fail precedence too, so a mixed cause cannot hide an altered Die payload. */
@@ -727,26 +737,36 @@ const selfTestErrors = (): number => {
     schedule: [], events: [], frames: [], late: [], settledLater: null, tape: [] })
   const agrees = (lean: Json, host: Json): boolean =>
     compareExits({ kind: exitKindOf(lean), exit: lean }, observation(host)).agree
-  const sql = die({ error: ["UnknownError", "no such table: missing"] })
-  const changedMessage = die({ error: ["UnknownError", "a different SQL message"] })
+  // The Lean face's defects, as the codec writes them (`Schema.Codec.encodeDefect`); the host's
+  // are rc.112's own encoding (`encodeDefect`), with no projection between.
+  const sql = die(["UnknownError", "no such table: missing"])
+  const changedMessage = die(["UnknownError", "a different SQL message"])
   const mixed = (message: string): Json => ({ failure: { reasons: [
-    { fail: ["Expected", "same failure"] }, { die: { error: message } }
+    { fail: ["Expected", "same failure"] }, { die: message }
   ] } })
+  const scopeMissing = new Error("Service not found: effect/Scope")
+  const leanScopeMissing: Json = { message: "Service not found: effect/Scope", name: "Error" }
   const cases: Array<[string, boolean]> = [
     ["pSqlOrDie exact pair", agrees(sql, sql)],
     ["pSqlOrDie changed message rejected", !agrees(sql, changedMessage)],
     ["pSqlOrDie missing payload rejected", !agrees(sql, die("diagnostic only"))],
-    ["text defect exact", agrees(die({ error: "lost" }), die(defectWire("lost")))],
-    ["text defect changed message rejected", !agrees(die({ error: "lost" }), die(defectWire("found")))],
+    ["pSqlOrDie pair as rc.112 writes it", agrees(sql, die(encodeDefect(["UnknownError", "no such table: missing"])))],
+    ["text defect exact", agrees(die("lost"), die(encodeDefect("lost")))],
+    ["text defect changed message rejected", !agrees(die("lost"), die(encodeDefect("found")))],
     ["mixed cause changed defect rejected", !agrees(mixed("lost"), mixed("found"))],
     ["raw boom differs from text boom", !agrees(fail({ boom: null }), fail("boom"))],
     ["text boom remains text", agrees(fail("boom"), fail("boom"))],
-    ["pair projection exact", deepEqual(defectWire(["SqlError", "boom"]), { error: ["SqlError", "boom"] })],
-    ["unsupported object remains diagnostic", typeof defectWire({ _tag: "SqlError", message: "boom" }) === "string"],
-    ["text asyncFiber is not the runtime marker", !isAsyncFiberExit(die(defectWire("asyncFiber")))],
+    ["numeric user defect is its number", agrees(die(3), die(encodeDefect(3)))],
+    ["numeric user defect mutation rejected", !agrees(die(3), die(encodeDefect(4)))],
+    ["the legacy user wrapper is no defect of rc.112", !agrees(die({ user: 3 }), die(encodeDefect(3)))],
+    ["missing scope as rc.112 writes it", agrees(die(leanScopeMissing), die(encodeDefect(scopeMissing)))],
+    ["missing service of another key rejected", !agrees(die(leanScopeMissing),
+      die(encodeDefect(new Error("Service not found: TodoRepo"))))],
+    ["an object the machine never throws agrees with no Lean defect", !agrees(die("SqlError"),
+      die(encodeDefect({ _tag: "SqlError", message: "boom" })))],
+    ["text asyncFiber is not the runtime marker", !isAsyncFiberExit(die(encodeDefect("asyncFiber")))],
+    ["the AsyncFiberError object is the marker", isAsyncFiberExit(die(asyncFiberDefect))],
     ["unrepresented defect payload mutation rejected", !agrees(die("lost"), die("found"))],
-    ["numeric user defect projection", deepEqual(defectWire(3), { user: 3 })],
-    ["numeric user defect mutation rejected", !agrees(die({ user: 3 }), die(defectWire(4)))],
     ["interrupt identity mutation rejected", !agrees(
       { failure: { reasons: [{ interrupt: 1 }] } }, { failure: { reasons: [{ interrupt: 2 }] } })],
     ["mixed unrepresented defect mutation rejected", !agrees(
@@ -847,7 +867,7 @@ const signedHostPark = (name: string, scenario: string | null | undefined, lean:
   leanSync: Json | null, hostSync: Json | null, parked: boolean): boolean => {
   if (!HOST_PARK_SIGNED.includes(name) || scenario != null || parked) return false
   if (!deepEqual(lean, host) || !deepEqual(hostSync, host)) return false
-  if (!deepEqual(leanSync, { failure: { reasons: [{ die: "asyncFiber" }] } })) return false
+  if (!deepEqual(leanSync, { failure: { reasons: [{ die: asyncFiberDefect }] } })) return false
   const l = withoutParks(leanSchedule.filter((row) => !isScheduledRow(row)))
   return l.parks >= 1 && (calls === 0 || l.parks === calls) &&
     deepEqual(l.rows, hostSchedule.filter((row) => !isScheduledRow(row)))
@@ -872,7 +892,7 @@ const selfTestDivergence = (): number => {
     ["parked host rejected", !check(lean, host, "pInterruptEscape", "U-01", ls, true, true)]
   ]
   const ok: Json = { success: 7 }
-  const die: Json = { failure: { reasons: [{ die: "asyncFiber" }] } }
+  const die: Json = { failure: { reasons: [{ die: asyncFiberDefect }] } }
   const parkedRun = ["started 0", "parked 0", "resumed 0", "started 0", "exited 0 success"]
   const inline = ["started 0", "exited 0 success"]
   const park = (n = "pSqlite", l = ok, h = ok, sched = parkedRun, calls = 1, ls = die, hs = ok,
@@ -906,6 +926,17 @@ const selfTestDivergence = (): number => {
   cases.push(
     ["latest: the walk's added interrupt signed", latest("poisonNoHandler", latestPoison, pinPoison, latestPoison, pinPoison)],
     ["latest: the pin's walk on the Lean face rejected", !latest("poisonNoHandler", pinPoison, pinPoison, pinPoison, pinPoison)])
+  // The AsyncFiberError marker of `signedHostPark` and `isAsyncFiberExit` is rc.112's own
+  // encoding of the defect that `runSyncExit` gives a fiber that never resumes
+  // (`internal/effect.ts:5543`; `Effect.never` is a callback that registers nothing, `:1172`).
+  const parkedExit = Effect.runSyncExit(Effect.never)
+  const parkedDefect: unknown = Exit.isFailure(parkedExit)
+    ? (parkedExit.cause.reasons[0] as { defect?: unknown } | undefined)?.defect
+    : undefined
+  cases.push(
+    ["AsyncFiberError marker is rc.112's encoding", deepEqual(encodeDefect(parkedDefect), asyncFiberDefect)],
+    ["AsyncFiberError with another message rejected", !deepEqual(encodeDefect(parkedDefect),
+      { name: "AsyncFiberError", message: "An asynchronous Effect was executed" })])
   const failures = cases.filter(([, pass]) => !pass).map(([name]) => name)
   console.log(JSON.stringify({ kind: "signed-divergence-controls", checks: cases.length, failures }))
   return failures.length === 0 ? 0 : 1

@@ -94,7 +94,7 @@ def notFound : List Effect4.Machine.Err :=
 def errs : List Effect4.Machine.Err :=
   [.boom, .tag 7, .tagged "NotFound" "no row", .text "x"] ++ notFound
 def defects : List Effect4.Machine.Defect :=
-  [.notImplemented, .asyncFiber, .badName, .missingService, .user 3, .error .boom] ++
+  [.notImplemented, .asyncFiber, .badName, .missingService ⟨⟨5⟩, ⟨6⟩⟩, .user 3, .error .boom] ++
     notFound.map .error
 #guard errs.all fun x => Canonical.decode (α := Effect4.Machine.Err) (Canonical.encode x) = some x
 #guard errs.all fun x =>

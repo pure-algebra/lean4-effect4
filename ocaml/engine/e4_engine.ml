@@ -40,8 +40,10 @@ let check_answer (answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t) : u
   let defect = function
     | Defect.User payload -> nat payload
     | Defect.Error e -> error e
-    | Defect.NotImplemented | Defect.AsyncFiber | Defect.BadName | Defect.MissingService
-      -> ()
+    | Defect.MissingService key ->
+      nat key.name;
+      nat key.service
+    | Defect.NotImplemented | Defect.AsyncFiber | Defect.BadName -> ()
   in
   let keys annotations = List.iter (fun (key, ()) -> str key) annotations in
   let reason = function
@@ -288,7 +290,9 @@ module Make (I : INSTANCE) = struct
     | Eff_types.Defect.NotImplemented -> "notImplemented"
     | Eff_types.Defect.AsyncFiber -> "asyncFiber"
     | Eff_types.Defect.BadName -> "badName"
-    | Eff_types.Defect.MissingService -> "missingService"
+    | Eff_types.Defect.MissingService key ->
+      (* the engine holds no key names: the key's two numbers, as its runtime text *)
+      Printf.sprintf "missingService k%d_%d" key.name key.service
     | Eff_types.Defect.User n -> Printf.sprintf "user %d" n
     | Eff_types.Defect.Error e -> "error(" ^ show_err e ^ ")"
   ;;

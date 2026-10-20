@@ -612,6 +612,6 @@ statement's premise stops. -/
 
 #guard closedOf (library.make .nat 1 (succeed (nat 1))) = some false
 #guard exitOf (library.make .nat 1 (succeed (nat 1))) =
-  some (.failure (Cause.die Defect.missingService))
+  some (.failure (Cause.die (Defect.missingService Env.scopeKey)))
 
 end Test.Program.PoolOps

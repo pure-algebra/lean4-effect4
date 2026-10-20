@@ -109,7 +109,7 @@ def exits : List (Option ExitV) :=
 -- Encoded at `Response` by the codec, each equals rc.112's JSON modulo object key order (`normJ`).
 #guard (exits.zip rc112Json).all fun (exit, expected) =>
   match exit with
-  | some (.success v) => (Effect4.Schema.encode responseTy v).map Effect4.Schema.Codec.normJ ==
+  | some (.success v) => (Effect4.Schema.encode [] responseTy v).map Effect4.Schema.Codec.normJ ==
       some (Effect4.Schema.Codec.normJ expected)
   | _ => false
 -- Every row of the green run was accepted: no phase is a refusal.
@@ -150,8 +150,8 @@ def refusals (r : Run) : List Effect4.Api.HostSession.Refusal :=
 -- The strict codec refuses the wider JSON object and decodes the exact one to the host's record.
 def wideJson : Json := .obj [("name", .str "bob"), ("createdAt", num 0), ("id", num 2), ("role", .str "member")]
 def exactJson : Json := .obj [("name", .str "bob"), ("id", num 2), ("role", .str "member")]
-#guard (Effect4.Schema.decode userTy wideJson).isNone
-#guard Effect4.Schema.decode userTy exactJson = user 2
+#guard (Effect4.Schema.decode [] userTy wideJson).isNone
+#guard Effect4.Schema.decode [] userTy exactJson = user 2
 
 /-! ## 5. Printing -/
 

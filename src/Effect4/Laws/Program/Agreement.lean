@@ -1241,7 +1241,8 @@ theorem serviceLookupK_found (key : ServiceKey) (ctx : Ctx) (value : Val)
 /-- A missing key is the host throw of `Context.getUnsafe` as a defect (`internal/effect.ts:2134`),
 never a typed error. census: layer.build-uses-ambient-scope -/
 theorem serviceLookupK_missing (key : ServiceKey) (ctx : Ctx) (h : ctx.services.getV key = none) :
-    serviceLookupK key (Val.context ctx) = Prim.failure (Cause.die Defect.missingService) := by
+    serviceLookupK key (Val.context ctx) =
+      Prim.failure (Cause.die (Defect.missingService key)) := by
   simp [serviceLookupK, Val.context?_context, h]
 
 /-- `provideWith` on the dependency's context: the dependent's build under `provideContext`, then

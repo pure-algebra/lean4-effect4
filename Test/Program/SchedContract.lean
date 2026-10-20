@@ -51,7 +51,7 @@ example : completionPrim (.ofExit (.failure (Cause.fail Err.boom))) =
 
 def forkWithoutScope : NativeEff := .withFiber (.forkScoped pSucceed scopedChild)
 #guard exitOf (replayEff forkWithoutScope [evaluateRoot]) 0 =
-  some (Exit.failure (Cause.die Defect.missingService))
+  some (Exit.failure (Cause.die (Defect.missingService Env.scopeKey)))
 
 -- the fiber operations are first-order and decidable: two distinct leaves, two equal ones
 #guard decide (FiberOp.getId = FiberOp.getContext) = false

@@ -32,7 +32,8 @@ identifier projects to the name of its class (`payloadClass?`): ruling (b) print
 `Data.TaggedError` class per tagged payload type, named by its tag. A module declares the class
 (`Codegen/Classes.lean`); the projection is the reference to it.
 
-A service key has one spelling in a module, kept here (`keySpelling`): the name the module
+A service key has one spelling in a module (`keySpelling`, `Program/Native.lean`, below the
+codec that spells a missing service's key, `Schema.Codec.encodeDefect`): the name the module
 gives it (`Signature.keyNames`, decisions row 378 (19), (22)), and its runtime text (`keyText`)
 when it has none. A row namespace that is an Effect service names its key, so the to-do's
 requirement reads `"TodoRepo"`; every other key keeps its runtime text. The identifier type
@@ -47,55 +48,6 @@ row at the native scope key (`nativeScopeKey`), the scope of every checked emiss
 -/
 
 namespace Effect4.Program
-
-/-- Canonical runtime spelling for an ordinary service key. Its full pair is the identity;
-its carrier is deliberately not its identity. -/
-def keyText (key : ServiceKey) : String :=
-  "k" ++ toString key.name.value ++ "_" ++ toString key.service.value
-
-/-- A key back from its runtime text: the decimal fields after `k` and after `_`. A reader
-checks the complete spelling (`text = keyText key`); `keyFromText_print`
-(`Laws/Codegen/ReadLeaf.lean`) is the retraction. -/
-def keyFromText (text : String) : ServiceKey :=
-  let bytes := text.toByteArray.data.toList.drop 1
-  ⟨⟨Effect4.Data.NatDecimal.decodeBytes (bytes.takeWhile (· != 95))⟩,
-    ⟨Effect4.Data.NatDecimal.decodeBytes ((bytes.dropWhile (· != 95)).drop 1)⟩⟩
-
-/-- **The names a module gives its keys** (`Signature.keyNames`; decisions row 378 (19), (22)):
-a key and the name it prints by, in the order of the table's rows (`rowKeyNames`,
-`Program/Native.lean`). -/
-abbrev KeyNames := List (ServiceKey × String)
-
-/-- **The name a key prints by**, if it has one: the first name that the module gives the key,
-when no earlier entry gives that name and the name is no key's runtime text (`keyText`). The two
-conditions make the names invert whatever the list (`keyOf_nameOf`, `keyOf_keyText`,
-`Laws/Codegen/ReadLeaf.lean`): a name stands for one key, and a runtime text for its own key. -/
-def KeyNames.nameOf (names : KeyNames) (key : ServiceKey) : Option String :=
-  match names.find? (fun p => decide (p.1 = key)) with
-  | some (_, name) =>
-    if names.find? (fun p => decide (p.2 = name)) = some (key, name) ∧
-        keyText (keyFromText name) ≠ name then some name
-    else none
-  | none => none
-
-/-- The key that a name stands for (`nameOf`'s inverse): the key of the first entry that gives
-the name, when the key prints by it. -/
-def KeyNames.keyOf (names : KeyNames) (name : String) : Option ServiceKey :=
-  match names.find? (fun p => decide (p.2 = name)) with
-  | some (key, _) => if names.nameOf key = some name then some key else none
-  | none => none
-
-/-- **A key's one spelling in a module**: the name that the module gives it (`nameOf`), and its
-runtime text (`keyText`) otherwise. A requirement row, a context type, a key's value and its
-declaration each read it here. -/
-def keySpelling (names : KeyNames) (key : ServiceKey) : String :=
-  (names.nameOf key).getD (keyText key)
-
-/-- A key back from its spelling (`keySpelling`'s inverse, `keyOfSpelling_keySpelling`): the key
-that a name stands for, and otherwise the key whose runtime text the spelling is. A reader checks
-the complete spelling (`text = keySpelling names key`). -/
-def keyOfSpelling (names : KeyNames) (text : String) : ServiceKey :=
-  (names.keyOf text).getD (keyFromText text)
 
 /-- The requirement identity at a fixed signature, under the module's key names. Scope uses
 Effect's own identity; an ordinary key its spelling (`keySpelling`), including when the carriers

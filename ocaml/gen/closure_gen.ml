@@ -2694,105 +2694,19 @@ let err_image : Err.t image =
 
 
 
-(* LCNF mono: Effect4.Machine.Defect.image._lam_0 (x.1 : Effect4.Machine.Defect) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Machine.Env.serviceKeyImage._lam_0 (p : Prod Nat Nat) : Effect4.ServiceKey *)
 
-let defect_image__lam_0 (x_1 : Defect.t) : Val.t =
-  match (x_1 : Defect.t) with
-    | Defect.NotImplemented -> (let _x_2 = 0 in
-      let _x_3 = [] in
-      Val.Ctor (_x_2, _x_3))
-    | Defect.AsyncFiber -> (let _x_5 = 1 in
-      let _x_6 = [] in
-      Val.Ctor (_x_5, _x_6))
-    | Defect.BadName -> (let _x_8 = 2 in
-      let _x_9 = [] in
-      Val.Ctor (_x_8, _x_9))
-    | Defect.MissingService -> (let _x_11 = 3 in
-      let _x_12 = [] in
-      Val.Ctor (_x_11, _x_12))
-    | Defect.User payload_14 -> (let _x_15 = 4 in
-      let _x_16 = Val.Nat payload_14 in
-      let _x_17 = [] in
-      let _x_18 = _x_16 :: _x_17 in
-      Val.Ctor (_x_15, _x_18))
-    | Defect.Error payload_20 -> (let _x_21 = err_image in
-      match (_x_21 : _ image) with
-        | { to_val = to_val; _ } -> (let _x_22 = 5 in
-          let _x_23 = to_val payload_20 in
-          let _x_24 = [] in
-          let _x_25 = _x_23 :: _x_24 in
-          Val.Ctor (_x_22, _x_25)))
+let env_service_key_image__lam_0 (p : int * int) : ServiceKey.t =
+  match p with
+    | fst_1, snd_1 -> ({ ServiceKey.name = fst_1; ServiceKey.service = snd_1 } : ServiceKey.t)
 
 
 
-(* LCNF mono: Effect4.Machine.ofDefect (x.1 : Effect4.Store.Val) : Option Effect4.Machine.Defect *)
+(* LCNF mono: Effect4.Machine.Env.serviceKeyImage._lam_1 (k : Effect4.ServiceKey) : Prod Nat Nat *)
 
-let of_defect (x_1 : Val.t) : Defect.t option =
-  match (x_1 : Val.t) with
-    | Val.Ctor (index_2, args_3) -> (let _x_4 = 0 in
-      let _x_5 = index_2 = _x_4 in
-      if _x_5 then (match args_3 with
-          | [] -> (let _x_43 = Defect.NotImplemented in
-            Some _x_43)
-          | _ -> None) else (let _x_6 = 1 in
-        let _x_7 = index_2 = _x_6 in
-        if _x_7 then (match args_3 with
-            | [] -> (let _x_40 = Defect.AsyncFiber in
-              Some _x_40)
-            | _ -> None) else (let _x_8 = 2 in
-          let _x_9 = index_2 = _x_8 in
-          if _x_9 then (match args_3 with
-              | [] -> (let _x_37 = Defect.BadName in
-                Some _x_37)
-              | _ -> None) else (let _x_10 = 3 in
-            let _x_11 = index_2 = _x_10 in
-            if _x_11 then (match args_3 with
-                | [] -> (let _x_34 = Defect.MissingService in
-                  Some _x_34)
-                | _ -> None) else (let _x_12 = 4 in
-              let _x_13 = index_2 = _x_12 in
-              if _x_13 then (match args_3 with
-                  | head_26 :: tail_27 -> (match (head_26 : Val.t) with
-                      | Val.Nat n_28 -> (match tail_27 with
-                          | [] -> (let _x_29 = Defect.User n_28 in
-                            Some _x_29)
-                          | _ -> None)
-                      | _ -> None)
-                  | _ -> None) else (let _x_14 = 5 in
-                let _x_15 = index_2 = _x_14 in
-                if _x_15 then (match args_3 with
-                    | head_17 :: tail_18 -> (match tail_18 with
-                        | [] -> (let _x_19 = of_err head_17 in
-                          match _x_19 with
-                            | None -> None
-                            | Some val__21 -> (let _x_22 = Defect.Error val__21 in
-                              Some _x_22))
-                        | _ -> None)
-                    | _ -> None) else None))))))
-    | _ -> None
-
-
-
-(* LCNF mono: Effect4.Machine.Defect.image : Effect4.Store.Image Effect4.Machine.Defect *)
-
-let defect_image : Defect.t image =
-  let _f_1 = defect_image__lam_0 in
-  let _x_2 = of_defect in
-  ({ to_val = _f_1; of_val = _x_2 } : _ image)
-
-
-
-(* LCNF mono: Effect4.Machine.Value.fiberHandle._lam_0 (value : Nat) : Nat *)
-
-let value_fiber_handle__lam_0 (value : int) : int =
-  value
-
-
-
-(* LCNF mono: Effect4.Machine.Value.fiberHandle._lam_1 (self : Nat) : Nat *)
-
-let value_fiber_handle__lam_1 (self : int) : int =
-  self
+let env_service_key_image__lam_1 (k : ServiceKey.t) : int * int =
+  match (k : ServiceKey.t) with
+    | { ServiceKey.name = name; ServiceKey.service = service } -> name, service
 
 
 
@@ -2853,6 +2767,181 @@ let store_image_ctor1 (i : _ image) (i_1 : int) : _ image =
   let _f_1 = store_image_ctor1__red_arg__lam_0 i i_1 in
   let _x_2 = fun _eta -> store_image_of_ctor1 i i_1 _eta in
   ({ to_val = _f_1; of_val = _x_2 } : _ image)
+
+
+
+(* LCNF mono: Effect4.Store.Image.ctor2._redArg._lam_0 (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (i : Nat) (p : Prod lcAny lcAny) : Effect4.Store.Val *)
+
+let store_image_ctor2__red_arg__lam_0 (i : _ image) (j : _ image) (i_1 : int) (p : _ * _) : Val.t =
+  match (i : _ image) with
+    | { to_val = to_val; _ } -> (match p with
+        | fst_1, snd_1 -> (match (j : _ image) with
+            | { to_val = to_val_1; _ } -> (let _x_1 = to_val fst_1 in
+              let _x_2 = to_val_1 snd_1 in
+              let _x_3 = [] in
+              let _x_4 = _x_2 :: _x_3 in
+              let _x_5 = _x_1 :: _x_4 in
+              Val.Ctor (i_1, _x_5))))
+
+
+
+(* LCNF mono: Effect4.Store.Image.ofCtor2._redArg (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (i : Nat) (x.1 : Effect4.Store.Val) : Option (Prod lcAny lcAny) *)
+
+let store_image_of_ctor2 (i : _ image) (j : _ image) (i_1 : int) (x_1 : Val.t) : (_ * _) option =
+  match (x_1 : Val.t) with
+    | Val.Ctor (index_2, args_3) -> (match args_3 with
+        | head_4 :: tail_5 -> (match tail_5 with
+            | head_6 :: tail_7 -> (match tail_7 with
+                | [] -> (let _x_8 = index_2 = i_1 in
+                  if _x_8 then (match (i : _ image) with
+                      | { of_val = of_val; _ } -> (let _x_10 = of_val head_4 in
+                        match _x_10 with
+                          | Some val__11 -> (match (j : _ image) with
+                              | { of_val = of_val_1; _ } -> (let _x_12 = of_val_1 head_6 in
+                                match _x_12 with
+                                  | Some val__13 -> (let _x_14 = val__11, val__13 in
+                                    Some _x_14)
+                                  | _ -> None))
+                          | _ -> None)) else None)
+                | _ -> None)
+            | _ -> None)
+        | _ -> None)
+    | _ -> None
+
+
+
+(* LCNF mono: Effect4.Store.Image.ctor2._redArg (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (i : Nat) : Effect4.Store.Image (Prod lcAny lcAny) *)
+
+let store_image_ctor2 (i : _ image) (j : _ image) (i_1 : int) : (_ * _) image =
+  let _f_1 = store_image_ctor2__red_arg__lam_0 i j i_1 in
+  let _x_2 = fun _eta -> store_image_of_ctor2 i j i_1 _eta in
+  ({ to_val = _f_1; of_val = _x_2 } : _ image)
+
+
+
+(* LCNF mono: Effect4.Machine.Env.serviceKeyImage : Effect4.Store.Image Effect4.ServiceKey *)
+
+let env_service_key_image : ServiceKey.t image =
+  let _f_1 = env_service_key_image__lam_0 in
+  let _f_2 = env_service_key_image__lam_1 in
+  let _x_3 = store_image_nat in
+  let _x_4 = 0 in
+  let _x_5 = store_image_ctor1 _x_3 _x_4 in
+  let _x_6 = store_image_ctor2 _x_5 _x_5 _x_4 in
+  store_image_equiv _x_6 _f_1 _f_2
+
+
+
+(* LCNF mono: Effect4.Machine.Defect.image._lam_0 (x.1 : Effect4.Machine.Defect) : Effect4.Store.Val *)
+
+let defect_image__lam_0 (x_1 : Defect.t) : Val.t =
+  match (x_1 : Defect.t) with
+    | Defect.NotImplemented -> (let _x_2 = 0 in
+      let _x_3 = [] in
+      Val.Ctor (_x_2, _x_3))
+    | Defect.AsyncFiber -> (let _x_5 = 1 in
+      let _x_6 = [] in
+      Val.Ctor (_x_5, _x_6))
+    | Defect.BadName -> (let _x_8 = 2 in
+      let _x_9 = [] in
+      Val.Ctor (_x_8, _x_9))
+    | Defect.MissingService key_11 -> (let _x_12 = env_service_key_image in
+      match (_x_12 : _ image) with
+        | { to_val = to_val; _ } -> (let _x_13 = 3 in
+          let _x_14 = to_val key_11 in
+          let _x_15 = [] in
+          let _x_16 = _x_14 :: _x_15 in
+          Val.Ctor (_x_13, _x_16)))
+    | Defect.User payload_18 -> (let _x_19 = 4 in
+      let _x_20 = Val.Nat payload_18 in
+      let _x_21 = [] in
+      let _x_22 = _x_20 :: _x_21 in
+      Val.Ctor (_x_19, _x_22))
+    | Defect.Error payload_24 -> (let _x_25 = err_image in
+      match (_x_25 : _ image) with
+        | { to_val = to_val_1; _ } -> (let _x_26 = 5 in
+          let _x_27 = to_val_1 payload_24 in
+          let _x_28 = [] in
+          let _x_29 = _x_27 :: _x_28 in
+          Val.Ctor (_x_26, _x_29)))
+
+
+
+(* LCNF mono: Effect4.Machine.ofDefect (x.1 : Effect4.Store.Val) : Option Effect4.Machine.Defect *)
+
+let of_defect (x_1 : Val.t) : Defect.t option =
+  match (x_1 : Val.t) with
+    | Val.Ctor (index_2, args_3) -> (let _x_4 = 0 in
+      let _x_5 = index_2 = _x_4 in
+      if _x_5 then (match args_3 with
+          | [] -> (let _x_50 = Defect.NotImplemented in
+            Some _x_50)
+          | _ -> None) else (let _x_6 = 1 in
+        let _x_7 = index_2 = _x_6 in
+        if _x_7 then (match args_3 with
+            | [] -> (let _x_47 = Defect.AsyncFiber in
+              Some _x_47)
+            | _ -> None) else (let _x_8 = 2 in
+          let _x_9 = index_2 = _x_8 in
+          if _x_9 then (match args_3 with
+              | [] -> (let _x_44 = Defect.BadName in
+                Some _x_44)
+              | _ -> None) else (let _x_10 = 3 in
+            let _x_11 = index_2 = _x_10 in
+            if _x_11 then (match args_3 with
+                | head_34 :: tail_35 -> (match tail_35 with
+                    | [] -> (let _x_36 = env_service_key_image in
+                      match (_x_36 : _ image) with
+                        | { of_val = of_val; _ } -> (let _x_37 = of_val head_34 in
+                          match _x_37 with
+                            | None -> None
+                            | Some val__39 -> (let _x_40 = Defect.MissingService val__39 in
+                              Some _x_40)))
+                    | _ -> None)
+                | _ -> None) else (let _x_12 = 4 in
+              let _x_13 = index_2 = _x_12 in
+              if _x_13 then (match args_3 with
+                  | head_26 :: tail_27 -> (match (head_26 : Val.t) with
+                      | Val.Nat n_28 -> (match tail_27 with
+                          | [] -> (let _x_29 = Defect.User n_28 in
+                            Some _x_29)
+                          | _ -> None)
+                      | _ -> None)
+                  | _ -> None) else (let _x_14 = 5 in
+                let _x_15 = index_2 = _x_14 in
+                if _x_15 then (match args_3 with
+                    | head_17 :: tail_18 -> (match tail_18 with
+                        | [] -> (let _x_19 = of_err head_17 in
+                          match _x_19 with
+                            | None -> None
+                            | Some val__21 -> (let _x_22 = Defect.Error val__21 in
+                              Some _x_22))
+                        | _ -> None)
+                    | _ -> None) else None))))))
+    | _ -> None
+
+
+
+(* LCNF mono: Effect4.Machine.Defect.image : Effect4.Store.Image Effect4.Machine.Defect *)
+
+let defect_image : Defect.t image =
+  let _f_1 = defect_image__lam_0 in
+  let _x_2 = of_defect in
+  ({ to_val = _f_1; of_val = _x_2 } : _ image)
+
+
+
+(* LCNF mono: Effect4.Machine.Value.fiberHandle._lam_0 (value : Nat) : Nat *)
+
+let value_fiber_handle__lam_0 (value : int) : int =
+  value
+
+
+
+(* LCNF mono: Effect4.Machine.Value.fiberHandle._lam_1 (self : Nat) : Nat *)
+
+let value_fiber_handle__lam_1 (self : int) : int =
+  self
 
 
 
@@ -4807,40 +4896,59 @@ let inst_decidable_eq_err (x_1 : Err.t) (x_2 : Err.t) : bool =
 
 
 
+(* LCNF mono: Effect4.instDecidableEqServiceKey.decEq (x.1 : Effect4.ServiceKey) (x.2 : Effect4.ServiceKey) : Bool *)
+
+let inst_decidable_eq_service_key_dec_eq (x_1 : ServiceKey.t) (x_2 : ServiceKey.t) : bool =
+  match (x_1 : ServiceKey.t) with
+    | { ServiceKey.name = name_3; ServiceKey.service = service_4 } -> (match (x_2 : ServiceKey.t) with
+        | { ServiceKey.name = name_5; ServiceKey.service = service_6 } -> (let _x_7 = name_3 = name_5 in
+          if _x_7 then service_4 = service_6 else _x_7))
+
+
+
 (* LCNF mono: Effect4.Machine.instDecidableEqDefect.decEq (x.1 : Effect4.Machine.Defect) (x.2 : Effect4.Machine.Defect) : Bool *)
 
 let inst_decidable_eq_defect_dec_eq (x_1 : Defect.t) (x_2 : Defect.t) : bool =
   match (x_1 : Defect.t) with
     | Defect.NotImplemented -> (match (x_2 : Defect.t) with
         | Defect.NotImplemented -> true
-        | Defect.User _ -> false
-        | Defect.Error _ -> false
+        | Defect.AsyncFiber -> false
+        | Defect.BadName -> false
         | _ -> false)
     | Defect.AsyncFiber -> (match (x_2 : Defect.t) with
+        | Defect.NotImplemented -> false
         | Defect.AsyncFiber -> true
-        | Defect.User _ -> false
-        | Defect.Error _ -> false
+        | Defect.BadName -> false
         | _ -> false)
     | Defect.BadName -> (match (x_2 : Defect.t) with
+        | Defect.NotImplemented -> false
+        | Defect.AsyncFiber -> false
         | Defect.BadName -> true
-        | Defect.User _ -> false
-        | Defect.Error _ -> false
         | _ -> false)
-    | Defect.MissingService -> (match (x_2 : Defect.t) with
-        | Defect.MissingService -> true
-        | Defect.User _ -> false
-        | Defect.Error _ -> false
-        | _ -> false)
-    | Defect.User payload_27 -> (let _x_28 = false in
+    | Defect.MissingService key_15 -> (let _x_16 = false in
       match (x_2 : Defect.t) with
-        | Defect.User payload_29 -> (let _x_30 = payload_27 = payload_29 in
-          if _x_30 then _x_30 else _x_28)
-        | _ -> _x_28)
-    | Defect.Error payload_31 -> (let _x_32 = false in
+        | Defect.NotImplemented -> _x_16
+        | Defect.AsyncFiber -> _x_16
+        | Defect.BadName -> _x_16
+        | Defect.MissingService key_17 -> (let _x_18 = inst_decidable_eq_service_key_dec_eq key_15 key_17 in
+          if _x_18 then _x_18 else _x_16)
+        | _ -> _x_16)
+    | Defect.User payload_19 -> (let _x_20 = false in
       match (x_2 : Defect.t) with
-        | Defect.Error payload_33 -> (let _x_34 = inst_decidable_eq_err_dec_eq payload_31 payload_33 in
-          if _x_34 then _x_34 else _x_32)
-        | _ -> _x_32)
+        | Defect.NotImplemented -> _x_20
+        | Defect.AsyncFiber -> _x_20
+        | Defect.BadName -> _x_20
+        | Defect.User payload_21 -> (let _x_22 = payload_19 = payload_21 in
+          if _x_22 then _x_22 else _x_20)
+        | _ -> _x_20)
+    | Defect.Error payload_23 -> (let _x_24 = false in
+      match (x_2 : Defect.t) with
+        | Defect.NotImplemented -> _x_24
+        | Defect.AsyncFiber -> _x_24
+        | Defect.BadName -> _x_24
+        | Defect.Error payload_25 -> (let _x_26 = inst_decidable_eq_err_dec_eq payload_23 payload_25 in
+          if _x_26 then _x_26 else _x_24)
+        | _ -> _x_24)
 
 
 
@@ -5390,84 +5498,6 @@ let val__saved_mask_opt (a_1 : Val.t) : bool option =
 
 
 
-(* LCNF mono: Effect4.Machine.Env.serviceKeyImage._lam_0 (p : Prod Nat Nat) : Effect4.ServiceKey *)
-
-let env_service_key_image__lam_0 (p : int * int) : ServiceKey.t =
-  match p with
-    | fst_1, snd_1 -> ({ ServiceKey.name = fst_1; ServiceKey.service = snd_1 } : ServiceKey.t)
-
-
-
-(* LCNF mono: Effect4.Machine.Env.serviceKeyImage._lam_1 (k : Effect4.ServiceKey) : Prod Nat Nat *)
-
-let env_service_key_image__lam_1 (k : ServiceKey.t) : int * int =
-  match (k : ServiceKey.t) with
-    | { ServiceKey.name = name; ServiceKey.service = service } -> name, service
-
-
-
-(* LCNF mono: Effect4.Store.Image.ctor2._redArg._lam_0 (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (i : Nat) (p : Prod lcAny lcAny) : Effect4.Store.Val *)
-
-let store_image_ctor2__red_arg__lam_0 (i : _ image) (j : _ image) (i_1 : int) (p : _ * _) : Val.t =
-  match (i : _ image) with
-    | { to_val = to_val; _ } -> (match p with
-        | fst_1, snd_1 -> (match (j : _ image) with
-            | { to_val = to_val_1; _ } -> (let _x_1 = to_val fst_1 in
-              let _x_2 = to_val_1 snd_1 in
-              let _x_3 = [] in
-              let _x_4 = _x_2 :: _x_3 in
-              let _x_5 = _x_1 :: _x_4 in
-              Val.Ctor (i_1, _x_5))))
-
-
-
-(* LCNF mono: Effect4.Store.Image.ofCtor2._redArg (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (i : Nat) (x.1 : Effect4.Store.Val) : Option (Prod lcAny lcAny) *)
-
-let store_image_of_ctor2 (i : _ image) (j : _ image) (i_1 : int) (x_1 : Val.t) : (_ * _) option =
-  match (x_1 : Val.t) with
-    | Val.Ctor (index_2, args_3) -> (match args_3 with
-        | head_4 :: tail_5 -> (match tail_5 with
-            | head_6 :: tail_7 -> (match tail_7 with
-                | [] -> (let _x_8 = index_2 = i_1 in
-                  if _x_8 then (match (i : _ image) with
-                      | { of_val = of_val; _ } -> (let _x_10 = of_val head_4 in
-                        match _x_10 with
-                          | Some val__11 -> (match (j : _ image) with
-                              | { of_val = of_val_1; _ } -> (let _x_12 = of_val_1 head_6 in
-                                match _x_12 with
-                                  | Some val__13 -> (let _x_14 = val__11, val__13 in
-                                    Some _x_14)
-                                  | _ -> None))
-                          | _ -> None)) else None)
-                | _ -> None)
-            | _ -> None)
-        | _ -> None)
-    | _ -> None
-
-
-
-(* LCNF mono: Effect4.Store.Image.ctor2._redArg (I : Effect4.Store.Image lcAny) (J : Effect4.Store.Image lcAny) (i : Nat) : Effect4.Store.Image (Prod lcAny lcAny) *)
-
-let store_image_ctor2 (i : _ image) (j : _ image) (i_1 : int) : (_ * _) image =
-  let _f_1 = store_image_ctor2__red_arg__lam_0 i j i_1 in
-  let _x_2 = fun _eta -> store_image_of_ctor2 i j i_1 _eta in
-  ({ to_val = _f_1; of_val = _x_2 } : _ image)
-
-
-
-(* LCNF mono: Effect4.Machine.Env.serviceKeyImage : Effect4.Store.Image Effect4.ServiceKey *)
-
-let env_service_key_image : ServiceKey.t image =
-  let _f_1 = env_service_key_image__lam_0 in
-  let _f_2 = env_service_key_image__lam_1 in
-  let _x_3 = store_image_nat in
-  let _x_4 = 0 in
-  let _x_5 = store_image_ctor1 _x_3 _x_4 in
-  let _x_6 = store_image_ctor2 _x_5 _x_5 _x_4 in
-  store_image_equiv _x_6 _f_1 _f_2
-
-
-
 (* LCNF mono: Effect4.Machine.Env.entryStore (key : Effect4.ServiceKey) (value : Effect4.Store.Val) : Effect4.Store.Val *)
 
 let env_entry_store (key : ServiceKey.t) (value : Val.t) : Val.t =
@@ -5558,16 +5588,6 @@ let env_spine (x_1 : Val.t) : _ service list option =
       let _x_5 = index_2 = _x_4 in
       if _x_5 then env_entries_of args_3 else None)
     | _ -> None
-
-
-
-(* LCNF mono: Effect4.instDecidableEqServiceKey.decEq (x.1 : Effect4.ServiceKey) (x.2 : Effect4.ServiceKey) : Bool *)
-
-let inst_decidable_eq_service_key_dec_eq (x_1 : ServiceKey.t) (x_2 : ServiceKey.t) : bool =
-  match (x_1 : ServiceKey.t) with
-    | { ServiceKey.name = name_3; ServiceKey.service = service_4 } -> (match (x_2 : ServiceKey.t) with
-        | { ServiceKey.name = name_5; ServiceKey.service = service_6 } -> (let _x_7 = name_3 = name_5 in
-          if _x_7 then service_4 = service_6 else _x_7))
 
 
 
@@ -8489,8 +8509,9 @@ let stores : (name, thunk, Val.t, Err.t, Defect.t, int, unit, ctx, stores, (name
   let _x_51 = Name_closeParDone in
   let _x_52 = stack_annotations_of in
   let _x_53 = Defect.AsyncFiber in
-  let _x_54 = Defect.MissingService in
-  ({ to_prim_interp = _x_40; park_of = _f_15; park_code = _f_16; interrupt_code = _f_17; interrupt_as_code = _f_18; interrupt_all_code = _f_19; with_fiber_of = _f_20; sync_state = _f_21; register_async = _f_22; answer_code = _x_41; due_resumes = _f_7; wake_list = _x_43; clock_step = _f_42; cancel_name = _f_23; abort_name = _x_44; park_cancel_name = _x_45; race_cancel_name = _f_24; race_settle = _x_46; finalizer_program = _f_25; restore_name = _f_26; merge_name = _f_27; scope_status = _f_28; scope_link_fiber = _f_29; drop_finalizer = _f_30; close_scope = _f_31; ambient_scope = _x_47; budget_of = _f_32; empty_context = _x_48; context_value = _f_6; exit_value = _f_33; fiber_value = _f_5; fiber_id_value = _f_34; restore_value = _f_4; fibers_value = _f_3; exits_value = _x_49; void_value = _x_50; scope_value = _f_2; close_done_name = _x_51; encode_fiber = _f_1; stack_annotations = _x_52; async_fiber_error = _x_53; missing_scope = _x_54; prepare_answer = _f_35 } : (_, _, _, _, _, _, _, _, _, _) run_interp)
+  let _x_54 = env_scope_key in
+  let _x_55 = Defect.MissingService _x_54 in
+  ({ to_prim_interp = _x_40; park_of = _f_15; park_code = _f_16; interrupt_code = _f_17; interrupt_as_code = _f_18; interrupt_all_code = _f_19; with_fiber_of = _f_20; sync_state = _f_21; register_async = _f_22; answer_code = _x_41; due_resumes = _f_7; wake_list = _x_43; clock_step = _f_42; cancel_name = _f_23; abort_name = _x_44; park_cancel_name = _x_45; race_cancel_name = _f_24; race_settle = _x_46; finalizer_program = _f_25; restore_name = _f_26; merge_name = _f_27; scope_status = _f_28; scope_link_fiber = _f_29; drop_finalizer = _f_30; close_scope = _f_31; ambient_scope = _x_47; budget_of = _f_32; empty_context = _x_48; context_value = _f_6; exit_value = _f_33; fiber_value = _f_5; fiber_id_value = _f_34; restore_value = _f_4; fibers_value = _f_3; exits_value = _x_49; void_value = _x_50; scope_value = _f_2; close_done_name = _x_51; encode_fiber = _f_1; stack_annotations = _x_52; async_fiber_error = _x_53; missing_scope = _x_55; prepare_answer = _f_35 } : (_, _, _, _, _, _, _, _, _, _) run_interp)
 
 
 
@@ -8568,21 +8589,20 @@ let program_interp_of__lam_1 (root : NativeOp.t Eff.t) (name : eff_name) (value 
             _jp_4 _x_10) else _jp_4 env))
     | EffName_store name_11 -> (let _x_12 = stores in
       match (_x_12 : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-        | { to_prim_interp = to_prim_interp; _ } -> (let _x_13 = Defect.MissingService in
-          let _x_14 = Defect.AsyncFiber in
-          let _x_15 = Name_closeParDone in
-          let _x_16 = Val.Unit in
-          let _x_17 = Name_cancelPark in
-          let _x_18 = Name_abortController in
+        | { to_prim_interp = to_prim_interp; _ } -> (let _x_13 = Defect.AsyncFiber in
+          let _x_14 = Name_closeParDone in
+          let _x_15 = Val.Unit in
+          let _x_16 = Name_cancelPark in
+          let _x_17 = Name_abortController in
           match (to_prim_interp : (_, _, _, _, _, _, _, _) prim_interp) with
-            | { iter_next = iter_next; _ } -> (let _x_19 = Defect.NotImplemented in
-              let _x_20 = iter_next name_11 value in
-              match _x_20 with
-                | fst_1, snd_1 -> (let _x_21 = program_embed_step snd_1 in
-                  fst_1, _x_21))))
-    | _ -> (let _x_23 = [] in
-      let _x_24 = IterStep_done value in
-      _x_23, _x_24)
+            | { iter_next = iter_next; _ } -> (let _x_18 = Defect.NotImplemented in
+              let _x_19 = iter_next name_11 value in
+              match _x_19 with
+                | fst_1, snd_1 -> (let _x_20 = program_embed_step snd_1 in
+                  fst_1, _x_20))))
+    | _ -> (let _x_22 = [] in
+      let _x_23 = IterStep_done value in
+      _x_22, _x_23)
 
 
 
@@ -10305,7 +10325,7 @@ let program_service_lookup_k (key : ServiceKey.t) (v : Val.t) : (eff_name, eff_t
     | Some val__3 -> (match (val__3 : ctx) with
         | { services = services; _ } -> (let _x_4 = env_context_lookup key services in
           match _x_4 with
-            | None -> (let _x_5 = Defect.MissingService in
+            | None -> (let _x_5 = Defect.MissingService key in
               let _x_6 = cause_die _x_5 in
               Prim_failure _x_6)
             | Some val__8 -> Prim_success val__8))
@@ -13030,9 +13050,10 @@ let program_interp_of (root : NativeOp.t Eff.t) (table : Row.t list) : (eff_name
   let _x_52 = EffName_store _x_51 in
   let _x_53 = stack_annotations_of in
   let _x_54 = Defect.AsyncFiber in
-  let _x_55 = Defect.MissingService in
-  let _x_56 = program_prepare_external_answer table in
-  ({ to_prim_interp = _x_42; park_of = _f_6; park_code = _f_7; interrupt_code = _f_8; interrupt_as_code = _f_9; interrupt_all_code = _f_10; with_fiber_of = _f_11; sync_state = _f_12; register_async = _f_13; answer_code = _f_14; due_resumes = _f_15; wake_list = _x_43; clock_step = _f_16; cancel_name = _f_17; abort_name = _x_44; park_cancel_name = _x_46; race_cancel_name = _f_18; race_settle = _f_19; finalizer_program = _f_20; restore_name = _f_21; merge_name = _f_22; scope_status = _f_23; scope_link_fiber = _f_24; drop_finalizer = _f_25; close_scope = _f_26; ambient_scope = _x_47; budget_of = _f_27; empty_context = _x_48; context_value = _f_30; exit_value = _f_28; fiber_value = _f_31; fiber_id_value = _f_29; restore_value = _f_32; fibers_value = _f_33; exits_value = _x_49; void_value = _x_50; scope_value = _f_34; close_done_name = _x_52; encode_fiber = _f_35; stack_annotations = _x_53; async_fiber_error = _x_54; missing_scope = _x_55; prepare_answer = _x_56 } : (_, _, _, _, _, _, _, _, _, _) run_interp)
+  let _x_55 = env_scope_key in
+  let _x_56 = Defect.MissingService _x_55 in
+  let _x_57 = program_prepare_external_answer table in
+  ({ to_prim_interp = _x_42; park_of = _f_6; park_code = _f_7; interrupt_code = _f_8; interrupt_as_code = _f_9; interrupt_all_code = _f_10; with_fiber_of = _f_11; sync_state = _f_12; register_async = _f_13; answer_code = _f_14; due_resumes = _f_15; wake_list = _x_43; clock_step = _f_16; cancel_name = _f_17; abort_name = _x_44; park_cancel_name = _x_46; race_cancel_name = _f_18; race_settle = _f_19; finalizer_program = _f_20; restore_name = _f_21; merge_name = _f_22; scope_status = _f_23; scope_link_fiber = _f_24; drop_finalizer = _f_25; close_scope = _f_26; ambient_scope = _x_47; budget_of = _f_27; empty_context = _x_48; context_value = _f_30; exit_value = _f_28; fiber_value = _f_31; fiber_id_value = _f_29; restore_value = _f_32; fibers_value = _f_33; exits_value = _x_49; void_value = _x_50; scope_value = _f_34; close_done_name = _x_52; encode_fiber = _f_35; stack_annotations = _x_53; async_fiber_error = _x_54; missing_scope = _x_56; prepare_answer = _x_57 } : (_, _, _, _, _, _, _, _, _, _) run_interp)
 
 
 
@@ -13127,27 +13148,26 @@ let run_fiber_make_at_spawn_at_launch_entrant_at_drive_step_at_drive_state_at_st
 let api_load (program : NativeOp.t Eff.t) (compile_fuel : int) : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit, ctx, stores, (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) prim, (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) frame_fiber, (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) frame_event) run_machine =
   let _x_1 = stores in
   match (_x_1 : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-    | { budget_of = budget_of; _ } -> (let _x_2 = Defect.MissingService in
-      let _x_3 = Defect.AsyncFiber in
-      let _x_4 = Name_closeParDone in
-      let _x_5 = Val.Unit in
-      let _x_6 = Name_cancelPark in
-      let _x_7 = Name_abortController in
-      let _x_8 = stores_empty in
-      let _x_9 = run_machine_empty _x_8 in
-      match (_x_9 : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
-        | { state = state; _ } -> (let _x_10 = [] in
-          let _x_11 = None in
-          let _x_12 = false in
-          let _x_13 = 0 in
-          let _x_14 = empty_ctx in
-          let _x_15 = budget_of _x_14 in
-          let _x_16 = api_compile program compile_fuel in
-          let _x_17 = true in
-          let _x_18 = run_fiber_make_at_spawn_at_launch_entrant_at_drive_step_at_drive_state_at_step_decision_state_at_program_prepared_step_spec_0_spec_2_spec_5_spec_11_spec_20_spec_27 _x_13 _x_16 _x_17 _x_15 _x_14 in
-          let _x_19 = _x_18 :: _x_10 in
-          let _x_20 = 1 in
-          ({ fibers = _x_19; races = _x_10; next_id = _x_20; next_token = _x_13; next_race = _x_13; middleware_installed = _x_12; armed = _x_10; state = state; trace = _x_10; stuck = _x_11; forks = _x_10 } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine)))
+    | { budget_of = budget_of; _ } -> (let _x_2 = Defect.AsyncFiber in
+      let _x_3 = Name_closeParDone in
+      let _x_4 = Val.Unit in
+      let _x_5 = Name_cancelPark in
+      let _x_6 = Name_abortController in
+      let _x_7 = stores_empty in
+      let _x_8 = run_machine_empty _x_7 in
+      match (_x_8 : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
+        | { state = state; _ } -> (let _x_9 = [] in
+          let _x_10 = None in
+          let _x_11 = false in
+          let _x_12 = 0 in
+          let _x_13 = empty_ctx in
+          let _x_14 = budget_of _x_13 in
+          let _x_15 = api_compile program compile_fuel in
+          let _x_16 = true in
+          let _x_17 = run_fiber_make_at_spawn_at_launch_entrant_at_drive_step_at_drive_state_at_step_decision_state_at_program_prepared_step_spec_0_spec_2_spec_5_spec_11_spec_20_spec_27 _x_12 _x_15 _x_16 _x_14 _x_13 in
+          let _x_18 = _x_17 :: _x_9 in
+          let _x_19 = 1 in
+          ({ fibers = _x_18; races = _x_9; next_id = _x_19; next_token = _x_12; next_race = _x_12; middleware_installed = _x_11; armed = _x_9; state = state; trace = _x_9; stuck = _x_10; forks = _x_9 } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine)))
 
 
 
@@ -13470,21 +13490,20 @@ let program_interp_at__lam_3 (completed : (int * (Val.t, Err.t, Defect.t, int, u
             _jp_5 _x_11) else _jp_5 env))
     | EffName_store name_12 -> (let _x_13 = stores in
       match (_x_13 : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-        | { to_prim_interp = to_prim_interp; _ } -> (let _x_14 = Defect.MissingService in
-          let _x_15 = Defect.AsyncFiber in
-          let _x_16 = Name_closeParDone in
-          let _x_17 = Val.Unit in
-          let _x_18 = Name_cancelPark in
-          let _x_19 = Name_abortController in
+        | { to_prim_interp = to_prim_interp; _ } -> (let _x_14 = Defect.AsyncFiber in
+          let _x_15 = Name_closeParDone in
+          let _x_16 = Val.Unit in
+          let _x_17 = Name_cancelPark in
+          let _x_18 = Name_abortController in
           match (to_prim_interp : (_, _, _, _, _, _, _, _) prim_interp) with
-            | { iter_next = iter_next; _ } -> (let _x_20 = Defect.NotImplemented in
-              let _x_21 = iter_next name_12 value in
-              match _x_21 with
-                | fst_1, snd_1 -> (let _x_22 = program_embed_step snd_1 in
-                  fst_1, _x_22))))
-    | _ -> (let _x_24 = [] in
-      let _x_25 = IterStep_done value in
-      _x_24, _x_25)
+            | { iter_next = iter_next; _ } -> (let _x_19 = Defect.NotImplemented in
+              let _x_20 = iter_next name_12 value in
+              match _x_20 with
+                | fst_1, snd_1 -> (let _x_21 = program_embed_step snd_1 in
+                  fst_1, _x_21))))
+    | _ -> (let _x_23 = [] in
+      let _x_24 = IterStep_done value in
+      _x_23, _x_24)
 
 
 
@@ -13528,14 +13547,16 @@ let program_interp_at__lam_6 (completed : (int * (Val.t, Err.t, Defect.t, int, u
     | _ -> (let _x_8 = [] in
       let _x_9 = program_interp_of root _x_8 in
       match (_x_9 : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-        | { finalizer_program = finalizer_program; _ } -> (let _x_10 = Defect.MissingService in
-          let _x_11 = Defect.AsyncFiber in
-          let _x_12 = Name_closeParDone in
-          let _x_13 = EffName_store _x_12 in
-          let _x_14 = Val.Unit in
-          let _x_15 = Name_cancelPark in
-          let _x_16 = EffName_store _x_15 in
-          let _x_17 = EffName_abort in
+        | { finalizer_program = finalizer_program; _ } -> (let _x_10 = 0 in
+          let _x_11 = ({ ServiceKey.name = _x_10; ServiceKey.service = _x_10 } : ServiceKey.t) in
+          let _x_12 = Defect.MissingService _x_11 in
+          let _x_13 = Defect.AsyncFiber in
+          let _x_14 = Name_closeParDone in
+          let _x_15 = EffName_store _x_14 in
+          let _x_16 = Val.Unit in
+          let _x_17 = Name_cancelPark in
+          let _x_18 = EffName_store _x_17 in
+          let _x_19 = EffName_abort in
           finalizer_program name exit_))
 
 
@@ -13545,25 +13566,27 @@ let program_interp_at__lam_6 (completed : (int * (Val.t, Err.t, Defect.t, int, u
 let program_interp_at (root : NativeOp.t Eff.t) (completed : (int * (Val.t, Err.t, Defect.t, int, unit) Exit.t) list) (table : Row.t list) : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit, ctx, stores, (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) prim) run_interp =
   let _x_1 = program_interp_of root table in
   match (_x_1 : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-    | { to_prim_interp = to_prim_interp; park_of = park_of; park_code = park_code; interrupt_code = interrupt_code; interrupt_as_code = interrupt_as_code; interrupt_all_code = interrupt_all_code; with_fiber_of = with_fiber_of; sync_state = sync_state; register_async = register_async; answer_code = answer_code; due_resumes = due_resumes; wake_list = wake_list; clock_step = clock_step; cancel_name = cancel_name; race_cancel_name = race_cancel_name; race_settle = race_settle; restore_name = restore_name; merge_name = merge_name; scope_status = scope_status; scope_link_fiber = scope_link_fiber; drop_finalizer = drop_finalizer; close_scope = close_scope; ambient_scope = ambient_scope; budget_of = budget_of; empty_context = empty_context; context_value = context_value; exit_value = exit_value; fiber_value = fiber_value; fiber_id_value = fiber_id_value; restore_value = restore_value; fibers_value = fibers_value; exits_value = exits_value; scope_value = scope_value; encode_fiber = encode_fiber; stack_annotations = stack_annotations; prepare_answer = prepare_answer; _ } -> (let _x_2 = Defect.MissingService in
-      let _x_3 = Defect.AsyncFiber in
-      let _x_4 = Name_closeParDone in
-      let _x_5 = EffName_store _x_4 in
-      let _x_6 = Val.Unit in
-      let _x_7 = Name_cancelPark in
-      let _x_8 = EffName_store _x_7 in
-      let _x_9 = EffName_abort in
+    | { to_prim_interp = to_prim_interp; park_of = park_of; park_code = park_code; interrupt_code = interrupt_code; interrupt_as_code = interrupt_as_code; interrupt_all_code = interrupt_all_code; with_fiber_of = with_fiber_of; sync_state = sync_state; register_async = register_async; answer_code = answer_code; due_resumes = due_resumes; wake_list = wake_list; clock_step = clock_step; cancel_name = cancel_name; race_cancel_name = race_cancel_name; race_settle = race_settle; restore_name = restore_name; merge_name = merge_name; scope_status = scope_status; scope_link_fiber = scope_link_fiber; drop_finalizer = drop_finalizer; close_scope = close_scope; ambient_scope = ambient_scope; budget_of = budget_of; empty_context = empty_context; context_value = context_value; exit_value = exit_value; fiber_value = fiber_value; fiber_id_value = fiber_id_value; restore_value = restore_value; fibers_value = fibers_value; exits_value = exits_value; scope_value = scope_value; encode_fiber = encode_fiber; stack_annotations = stack_annotations; prepare_answer = prepare_answer; _ } -> (let _x_2 = 0 in
+      let _x_3 = ({ ServiceKey.name = _x_2; ServiceKey.service = _x_2 } : ServiceKey.t) in
+      let _x_4 = Defect.MissingService _x_3 in
+      let _x_5 = Defect.AsyncFiber in
+      let _x_6 = Name_closeParDone in
+      let _x_7 = EffName_store _x_6 in
+      let _x_8 = Val.Unit in
+      let _x_9 = Name_cancelPark in
+      let _x_10 = EffName_store _x_9 in
+      let _x_11 = EffName_abort in
       match (to_prim_interp : (_, _, _, _, _, _, _, _) prim_interp) with
-        | { sync_value = sync_value; finalizer_exit = finalizer_exit; reify_exit = reify_exit; cancel_then_fail = cancel_then_fail; _ } -> (let _x_10 = Defect.NotImplemented in
-          let _f_11 = program_interp_at__lam_0 completed root in
-          let _f_12 = program_interp_at__lam_1 completed root in
-          let _f_13 = program_interp_at__lam_2 completed root in
-          let _f_14 = program_interp_at__lam_3 completed root in
-          let _f_15 = program_interp_at__lam_4 completed root in
-          let _f_16 = program_interp_at__lam_5 completed root in
-          let _f_17 = program_interp_at__lam_6 completed root in
-          let _x_18 = ({ cont_a = _f_11; cont_e = _f_12; sync_value = sync_value; suspend_body = _f_13; finalizer_exit = finalizer_exit; reify_exit = reify_exit; iter_next = _f_14; loop_enter = _f_15; loop_resume = _f_16; not_implemented = _x_10; cancel_then_fail = cancel_then_fail } : (_, _, _, _, _, _, _, _) prim_interp) in
-          ({ to_prim_interp = _x_18; park_of = park_of; park_code = park_code; interrupt_code = interrupt_code; interrupt_as_code = interrupt_as_code; interrupt_all_code = interrupt_all_code; with_fiber_of = with_fiber_of; sync_state = sync_state; register_async = register_async; answer_code = answer_code; due_resumes = due_resumes; wake_list = wake_list; clock_step = clock_step; cancel_name = cancel_name; abort_name = _x_9; park_cancel_name = _x_8; race_cancel_name = race_cancel_name; race_settle = race_settle; finalizer_program = _f_17; restore_name = restore_name; merge_name = merge_name; scope_status = scope_status; scope_link_fiber = scope_link_fiber; drop_finalizer = drop_finalizer; close_scope = close_scope; ambient_scope = ambient_scope; budget_of = budget_of; empty_context = empty_context; context_value = context_value; exit_value = exit_value; fiber_value = fiber_value; fiber_id_value = fiber_id_value; restore_value = restore_value; fibers_value = fibers_value; exits_value = exits_value; void_value = _x_6; scope_value = scope_value; close_done_name = _x_5; encode_fiber = encode_fiber; stack_annotations = stack_annotations; async_fiber_error = _x_3; missing_scope = _x_2; prepare_answer = prepare_answer } : (_, _, _, _, _, _, _, _, _, _) run_interp)))
+        | { sync_value = sync_value; finalizer_exit = finalizer_exit; reify_exit = reify_exit; cancel_then_fail = cancel_then_fail; _ } -> (let _x_12 = Defect.NotImplemented in
+          let _f_13 = program_interp_at__lam_0 completed root in
+          let _f_14 = program_interp_at__lam_1 completed root in
+          let _f_15 = program_interp_at__lam_2 completed root in
+          let _f_16 = program_interp_at__lam_3 completed root in
+          let _f_17 = program_interp_at__lam_4 completed root in
+          let _f_18 = program_interp_at__lam_5 completed root in
+          let _f_19 = program_interp_at__lam_6 completed root in
+          let _x_20 = ({ cont_a = _f_13; cont_e = _f_14; sync_value = sync_value; suspend_body = _f_15; finalizer_exit = finalizer_exit; reify_exit = reify_exit; iter_next = _f_16; loop_enter = _f_17; loop_resume = _f_18; not_implemented = _x_12; cancel_then_fail = cancel_then_fail } : (_, _, _, _, _, _, _, _) prim_interp) in
+          ({ to_prim_interp = _x_20; park_of = park_of; park_code = park_code; interrupt_code = interrupt_code; interrupt_as_code = interrupt_as_code; interrupt_all_code = interrupt_all_code; with_fiber_of = with_fiber_of; sync_state = sync_state; register_async = register_async; answer_code = answer_code; due_resumes = due_resumes; wake_list = wake_list; clock_step = clock_step; cancel_name = cancel_name; abort_name = _x_11; park_cancel_name = _x_10; race_cancel_name = race_cancel_name; race_settle = race_settle; finalizer_program = _f_19; restore_name = restore_name; merge_name = merge_name; scope_status = scope_status; scope_link_fiber = scope_link_fiber; drop_finalizer = drop_finalizer; close_scope = close_scope; ambient_scope = ambient_scope; budget_of = budget_of; empty_context = empty_context; context_value = context_value; exit_value = exit_value; fiber_value = fiber_value; fiber_id_value = fiber_id_value; restore_value = restore_value; fibers_value = fibers_value; exits_value = exits_value; void_value = _x_8; scope_value = scope_value; close_done_name = _x_7; encode_fiber = encode_fiber; stack_annotations = stack_annotations; async_fiber_error = _x_5; missing_scope = _x_4; prepare_answer = prepare_answer } : (_, _, _, _, _, _, _, _, _, _) run_interp)))
 
 
 
@@ -17537,11 +17560,10 @@ let program_minted_in (m : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, un
 
 let program_reserved_defect (x_1 : Defect.t) : bool =
   match (x_1 : Defect.t) with
+    | Defect.NotImplemented -> true
     | Defect.AsyncFiber -> false
-    | Defect.MissingService -> false
-    | Defect.User _ -> false
-    | Defect.Error _ -> false
-    | _ -> true
+    | Defect.BadName -> true
+    | _ -> false
 
 
 
@@ -38984,46 +39006,52 @@ let store_runner_gen_defect_c_shape_doc : shape_doc =
   let _x_1 = 0 in
   let _x_2 = [] in
   let _x_3 = _x_1, _x_2 in
-  let _x_4 = 1 in
-  let _x_5 = _x_4, _x_2 in
-  let _x_6 = 2 in
-  let _x_7 = _x_6, _x_2 in
-  let _x_8 = store_runner_gen_err_c_shape_doc in
-  match (_x_8 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_9 = 3 in
-      let _x_10 = _x_9, _x_2 in
-      let _x_11 = "Defect" in
-      let _x_12 = "notImplemented" in
-      let _x_13 = _x_12, _x_3 in
-      let _x_14 = "asyncFiber" in
-      let _x_15 = _x_14, _x_5 in
-      let _x_16 = "badName" in
-      let _x_17 = _x_16, _x_7 in
-      let _x_18 = "missingService" in
-      let _x_19 = _x_18, _x_10 in
-      let _x_20 = "user" in
-      let _x_21 = 4 in
-      let _x_22 = "payload" in
-      let _x_23 = Shape_nat in
-      let _x_24 = _x_22, _x_23 in
-      let _x_25 = _x_24 :: _x_2 in
-      let _x_26 = _x_21, _x_25 in
-      let _x_27 = _x_20, _x_26 in
-      let _x_28 = "error" in
-      let _x_29 = 5 in
-      let _x_30 = _x_22, root in
-      let _x_31 = _x_30 :: _x_2 in
-      let _x_32 = _x_29, _x_31 in
-      let _x_33 = _x_28, _x_32 in
-      let _x_34 = _x_33 :: _x_2 in
-      let _x_35 = _x_27 :: _x_34 in
-      let _x_36 = _x_19 :: _x_35 in
-      let _x_37 = _x_17 :: _x_36 in
-      let _x_38 = _x_15 :: _x_37 in
-      let _x_39 = _x_13 :: _x_38 in
-      let _x_40 = Shape_sum (_x_11, _x_39) in
-      let _x_41 = _x_2 @ defs in
-      ({ root = _x_40; defs = _x_41 } : shape_doc))
+  let _x_4 = store_program_gen_service_key_c_shape_doc in
+  match (_x_4 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_5 = 1 in
+      let _x_6 = _x_5, _x_2 in
+      let _x_7 = 2 in
+      let _x_8 = _x_7, _x_2 in
+      let _x_9 = store_runner_gen_err_c_shape_doc in
+      match (_x_9 : shape_doc) with
+        | { root = root_1; defs = defs_1 } -> (let _x_10 = "key" in
+          let _x_11 = _x_10, root in
+          let _x_12 = _x_11 :: _x_2 in
+          let _x_13 = "Defect" in
+          let _x_14 = "notImplemented" in
+          let _x_15 = _x_14, _x_3 in
+          let _x_16 = "asyncFiber" in
+          let _x_17 = _x_16, _x_6 in
+          let _x_18 = "badName" in
+          let _x_19 = _x_18, _x_8 in
+          let _x_20 = "missingService" in
+          let _x_21 = 3 in
+          let _x_22 = _x_21, _x_12 in
+          let _x_23 = _x_20, _x_22 in
+          let _x_24 = "user" in
+          let _x_25 = 4 in
+          let _x_26 = "payload" in
+          let _x_27 = Shape_nat in
+          let _x_28 = _x_26, _x_27 in
+          let _x_29 = _x_28 :: _x_2 in
+          let _x_30 = _x_25, _x_29 in
+          let _x_31 = _x_24, _x_30 in
+          let _x_32 = "error" in
+          let _x_33 = 5 in
+          let _x_34 = _x_26, root_1 in
+          let _x_35 = _x_34 :: _x_2 in
+          let _x_36 = _x_33, _x_35 in
+          let _x_37 = _x_32, _x_36 in
+          let _x_38 = _x_37 :: _x_2 in
+          let _x_39 = _x_31 :: _x_38 in
+          let _x_40 = _x_23 :: _x_39 in
+          let _x_41 = _x_19 :: _x_40 in
+          let _x_42 = _x_17 :: _x_41 in
+          let _x_43 = _x_15 :: _x_42 in
+          let _x_44 = Shape_sum (_x_13, _x_43) in
+          let _x_45 = defs @ _x_2 in
+          let _x_46 = _x_45 @ defs_1 in
+          ({ root = _x_44; defs = _x_46 } : shape_doc)))
 
 
 
@@ -39564,19 +39592,21 @@ let store_runner_gen_defect_c_to_val (x_1 : Defect.t) : Val.t =
     | Defect.BadName -> (let _x_8 = 2 in
       let _x_9 = [] in
       Val.Ctor (_x_8, _x_9))
-    | Defect.MissingService -> (let _x_11 = 3 in
-      let _x_12 = [] in
-      Val.Ctor (_x_11, _x_12))
-    | Defect.User payload_14 -> (let _x_15 = 4 in
-      let _x_16 = Val.Nat payload_14 in
-      let _x_17 = [] in
-      let _x_18 = _x_16 :: _x_17 in
-      Val.Ctor (_x_15, _x_18))
-    | Defect.Error payload_20 -> (let _x_21 = 5 in
-      let _x_22 = store_runner_gen_err_c_to_val payload_20 in
-      let _x_23 = [] in
-      let _x_24 = _x_22 :: _x_23 in
-      Val.Ctor (_x_21, _x_24))
+    | Defect.MissingService key_11 -> (let _x_12 = 3 in
+      let _x_13 = store_program_gen_service_key_c_to_val key_11 in
+      let _x_14 = [] in
+      let _x_15 = _x_13 :: _x_14 in
+      Val.Ctor (_x_12, _x_15))
+    | Defect.User payload_17 -> (let _x_18 = 4 in
+      let _x_19 = Val.Nat payload_17 in
+      let _x_20 = [] in
+      let _x_21 = _x_19 :: _x_20 in
+      Val.Ctor (_x_18, _x_21))
+    | Defect.Error payload_23 -> (let _x_24 = 5 in
+      let _x_25 = store_runner_gen_err_c_to_val payload_23 in
+      let _x_26 = [] in
+      let _x_27 = _x_25 :: _x_26 in
+      Val.Ctor (_x_24, _x_27))
 
 
 
@@ -39760,23 +39790,28 @@ let store_runner_gen_defect_c_of_val (x_1 : Val.t) : Defect.t option =
     | Val.Ctor (index_2, args_3) -> (let _x_4 = 0 in
       let _x_5 = index_2 = _x_4 in
       if _x_5 then (match args_3 with
-          | [] -> (let _x_45 = Defect.NotImplemented in
-            Some _x_45)
+          | [] -> (let _x_51 = Defect.NotImplemented in
+            Some _x_51)
           | _ -> None) else (let _x_6 = 1 in
         let _x_7 = index_2 = _x_6 in
         if _x_7 then (match args_3 with
-            | [] -> (let _x_42 = Defect.AsyncFiber in
-              Some _x_42)
+            | [] -> (let _x_48 = Defect.AsyncFiber in
+              Some _x_48)
             | _ -> None) else (let _x_8 = 2 in
           let _x_9 = index_2 = _x_8 in
           if _x_9 then (match args_3 with
-              | [] -> (let _x_39 = Defect.BadName in
-                Some _x_39)
+              | [] -> (let _x_45 = Defect.BadName in
+                Some _x_45)
               | _ -> None) else (let _x_10 = 3 in
             let _x_11 = index_2 = _x_10 in
             if _x_11 then (match args_3 with
-                | [] -> (let _x_36 = Defect.MissingService in
-                  Some _x_36)
+                | head_36 :: tail_37 -> (match tail_37 with
+                    | [] -> (let _x_38 = store_program_gen_service_key_c_of_val head_36 in
+                      match _x_38 with
+                        | None -> None
+                        | Some val__40 -> (let _x_41 = Defect.MissingService val__40 in
+                          Some _x_41))
+                    | _ -> None)
                 | _ -> None) else (let _x_12 = 4 in
               let _x_13 = index_2 = _x_12 in
               if _x_13 then (match args_3 with

@@ -12,7 +12,8 @@ import Effect4.Schema.Codec
 `fold_of` connects the listed structural definitions to their generated type algebra.
 Accumulator-shaped definitions carry their extra arguments in the algebra's result.
 Schema writing uses `Bridge.schemaAlg` directly.
-The JSON boundary uses one `Codec.wireAlgebra`; layout, support, encoding and decoding project its result.
+The JSON boundary uses one `Codec.wireAlgebra`; layout, support, encoding and decoding project its result,
+and encoding and decoding read the module's key names.
 Their connectors retain the existing outward names.
 The traversal census owns the classification of each declaration.
 -/
@@ -56,10 +57,10 @@ theorem layout.eq_cata (t : Ty) : layout t = (cata_ty wireAlgebra t).layout := r
 
 theorem isSupported.eq_cata (t : Ty) : isSupported t = (cata_ty wireAlgebra t).supported := rfl
 
-theorem encodeRaw.eq_cata (t : Ty) (v : Effect4.Machine.Val) :
-    encodeRaw t v = (cata_ty wireAlgebra t).encode v := rfl
+theorem encodeRaw.eq_cata (names : KeyNames) (t : Ty) (v : Effect4.Machine.Val) :
+    encodeRaw names t v = (cata_ty wireAlgebra t).encode names v := rfl
 
-theorem decodeRaw.eq_cata (t : Ty) (j : Effect4.Json) :
-    decodeRaw t j = (cata_ty wireAlgebra t).decode j := rfl
+theorem decodeRaw.eq_cata (names : KeyNames) (t : Ty) (j : Effect4.Json) :
+    decodeRaw names t j = (cata_ty wireAlgebra t).decode names j := rfl
 
 end Effect4.Schema.Codec

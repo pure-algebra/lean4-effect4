@@ -2311,7 +2311,8 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
   encodeFiber := id
   stackAnnotations := stackAnnotationsOf
   asyncFiberError := Defect.asyncFiber
-  missingScope := Defect.missingService
+  -- `forkScoped` with no ambient scope: the scope's key is the one missing
+  missingScope := Defect.missingService Env.scopeKey
 
 /-! ### The remaining `deferred.*` clauses, as facts about the compiled program -/
 

@@ -2247,10 +2247,11 @@ theorem clause_ambientScope (root : ProgramSource) (rootTy : EffTy) :
       (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
       (Val.scopeHandle scope) (fun _ _ _ => fits_scopeHandle _ _ live) (fun _ => rfl))
   | none =>
-    refine ev.settle_continue { f.frame with current := .pure (.failure (Cause.die .missingService)) }
+    refine ev.settle_continue
+      { f.frame with current := .pure (.failure (Cause.die (.missingService Env.scopeKey))) }
       (fun ty declared => ?_)
     obtain ⟨row, tin, flag, covered, bit, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
-    have clean : NoShapeDefect tin.1.type (.failure (Cause.die .missingService)) := by
+    have clean : NoShapeDefect tin.1.type (.failure (Cause.die (.missingService Env.scopeKey))) := by
       intro reason member
       simp only [Cause.die_reasons, List.mem_singleton] at member
       subst member

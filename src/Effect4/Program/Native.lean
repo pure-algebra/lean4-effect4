@@ -7,6 +7,7 @@ public import Effect4.Program.ScopedOp
 public import Effect4.Program.FnName
 public import Effect4.Machine.Stores
 public import Effect4.Store.Carrier.Utf8
+public import Effect4.Data.NatDecimal
 
 /-!
 # Syntax.Native — the native row alphabet over the stores (lane A3, first cut)
@@ -606,7 +607,60 @@ def nativeRowOf (table : RowTable) : NativeOp → Row
 @[simp] theorem nativeRowOf_nil (op : NativeOp) : nativeRowOf [] op = op.row := by
   cases op <;> rfl
 
-/-! ## The names a table gives its keys (decisions row 378 (19), (22)) -/
+/-! ## The names a table gives its keys (decisions row 378 (19), (22))
+
+A key's spelling lives here, below the codegen, since move G (the owner's ruling R5,
+2026-10-19): the printer reads it (`printKey`, `Codegen/PrintLeaf.lean`), and so does the codec
+that spells a missing service's key (`Schema.Codec.encodeDefect`), which the application face
+imports without the codegen (decisions row 392). Moved from `Codegen/Types.lean` unchanged. -/
+
+/-- Canonical runtime spelling for an ordinary service key. Its full pair is the identity;
+its carrier is deliberately not its identity. -/
+def keyText (key : ServiceKey) : String :=
+  "k" ++ toString key.name.value ++ "_" ++ toString key.service.value
+
+/-- A key back from its runtime text: the decimal fields after `k` and after `_`. A reader
+checks the complete spelling (`text = keyText key`); `keyFromText_print`
+(`Laws/Codegen/ReadLeaf.lean`) is the retraction. -/
+def keyFromText (text : String) : ServiceKey :=
+  let bytes := text.toByteArray.data.toList.drop 1
+  ⟨⟨Effect4.Data.NatDecimal.decodeBytes (bytes.takeWhile (· != 95))⟩,
+    ⟨Effect4.Data.NatDecimal.decodeBytes ((bytes.dropWhile (· != 95)).drop 1)⟩⟩
+
+/-- **The names a module gives its keys** (`Signature.keyNames`; decisions row 378 (19), (22)):
+a key and the name it prints by, in the order of the table's rows (`rowKeyNames`). -/
+abbrev KeyNames := List (ServiceKey × String)
+
+/-- **The name a key prints by**, if it has one: the first name that the module gives the key,
+when no earlier entry gives that name and the name is no key's runtime text (`keyText`). The two
+conditions make the names invert whatever the list (`keyOf_nameOf`, `keyOf_keyText`,
+`Laws/Codegen/ReadLeaf.lean`): a name stands for one key, and a runtime text for its own key. -/
+def KeyNames.nameOf (names : KeyNames) (key : ServiceKey) : Option String :=
+  match names.find? (fun p => decide (p.1 = key)) with
+  | some (_, name) =>
+    if names.find? (fun p => decide (p.2 = name)) = some (key, name) ∧
+        keyText (keyFromText name) ≠ name then some name
+    else none
+  | none => none
+
+/-- The key that a name stands for (`nameOf`'s inverse): the key of the first entry that gives
+the name, when the key prints by it. -/
+def KeyNames.keyOf (names : KeyNames) (name : String) : Option ServiceKey :=
+  match names.find? (fun p => decide (p.2 = name)) with
+  | some (key, _) => if names.nameOf key = some name then some key else none
+  | none => none
+
+/-- **A key's one spelling in a module**: the name that the module gives it (`nameOf`), and its
+runtime text (`keyText`) otherwise. A requirement row, a context type, a key's value and its
+declaration each read it here. -/
+def keySpelling (names : KeyNames) (key : ServiceKey) : String :=
+  (names.nameOf key).getD (keyText key)
+
+/-- A key back from its spelling (`keySpelling`'s inverse, `keyOfSpelling_keySpelling`): the key
+that a name stands for, and otherwise the key whose runtime text the spelling is. A reader checks
+the complete spelling (`text = keySpelling names key`). -/
+def keyOfSpelling (names : KeyNames) (text : String) : ServiceKey :=
+  (names.keyOf text).getD (keyFromText text)
 
 /-- The bytes before the one dot of a spelling and the bytes after it; `none` unless the bytes
 hold exactly one dot (byte `46`). -/

@@ -199,16 +199,17 @@ def shapeDoc : ShapeDoc :=
      [("notImplemented", 0, []),
       ("asyncFiber", 1, []),
       ("badName", 2, []),
-      ("missingService", 3, []),
+      ("missingService", 3, [("key", (shape _root_.Effect4.ServiceKey).root)]),
       ("user", 4, [("payload", (shape _root_.Nat).root)]),
       ("error", 5, [("payload", (shape _root_.Effect4.Machine.Err).root)])],
-   (shape _root_.Nat).defs ++ (shape _root_.Effect4.Machine.Err).defs⟩
+   (shape _root_.Effect4.ServiceKey).defs ++ (shape _root_.Nat).defs ++
+     (shape _root_.Effect4.Machine.Err).defs⟩
 
 def toVal : _root_.Effect4.Machine.Defect → Val
   | .notImplemented => .ctor 0 []
   | .asyncFiber => .ctor 1 []
   | .badName => .ctor 2 []
-  | .missingService => .ctor 3 []
+  | .missingService a0 => .ctor 3 [Canonical.toVal a0]
   | .user a0 => .ctor 4 [Canonical.toVal a0]
   | .error a0 => .ctor 5 [Canonical.toVal a0]
 
@@ -216,13 +217,16 @@ def ofVal : Val → Option (_root_.Effect4.Machine.Defect)
   | .ctor 0 [] => some .notImplemented
   | .ctor 1 [] => some .asyncFiber
   | .ctor 2 [] => some .badName
-  | .ctor 3 [] => some .missingService
+  | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.Effect4.ServiceKey) v0).map .missingService
   | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .user
   | .ctor 5 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.Err) v0).map .error
   | _ => none
 
 /-! Each reader arm as its own `rfl` equation, for the round-trip proof below. -/
 
+theorem ofVal_arm3 (v0 : Val) :
+    ofVal (.ctor 3 [v0]) =
+      (Canonical.ofVal (α := _root_.Effect4.ServiceKey) v0).map .missingService := rfl
 theorem ofVal_arm4 (v0 : Val) :
     ofVal (.ctor 4 [v0]) =
       (Canonical.ofVal (α := _root_.Nat) v0).map .user := rfl
@@ -235,13 +239,17 @@ theorem ofVal_toVal (a : _root_.Effect4.Machine.Defect) : ofVal (toVal a) = some
   | «notImplemented» => rfl
   | «asyncFiber» => rfl
   | «badName» => rfl
-  | «missingService» => rfl
+  | «missingService» a0 => simp only [toVal, ofVal_arm3, Canonical.ofVal_toVal, Option.map_some]
   | «user» a0 => simp only [toVal, ofVal_arm4, Canonical.ofVal_toVal, Option.map_some]
   | «error» a0 => simp only [toVal, ofVal_arm5, Canonical.ofVal_toVal, Option.map_some]
 
+theorem lift_ServiceKey (x : _root_.Effect4.ServiceKey) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.ServiceKey).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (hp)))
+    _ _ (Canonical.fits x)
 theorem lift_Nat (x : _root_.Nat) :
     acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
     _ _ (Canonical.fits x)
 theorem lift_Err (x : _root_.Effect4.Machine.Err) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Machine.Err).root (Canonical.toVal x) = true :=
@@ -256,8 +264,9 @@ theorem fits (a : _root_.Effect4.Machine.Defect) : shapeDoc.accepts (toVal a) = 
     exact accepts_sum _ _ _ 1 "asyncFiber" [] [] rfl (acceptsFields_nil _)
   | «badName» =>
     exact accepts_sum _ _ _ 2 "badName" [] [] rfl (acceptsFields_nil _)
-  | «missingService» =>
-    exact accepts_sum _ _ _ 3 "missingService" [] [] rfl (acceptsFields_nil _)
+  | «missingService» a0 =>
+    exact accepts_sum _ _ _ 3 "missingService" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_ServiceKey a0) (acceptsFields_nil _))
   | «user» a0 =>
     exact accepts_sum _ _ _ 4 "user" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
@@ -1867,7 +1876,7 @@ def notFound : List Effect4.Machine.Err :=
 def errs : List Effect4.Machine.Err :=
   [.boom, .tag 7, .tagged "NotFound" "no row", .text "x"] ++ notFound
 def defects : List Effect4.Machine.Defect :=
-  [.notImplemented, .asyncFiber, .badName, .missingService, .user 3, .error .boom] ++
+  [.notImplemented, .asyncFiber, .badName, .missingService ⟨⟨5⟩, ⟨6⟩⟩, .user 3, .error .boom] ++
     notFound.map .error
 #guard errs.all fun x => Canonical.decode (α := Effect4.Machine.Err) (Canonical.encode x) = some x
 #guard errs.all fun x =>

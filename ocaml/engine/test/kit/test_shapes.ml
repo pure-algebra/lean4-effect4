@@ -27,7 +27,7 @@ module Kit = Effect4_kit.Kit
 
 (* The rule: when S1 fails, a shape has changed. Take the digests this test prints as the new
    pins, and move [pinned_version] and Kit.format_version up by one, in the same commit. *)
-let pinned_version = 2
+let pinned_version = 3
 
 let pins =
   [ "admit", "fece61a8e4b0cec24350afeea5a9b63d4e28b14a2ed3e7487738141b81f8ee7f"
@@ -37,7 +37,7 @@ let pins =
   ; "ty", "a326c1d8b4416d0c12708fdc6fb57710eb2774e8515a889148b787ba90d672d3"
   ; "eff_ty", "398dd55b90392c4a595beff164ab1ac76f6c13f9abdf2c1bf964cb43ed6534a3"
   ; "refusal", "27dc1facbfc1308441beb99940201e98d7ac0f26558d53d8fb91739b2efadfac"
-  ; "exit", "a6db7d6c97fef76407f7259345de9aa85e3edaef4bf5f888ef92496b23bfc17a"
+  ; "exit", "9ca17adb010d9efd0ce3b031f338e1a862cb71b703a3a0ae45675123cb8bfb1f"
   ; "val", "5af72e029939913e205454540e86ed7b6e965492ee5c18fc8449873e07451cc8"
   ]
 ;;

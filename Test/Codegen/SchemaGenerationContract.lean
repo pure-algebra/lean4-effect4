@@ -393,9 +393,11 @@ private def codecCause : Machine.CauseV :=
   ⟨[.fail (.text "bad") .empty, .die (.user 7) .empty,
     .interrupt none .empty, .interrupt (some ⟨9⟩) .empty]⟩
 
+/-- `codecCause`'s JSON, as rc.112's `Schema.Cause` writes it: the user defect is its own number,
+as rc.112 writes the defect of `Effect.die(7)` (the owner's ruling R5, move G). -/
 private def codecCauseJson : Json := .arr
   [ .obj [("_tag", .str "Fail"), ("error", .str "bad")]
-  , .obj [("_tag", .str "Die"), ("defect", .obj [("user", Arch.Json.ofNat 7)])]
+  , .obj [("_tag", .str "Die"), ("defect", Arch.Json.ofNat 7)]
   , .obj [("_tag", .str "Interrupt"), ("fiberId", .null)]
   , .obj [("_tag", .str "Interrupt"), ("fiberId", Arch.Json.ofNat 9)] ]
 
@@ -430,7 +432,7 @@ def codecCases : List (String × Ty × Store.Val × Json) :=
         .obj [("_tag", .str "None")]]) ]
 
 #guard codecCases.all fun (_, t, v, j) =>
-  Ty.encode t v == some j && Ty.decode t j == some v && Ty.isCodecValue t v
+  Ty.encode [] t v == some j && Ty.decode [] t j == some v && Ty.isCodecValue [] t v
 
 /-- Numeric host inputs name independent binary64 data, including the sign of zero.
 The host comparison also reads the public decoder at each expected datum. -/
@@ -456,48 +458,48 @@ def numericCodecCases : List (String × Ty × Store.Val × Json) :=
 -- The nat wire refuses every natural past `safeBound` (the owner's ruling R7, 2026-10-19). It
 -- refuses one that binary64 holds exactly and one that binary64 would round. `number` keeps the
 -- exact data.
-#guard Ty.encode .nat (.nat (2 ^ 53)) = none
-#guard Ty.encode .nat (.nat (2 ^ 53 + 1)) = none
-#guard Ty.encode .nat (.nat (2 ^ 53 + 2)) = none
-#guard Ty.decode .nat (.number Float64.negZero) = none
-#guard Ty.decode .nat (.number Float64.nan) = none
-#guard Ty.decode .nat (.number Float64.posInfinity) = none
-#guard Ty.decode .nat (.number ⟨0x3FF8000000000000⟩) = none -- 1.5
+#guard Ty.encode [] .nat (.nat (2 ^ 53)) = none
+#guard Ty.encode [] .nat (.nat (2 ^ 53 + 1)) = none
+#guard Ty.encode [] .nat (.nat (2 ^ 53 + 2)) = none
+#guard Ty.decode [] .nat (.number Float64.negZero) = none
+#guard Ty.decode [] .nat (.number Float64.nan) = none
+#guard Ty.decode [] .nat (.number Float64.posInfinity) = none
+#guard Ty.decode [] .nat (.number ⟨0x3FF8000000000000⟩) = none -- 1.5
 
 -- The checked decoder enforces original literals and rejects malformed object fields.
-#guard Ty.decode (.lit "yes") (.str "no") = none
-#guard Ty.encode (.list .nat) (.list [.str "no"]) = none
-#guard Ty.decode (.prod .nat .bool) (.arr [Arch.Json.ofNat 1]) = none
-#guard Ty.decode (.option .nat) (.obj [("value", Arch.Json.ofNat 7), ("_tag", .str "Some")]) =
+#guard Ty.decode [] (.lit "yes") (.str "no") = none
+#guard Ty.encode [] (.list .nat) (.list [.str "no"]) = none
+#guard Ty.decode [] (.prod .nat .bool) (.arr [Arch.Json.ofNat 1]) = none
+#guard Ty.decode [] (.option .nat) (.obj [("value", Arch.Json.ofNat 7), ("_tag", .str "Some")]) =
   some (.some (.nat 7))
-#guard Ty.decode (.option .nat) (.obj [("_tag", .str "Some"), ("_tag", .str "None")]) = none
-#guard Ty.decode (.option .nat) (.obj [("_tag", .str "None"), ("extra", .bool true)]) = none
-#guard Ty.decode (Ty.result .bool .string) (.obj [("_tag", .str "Success"), ("value", .bool true)]) = none
-#guard Ty.decode (.causeOf .string) (.obj [("reasons", .arr [])]) = none
-#guard Ty.decode (.causeOf .never)
+#guard Ty.decode [] (.option .nat) (.obj [("_tag", .str "Some"), ("_tag", .str "None")]) = none
+#guard Ty.decode [] (.option .nat) (.obj [("_tag", .str "None"), ("extra", .bool true)]) = none
+#guard Ty.decode [] (Ty.result .bool .string) (.obj [("_tag", .str "Success"), ("value", .bool true)]) = none
+#guard Ty.decode [] (.causeOf .string) (.obj [("reasons", .arr [])]) = none
+#guard Ty.decode [] (.causeOf .never)
   (.arr [.obj [("_tag", .str "Fail"), ("error", .str "bad")]]) = none
 
 -- Opaque runtime handles and the distinct snapshot representation stay outside JSON.
-#guard Ty.decode .never .null = none
-#guard Ty.encode (.fiberOf .nat .never) (Machine.Val.fiber ⟨0⟩) = none
-#guard Ty.encode (Ty.handle "Ref.Ref<unknown>") (Machine.Val.cell ⟨0⟩) = none
-#guard Ty.encode (.list .bool) (Machine.Val.fibers []) = none
-#guard Ty.encode (.list .bool) (.list []) = some (.arr [])
+#guard Ty.decode [] .never .null = none
+#guard Ty.encode [] (.fiberOf .nat .never) (Machine.Val.fiber ⟨0⟩) = none
+#guard Ty.encode [] (Ty.handle "Ref.Ref<unknown>") (Machine.Val.cell ⟨0⟩) = none
+#guard Ty.encode [] (.list .bool) (Machine.Val.fibers []) = none
+#guard Ty.encode [] (.list .bool) (.list []) = some (.arr [])
 
 -- Cause annotations are omitted by the host JSON schema; exact admission refuses loss.
-#guard Ty.encode (.causeOf .never) (Machine.Val.exitErr
+#guard Ty.encode [] (.causeOf .never) (Machine.Val.exitErr
   ⟨[.die .badName ⟨[("note", ())], by decide⟩]⟩) = none
 
 -- Canonical union order chooses the list interpretation first; an empty cause refuses
 -- in either raw spelling because both layouts would otherwise encode as [].
-#guard Ty.encode (.union (.list .bool) (.causeOf .never)) (Machine.Val.exitErr ⟨[]⟩) = none
-#guard Ty.encode (.union (.causeOf .never) (.list .bool)) (Machine.Val.exitErr ⟨[]⟩) = none
+#guard Ty.encode [] (.union (.list .bool) (.causeOf .never)) (Machine.Val.exitErr ⟨[]⟩) = none
+#guard Ty.encode [] (.union (.causeOf .never) (.list .bool)) (Machine.Val.exitErr ⟨[]⟩) = none
 
 -- Conservative compatibility admits literal widening without erasing union selectors.
 example : Schema.Codec.Compatible (.prod (.lit "User") (.option (.lit "ok")))
     (.prod .string (.option .string)) := rfl
 example (v : Store.Val) (hv : Program.Val.hasTy v (.lit "User") = true) :
-    Ty.encode .string v = Ty.encode (.lit "User") v :=
+    Ty.encode [] .string v = Ty.encode [] (.lit "User") v :=
   Schema.encode_sub (s := CTy.ofRaw (.lit "User")) (t := CTy.ofRaw .string)
     (Ty.sub_lit_string "User") hv rfl
 
@@ -516,23 +518,23 @@ def jResultFailure : Json := .obj [("_tag", .str "Failure"), ("failure", Arch.Js
 
 /-- `decodeRaw`'s union arm before row 128's commit (`Schema/Codec.lean:209-212` at `74dae8d2`). -/
 def unionArmBefore (a b : Ty) (j : Json) : Option Store.Val :=
-  match (Schema.Codec.decodeRaw a j).filter (fun v => Program.Val.hasTy v a) with
+  match (Schema.Codec.decodeRaw [] a j).filter (fun v => Program.Val.hasTy v a) with
   | some v => some v
-  | none => (Schema.Codec.decodeRaw b j).filter (fun v => Program.Val.hasTy v b)
+  | none => (Schema.Codec.decodeRaw [] b j).filter (fun v => Program.Val.hasTy v b)
 
 /-- RED CONTROL (proved): the arm before the repair is not exact. It reads `Exit.Success(1)`'s JSON
 at row 128's union as `ctor 0 [nat 1]`, whose encoding is `Result.Failure(1)`'s JSON: two images of
 one value, not equal modulo `N_J`. -/
 theorem codec_not_exact :
     unionArmBefore (.except .nat .nat) (.exitOf .nat .nat) jExitSuccess = some (.ctor 0 [.nat 1]) ∧
-      Ty.encode exactUnion (.ctor 0 [.nat 1]) = some jResultFailure ∧
+      Ty.encode [] exactUnion (.ctor 0 [.nat 1]) = some jResultFailure ∧
       Schema.Codec.normJ jResultFailure ≠ Schema.Codec.normJ jExitSuccess := by
   decide +kernel
 
 /-- The repaired decoder refuses the non-canonical image and keeps the canonical one. -/
 theorem repaired_refuses :
-    Ty.decode exactUnion jExitSuccess = none ∧
-      Ty.decode exactUnion jResultFailure = some (.ctor 0 [.nat 1]) := by
+    Ty.decode [] exactUnion jExitSuccess = none ∧
+      Ty.decode [] exactUnion jResultFailure = some (.ctor 0 [.nat 1]) := by
   decide +kernel
 
 /-- RED (seat S's `red_productionExact`, on the arm it was about): the arm before the repair refuses
@@ -550,7 +552,7 @@ did not evaluate to `true`
 /-- RED: the production decoder reads the `Success` image at row 128's union (it did before the
 repair). -/
 def red_decodesExitAsResult : Bool :=
-  Ty.decode exactUnion jExitSuccess == some (.ctor 0 [.nat 1])
+  Ty.decode [] exactUnion jExitSuccess == some (.ctor 0 [.nat 1])
 /--
 error: Expression
   red_decodesExitAsResult
@@ -562,7 +564,7 @@ did not evaluate to `true`
 /-- RED: exactness without the normaliser (a decoded JSON is literally the encoder's image). The
 decoder reads an object's entries in any order, so only `N_J` makes the pair exact. -/
 def red_exactWithoutNJ : Bool :=
-  Ty.encode (.option .nat) (.some (.nat 7)) ==
+  Ty.encode [] (.option .nat) (.some (.nat 7)) ==
     some (.obj [("value", Arch.Json.ofNat 7), ("_tag", .str "Some")])
 /--
 error: Expression
@@ -580,14 +582,14 @@ did not evaluate to `true`
   .arr [.obj [("a", .obj [("c", .null), ("d", .null)]), ("b", .null)]]
 #guard Schema.Codec.normJ (.obj [("b", .null), ("a", .null), ("b", .bool true)]) =
   .obj [("a", .null), ("b", .null), ("b", .bool true)]
-#guard Ty.decode (.option .unit) (.obj [("value", .null), ("_tag", .str "Some"), ("value", .null)]) = none
+#guard Ty.decode [] (.option .unit) (.obj [("value", .null), ("_tag", .str "Some"), ("value", .null)]) = none
 -- every contract case reads its key-sorted image, and its image is a fixed point of `N_J`
 #guard codecCases.all fun (_, t, v, j) =>
-  Ty.decode t (Schema.Codec.normJ j) == some v && Schema.Codec.normJ j == j
+  Ty.decode [] t (Schema.Codec.normJ j) == some v && Schema.Codec.normJ j == j
 -- Integer members and Result failures have distinct JSON layouts, so this Result failure
 -- round-trips at the union without choosing the integer arm.
-#guard Ty.decode (.union .int (.except .nat .nat)) jResultFailure = some (.ctor 0 [.nat 1])
-#guard Ty.encode (.union .int (.except .nat .nat)) (.ctor 0 [.nat 1]) = some jResultFailure
+#guard Ty.decode [] (.union .int (.except .nat .nat)) jResultFailure = some (.ctor 0 [.nat 1])
+#guard Ty.encode [] (.union .int (.except .nat .nat)) (.ctor 0 [.nat 1]) = some jResultFailure
 
 /-! ## Stability of Core Language Constructs & Effect Reification -/
 
@@ -726,35 +728,35 @@ open Effect4.Schema.Codec
 
 -- finite evaluation: the image reads back at both signs and at the bound
 #guard [Machine.Val.nat 0, .nat 1, .nat 404, .nat safeBound, .negInt 0, .negInt 14,
-    .negInt (safeBound - 1)].all fun v => Ty.decode .int (Ty.encode .int v |>.getD .null) == some v
+    .negInt (safeBound - 1)].all fun v => Ty.decode [] .int (Ty.encode [] .int v |>.getD .null) == some v
 -- finite evaluation: the JSON text of an image
-#guard (Ty.encode .int (.negInt 14)).map (Effect4.Codegen.JsonText.render 0) = some "-15"
-#guard Ty.encode .int (.nat 1) = some (Arch.Json.ofNat 1)
+#guard (Ty.encode [] .int (.negInt 14)).map (Effect4.Codegen.JsonText.render 0) = some "-15"
+#guard Ty.encode [] .int (.nat 1) = some (Arch.Json.ofNat 1)
 -- control: outside the bound both directions refuse, and the natural wire refuses 2^53 too (R7)
-#guard Ty.encode .int (.nat (safeBound + 1)) = none
-#guard Ty.encode .int (.negInt safeBound) = none
-#guard Ty.decode .int (Arch.Json.ofNat (2 ^ 53)) = none
-#guard Ty.decode .nat (Arch.Json.ofNat (2 ^ 53)) = none
+#guard Ty.encode [] .int (.nat (safeBound + 1)) = none
+#guard Ty.encode [] .int (.negInt safeBound) = none
+#guard Ty.decode [] .int (Arch.Json.ofNat (2 ^ 53)) = none
+#guard Ty.decode [] .nat (Arch.Json.ofNat (2 ^ 53)) = none
 -- control: negative zero, a fraction, a negative fraction, an infinity, a NaN and a string are
 -- no integers
 #guard [Json.number ⟨0x8000000000000000⟩, .number ⟨0x3FE0000000000000⟩,
     .number ⟨0xBFE0000000000000⟩, .number ⟨0x7FF0000000000000⟩, .number ⟨0x7FF8000000000000⟩,
-    .str "1"].all fun j => Ty.decode .int j == none
+    .str "1"].all fun j => Ty.decode [] .int j == none
 -- finite evaluation: 0.5, -0.5, negative zero and integers on both sides of the safe bound read
 -- back as numbers
 #guard [Effect4.Store.Val.float 0x3FE0000000000000, .float 0xBFE0000000000000, .float 0x8000000000000000,
     .nat 3, .negInt 2, .nat (2 ^ 60), .negInt (2 ^ 60 - 1)].all fun v =>
-  Ty.decode .number (Ty.encode .number v |>.getD .null) == some v
-#guard (Ty.encode .number (.float 0xBFE0000000000000)).map (Effect4.Codegen.JsonText.render 0) =
+  Ty.decode [] .number (Ty.encode [] .number v |>.getD .null) == some v
+#guard (Ty.encode [] .number (.float 0xBFE0000000000000)).map (Effect4.Codegen.JsonText.render 0) =
   some "-0.5"
 -- control: a member of `number` with no binary64 has no image; a NaN and an infinity are
 -- refused; an integral datum is read as an integer, never as a frame
-#guard Ty.encode .number (.nat (2 ^ 53 + 1)) = none
-#guard Ty.encode .number (.float 0x7FF8000000000000) = none
-#guard Ty.decode .number (.number ⟨0x7FF0000000000000⟩) = none
-#guard Ty.decode .number (.number ⟨0x4008000000000000⟩) = some (.nat 3)
+#guard Ty.encode [] .number (.nat (2 ^ 53 + 1)) = none
+#guard Ty.encode [] .number (.float 0x7FF8000000000000) = none
+#guard Ty.decode [] .number (.number ⟨0x7FF0000000000000⟩) = none
+#guard Ty.decode [] .number (.number ⟨0x4008000000000000⟩) = some (.nat 3)
 -- tested: the JSON text loses the sign of zero, as `JSON.stringify(-0)` does
-#guard (Ty.encode .number (.float 0x8000000000000000)).map (Effect4.Codegen.JsonText.render 0) =
+#guard (Ty.encode [] .number (.float 0x8000000000000000)).map (Effect4.Codegen.JsonText.render 0) =
   some "0"
 
 end Integers

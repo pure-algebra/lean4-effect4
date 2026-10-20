@@ -4,6 +4,7 @@ public import Effect4.Machine.Value
 public import Effect4.Machine.Completion
 public import Effect4.Machine.Wake
 public import Effect4.Machine.Record
+public import Effect4.Machine.ContextMap
 
 /-!
 # Machine.Alphabets — the error, defect and value alphabets, once, below the stores
@@ -96,9 +97,13 @@ inductive Defect
   | notImplemented
   | asyncFiber
   | badName
-  /-- `Context.get` on a missing service (`forkScoped` with no ambient `Scope`,
-  `internal/effect.ts:5400-5406`); finding S1-1, 2026-09-04. -/
-  | missingService
+  /-- `Context.get` on a missing service: rc.112 throws `Service not found: ` and the key's
+  spelling (`vendor/effect-4.0.0-rc.112/src/Context.ts:1481`, `serviceNotFoundError` at
+  `:1591-1601`). The defect stores the key that was missing: the one `Effect.service` looked up
+  (`serviceLookupK`), or the scope's, for `forkScoped` with no ambient `Scope`
+  (`internal/effect.ts:5400-5406`). Finding S1-1, 2026-09-04; the key is stored since the
+  owner's ruling R5 of 2026-10-19 (move G). -/
+  | missingService (key : ServiceKey)
   /-- A user defect, `Effect.die(d)` with a numeric payload (the `Eff` compile's `die`). -/
   | user (payload : Nat)
   /-- A represented typed error promoted to a defect by `orDie` (DI-31). -/
@@ -110,7 +115,12 @@ deriving DecidableEq, Repr
 value (DI-74): a numeric error keeps its number as a user defect, a text, package or record
 error keeps its exact payload, and the payload-less `boom` is the wrong-shape defect. The one
 owner of that conversion, used by both sites in `Program/Compile.lean` (`orDieCause`,
-`causeOf`). -/
+`causeOf`).
+
+Its normal form is the canonical defect alphabet (the owner's ruling R5, 2026-10-19): `user n`,
+`error e` with `e` neither `tag _` nor `boom`, and the machine's own defects. The defect codec
+admits only canonical defects: it refuses `error (tag n)`, which is `user n` here, and
+`error boom`, which is `badName` (`Schema.Codec.encodeDefect`). -/
 def Defect.ofError : Err → Defect
   | .tag code => .user code
   | .boom => .badName
@@ -215,33 +225,48 @@ def ofDefect : Store.Val → Option Defect
   | .ctor 0 [] => some .notImplemented
   | .ctor 1 [] => some .asyncFiber
   | .ctor 2 [] => some .badName
-  | .ctor 3 [] => some .missingService
+  | .ctor 3 [k] => (Env.serviceKeyImage.ofVal k).map Defect.missingService
   | .ctor 4 [.nat n] => some (.user n)
   | .ctor 5 [e] => (ofErr e).map Defect.error
   | _ => none
 
-/-- `Defect` at the generated rule, in declaration order; `user n` is `ctor 4 [nat n]`
-and `error e` is `ctor 5 [Err.image.toVal e]`. A malformed nested error is refused. -/
+/-- `Defect` at the generated rule, in declaration order; `missingService key` is `ctor 3 [key]`
+through `Env.serviceKeyImage`, `user n` is `ctor 4 [nat n]` and `error e` is
+`ctor 5 [Err.image.toVal e]`. A malformed nested key or error is refused. -/
 def Defect.image : Image Defect where
   toVal
     | .notImplemented => .ctor 0 []
     | .asyncFiber => .ctor 1 []
     | .badName => .ctor 2 []
-    | .missingService => .ctor 3 []
+    | .missingService key => .ctor 3 [Env.serviceKeyImage.toVal key]
     | .user n => .ctor 4 [.nat n]
     | .error e => .ctor 5 [Err.image.toVal e]
   ofVal := ofDefect
   ofVal_toVal d := by
-    cases d <;> try rfl
-    next e =>
+    cases d with
+    | missingService key =>
+      change (Env.serviceKeyImage.ofVal (Env.serviceKeyImage.toVal key)).map
+        Defect.missingService = some (.missingService key)
+      rw [Env.serviceKeyImage.ofVal_toVal]
+      rfl
+    | error e =>
       change (ofErr (Err.image.toVal e)).map Defect.error = some (.error e)
       rw [show ofErr (Err.image.toVal e) = some e from Err.image.ofVal_toVal e]
       rfl
+    | _ => rfl
   ofVal_exact := by
     intro v d h
     unfold ofDefect at h
     split at h
-    all_goals try (injection h with h; subst h; rfl)
+    · cases h; rfl
+    · cases h; rfl
+    · cases h; rfl
+    · next written =>
+      obtain ⟨key, hk, hd⟩ := Image.map_eq_some_inv h
+      subst hd
+      show Store.Val.ctor 3 [written] = Store.Val.ctor 3 [Env.serviceKeyImage.toVal key]
+      rw [Env.serviceKeyImage.ofVal_exact hk]
+    · cases h; rfl
     · next written =>
       obtain ⟨e, he, hd⟩ := Image.map_eq_some_inv h
       subst hd
@@ -251,11 +276,16 @@ def Defect.image : Image Defect where
 
 theorem Defect.image_handleFree : Image.HandleFree Defect.image := by
   intro d
-  cases d <;> try rfl
-  next e =>
+  cases d with
+  | missingService key =>
+    change (Env.serviceKeyImage.toVal key).handles ++ [] = []
+    rw [Env.serviceKeyImage_handleFree key]
+    rfl
+  | error e =>
     change (Err.image.toVal e).handles ++ [] = []
     rw [Err.image_handleFree e]
     rfl
+  | _ => rfl
 
 /-- The cause carrier at this instantiation. -/
 abbrev CauseV := Cause Err Defect FiberId Ann

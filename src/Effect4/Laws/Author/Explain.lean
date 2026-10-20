@@ -96,9 +96,10 @@ structure Obligations where
 
 derive_modeled Obligations (namespace_ := "namespace")
 
-/-- A value's canonical JSON, by the codec at its derived type. -/
+/-- A value's canonical JSON, by the codec at its derived type. A modeled type belongs to no
+module, so no key has a name: the key names are the empty table. -/
 def canonicalJson {α : Type} [Modeled α] (a : α) : String :=
-  match Effect4.Schema.encode (Modeled.ty (α := α)) ((Modeled.image α).toVal a) with
+  match Effect4.Schema.encode [] (Modeled.ty (α := α)) ((Modeled.image α).toVal a) with
   | some j => Effect4.Codegen.renderJson j
   | none => "the codec refused the value at its derived type"
 

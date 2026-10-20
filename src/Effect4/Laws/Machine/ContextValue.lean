@@ -56,7 +56,7 @@ private def key12 : Store.Val := .ctor 0 [.ctor 0 [.nat 1], .ctor 0 [.nat 2]]
 #guard Val.memoMap 3 = Value.memoMap 3
 #guard Val.promise 1 = Value.promise 1
 #guard (Val.pair (Val.promise 1) (Val.memoMap 2)).handles = [(3, 1), (5, 2)]
-#guard (Effect4.Machine.Val.exitErr (Cause.die Defect.missingService)).handles = []
+#guard (Effect4.Machine.Val.exitErr (Cause.die (Defect.missingService ⟨⟨1⟩, ⟨2⟩⟩))).handles = []
 #guard Effect4.Machine.exitImage.ofVal (Effect4.Machine.Val.exitErr (Cause.fail (Err.tag 3))) =
   some (Exit.failure (Cause.fail (Err.tag 3)))
 

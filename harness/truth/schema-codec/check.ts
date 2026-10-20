@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { isDeepStrictEqual } from "node:util"
-import { Cause, Exit, Option, Result, Schema, SchemaRepresentation } from "effect"
+import { Cause, Context, Effect, Exit, Option, Result, Schema, SchemaRepresentation, Scope } from "effect"
 import effectPackage from "effect/package.json"
 // Written fresh by Emit.lean before tsgo checks this file: Lean's codec results, and each case's
 // typed Schema as the code printer writes it (`Codegen.SchemaCode.ofTy`). The checker writes no
@@ -21,7 +21,8 @@ assert.deepEqual(unlowered, {}, "every case's type has generated Schema code")
 
 const cause = Cause.fromReasons([
   Cause.makeFailReason("bad"),
-  Cause.makeDieReason({ user: 7 }),
+  // a user defect crosses as its own number (the owner's ruling R5, move G)
+  Cause.makeDieReason(7),
   Cause.makeInterruptReason(undefined),
   Cause.makeInterruptReason(9)
 ])
@@ -78,6 +79,41 @@ check("nestedTupleRecordMap", schemas.nestedTupleRecordMap,
 // The nat wire's bound (the owner's ruling R7). rc.112's natural Schema checks isInt, which is
 // Number.isSafeInteger. So both faces write 2 ** 53 - 1, and both refuse 2 ** 53 (natAboveBound).
 check("natAtBound", schemas.natAtBound, 2 ** 53 - 1)
+
+// One case per canonical defect form, each as rc.112 holds the thrown value (the owner's ruling R5,
+// move G). The Lean face writes each under the lane's key names (`Emit.lean`, `names`): the named
+// key is `TodoRepo`, an unnamed key spells its runtime text `k5_6`, and the scope's key is
+// `effect/Scope`, rc.112's `Scope.Scope` (`internal/effect.ts:3772`).
+const parkedExit = Effect.runSyncExit(Effect.never)
+assert.ok(Exit.isFailure(parkedExit), "runSyncExit of a fiber that never resumes fails")
+/** What a call throws: the `Error` rc.112 throws for a service a context does not hold
+ * (`Context.getUnsafe`, `Context.ts:1481`; `serviceNotFoundError`, `:1591-1601`). */
+const thrown = (f: () => unknown): unknown => {
+  try {
+    f()
+    return undefined
+  } catch (error) {
+    return error
+  }
+}
+const missing = (key: Context.Key<any, any>): unknown =>
+  thrown(() => Context.getUnsafe(Context.empty() as Context.Context<any>, key))
+/** Lean's own name for the two machine defects that rc.112 has no error for. */
+const leanError = (message: string): Error => Object.assign(new Error(message), { name: "Effect4" })
+check("defectUser", schemas.defectUser, Cause.die(7))
+check("defectText", schemas.defectText, Cause.die("boom"))
+check("defectTagged", schemas.defectTagged, Cause.die(["SqlError", "no such table"]))
+// The payload object is the Lean codec's own form of a record error inside a defect: the hex of
+// the record `{ _tag: "NotFound", id: 9 }`'s canonical bytes, pinned here. rc.112 writes a plain
+// object as its own JSON, so the faces agree on its text; no rc.112 value means the hex.
+check("defectPayload", schemas.defectPayload, Cause.die({ payload:
+  "0a000000000000004e0200000000000000000400000000000000180300000000000000045f746167030000000000000002696404000000000000001b0300000000000000084e6f74466f756e6402000000000000000109" }))
+check("defectAsyncFiber", schemas.defectAsyncFiber, parkedExit.cause)
+check("defectMissingScope", schemas.defectMissingScope, Cause.die(missing(Scope.Scope)))
+check("defectMissingNamed", schemas.defectMissingNamed, Cause.die(missing(Context.Service<number>("TodoRepo"))))
+check("defectMissingUnnamed", schemas.defectMissingUnnamed, Cause.die(missing(Context.Service<number>("k5_6"))))
+check("defectNotImplemented", schemas.defectNotImplemented, Cause.die(leanError("notImplemented")))
+check("defectBadName", schemas.defectBadName, Cause.die(leanError("badName")))
 
 interface NumericDecoding {
   input: number
@@ -239,6 +275,13 @@ for (const [name, magnitude] of [
   encodingRefusalNames.push(name)
   boundaryDifferences++
 }
+// One numeric bound at the observation (R7; D-J1 of move J's receipt): the Lean encoder refuses a
+// user defect past the bound, while rc.112's `Schema.Defect()` writes any number.
+assert.equal(encodingRefusals.defectUserAboveBound, true, "defectUserAboveBound: Lean encoder must refuse")
+assert.deepEqual(Schema.encodeSync(Schema.toCodecJson(generated(encodingRefusalSchemas,
+  "defectUserAboveBound") as typeof schemas.defectUser))(Cause.die(2 ** 53)), [{ _tag: "Die", defect: 2 ** 53 }])
+encodingRefusalNames.push("defectUserAboveBound")
+boundaryDifferences++
 assert.deepEqual(Object.keys(encodingRefusals).sort(), encodingRefusalNames.sort(), "uncompared or missing Lean encoding refusal")
 // Datum transport retains -0; ordinary JSON text deliberately does not.
 assert.equal(encoded.numberNegativeZero, -0)
@@ -258,6 +301,22 @@ for (const [name, text, expected] of [
   assert.deepEqual(refusals[name].input, JSON.parse(text), `${name}: host object conversion keeps the last key`)
   assert.deepEqual(Schema.decodeUnknownSync(Schema.toCodecJson(refusalSchema(name)))(JSON.parse(text)), expected)
   refusalNames.push(name)
+}
+// A defect outside the canonical alphabet: rc.112's `Schema.Defect()` reads any JSON, and the Lean
+// codec refuses it (move G). The legacy wrapper reads as a plain object, and an `Error` the machine
+// never throws reads as an `Error`.
+for (const [name, isExpected] of [
+  ["defectLegacyUser", (defect: unknown) => isDeepStrictEqual(defect, { user: 7 })],
+  ["defectForeignError", (defect: unknown) => defect instanceof Error && defect.message === "boom"]
+] as const) {
+  assert.equal(refusals[name].refused, true, `${name}: Lean must refuse`)
+  const host = Schema.decodeUnknownSync(Schema.toCodecJson(refusalSchema(name)))(refusals[name].input)
+  assert.ok(Cause.isCause(host), `${name}: rc.112 reads a cause`)
+  const reason = host.reasons[0]
+  assert.ok(reason !== undefined && Cause.isDieReason(reason) && isExpected(reason.defect),
+    `${name}: rc.112 reads the defect as it stands`)
+  refusalNames.push(name)
+  boundaryDifferences++
 }
 assert.deepEqual(Object.keys(refusals).sort(), refusalNames.sort(), "uncompared or missing Lean refusal")
 

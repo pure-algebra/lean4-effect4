@@ -140,14 +140,16 @@ def jsonEntries : List (String × Json) → List String
   | (k, v) :: rest => (String.fromUTF8! ⟨((NatJson.render (.str k)).map (·.toUInt8)).toArray⟩ ++ ":" ++ jsonText v) :: jsonEntries rest
 end
 
-/-- An exit encoded at the built program's exit type, keys in canonical order, as text; `refused`
+/-- An exit encoded at the built program's exit type, under the program's key names (its
+signature's, as the printed module spells each key), keys in canonical order, as text; `refused`
 where the type has no codec (`Codec.isSupported`) or the value no image. -/
 def typedJson (b : Api.Built) (exit : Option Machine.ExitV) : String :=
   match exit with
   | none => "no exit"
   | some e =>
     if !Schema.Codec.isSupported (exitTy b) then "refused" else
-    match Ty.encode (exitTy b) (Machine.exitImage.toVal (bare e)) with
+    match Ty.encode (nativeSignature b.table).keyNames (exitTy b)
+        (Machine.exitImage.toVal (bare e)) with
     | some j => jsonText (Schema.Codec.normJ j)
     | none => "refused"
 
@@ -228,7 +230,7 @@ def defectHead : Machine.Defect → String
   | .notImplemented => "notImplemented"
   | .asyncFiber => "asyncFiber"
   | .badName => "badName"
-  | .missingService => "missingService"
+  | .missingService _ => "missingService"
   | .user _ => "user"
   | .error _ => "error"
 

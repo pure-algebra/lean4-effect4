@@ -92,7 +92,7 @@ def blockAlgB (table : RowTable) (k : Nat) (params : List (ParamTreeB table))
   eff_provideLayer _ _ _ := fun _ _ => pure (some outsideExit)
   eff_service key := fun ctx _ => match ctx.services.getV key with
     | some v => pure (some (.success v))
-    | none => pure (some (.failure (Cause.die Defect.missingService)))
+    | none => pure (some (.failure (Cause.die (Defect.missingService key))))
   eff_provideService key value body := fun ctx env => match evalTerm env value with
     | some v => body (provided (.provideService key v) ctx) env
     | none => pure (some badShapeExit)
@@ -805,14 +805,14 @@ theorem denoteBlockB_provideService (table : RowTable) (bodies : List NativeEff)
   all_goals rw [hv]; rfl
 
 /-- Step of rows-block-host (R6), consumed by stage 4's service lookup arm.
-A missing key dies with `missingService`; this is only the tree equation. -/
+A missing key dies with `missingService key`; this is only the tree equation. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem denoteBlockB_service (table : RowTable) (bodies : List NativeEff) (k : Nat)
     (params : List (ParamTreeB table)) (key : ServiceKey) (ctx : Ctx) (env : List Val) :
     denoteBlockB table bodies k params (.service key) ctx env =
       pure (some (match ctx.services.getV key with
         | some v => .success v
-        | none => .failure (Cause.die Defect.missingService))) := by
+        | none => .failure (Cause.die (Defect.missingService key)))) := by
   cases h : ctx.services.getV key <;> cases k <;>
     simp only [denoteBlockB, cata_eff, blockAlgB, h]
 

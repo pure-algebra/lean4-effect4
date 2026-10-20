@@ -376,7 +376,8 @@ theorem clause_forkScoped (root : ProgramSource) (rootTy : EffTy) (child : Point
         ((interpRAt root.program m.completedExits).stackAnnotations g.id)])
       (fun _ _ state present typed => configTyped_cons_link typed (by rw [state]; exact live) present)
   | none =>
-    refine ev.settle_continue { f.frame with current := .pure (.failure (Cause.die .missingService)) }
+    refine ev.settle_continue
+      { f.frame with current := .pure (.failure (Cause.die (.missingService Env.scopeKey))) }
       (fun ty' declared' => ?_)
     have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
     subst same

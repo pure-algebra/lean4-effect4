@@ -82,7 +82,10 @@ cause is `{"reasons":[…]}` with `{"fail":n|string|{"boom":null}|[tag,message]|
 where the program's own exit writes a payload through its error column,
 `{"fail":{"payload":{"_tag":…,…}}}` (`errJsonAt`, decisions row 120, ruling (a)),
 `{"die":d}`,
-where a represented error defect is `{"die":{"error":<the same error wire>}}`,
+where `d` is the defect as rc.112's `Schema.Defect()` writes the thrown value
+(`Schema.Codec.encodeDefect`, the owner's ruling R5): a user defect as its number, a represented
+error as its raw JSON, and a machine defect as an `Error`'s name and message, a missing service's
+message spelling its key under the program's key names,
 `{"interrupt":who|null}`, the interruptor under the same number;
 an exit is `{"success":v}` / `{"failure":cause}`. Annotations are dropped.
 
@@ -1220,79 +1223,6 @@ def corpus : List (String × Api.Program) :=
 
 /-! ## The value wire -/
 
-def errJson : Err → J
-  | .boom => Lean.Json.mkObj [("boom", Lean.Json.null)]
-  | .tag n => toJson n
-  -- the host wires the failed pair as a two-element array, as `pair` builds it
-  | .tagged t m => Lean.Json.arr #[Lean.Json.str t, Lean.Json.str m]
-  | .text s => Lean.Json.str s
-  -- a record payload (decisions row 120) where no type directs its image (a promoted defect's
-  -- error, a child fiber's exit, a reified exit inside a value): the codec's one-key object of
-  -- its canonical bytes in hexadecimal (`Schema.Codec.encodeErr`), apart from the four shapes
-  -- above. At the program's own exit the error column directs it (`errJsonAt`).
-  | .payload p => Lean.Json.mkObj [("payload", Lean.Json.str (Effect4.Schema.Codec.payloadHex p))]
-
-def defectJson : Defect → J
-  | .notImplemented => Lean.Json.str "notImplemented"
-  | .asyncFiber => Lean.Json.str "asyncFiber"
-  | .badName => Lean.Json.str "badName"
-  | .missingService => Lean.Json.str "missingService"
-  | .user n => Lean.Json.mkObj [("user", toJson n)]
-  | .error e => Lean.Json.mkObj [("error", errJson e)]
-
-/-! A fiber in the wire is a number. Each function below that can meet a fiber takes `fiber`,
-the number that the wire writes for a machine fiber id. A compared exit passes the run's
-numbering (`numberOf`, in the section on the fiber numbers below). The machine's own record
-(`events`, `fibers`) passes `id`. Three fields hold a fiber: an interruptor, a fiber handle and
-the handles of a snapshot. -/
-
-def reasonJson (fiber : Nat → Nat) : Reason Err Defect FiberId Ann → J
-  | .fail e _ => Lean.Json.mkObj [("fail", errJson e)]
-  | .die d _ => Lean.Json.mkObj [("die", defectJson d)]
-  | .interrupt none _ => Lean.Json.mkObj [("interrupt", Lean.Json.null)]
-  | .interrupt (some who) _ => Lean.Json.mkObj [("interrupt", toJson (fiber who.value))]
-
-def causeJson (fiber : Nat → Nat) (c : CauseV) : J :=
-  Lean.Json.mkObj [("reasons", Lean.Json.arr (c.reasons.map (reasonJson fiber)).toArray)]
-
-/-- Values in the wire, on the shared carrier (`Machine/Value.lean`'s table): a handle by its
-kind byte, a reified exit by its constructor index with the cause read back through
-`causeImage`, the snapshot by its fibers, a `list` as one array. A shape the machine never
-produces renders deterministically under `"raw"`, so the wire stays total. A fiber is written
-as `fiber` numbers it. -/
-partial def valJson (fiber : Nat → Nat) : Val → J
-  | .unit => Lean.Json.null
-  | .nat n => toJson n
-  | .bool b => Lean.Json.bool b
-  -- strings are machine values since DB-15; the host wires a string as itself, an option as
-  -- rc.112's `Option` (`{"some":v}` / `{"none":true}`, the runner's wire of `_tag`)
-  | .str s => Lean.Json.str s
-  | .some v => Lean.Json.mkObj [("some", valJson fiber v)]
-  | .none => Lean.Json.mkObj [("none", Lean.Json.bool true)]
-  | Value.external index => Lean.Json.mkObj [("external", toJson index)]
-  | Value.fiber index => Lean.Json.mkObj [("fiber", toJson (fiber index))]
-  | Value.fiberSnapshot handles =>
-    Lean.Json.mkObj [("fibers", Lean.Json.arr
-      ((((Effect4.Store.Image.list Value.fiberHandle).ofVal handles).getD []).map fun i =>
-        toJson (fiber i.value)).toArray)]
-  | Value.cell k => Lean.Json.mkObj [("ref", toJson k)]
-  | Value.promise k => Lean.Json.mkObj [("deferred", toJson k)]
-  | Value.scope s => Lean.Json.mkObj [("scope", toJson s)]
-  | Value.fiberContext _ _ _ => Lean.Json.mkObj [("context", Lean.Json.bool true)]
-  -- a built service map (`Env.encode`, what a layer build answers and `Effect.provide` reads):
-  -- the same `Context` object on the rc.112 face
-  | Value.serviceContext _ => Lean.Json.mkObj [("context", Lean.Json.bool true)]
-  | Val.exitOk v => Lean.Json.mkObj [("success", valJson fiber v)]
-  | Value.exitErr written =>
-    Lean.Json.mkObj [("failure",
-      ((causeImage.ofVal written).map (causeJson fiber)).getD Lean.Json.null)]
-  | .list values => Lean.Json.arr (values.map (valJson fiber)).toArray
-  | other => Lean.Json.mkObj [("raw", Lean.Json.str (toString (repr other)))]
-
-def exitJson (fiber : Nat → Nat) : ExitV → J
-  | .success v => Lean.Json.mkObj [("success", valJson fiber v)]
-  | .failure c => Lean.Json.mkObj [("failure", causeJson fiber c)]
-
 mutual
 /-- The codec's JSON (`Effect4.Json`) as the manifest's (`Lean.Json`). A number is a natural
 (`Schema.Codec.nat?`): the codec writes no other, and anything else is named, never rounded. An
@@ -1316,6 +1246,81 @@ def leanEntries : List (String × Effect4.Json) → List (String × J)
   | (k, j) :: es => (k, leanJson j) :: leanEntries es
 end
 
+def errJson : Err → J
+  | .boom => Lean.Json.mkObj [("boom", Lean.Json.null)]
+  | .tag n => toJson n
+  -- the host wires the failed pair as a two-element array, as `pair` builds it
+  | .tagged t m => Lean.Json.arr #[Lean.Json.str t, Lean.Json.str m]
+  | .text s => Lean.Json.str s
+  -- a record payload (decisions row 120) where no type directs its image (a promoted defect's
+  -- error, a child fiber's exit, a reified exit inside a value): the codec's one-key object of
+  -- its canonical bytes in hexadecimal (`Schema.Codec.encodeErr`), apart from the four shapes
+  -- above. At the program's own exit the error column directs it (`errJsonAt`).
+  | .payload p => Lean.Json.mkObj [("payload", Lean.Json.str (Effect4.Schema.Codec.payloadHex p))]
+
+/-- A defect as rc.112's `Schema.Defect()` writes the thrown value: the codec's encoding
+(`Schema.Codec.encodeDefect`) under the program's key names, which the table that prints the
+program's module gives its keys (`(nativeSignature table).keyNames`), so a missing service's
+message names the key as the printed module's tag does. A defect that the codec refuses, outside
+the canonical alphabet or past the bound, is named, never rounded. -/
+def defectJson (names : KeyNames) (d : Defect) : J :=
+  match Effect4.Schema.Codec.encodeDefect names d with
+  | some j => leanJson j
+  | none => Lean.Json.mkObj [("refused", Lean.Json.str "no canonical defect image")]
+
+/-! A fiber in the wire is a number. Each function below that can meet a fiber takes `fiber`,
+the number that the wire writes for a machine fiber id. A compared exit passes the run's
+numbering (`numberOf`, in the section on the fiber numbers below). The machine's own record
+(`events`, `fibers`) passes `id`. Three fields hold a fiber: an interruptor, a fiber handle and
+the handles of a snapshot. -/
+
+def reasonJson (names : KeyNames) (fiber : Nat → Nat) : Reason Err Defect FiberId Ann → J
+  | .fail e _ => Lean.Json.mkObj [("fail", errJson e)]
+  | .die d _ => Lean.Json.mkObj [("die", defectJson names d)]
+  | .interrupt none _ => Lean.Json.mkObj [("interrupt", Lean.Json.null)]
+  | .interrupt (some who) _ => Lean.Json.mkObj [("interrupt", toJson (fiber who.value))]
+
+def causeJson (names : KeyNames) (fiber : Nat → Nat) (c : CauseV) : J :=
+  Lean.Json.mkObj [("reasons", Lean.Json.arr (c.reasons.map (reasonJson names fiber)).toArray)]
+
+/-- Values in the wire, on the shared carrier (`Machine/Value.lean`'s table): a handle by its
+kind byte, a reified exit by its constructor index with the cause read back through
+`causeImage`, the snapshot by its fibers, a `list` as one array. A shape the machine never
+produces renders deterministically under `"raw"`, so the wire stays total. A fiber is written
+as `fiber` numbers it. -/
+partial def valJson (names : KeyNames) (fiber : Nat → Nat) : Val → J
+  | .unit => Lean.Json.null
+  | .nat n => toJson n
+  | .bool b => Lean.Json.bool b
+  -- strings are machine values since DB-15; the host wires a string as itself, an option as
+  -- rc.112's `Option` (`{"some":v}` / `{"none":true}`, the runner's wire of `_tag`)
+  | .str s => Lean.Json.str s
+  | .some v => Lean.Json.mkObj [("some", valJson names fiber v)]
+  | .none => Lean.Json.mkObj [("none", Lean.Json.bool true)]
+  | Value.external index => Lean.Json.mkObj [("external", toJson index)]
+  | Value.fiber index => Lean.Json.mkObj [("fiber", toJson (fiber index))]
+  | Value.fiberSnapshot handles =>
+    Lean.Json.mkObj [("fibers", Lean.Json.arr
+      ((((Effect4.Store.Image.list Value.fiberHandle).ofVal handles).getD []).map fun i =>
+        toJson (fiber i.value)).toArray)]
+  | Value.cell k => Lean.Json.mkObj [("ref", toJson k)]
+  | Value.promise k => Lean.Json.mkObj [("deferred", toJson k)]
+  | Value.scope s => Lean.Json.mkObj [("scope", toJson s)]
+  | Value.fiberContext _ _ _ => Lean.Json.mkObj [("context", Lean.Json.bool true)]
+  -- a built service map (`Env.encode`, what a layer build answers and `Effect.provide` reads):
+  -- the same `Context` object on the rc.112 face
+  | Value.serviceContext _ => Lean.Json.mkObj [("context", Lean.Json.bool true)]
+  | Val.exitOk v => Lean.Json.mkObj [("success", valJson names fiber v)]
+  | Value.exitErr written =>
+    Lean.Json.mkObj [("failure",
+      ((causeImage.ofVal written).map (causeJson names fiber)).getD Lean.Json.null)]
+  | .list values => Lean.Json.arr (values.map (valJson names fiber)).toArray
+  | other => Lean.Json.mkObj [("raw", Lean.Json.str (toString (repr other)))]
+
+def exitJson (names : KeyNames) (fiber : Nat → Nat) : ExitV → J
+  | .success v => Lean.Json.mkObj [("success", valJson names fiber v)]
+  | .failure c => Lean.Json.mkObj [("failure", causeJson names fiber c)]
+
 /-- A typed failure's error at the program's error column (decisions row 120, ruling (a), part
 E2): a payload through the type-directed codec (`Schema.encode`), under the one key `payload`,
 its objects' keys in UTF-8 byte order (`leanJson`). That is the JSON rc.112 writes for the
@@ -1323,26 +1328,27 @@ printed class's instance (`Data.Error`'s `toJSON`, `{ ...plainArgs, ...this }`,
 `vendor/effect-4.0.0-rc.112/src/internal/core.ts:602-604`), which `run-truth.ts` sorts the same
 way. Any other error, and a payload the codec does not write (a `number`, `null`, `undefined`
 or byte field), is `errJson`'s. -/
-def errJsonAt (errorTy : Option Ty) : Err → J
+def errJsonAt (names : KeyNames) (errorTy : Option Ty) : Err → J
   | .payload p =>
-    match errorTy.bind fun t => Effect4.Schema.encode t p.val with
+    match errorTy.bind fun t => Effect4.Schema.encode names t p.val with
     | some j => Lean.Json.mkObj [("payload", leanJson j)]
     | none => errJson (.payload p)
   | e => errJson e
 
 /-- `reasonJson` with the failure's error at the program's error column (`errJsonAt`). -/
-def reasonJsonAt (fiber : Nat → Nat) (errorTy : Option Ty) : Reason Err Defect FiberId Ann → J
-  | .fail e _ => Lean.Json.mkObj [("fail", errJsonAt errorTy e)]
-  | r => reasonJson fiber r
+def reasonJsonAt (names : KeyNames) (fiber : Nat → Nat) (errorTy : Option Ty) :
+    Reason Err Defect FiberId Ann → J
+  | .fail e _ => Lean.Json.mkObj [("fail", errJsonAt names errorTy e)]
+  | r => reasonJson names fiber r
 
 /-- The program's own exit, its failures typed by its error column: the `exit` the comparison
 reads (`run.exit`, `runSync.exit`). Its fibers are written as `fiber` numbers them, which is the
 run's numbering at both call sites. A child fiber's exit and the event texts keep `exitJson`. -/
-def exitJsonAt (fiber : Nat → Nat) (errorTy : Option Ty) : ExitV → J
-  | .success v => exitJson fiber (.success v)
+def exitJsonAt (names : KeyNames) (fiber : Nat → Nat) (errorTy : Option Ty) : ExitV → J
+  | .success v => exitJson names fiber (.success v)
   | .failure c => Lean.Json.mkObj [("failure",
       Lean.Json.mkObj [("reasons",
-        Lean.Json.arr (c.reasons.map (reasonJsonAt fiber errorTy)).toArray)])]
+        Lean.Json.arr (c.reasons.map (reasonJsonAt names fiber errorTy)).toArray)])]
 
 /-- The kind of an exit, with the archived tracer's precedence (`outcomeWire`): a `Fail`
 reason wins, then an `Interrupt`, then a `Die`; an empty cause is its own kind. -/
@@ -1365,7 +1371,7 @@ abbrev Event := RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx
 
 /-- The events with an rc.112 counterpart, as the manifest spells them. `none` for the rest.
 Recorded, never compared: a fiber keeps the machine's id here, in an exit's text too. -/
-def observable : Event → Option String
+def observable (names : KeyNames) : Event → Option String
   | .forked p c d => some s!"forked {p.value}->{c.value}{if d then " daemon" else ""}"
   | .started f => some s!"started {f.value}"
   | .scheduledTask o p _ => some s!"scheduledTask owner={o.value} prio={p}"
@@ -1373,7 +1379,7 @@ def observable : Event → Option String
   | .yieldInjected f n => some s!"yieldInjected {f.value}@{n}"
   | .parkedOn f t => some s!"parkedOn {f.value} token={t}"
   | .resumedWith f t _ => some s!"resumedWith {f.value} token={t}"
-  | .exited f e => some s!"exited {f.value} {(exitJson id e).compress}"
+  | .exited f e => some s!"exited {f.value} {(exitJson names id e).compress}"
   | _ => none
 
 /-- One row of the reduced schedule, over fiber numbers: the alphabet that the runner can
@@ -1749,11 +1755,12 @@ def refusalText : PrintRefusal → String
 
 /-- One fiber of the machine's own record, under the machine's ids: its exit is recorded and
 never compared. -/
-def fiberJson (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : J :=
+def fiberJson (names : KeyNames) (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) :
+    J :=
   Lean.Json.mkObj
     [ ("id", toJson f.id.value)
     , ("exited", Lean.Json.bool f.exit.isSome)
-    , ("exit", match f.exit with | some e => exitJson id e | none => Lean.Json.null)
+    , ("exit", match f.exit with | some e => exitJson names id e | none => Lean.Json.null)
     , ("parkedToken", match f.parked with | .withGuard t => toJson t | .notParked => Lean.Json.null) ]
 
 def strings (xs : List String) : J := Lean.Json.arr (xs.map Lean.Json.str).toArray
@@ -1776,7 +1783,7 @@ def fixtureRun (name : String) (p : Api.Program) (fuel : Nat) (table : RowTable)
     | some run => run.inspect
     | none => Api.run p fuel table
 
-def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
+def runJson (names : KeyNames) (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (name : String := "") : J :=
   let r := fixtureRun name p fuel table answers
   let trace := r.trace
@@ -1786,21 +1793,21 @@ def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
   Lean.Json.mkObj
     [ ("outcome", Lean.Json.str (outcomeText r.outcome))
     , ("exit", match r.exit with
-        | some e => exitJsonAt fiber errorTy e
+        | some e => exitJsonAt names fiber errorTy e
         | none => Lean.Json.null)
     , ("exitKind", match r.exit with | some e => Lean.Json.str (exitKind e) | none => Lean.Json.null)
     , ("fiberCount", toJson r.fiberCount)
-    , ("fibers", Lean.Json.arr (r.machine.fibers.map fiberJson).toArray)
-    , ("events", strings (trace.filterMap observable))
+    , ("fibers", Lean.Json.arr (r.machine.fibers.map (fiberJson names)).toArray)
+    , ("events", strings (trace.filterMap (observable names)))
     , ("schedule", strings (reduce trace))
     , ("internal", strings (trace.filterMap internal))
     , ("frames", toJson (trace.filter isFrame).length) ]
 
-def runSyncJson (p : Api.Program) (fuel : Nat) (table : RowTable := []) : J :=
+def runSyncJson (names : KeyNames) (p : Api.Program) (fuel : Nat) (table : RowTable := []) : J :=
   let (machine, exit) := Api.runSync p fuel table
   Lean.Json.mkObj
     -- the sync run has its own trace, and so its own numbering
-    [ ("exit", exitJsonAt (numberOf machine.trace) ((Api.typeOf p table).map (·.error)) exit)
+    [ ("exit", exitJsonAt names (numberOf machine.trace) ((Api.typeOf p table).map (·.error)) exit)
     , ("exitKind", Lean.Json.str (exitKind exit))
     , ("sync", Lean.Json.bool (!isAsyncFiberDefect exit)) ]
 
@@ -1858,6 +1865,9 @@ def entry (header : List String) (fuel : Nat)
     (tapes : String → List (Completion Val Err Defect FiberId Ann)) (name : String) (p : Api.Program) :
     J :=
   let (table, builtIn) := hostInputs name
+  -- the key names of the table that prints the module: a missing service's defect spells its key
+  -- as the module's tag does (`defectJson`)
+  let names := (nativeSignature table).keyNames
   let runtimeTable := fixtureRuntimeTable name p table
   let answers := builtIn ++ tapes name
   let ty := Api.typeOf p table
@@ -1888,8 +1898,10 @@ def entry (header : List String) (fuel : Nat)
     , ("moduleInferred", match written with
         | .ok (m, true) => text { m with decls := m.decls.map unannotated }
         | _ => Lean.Json.null)
-    , ("run", (runtimeTable.map fun rows => runJson p fuel rows answers name).getD Lean.Json.null)
-    , ("runSync", (runtimeTable.map fun rows => runSyncJson p fuel rows).getD Lean.Json.null) ] ++
+    , ("run", (runtimeTable.map fun rows => runJson names p fuel rows answers name).getD
+        Lean.Json.null)
+    , ("runSync", (runtimeTable.map fun rows => runSyncJson names p fuel rows).getD
+        Lean.Json.null) ] ++
     (if name == "pJoinedFirstNumber" || name == "pJoinedFirstString" then
       [("genericRows", Lean.Json.arr (table.map Tools.ProfileJson.rowJson).toArray),
        ("runtimeInstanceRows", match runtimeTable with
@@ -2160,18 +2172,18 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard numberIn [0, 2, 3, 1] 3 = 2 && numberIn [0, 2, 3, 1] 1 = 3 && numberIn [0, 2, 3, 1] 9 = 9
 -- The three fields of an exit that hold a fiber, under an order: an interruptor, a fiber
 -- handle, and the handles of a snapshot. Red control of each: under `id` the machine's id stays.
-#guard (reasonJson (numberIn [0, 2, 3, 1]) (.interrupt (some ⟨3⟩) .empty)).compress =
+#guard (reasonJson [] (numberIn [0, 2, 3, 1]) (.interrupt (some ⟨3⟩) .empty)).compress =
   "{\"interrupt\":2}"
-#guard (valJson (numberIn [0, 2, 3, 1]) (Value.fiber 1)).compress = "{\"fiber\":3}"
-#guard (valJson (numberIn [0, 2, 3, 1])
+#guard (valJson [] (numberIn [0, 2, 3, 1]) (Value.fiber 1)).compress = "{\"fiber\":3}"
+#guard (valJson [] (numberIn [0, 2, 3, 1])
     (Value.fiberSnapshot (.list [Value.fiber 1, Value.fiber 3]))).compress = "{\"fibers\":[3,2]}"
-#guard (reasonJson id (.interrupt (some ⟨3⟩) .empty)).compress = "{\"interrupt\":3}"
-#guard (valJson id (Value.fiber 1)).compress = "{\"fiber\":1}"
-#guard (valJson id (Value.fiberSnapshot (.list [Value.fiber 1, Value.fiber 3]))).compress =
+#guard (reasonJson [] id (.interrupt (some ⟨3⟩) .empty)).compress = "{\"interrupt\":3}"
+#guard (valJson [] id (Value.fiber 1)).compress = "{\"fiber\":1}"
+#guard (valJson [] id (Value.fiberSnapshot (.list [Value.fiber 1, Value.fiber 3]))).compress =
   "{\"fibers\":[1,3]}"
 -- The limit of DI-74, as a control: a literal interruptor that equals a machine id of the run
 -- is written like that fiber, and one outside the run is written as it is.
-#guard (reasonJson (numberIn [0, 2, 3, 1]) (.interrupt (some ⟨9⟩) .empty)).compress =
+#guard (reasonJson [] (numberIn [0, 2, 3, 1]) (.interrupt (some ⟨9⟩) .empty)).compress =
   "{\"interrupt\":9}"
 -- Measured over the lane: the numbering of each program is the allocation order, in the fork
 -- run and in the sync run, but for the programs of `lateSights`, which are pinned with the
@@ -2263,12 +2275,12 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 -- Its exit names the interruptor and the helper. Under the machine's ids they are `3` and `1`.
 -- Under the recorder's numbers they are `2` and `3`, in the fork run and in the sync run: the
 -- exit that rc.112 gave on both entries (`harness/truth/result.json`).
-#guard ((Api.run pLateSeen 1000).exit.map fun e => (exitJsonAt id none e).compress) =
+#guard ((Api.run pLateSeen 1000).exit.map fun e => (exitJsonAt [] id none e).compress) =
   some "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":3}]}},{\"fiber\":1}]}"
 #guard ((Api.run pLateSeen 1000).exit.map fun e =>
-    (exitJsonAt (numberOf (Api.run pLateSeen 1000).trace) none e).compress) =
+    (exitJsonAt [] (numberOf (Api.run pLateSeen 1000).trace) none e).compress) =
   some "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":2}]}},{\"fiber\":3}]}"
-#guard (exitJsonAt (numberOf (Api.runSync pLateSeen 1000).1.trace) none
+#guard (exitJsonAt [] (numberOf (Api.runSync pLateSeen 1000).1.trace) none
     (Api.runSync pLateSeen 1000).2).compress =
   "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":2}]}},{\"fiber\":3}]}"
 -- Its rows under the recorder's numbers: the helper is first seen at its start, as `3`.
@@ -2529,15 +2541,15 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 -- one text under the machine's ids and under the sync run's numbers. `pLateSeen` above is the
 -- red control: its exit holds a fiber, and its two texts differ.
 #guard [pPoolWaiters, pPoolLateWake, pPoolWake].all fun p =>
-  (exitJsonAt id none (Api.runSync p 1000).2).compress ==
-    (exitJsonAt (numberOf (Api.runSync p 1000).1.trace) none (Api.runSync p 1000).2).compress
+  (exitJsonAt [] id none (Api.runSync p 1000).2).compress ==
+    (exitJsonAt [] (numberOf (Api.runSync p 1000).1.trace) none (Api.runSync p 1000).2).compress
 -- The two borrows at a closed pool: L's exit names L's own fiber, 1 and then 3, and the
 -- allocation order is the recorder's order in both runs.
 #guard ((Api.run pPoolClosed 1000).exit.map fun e =>
-    (exitJsonAt (numberOf (Api.run pPoolClosed 1000).trace) none e).compress) = some
+    (exitJsonAt [] (numberOf (Api.run pPoolClosed 1000).trace) none e).compress) = some
   "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":1}]}},[[0],[],[],0,true,0],[[9,1]]]}"
 #guard ((Api.run pPoolClosing 1000).exit.map fun e =>
-    (exitJsonAt (numberOf (Api.run pPoolClosing 1000).trace) none e).compress) = some
+    (exitJsonAt [] (numberOf (Api.run pPoolClosing 1000).trace) none e).compress) = some
   "{\"success\":[[[],[0],[0],1,false,1],{\"failure\":{\"reasons\":[{\"interrupt\":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]]}"
 -- The closed pool's compared rows: L starts and exits with an interruption, and no row of
 -- another fiber stands between. Nobody interrupts L: it fails with its own interruption.
@@ -2587,7 +2599,16 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard ((Payload.image.ofVal (.ctor 0 [.list [.str "boom"], .list [.unit]])).map fun p =>
   errJson (.payload p) != errJson .boom && errJson (.payload p) ==
     Lean.Json.mkObj [("payload", Lean.Json.str (Effect4.Schema.Codec.payloadHex p))]) = some true
-#guard defectJson (.error (.text "lost")) == Lean.Json.mkObj [("error", Lean.Json.str "lost")]
+-- a defect is written as rc.112 writes the thrown value (`Schema.Codec.encodeDefect`, move G)
+#guard defectJson [] (.error (.text "lost")) == Lean.Json.str "lost"
+#guard defectJson [] (.user 7) == toJson (7 : Nat)
+#guard defectJson [] .asyncFiber == Lean.Json.mkObj
+  [("message", Lean.Json.str "An asynchronous Effect was executed with Effect.runSync"),
+    ("name", Lean.Json.str "AsyncFiberError")]
+#guard defectJson [] (.missingService Env.scopeKey) == Lean.Json.mkObj
+  [("message", Lean.Json.str "Service not found: effect/Scope"), ("name", Lean.Json.str "Error")]
+-- control: a defect outside the canonical alphabet is named, never written as another's image
+#guard defectJson [] (.error (.tag 7)) != defectJson [] (.user 7)
 -- decisions row 120, part E2: the payload programs type at their record, print with their class,
 -- read back, and the program's exit writes the payload through its error column (`errJsonAt`)
 #guard (Api.typeOf pFailPayload).map (·.error) =
@@ -2600,12 +2621,12 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
   ("export class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\n" ++
    "export const main: Effect.Effect<never, NotFound, never> = Effect.fail(new NotFound({ id: 9 }))\n")
 #guard ((Api.run pFailPayload 1000).exit.map fun e =>
-    (exitJsonAt id ((Api.typeOf pFailPayload).map (·.error)) e).compress) =
+    (exitJsonAt [] id ((Api.typeOf pFailPayload).map (·.error)) e).compress) =
   some "{\"failure\":{\"reasons\":[{\"fail\":{\"payload\":{\"_tag\":\"NotFound\",\"id\":9}}}]}}"
 #guard (Api.run pTagPayload 1000).exit = some (.success (.nat 1))
 -- untyped, a payload keeps the hexadecimal of its canonical bytes
 #guard ((Api.run pFailPayload 1000).exit.map fun e =>
-    (exitJsonAt id none e).compress == (exitJson id e).compress) = some true
+    (exitJsonAt [] id none e).compress == (exitJson [] id e).compress) = some true
 #guard Api.typeOf pFailText = some ⟨.never, .string, Env.Requirement.empty⟩
 #guard Api.typeOf pFailBoomText = some ⟨.never, .string, Env.Requirement.empty⟩
 #guard (Api.run pFailText 1000).exit = some (.failure (Cause.fail (.text "lost")))

@@ -284,7 +284,7 @@ def reservedDefect : Defect → Bool
   | .notImplemented => true
   | .asyncFiber => false
   | .badName => true
-  | .missingService => false
+  | .missingService _ => false
   | .user _ => false
   | .error _ => false
 

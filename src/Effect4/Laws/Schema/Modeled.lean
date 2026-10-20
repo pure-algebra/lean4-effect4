@@ -184,13 +184,14 @@ theorem member (α : Type) [m : Modeled α] (a : α) (alloc : List String) :
   exact Model.member m.ty m.checked (m.toC a) alloc
 
 /-- **The JSON round trip of a modeled value** (claim `modeled-codec`), at the normal form of its
-type. Membership comes from `Modeled.member` and `hasTy_normalize`. Codec admission stays a
-premise: it is value-specific, and a natural above 2^53 has no exact JSON image. -/
+type, under any table of key names. Membership comes from `Modeled.member` and
+`hasTy_normalize`. Codec admission stays a premise: it is value-specific, and a natural above 2^53
+has no exact JSON image. -/
 @[semantics "exact-codecs" (requirement := R3)]
-theorem codec_roundtrip (α : Type) [m : Modeled α] (a : α)
-    (admitted : Ty.isCodecValue (CTy.ofRaw m.ty).toRaw ((Modeled.image α).toVal a) = true) :
-    ((encode (CTy.ofRaw m.ty).toRaw ((Modeled.image α).toVal a)).bind
-        (decode (CTy.ofRaw m.ty).toRaw)).bind (Modeled.image α).ofVal = some a := by
+theorem codec_roundtrip (α : Type) [m : Modeled α] (a : α) {names : KeyNames}
+    (admitted : Ty.isCodecValue names (CTy.ofRaw m.ty).toRaw ((Modeled.image α).toVal a) = true) :
+    ((encode names (CTy.ofRaw m.ty).toRaw ((Modeled.image α).toVal a)).bind
+        (decode names (CTy.ofRaw m.ty).toRaw)).bind (Modeled.image α).ofVal = some a := by
   have hmem : Val.hasTy ((Modeled.image α).toVal a) (CTy.ofRaw m.ty).toRaw = true := by
     show Val.hasTy _ m.ty.normalize [] = true
     rw [hasTy_normalize]
