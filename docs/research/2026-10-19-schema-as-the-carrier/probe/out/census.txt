@@ -1,0 +1,26 @@
+Ty: 29 constructors: never, unit, nat, int, string, bool, handle, option, list, prod, except, exitOf, causeOf, fiberOf, union, lit, refOf, deferredOf, var, unknown, record, map, tuple, app, null, undefined, number, bytes, contextOf
+  witnessed 20: exitOf, unit, never, nat, int, bool, string, option, list, prod, lit, tuple, record, map, union, causeOf, fiberOf, refOf, deferredOf, handle
+  missing 9: except, var, unknown, app, null, undefined, number, bytes, contextOf
+  codec supports 18: never, unit, nat, int, string, bool, option, list, prod, except, exitOf, causeOf, union, lit, record, map, tuple, number
+  codec refuses 11: handle, fiberOf, refOf, deferredOf, var, unknown, app, null, undefined, bytes, contextOf
+  refusals witnessed 4: fiberOf, refOf, deferredOf, handle
+  without a representative 0: 
+Exit: 2 constructors: success, failure
+  witnessed 2: success, failure
+  missing 0: 
+Reason: 3 constructors: fail, die, interrupt
+  witnessed 3: fail, die, interrupt
+  missing 0: 
+Defect: 6 constructors: notImplemented, asyncFiber, badName, missingService, user, error
+  witnessed 4: user, error, missingService, asyncFiber
+  missing 2: notImplemented, badName
+Err: 5 constructors: boom, tag, tagged, text, payload
+  witnessed 4: text, tag, tagged, payload
+  missing 1: boom
+Option: 2 constructors: none, some
+  witnessed 2: none, some
+  missing 0: 
+Val: 14 constructors: unit, bool, nat, str, bytes, list, pair, none, some, ctor, ref, handle, negInt, float
+  witnessed 11: unit, nat, negInt, bool, str, some, none, list, ctor, pair, handle
+  missing 3: bytes, ref, float
+universe: 61 constructors over 7 sorts; cases: 35

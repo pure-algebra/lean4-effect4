@@ -1,6 +1,7 @@
-answerIsFiber: no exit Schema code: the declaration effect/schema/Fiber has no Schema code
 successUnit {"_tag":"Success","value":null}
 successNat {"_tag":"Success","value":7}
+successIntNegative {"_tag":"Success","value":-1}
+successIntNonNegative {"_tag":"Success","value":2}
 successBool {"_tag":"Success","value":true}
 successString {"_tag":"Success","value":"λ🙂 \"quoted\" \\ tab\t"}
 successSome {"_tag":"Success","value":{"_tag":"Some","value":3}}
@@ -26,4 +27,9 @@ exitOfInterrupt {"_tag":"Success","value":{"_tag":"Failure","cause":[{"_tag":"In
 forkFailJoin {"_tag":"Failure","cause":[{"_tag":"Fail","error":"child"}]}
 forkDieJoin {"_tag":"Failure","cause":[{"_tag":"Die","defect":{"user":9}}]}
 forkInterruptJoin {"_tag":"Failure","cause":[{"_tag":"Interrupt","fiberId":0}]}
-answerIsFiber refused: no codec at Exit.Exit<Fiber.Fiber<void, never>, never> for (Val.ctor 0 [(Val.handle 1 1)])
+forkScopedNoScope refused
+asyncSleep {"_tag":"Failure","cause":[{"_tag":"Die","defect":"asyncFiber"}]}
+answerIsFiber refused
+answerIsRef refused
+answerIsDeferred refused
+answerIsScope refused

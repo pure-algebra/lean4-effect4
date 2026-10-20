@@ -1,5 +1,7 @@
 successUnit {"_tag":"Success","value":null}
 successNat {"_tag":"Success","value":7}
+successIntNegative {"_tag":"Success","value":-1}
+successIntNonNegative {"_tag":"Success","value":2}
 successBool {"_tag":"Success","value":true}
 successString {"_tag":"Success","value":"λ🙂 \"quoted\" \\ tab\t"}
 successSome {"_tag":"Success","value":{"_tag":"Some","value":3}}
@@ -24,4 +26,10 @@ interruptNoOne {"_tag":"Failure","cause":[{"_tag":"Interrupt","fiberId":null}]}
 exitOfInterrupt {"_tag":"Success","value":{"_tag":"Failure","cause":[{"_tag":"Interrupt","fiberId":null}]}}
 forkFailJoin {"_tag":"Failure","cause":[{"_tag":"Fail","error":"child"}]}
 forkDieJoin {"_tag":"Failure","cause":[{"_tag":"Die","defect":9}]}
-forkInterruptJoin {"_tag":"Failure","cause":[{"_tag":"Interrupt","fiberId":29}]}
+forkInterruptJoin {"_tag":"Failure","cause":[{"_tag":"Interrupt","fiberId":31}]}
+forkScopedNoScope refused
+asyncSleep {"_tag":"Failure","cause":[{"_tag":"Die","defect":{"message":"An asynchronous Effect was executed with Effect.runSync","name":"AsyncFiberError"}}]}
+answerIsFiber refused
+answerIsRef refused
+answerIsDeferred refused
+answerIsScope refused

@@ -1,28 +1,35 @@
-successUnit	void	never
-successNat	number	never
-successBool	boolean	never
-successString	string	never
-successSome	Option.Option<number>	never
-successNone	Option.Option<never>	never
-successList	ReadonlyArray<number>	never
-successPair	readonly [number, "x"]	never
-successTuple	readonly [number, "a", boolean]	never
-successRecord	{ readonly id: number; readonly nick?: string; readonly title: string }	never
-successRecordOptional	{ readonly id: number; readonly nick?: string; readonly title: string }	never
-successMap	Readonly<Record<string, number>>	never
-successUnion	number | string	never
-successExitOfFail	Exit.Exit<never, string>	never
-successExitOfSucceed	Exit.Exit<number, never>	never
-successCause	Cause.Cause<string>	never
-failString	never	string
-failNat	never	number
-failTagged	never	readonly ["EmptyTitle", "a title is required"]
-failRecord	never	{ readonly _tag: "NotFound"; readonly id: number }
-dieNat	never	never
-dieString	never	never
-interruptNoOne	never	never
-exitOfInterrupt	Exit.Exit<never, never>	never
-forkFailJoin	never	string
-forkDieJoin	never	never
-forkInterruptJoin	void	never
-answerIsFiber	Fiber.Fiber<void, never>	never
+successUnit	void	never	run
+successNat	number	never	run
+successIntNegative	Int	never	run
+successIntNonNegative	Int	never	run
+successBool	boolean	never	run
+successString	string	never	run
+successSome	Option.Option<number>	never	run
+successNone	Option.Option<never>	never	run
+successList	ReadonlyArray<number>	never	run
+successPair	readonly [number, "x"]	never	run
+successTuple	readonly [number, "a", boolean]	never	run
+successRecord	{ readonly id: number; readonly nick?: string; readonly title: string }	never	run
+successRecordOptional	{ readonly id: number; readonly nick?: string; readonly title: string }	never	run
+successMap	Readonly<Record<string, number>>	never	run
+successUnion	number | string	never	run
+successExitOfFail	Exit.Exit<never, string>	never	run
+successExitOfSucceed	Exit.Exit<number, never>	never	run
+successCause	Cause.Cause<string>	never	run
+failString	never	string	run
+failNat	never	number	run
+failTagged	never	readonly ["EmptyTitle", "a title is required"]	run
+failRecord	never	{ readonly _tag: "NotFound"; readonly id: number }	run
+dieNat	never	never	run
+dieString	never	never	run
+interruptNoOne	never	never	run
+exitOfInterrupt	Exit.Exit<never, never>	never	run
+forkFailJoin	never	string	run
+forkDieJoin	never	never	run
+forkInterruptJoin	void	never	run
+forkScopedNoScope	Fiber.Fiber<void, never>	never	run
+asyncSleep	void	never	runSync
+answerIsFiber	Fiber.Fiber<void, never>	never	run
+answerIsRef	Ref.Ref<number>	never	run
+answerIsDeferred	Deferred.Deferred<number, never>	never	run
+answerIsScope	Scope.Scope	never	run

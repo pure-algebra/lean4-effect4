@@ -156,51 +156,93 @@ writes a number as a JavaScript bit literal, and the path to text is `NatJson.of
 `NatJson.render`, which answers bytes. And `Schema.Exit` alone encodes to an `Exit` object;
 only `Schema.toCodecJson` of it writes the JSON the codec writes.
 
-## 8. The faces, dogfooded
+## 8. The faces, dogfooded: the number from the algebra
 
-`probe/Faces.lean` beside this note builds 28 programs, one for each outcome form that Effect's
-standard library has a schema for. It runs each on the Lean machine and prints its exit by D1.
-It writes each program as Effect TypeScript. Then `probe/run.ts` runs the printed program under
-Bun on rc.112. It encodes the exit with the case's own codec, `Schema.toCodecJson(Schema.Exit(
-answer, error, Schema.Defect()))`, from the same types. The lines are diffed with fiber ids
-masked. The commands, from the library's root:
+The observation D1 is a fold. It dispatches on the constructors of seven sorts. `Ty` enters
+through the codec's `wireAlgebra`. `Exit`, `Reason`, `Defect` and `Err` enter through
+`encodeCause`, `encodeReason`, `encodeDefect` and `encodeErr`. The interruptor's `Option` and
+the `Val` inside each type's wire enter through their arms. A fold's witness set is whole when
+every constructor of every sort it dispatches on has a witness. So the universe of forms is a
+sum, not a list: the constructor counts of those seven sorts, read from the loaded environment.
+
+| Sort | Constructors | Witnessed | Missing |
+| --- | --- | --- | --- |
+| `Ty` | 29 | 20 | `except`, `var`, `unknown`, `app`, `null`, `undefined`, `number`, `bytes`, `contextOf` |
+| `Exit` | 2 | 2 | none |
+| `Reason` | 3 | 3 | none |
+| `Defect` | 6 | 4 | `notImplemented`, `badName` |
+| `Err` | 5 | 4 | `boom` |
+| `Option` | 2 | 2 | none |
+| `Val` | 14 | 11 | `bytes`, `ref`, `float` |
+| all | 61 | 46 | 15 |
+
+The codec supports 18 of the 29 type constructors and refuses 11; the probe witnesses four of
+the refusals: `fiberOf`, `refOf`, `deferredOf` and `handle`. Of the 15 missing constructors, 3
+are reachable from an admitted program and not taken here. They are `unknown`, a release's exit
+parameter; `app`, a module's named type; and `contextOf`, a service's context entry. The other
+12 are reachable from no program written on the authoring surface. No construct answers a
+`Result`, so `except` is out. No literal or term makes a `number`, `bytes`, `null`, `undefined`
+or `var`. `notImplemented`, `badName` and `boom` are the machine's own markers, which admission
+keeps out. `Val.bytes`, `Val.ref` and `Val.float` could come only from a host reply. So the
+reachable universe is 49, and the probe witnesses 46 of it. The arms that branch on a value add
+four more witnesses, not taken. They are a union's second member, the empty list, the empty map
+and the empty tuple.
+
+`probe/Faces.lean` beside this note is that census. It reads each sort's constructors from the
+environment. It walks each case's exit type with the generated `TyAlgebra`, where a constructor
+without a field does not compile. It walks each exit's value and cause with one arm a
+constructor. It refuses when a type constructor has no representative for the support
+judgment. It builds 35
+programs, runs each on the Lean machine, and prints its exit by D1. It writes each program as
+Effect TypeScript, and `probe/run.ts` runs the printed program under Bun on rc.112. The runner
+encodes the exit with the case's own codec, `Schema.toCodecJson(Schema.Exit(answer, error,
+Schema.Defect()))`, from the same types. The lines are diffed with fiber ids masked. The
+commands, from the library's root:
 
 ```
 lake env lean --run docs/research/2026-10-19-schema-as-the-carrier/probe/Faces.lean docs/research/2026-10-19-schema-as-the-carrier/probe/out ../../../../../harness/truth/prelude.ts
 bun docs/research/2026-10-19-schema-as-the-carrier/probe/run.ts
 ```
 
-The outputs are `probe/out/lean.txt` and `probe/out/bun.txt`, and the certificate types are
-`probe/out/types.tsv`. tsgo 7 accepts every printed module.
+The outputs are `probe/out/lean.txt`, `probe/out/bun.txt` and `probe/out/census.txt`; the
+certificate types are `probe/out/types.tsv`. tsgo 7 accepts every printed module.
 
 | Form | Cases | Result |
 | --- | --- | --- |
-| Success: unit, nat, bool, string with escapes and non-ASCII, option some and none, list, pair, tuple, record with and without its optional field, map, union | 13 | equal |
+| Success: unit, nat, a negative and a non-negative int, bool, string with escapes and non-ASCII, option some and none, list, pair, tuple, record with and without its optional field, map, union | 15 | equal |
 | Success: an exit as the value (`Effect.exit` of a failure and of a success), a cause as the value (`catchCause` answering it) | 3 | equal |
 | Failure, `Fail`: a string, a number, a tagged pair, a tagged record | 4 | equal |
 | Failure, `Interrupt`: no interruptor; as a value under `exit` | 2 | equal |
 | Failure, `Interrupt`: a forked child interrupted and joined | 1 | equal modulo the fiber id (Lean `0`, rc.112 `29`), and only after the annotations are dropped (finding 8.2) |
 | Failure from a forked child: its typed failure joined | 1 | equal |
-| Failure, `Die`: a number, a string, and a forked child's number | 3 | differ: the defect carrier (finding 8.1) |
-| A fiber as the answer | 1 | refused on both faces: Lean's codec has no wire for `Fiber`, and the Schema code generator has no `Fiber` declaration |
+| Failure, `Die`, a user defect: a number, a string, a forked child's number | 3 | differ: the defect carrier (finding 8.1) |
+| Failure, `Die`, a machine defect: `runSync` of a parked sleep (`asyncFiber`) | 1 | differ: the defect carrier (finding 8.1) |
+| A handle as the answer: a fiber, a ref, a deferred, a scope; and a scoped fork with no scope, which answers a fiber and dies | 5 | refused on both faces: Lean's codec has no wire for the type, and the Schema code generator has no declaration for it |
 
-Four things the probe established.
+Six things the probe established.
 
 ### 8.1 The defect carrier is not Effect's
 
 Lean's `Defect` is a closed alphabet: `user n`, `error e`, and four machine defects. The codec
-writes `user 7` as `{"user":7}`. It writes `error (text "boom")` as `{"error":"boom"}`. Both are
-`encodeDefect` (`src/Effect4/Schema/Codec.lean`). rc.112's `Schema.Defect()` is `Json` decoded
-to `Unknown` (`vendor/effect-4.0.0-rc.112/src/Schema.ts`, `Defect`). So a defect encodes as the
-raw JSON of the thrown value, `7` and `"boom"`, and an `Error` as its name and message. The
-truth harness bridges the two by a hand projection in TypeScript, `defectWire`
+writes `user 7` as `{"user":7}`. It writes `error (text "boom")` as `{"error":"boom"}`. It
+writes a machine defect as its name, `"asyncFiber"`. All three are `encodeDefect`
+(`src/Effect4/Schema/Codec.lean`). rc.112's `Schema.Defect()` is `Json` decoded to `Unknown`
+(`vendor/effect-4.0.0-rc.112/src/Schema.ts`, `Defect`). So a defect encodes as the raw JSON of
+the thrown value, `7` and `"boom"`, and an `Error` as its name and message. The truth harness
+bridges the user defects by a hand projection in TypeScript, `defectWire`
 (`harness/truth/run-truth.ts`), which turns a safe natural into `{ user: n }`. That projection is
 the fourth spelling of a defect, and the probe sees through it:
 
 ```
-dieNat    Lean {"_tag":"Die","defect":{"user":7}}    rc.112 {"_tag":"Die","defect":7}
-dieString Lean {"_tag":"Die","defect":{"error":"boom"}}  rc.112 {"_tag":"Die","defect":"boom"}
+dieNat     Lean {"_tag":"Die","defect":{"user":7}}      rc.112 {"_tag":"Die","defect":7}
+dieString  Lean {"_tag":"Die","defect":{"error":"boom"}}  rc.112 {"_tag":"Die","defect":"boom"}
+asyncSleep Lean {"_tag":"Die","defect":"asyncFiber"}
+           rc.112 {"_tag":"Die","defect":{"message":"An asynchronous Effect was executed with Effect.runSync","name":"AsyncFiberError"}}
 ```
+
+A machine defect has a name on both faces, and rc.112 adds its message. The scoped fork with no
+scope dies on rc.112 with `{"name":"Error","message":"Service not found: effect/Scope"}`, which
+is Lean's `missingService`.
 
 ### 8.2 The exact codec refuses an annotated cause
 
@@ -222,9 +264,25 @@ Effect does, `{"_tag":"Interrupt","fiberId":n}`, and the comparison renames, as 
 
 ### 8.4 A handle has no outside observation, on both faces
 
-`fork (succeed unit)` answers `Fiber.Fiber<void, never>`. Lean's codec refuses the type, and
-the Schema code generator refuses the declaration `effect/schema/Fiber`. The refusal is the same
-fact in two places, which is what R4 asks for.
+`fork (succeed unit)` answers `Fiber.Fiber<void, never>`, and `Ref.make`, `Deferred.make` and
+`Scope.make` answer their handles. Lean's codec refuses each type, and the Schema code generator
+refuses each declaration. The refusal is the same fact in two places, which is what R4 asks for.
+
+### 8.5 The tool's JSON profile holds naturals only
+
+`NatJson`, the profile's tree, holds a number as a natural, and `NatJson.ofBinary64` turns any
+other number into a numeral with no text. The codec writes a negative integer as a binary64
+datum with the sign bit (`negJson`). So the text path through the profile printed
+`successIntNegative` as `"value":` with nothing after it, where rc.112 prints `-1`. The codec's
+`Json` needs its own text renderer; the probe's `jsonText` is one. The tool's wire cannot carry
+an `int` answer below zero today.
+
+### 8.6 Encoding ignores type support
+
+`Ty.encode` at `Exit<Fiber<void, never>, never>` wrote a failure, since the failure arm reads
+no answer value. Yet the type is unsupported, `Codec.isSupported` is false, and rc.112 has no
+Schema for it at all. D1 gates on `isSupported` first, as the probe now does, so both faces
+refuse together.
 
 One more thing the probe met: `NatJson.render` answers bytes, and `String.ofList` over them
 splits a non-ASCII character. The text form is `String.fromUTF8!` over the bytes.
@@ -235,19 +293,21 @@ splits a non-ASCII character. The text form is `String.fromUTF8!` over the bytes
 | --- | --- | --- |
 | A | `Run.observe` answers D1 beside the raw exit: one function in Lean, lowered into the kit, so `Kit.Json.exit_json` and the tool's run replies print by type | §9.1 item 5, M8 one observation |
 | B | The truth lane's `exitJson`, `exitJsonAt`, its `defectWire`, and the session's `fail/payload` fold into `Ty.encode`; the fiber renumbering stays a function on the exit before it encodes | item 5; §9.2 item 1 for the protocol |
-| C | One text renderer of the codec's `Json`, `normJ` then `NatJson.ofBinary64` then `render` then UTF-8, named once | item 10, small |
+| C | One text renderer of the codec's `Json`, over its own binary64 numbers (finding 8.5), after `normJ`, as UTF-8 text; the profile's `NatJson` is not its path | item 10, small |
 | D | The composed claim P1 in the registry under concept 5, with its planned goal; move A is its consumer | new; semantics generation is paused, so a receipt proposes the row |
 | E | The kit's trace prints each call's request and reply by the row's columns, not by `valShape` | item 5 |
 | F | The surface carries `exit: Schema.toCodecJson(Schema.Exit(answer, error, Schema.Defect()))` per method, so a consumer composes nothing by hand | new, small |
-| G | The defect carrier follows Effect: `user n` encodes as the number `n`, `error e` as its error payload, and the four machine defects as one tagged object; the harness's `defectWire` goes | new, small; concept 5 |
-| H | The exit codec's exactness law gains the annotation normaliser: `Prepared.encode` compares against the value with its annotations dropped, and D1 encodes that value | new, small; concept 5, row 128 |
+| G | The defect carrier follows Effect: `user n` encodes as the number `n`, `error e` as its error payload, and a machine defect as rc.112's error name and message, pinned by line; the harness's `defectWire` goes | new, small; concept 5 |
+| H | The exit codec's exactness law gains the annotation normaliser: `Prepared.encode` compares against the value with its annotations dropped, and D1 encodes that value; D1 gates on `isSupported` (finding 8.6) | new, small; concept 5, row 128 |
+| I | The faces as a generated census: `probe/Faces.lean`'s walk and universe become a lane, one witness a constructor, the universe read from the environment, a constructor without a witness a refusal; it runs where the codec lane runs | new, M; the drift rule of `binders.json` |
 
 Not a move: `exitShape` and `valShape` stay the tool's wire for carriers that are no program
 value, such as programs, types and refusals.
 
 The order for the consolidation push. H and G come first, since they change what the codec
 admits and writes. Then A with C, which makes the observation one function on every face. Then
-B, which deletes the hand spellings. Then E and F. D rides with A.
+B, which deletes the hand spellings. Then I, which holds the number. Then E and F. D rides with
+A.
 
 ## 10. What the owner decides
 
@@ -262,8 +322,10 @@ B, which deletes the hand spellings. Then E and F. D rides with A.
 
 ## 11. What this does not establish
 
-- No theorem landed. The to-do probe is eleven requests, and the faces probe is 28 programs,
+- No theorem landed. The to-do probe is eleven requests, and the faces probe is 35 programs,
   each on one machine under one host.
+- The census counts constructors. The arms that branch on a value are counted by hand in §8.
+  The 12 unreachable constructors are classified by reading, not by a tool.
 - P1 is stated here and in no claim. Its parts are proved on their fragments.
 - The faces probe runs no host row, no clock advance and no parallel failure. rc.112's `all`
   with unbounded concurrency fails with its first reason. So a cause with several reasons came
