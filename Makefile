@@ -406,8 +406,7 @@ ts/eff/node_modules: | $(GEN)/ts-install
 	@test -d $@
 
 # The truth harness and the schema codec resolve Effect and the compiler through
-# harness/truth/node_modules, a link to that install (never a second install: the truth
-# runner refuses a link that selects a different one).
+# harness/truth/node_modules, a link to that install (never a second install).
 harness/truth/node_modules: | ts/eff/node_modules
 	ln -s ../../ts/eff/node_modules $@
 
@@ -433,17 +432,21 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # Retired lanes (owner, 2026-10-18: "just retire them... we'll design better checks"): truth,
 # truth-release, corpus, schema-codec, schema-ts and host-protocol, with the truth and schema-ts
-# generation groups. Their harnesses stay in the tree, run by no gate. The truth harness's two
-# producers stay on demand: `gen-truth` re-records the corpus, the result and the tapes on the
-# pinned rc.112, and `gen-truth-ledger` promotes the release lane's ledger.
-TRUTH_HOST_TESTS := harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts harness/truth/if-case.test.ts
-.PHONY: gen-truth gen-truth-ledger
-gen-truth: $(GEN)/derived $(GEN)/ts $(GEN)/host-protocol | harness/truth/node_modules ## on demand: re-record harness/truth on the pinned rc.112 (no gate reads it)
+# generation groups. The schema codec's and the host protocol's harnesses stay in the tree, run by
+# no gate. The truth differential is deleted (owner, 2026-10-20: "retire the old truth modules"):
+# its rc.112 comparison, recorded results, tapes, build ledger, release lane and scripts.
+#
+# The truth corpus stays, on demand: `gen-truth-corpus` runs `harness/truth/Truth.lean --corpus`,
+# with the native core loaded, and writes `harness/truth/corpus.json` (each program's name, its
+# Lean type and its Lean run, the scope's key and the host rows) and one printed module per
+# program, `harness/truth/generated/<name>.ts`. No host runs. The target lane reads the manifest's
+# types and host rows (tools/target/profile.ts, tools/Tools/RowTypes.lean) and the modules; the
+# reader lane reads the modules (ts/eff/check.ts); the OCaml engine's cross face reads the runs
+# (ocaml/engine/test/reference/corpora.ml). No gate runs the producer.
+.PHONY: gen-truth-corpus
+gen-truth-corpus: $(GEN)/derived ## on demand: write harness/truth/corpus.json and generated/*.ts from Truth.lean's corpus (no host run)
 	$(call build_imports,harness/truth/Truth.lean)
-	$(LAKE) env lean -M4096 $(call native_flags,harness/truth/Truth.lean) --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
-	$(BUN) run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
-gen-truth-ledger: | harness/truth/node_modules ## on demand: promote a fresh host run of both builds to harness/truth/build-ledger.tsv
-	$(PY) scripts/check-truth-release.py --promote --host-tests $(TRUTH_HOST_TESTS)
+	$(LAKE) env lean -M4096 $(call native_flags,harness/truth/Truth.lean) --run harness/truth/Truth.lean --corpus harness/truth
 
 CHECKS := roots native compiler ts-reader target ocaml ingest-smoke \
   service-identity census schema-pins tools tsgo tsdiag docs language
@@ -490,18 +493,17 @@ check-gen-full:
 	$(refuse_drift)
 	@echo 'PASS check-gen: every generated file is what its generator emits'
 
-# one check: make check-roots, make check-truth, ...
+# one check: make check-roots, make check-docs, ...
 $(addprefix check-,$(CHECKS)): check-%: $(CHK)/%
-clean-check: ## forget local check markers and interrupted truth runs; retain shared passes
+clean-check: ## forget local check markers; retain shared passes
 	@mkdir -p $(CHK)
 	find $(CHK) -maxdepth 1 -type f ! -name 'gen-*' -delete
-	rm -rf harness/truth/truth-check-*
 
 # Make owns dependency order and commands. The cache hashes source closures, bytes,
 # tool versions and these recipes. Old Lean traces never stand in for changed sources.
 CHECK_CACHE_SOURCES := Makefile scripts/gate-cache.py scripts/lib/gate_cache.py scripts/lib/lean_imports.py
 CHECK_ENVIRONMENT := LAKE BUN NODE PY OPAM_SWITCH OCAML OCAMLOPT TSGO_HOME E4_LEAN_CORPUS \
-  EFFECT4_BUN EFFECT4_NODE EFFECT4_CORPUS EFFECT4_EFFECT_NODE_MODULES EFFECT4_RELEASE_NODE_MODULES \
+  EFFECT4_BUN EFFECT4_NODE EFFECT4_CORPUS EFFECT4_EFFECT_NODE_MODULES \
   EFFECT4_GEN_TIMEOUT EFFECT4_OPAM_SWITCH EFFECT4_PROGRAM EFFECT4_TAPE \
   EFFECT4_RUNTIME_CENSUS_CANDIDATE EFFECT4_RUNTIME_CENSUS_ROWS EFFECT4_RUNTIME_CENSUS_SOURCE
 export $(foreach v,$(CHECK_ENVIRONMENT),$(if $(filter undefined,$(origin $(v))),,$(v)))
@@ -586,9 +588,9 @@ _run-compiler:
 	$(PY) scripts/check-conform.py compiler
 
 # The TypeScript reader against Lean's reader: every `.ts` of the corpus and of the truth
-# lane's exported modules must read back to the JSON Lean's own reader kept (`--oracle`),
+# corpus's printed modules must read back to the JSON Lean's own reader kept (`--oracle`),
 # then the package's type check and its pinned cases.
-TRUTH_GENERATED := harness/truth/corpus.json harness/truth/result.json harness/truth/result.md $(wildcard harness/truth/generated/*.ts)
+TRUTH_GENERATED := harness/truth/corpus.json $(wildcard harness/truth/generated/*.ts)
 $(eval $(call cached_check,ts-reader,ts,$(CORPUS) $(TS_EFF_SOURCES) $(TRUTH_GENERATED) $(PRELUDE_SOURCES) $(TS_PINS) $(TS_INSTALL),))
 $(CHK)/ts-reader.key: $(CORPUS)/index.tsv | ts/eff/node_modules
 _run-ts-reader:

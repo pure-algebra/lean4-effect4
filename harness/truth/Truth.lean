@@ -10,100 +10,76 @@ import Test.Program.DefinitionsControls
 import Test.Program.InvokeControls
 import Test.Program.QueueDefs
 import Test.Codegen.ServicesPrint
-import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api.Codegen
-import Effect4.Laws.Api.Frontier
-import Effect4.Laws.Program.Denote
-import Test.Program.Gen
 import Test.Api.HostList
 import TypeScript.Render
 import Lean.Data.Json
 
 /-!
-# Truth — the Lean face of the rc.112 truth check
+# Truth — the truth corpus: Lean's programs, their printed modules and their manifest
 
-What it is: for every program of the `Eff` corpus (`Effect4.Program.Wire.Corpus.all` plus
-`pTwo` of `git:14e6835:src/OCaml5/Bridge.lean`), the Lean machine's verdict and its observable
-schedule, written as one JSON manifest (`harness/truth/corpus.json`) that the rc.112 runner
-(`harness/truth/run-truth.ts`) and, later, the OCaml host replay against.
+What it is: the hand corpus of `Eff` programs (`corpus`: `Effect4.Program.Wire.Corpus.all`,
+`pTwo` of `git:14e6835:src/OCaml5/Bridge.lean`, and the fixtures below), each program's row table
+and built-in host answers (`hostInputs`), and one writer of two outputs:
 
-    lake env lean -M4096 --run harness/truth/Truth.lean [harness/truth/corpus.json]
-    lake env lean -M4096 --run harness/truth/Truth.lean --corpus <out.json> <count> <depth>
+    lake env lean -M4096 --run harness/truth/Truth.lean --corpus harness/truth
 
-Without an argument the manifest goes to stdout. The second form writes the same manifest
-shape for the generated corpus (`Test/Program/Gen.lean`, `count` programs at `depth`, named
-`g<i>` as `tools/Drivers/Corpus.lean` names them), with no tapes and the empty table; it is the
-input of `scripts/check-corpus.py` (`make check-corpus`), the run and type comparisons
-against rc.112 over the whole corpus. Depends on `Effect4.Api` (typing, printing,
-running), `TypeScript.Render` (the pinned renderer: bytes of the printed program), and
-`Lean.Data.Json` (escaping and layout of the manifest; nothing of the project's semantics).
+`make gen-truth-corpus` runs it, with the native core loaded. No gate runs it.
 
-Why one file: a `--run` tool can import only Lake modules, and `ocaml/tools` is not
-a Lake library, so the library half (`OCaml5.Truth`, everything above `main`) and the thin
-driver (`main`) share this file. The library half is pure; `main` only parses arguments and
-writes.
+* `generated/<name>.ts`, one module per program: the module text of every lane
+  (`moduleOf`, over `Tools.Code.programModule`; decisions row 392, P1 (a)). It is the checked
+  emission's file, its pieces printed typed, or, for a program the emission refuses, the
+  program printed plain as `main`, with its imports from Lean data, the prelude's host
+  namespaces (`hostImports`), and Effect's layout (`Tools.Code.moduleText`). The target lane
+  (`tools/target/profile.ts`) and the reader lane (`ts/eff/check.ts`) read these modules.
+* `corpus.json`, the manifest. At the top: `scopeKey`, the scope's service key, and `hostRows`,
+  the host fixture's rows (`acquireHandleTable`). Per program: `name`; `type`
+  (`{answer, error, requires}` as `Ty.render` spells them, `null` when ill-typed); and `run`.
+  The target lane reads `type`, `scopeKey` and `hostRows` (`tools/target/profile.ts`,
+  `tools/Tools/RowTypes.lean`). The OCaml engine's cross face reads `run`
+  (`Corpora.truth_expectations`, `ocaml/engine/test/reference/corpora.ml`).
 
-Manifest (`format: effect4-truth-manifest-v1`), one entry per program:
+`run` is `Api.run p fuel`, or for a program with built-in host answers its run under a host that
+answers from a list (`Test.Api.HostList`: the session, each answer a decision, DI-23):
+`outcome` (`finished`, `frontier`, `stuck …`), `exit` (the root's exit in the wire below, `null`
+while the root is live), `exitKind` and `fiberCount`. A canonical package fixture (`pSqlite`,
+`pKv`, the four `pSql*` programs) has no built-in answers, so its run parks at its first host
+call.
 
-* `name`, `wellTyped`, `type` (`{answer, error, requiresEmpty}` as `Ty.render` spells them,
-  `null` when ill-typed), `straight` (whether the program is in the fragment `run_eq_meaning`
-  covers, `Effect4.Program.Denote.Straight`: on such a program rc.112's exit is compared,
-  through the theorem, with the algebra's answer);
-* `module`: the program's module text, as every lane writes it (`moduleOf`, over
-  `Tools.Code.programModule`; decisions row 392, P1 (a)): the checked emission's file, its pieces
-  printed typed, or, for a program the emission refuses, the program printed plain as `main`
-  (`uncheckedFile`); with its imports from Lean data, the prelude's host namespaces
-  (`hostImports`), and Effect's layout (`Tools.Code.moduleText`). `run-truth.ts` writes it as it
-  is. `null` with `moduleRefusal` naming the printer's refusal;
-* `moduleSource`: `decl` for the checked emission's file, `expr` for the unchecked one;
-* `expr`: the initializer of the module's `main`, as the house prints it flat;
-* `moduleInferred`: the checked module with no type annotation on any declaration, under the same
-  imports: the module the type oracle reads, so that the host's compiler infers the program's
-  type on its own;
-* `run`: `Api.run p fuel`, or for a program with host answers its run under a host that answers
-  from a list (`Test.Api.HostList`: the session, each answer a decision, DI-23) — `outcome`
-  (`finished`, `frontier`, `stuck …`), `exit` (the root's
-  exit in the wire below, `null` while the root is live), `fibers` (id, exited, parked token),
-  `events` (the machine events with an rc.112 counterpart, in order), `schedule` (the same
-  events reduced to the alphabet the runner can observe, each fiber under its number in the
-  recorder's order, `numbering`), `internal` (the other non-frame events, recorded, never
-  compared), `frames` (how many frame rows were dropped);
-* `runSync`: `Api.runSync p fuel` — `Effect.runSyncExit`'s exit, and `sync`, whether the
-  program settled inside it (its exit is not the `AsyncFiberError` defect). A host call parks and
-  this entry answers none, so a root that waits on its host ends with that defect.
+The value wire: `unit` ↦ `null`, `nat` ↦ number, `bool` ↦ boolean, a tuple / exit list ↦ JSON
+array, `fiber k` ↦ `{"fiber":k}` (the machine's fiber id), `cell k` ↦ `{"ref":k}`, `promise k` ↦
+`{"deferred":k}`, `scopeHandle k` ↦ `{"scope":k}`, `context` ↦ `{"context":true}`, a reified exit
+↦ `{"success":v}` / `{"failure":cause}`; a cause is `{"reasons":[…]}` with
+`{"fail":n|string|{"boom":null}|[tag,message]|{"payload":hex}}`, where the program's own exit
+writes a payload through its error column, `{"fail":{"payload":{"_tag":…,…}}}` (`errJsonAt`,
+decisions row 120, ruling (a)), `{"die":d}`, where `d` is the defect as rc.112's
+`Schema.Defect()` writes the thrown value (`Schema.Codec.encodeDefect`, the owner's ruling R5),
+and `{"interrupt":who|null}`. Annotations are dropped.
 
-The value wire: `unit` ↦ `null`, `nat` ↦ number,
-`bool` ↦ boolean, a tuple / exit list ↦ JSON array, `fiber k` ↦ `{"fiber":n}`, where `n` is
-the number of the fiber `k` in the recorder's order in a compared exit (`numbering`),
-`cell k` ↦ `{"ref":k}`, `promise k` ↦ `{"deferred":k}`, `scopeHandle k` ↦ `{"scope":k}`,
-`context` ↦ `{"context":true}`, a reified exit ↦ `{"success":v}` / `{"failure":cause}`; a
-cause is `{"reasons":[…]}` with `{"fail":n|string|{"boom":null}|[tag,message]|{"payload":hex}}`,
-where the program's own exit writes a payload through its error column,
-`{"fail":{"payload":{"_tag":…,…}}}` (`errJsonAt`, decisions row 120, ruling (a)),
-`{"die":d}`,
-where `d` is the defect as rc.112's `Schema.Defect()` writes the thrown value
-(`Schema.Codec.encodeDefect`, the owner's ruling R5): a user defect as its number, a represented
-error as its raw JSON, and a machine defect as an `Error`'s name and message, a missing service's
-message spelling its key under the program's key names,
-`{"interrupt":who|null}`, the interruptor under the same number;
-an exit is `{"success":v}` / `{"failure":cause}`. Annotations are dropped.
+History. Until 2026-10-20 this file was the Lean face of the rc.112 truth differential: the
+manifest also carried each module's text, the sync run, the observable schedule under the
+recorder's fiber numbers and the machine's events, and `harness/truth/run-truth.ts` ran every
+module on rc.112 and compared. The owner retired the differential from the gates on 2026-10-18
+and deleted it on 2026-10-20: the comparison, the recorded results, the tapes, the ledgers and
+the release lane (`git:fa7bdc304:harness/truth/Truth.lean`). The fixtures' docstrings below keep
+that history: where one names an rc.112 run, a recorder row, a schedule or the runner's
+columns, it records the retired differential's evidence.
+
+Why one file: a `--run` tool can import only Lake modules, so the library half (`OCaml5.Truth`,
+everything above `main`) and the thin driver (`main`) share this file. The library half is pure;
+`main` only writes.
 
 Behaviours held:
 
-* deterministic — the manifest is a function of the corpus and the fuel (by construction:
-  no IO above `main`);
-* total under fuel — every run is `Api.run`/`Api.runSync`, or the list host's run, at the given
+* deterministic — the outputs are a function of the corpus and the fuel (by construction: no IO
+  above `main`);
+* total under fuel — every run is `Api.run`, the U-01 replay or the list host's run, at the given
   fuel, a frontier when it runs out, never a hang (by construction);
-* complete over the corpus — every program of `corpus` has one entry, names are unique
-  (tested: the `#guard`s at the end);
-* honest about refusals — a print refusal or an ill-typed program is recorded as such, and
-  every program's module is the one writer's: a joined fixture's is its checked module, whose
-  pieces the typed print writes;
-* one numbering — each compared field writes a fiber under its number in the recorder's
-  first-seen order (`numbering`), so the two faces are compared up to one renaming of the
-  fibers, and the machine's allocation order is compared in no field (tested: the receipts on
-  `lateSights`, `pQueueOrder` and `pLateSeen`).
+* honest about refusals — a program whose module the printer refuses stops the driver, which
+  names the refusal and writes nothing;
+* one module per program — the names are unique (the guard at the end), and the driver removes
+  every other module of the folder.
 -/
 
 open Lean (ToJson toJson)
@@ -115,7 +91,6 @@ abbrev J := Lean.Json
 namespace OCaml5.Truth
 
 open Effect4 Effect4.Api Effect4.Machine Effect4.Program
-open TypeScript (house0)
 
 /-! ## The corpus -/
 
@@ -299,8 +274,8 @@ def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
 
 /-- The sqlite fixture over the canonical `SqliteBun` table (host rows step 6): open the
 `:memory:` client, create, insert through `strings` parameters (JSON text, decoded by the
-host before binding), select, and close at the scope's end. The answers come from the tape
-rc.112 recorded (`harness/truth/tapes/pSqlite.jsonl`), read by a host that answers from a list. -/
+host before binding), select, and close at the scope's end. rc.112's answers were its tape
+(`git:fa7bdc304:harness/truth/tapes/pSqlite.jsonl`), deleted with the differential. -/
 def pSqlite : Api.Program :=
   .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
                                   (.perform (.external 2) (.var 0)))
@@ -309,7 +284,8 @@ def pSqlite : Api.Program :=
         (.perform (.external 1) (pairT (.var 0) (pairT (.lit (.str "SELECT a, b FROM t")) (strs [])))))))
 
 /-- The key-value fixture over the canonical `KeyValueStoreMemory` table: make, set, get,
-has, remove; the answer is the `(get, has)` pair. Answers from `tapes/pKv.jsonl`. -/
+has, remove; the answer is the `(get, has)` pair. rc.112's answers were its tape
+(`git:fa7bdc304:harness/truth/tapes/pKv.jsonl`), deleted with the differential. -/
 def pKv : Api.Program :=
   .bind (.perform (.external 0) (.lit .unit))
     (.bind (.perform (.external 2) (pairT (.var 0) (pairT (.lit (.str "k")) (.lit (.str "1")))))
@@ -328,8 +304,8 @@ way a program has of meeting such a failure is one fixture over the same client 
 it escapes through the scope, whose release still runs (`pSqlFail`); it is caught
 (`pSqlCatch`); it is reified into the answer (`pSqlExit`); a layer built over it dies under
 `Layer.orDie` (`pSqlOrDie`: both faces retain the adapter's exact two-string pair inside the
-defect, compared as represented error data). The answers
-come from `tapes/pSql*.jsonl`. -/
+defect, compared as represented error data). rc.112's answers were the tapes
+`pSql*.jsonl` (`git:fa7bdc304:harness/truth/tapes`), deleted with the differential. -/
 
 /-- The statement that fails: no table `missing`. -/
 def sqlMissing (handle : Term) : Api.Program :=
@@ -365,8 +341,8 @@ def pSqlOrDie : Api.Program :=
 def sqliteFixtures : List String := ["pSqlite", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie"]
 
 /-- Per-fixture input data supplied beside the canonical program: the row table, and the
-built-in host answers of a unit-declared fixture (`pAcquireHandle`); a canonical package
-fixture's answers come from its tape, appended by `main`. -/
+built-in host answers of a unit-declared fixture (`pAcquireHandle`). A canonical package
+fixture has no built-in answers: its tape went with the differential (2026-10-20). -/
 def hostInputs (name : String) : RowTable × List (Completion Val Err Defect FiberId Ann) :=
   if name == "pAcquireHandle" then (acquireHandleTable, acquireHandleAnswers)
   else if name == "pJoinedFirstNumber" then
@@ -647,8 +623,9 @@ def lateSeen : Src NativeOp := eff do
   let _ ← yieldNow 0
   return tuple [exit, helper]
 
-/-- **A fiber that the recorder sees late, named in an exit**: the control of the fiber numbers
-in `run.exit` and `runSync.exit` (`numbering`). The helper is the machine's fiber `1`: a
+/-- **A fiber that the recorder sees late, named in an exit**: the differential's control of the
+recorder's fiber numbers in an exit (`numbering`, `git:fa7bdc304:harness/truth/Truth.lean`). The
+manifest now writes the machine's ids. The helper is the machine's fiber `1`: a
 detached fork with a deferred start, so it has no `forked` row, and the recorder first sees it
 at its first run. The waiter and its interruptor start at once: the machine's fibers `2` and
 `3`, the recorder's `1` and `2`. The root awaits the waiter and yields, and the helper runs
@@ -668,8 +645,9 @@ def pLateSeen : Api.Program :=
 The probes `poisonNoHandler` and `closeInterruptedMidFinalizer` of seat A401
 (`docs/research/2026-10-05-seat-A401/probes/backlog.mjs`), written in the language. They are the
 truth programs of items 1 and 2 of `docs/research/2026-10-12-probe-alignment-plans.md`. The
-release lane reads the same program on 4.0.1. Where the machine follows 4.0.1, the rc.112 lane
-signs the program (`LATEST` in `harness/truth/run-truth.ts`). -/
+release lane read the same program on 4.0.1 (`git:fa7bdc304:scripts/check-truth-release.py`).
+Where the machine follows 4.0.1, the rc.112 lane signed the program (`LATEST` in
+`harness/truth/run-truth.ts`). -/
 
 open Effect4.Program.Authoring in
 /-- The source of `poisonNoHandler`. -/
@@ -1269,10 +1247,9 @@ def defectJson (names : KeyNames) (d : Defect) : J :=
   | none => Lean.Json.mkObj [("refused", Lean.Json.str "no canonical defect image")]
 
 /-! A fiber in the wire is a number. Each function below that can meet a fiber takes `fiber`,
-the number that the wire writes for a machine fiber id. A compared exit passes the run's
-numbering (`numberOf`, in the section on the fiber numbers below). The machine's own record
-(`events`, `fibers`) passes `id`. Three fields hold a fiber: an interruptor, a fiber handle and
-the handles of a snapshot. -/
+the number that the wire writes for a machine fiber id. The manifest's run passes `id`, the
+machine's own ids. Three fields hold a fiber: an interruptor, a fiber handle and the handles
+of a snapshot. -/
 
 def reasonJson (names : KeyNames) (fiber : Nat → Nat) : Reason Err Defect FiberId Ann → J
   | .fail e _ => Lean.Json.mkObj [("fail", errJson e)]
@@ -1341,9 +1318,8 @@ def reasonJsonAt (names : KeyNames) (fiber : Nat → Nat) (errorTy : Option Ty) 
   | .fail e _ => Lean.Json.mkObj [("fail", errJsonAt names errorTy e)]
   | r => reasonJson names fiber r
 
-/-- The program's own exit, its failures typed by its error column: the `exit` the comparison
-reads (`run.exit`, `runSync.exit`). Its fibers are written as `fiber` numbers them, which is the
-run's numbering at both call sites. A child fiber's exit and the event texts keep `exitJson`. -/
+/-- The program's own exit, its failures typed by its error column: the manifest's `run.exit`.
+Its fibers are written as `fiber` numbers them. A child fiber's exit keeps `exitJson`. -/
 def exitJsonAt (names : KeyNames) (fiber : Nat → Nat) (errorTy : Option Ty) : ExitV → J
   | .success v => exitJson names fiber (.success v)
   | .failure c => Lean.Json.mkObj [("failure",
@@ -1359,348 +1335,6 @@ def exitKind : ExitV → String
     else if c.reasons.any (fun | .interrupt _ _ => true | _ => false) then "interrupt"
     else if c.reasons.any (fun | .die _ _ => true | _ => false) then "die"
     else "empty"
-
-/-- Whether an exit is `runSyncExit`'s `AsyncFiberError` defect. -/
-def isAsyncFiberDefect : ExitV → Bool
-  | .failure c => c.reasons.any (fun | .die .asyncFiber _ => true | _ => false)
-  | _ => false
-
-/-! ## Events -/
-
-abbrev Event := RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx
-
-/-- The events with an rc.112 counterpart, as the manifest spells them. `none` for the rest.
-Recorded, never compared: a fiber keeps the machine's id here, in an exit's text too. -/
-def observable (names : KeyNames) : Event → Option String
-  | .forked p c d => some s!"forked {p.value}->{c.value}{if d then " daemon" else ""}"
-  | .started f => some s!"started {f.value}"
-  | .scheduledTask o p _ => some s!"scheduledTask owner={o.value} prio={p}"
-  | .ranTask o _ => some s!"ranTask owner={o.value}"
-  | .yieldInjected f n => some s!"yieldInjected {f.value}@{n}"
-  | .parkedOn f t => some s!"parkedOn {f.value} token={t}"
-  | .resumedWith f t _ => some s!"resumedWith {f.value} token={t}"
-  | .exited f e => some s!"exited {f.value} {(exitJson names id e).compress}"
-  | _ => none
-
-/-- One row of the reduced schedule, over fiber numbers: the alphabet that the runner can
-observe on rc.112. A fiber is forked, starts, parks, is resumed and exits (by kind), and the
-dispatcher of an owner schedules a task and runs one. Tokens, tasks and exit values are
-erased. -/
-inductive Row where
-  | forked (parent child : Nat)
-  | started (fiber : Nat)
-  | scheduled (owner priority : Nat)
-  | ran (owner : Nat)
-  | parked (fiber : Nat)
-  | resumed (fiber : Nat)
-  | exited (fiber : Nat) (kind : String)
-deriving DecidableEq
-
-/-- A row as the manifest and the recorder spell it. -/
-def Row.text : Row → String
-  | .forked parent child => s!"forked {parent} {child}"
-  | .started fiber => s!"started {fiber}"
-  | .scheduled owner priority => s!"scheduled {owner} {priority}"
-  | .ran owner => s!"ran {owner}"
-  | .parked fiber => s!"parked {fiber}"
-  | .resumed fiber => s!"resumed {fiber}"
-  | .exited fiber kind => s!"exited {fiber} {kind}"
-
-/-- A row under a renaming of its fibers. A priority and an exit's kind name no fiber. -/
-def Row.rename (to : Nat → Nat) : Row → Row
-  | .forked parent child => .forked (to parent) (to child)
-  | .started fiber => .started (to fiber)
-  | .scheduled owner priority => .scheduled (to owner) priority
-  | .ran owner => .ran (to owner)
-  | .parked fiber => .parked (to fiber)
-  | .resumed fiber => .resumed (to fiber)
-  | .exited fiber kind => .exited (to fiber) kind
-
-/-- The fiber that a row can show the recorder for the first time: the child of a `forked` row,
-and the fiber of a `started` row. No other row gives a fiber its index (`numbering`). -/
-def Row.sight : Row → Option Nat
-  | .forked _ child => some child
-  | .started fiber => some fiber
-  | _ => none
-
-/-- One event as a row, under the machine's fiber ids: the root is `0`, and a fork's child
-takes the next id when the machine allocates it (`spawn`, `src/Effect4/Machine/Fibers.lean`).
-A fork is no row here: `machineRows` decides which fork is a row, and where. -/
-def rowOf : Event → Option Row
-  | .forked _ _ _ => none   -- `machineRows` decides forks
-  | .started f => some (.started f.value)
-  | .scheduledTask o p _ => some (.scheduled o.value p)
-  | .ranTask o _ => some (.ran o.value)
-  | .parkedOn f _ => some (.parked f.value)
-  | .resumedWith f _ _ => some (.resumed f.value)
-  | .exited f e => some (.exited f.value (exitKind e))
-  | _ => none
-
-/-- The row-by-row projection of the trace, as texts: `rowOf` at one event. The fiber numbers
-are the machine's ids, which follow the allocation order. The recorder numbers a fiber when it
-first sees it, and that is another order when it sees a fiber late (`numbering`). Before
-2026-10-06 this docstring said that the runner reproduces the machine's ids by first-seen
-order. That is false for a scheduled daemon child that is followed by another fork before its
-first run (`pQueueOrder`). `reduce` writes the compared rows under the recorder's numbers. -/
-def reduced (e : Event) : Option String := (rowOf e).map Row.text
-
-/-- The fiber an observable event belongs to, for the immediacy test below. -/
-def eventFiber : Event → Option FiberId
-  | .started f => some f
-  | .scheduledTask o _ _ => some o
-  | .ranTask o _ => some o
-  | .yieldInjected f _ => some f
-  | .parkedOn f _ => some f
-  | .resumedWith f _ _ => some f
-  | .exited f _ => some f
-  | _ => none
-
-/-- Was the fork of `c` by `p` immediate: `c` starts before `p`'s next observable event that
-is not another fork. `forkUnsafe` runs an immediate child inside the parent's primitive
-(`internal/effect.ts:5279`), so the parent emits nothing until the child yields or exits; a
-scheduled child's fork is followed at once by the parent's `scheduledTask`. Other forks are
-read through because the machine's parallel close spawns every finalizer before running the
-first (`Fibers.lean`, `closePar`, `forkFinalizers`), where rc.112 forks and runs each in turn
-(`:3820`): the batch is a modeling shortcut visible in `events`, and the reduced schedule
-below places each immediate fork where the runner observes it. -/
-def immediateFork (p c : FiberId) : List Event → Bool
-  | [] => false
-  | .started f :: rest => if f.value = c.value then true else immediateFork p c rest
-  | .forked _ _ _ :: rest => immediateFork p c rest
-  | e :: rest =>
-    match eventFiber e with
-    | some f => if f.value = p.value then false else immediateFork p c rest
-    | none => immediateFork p c rest
-
-/-- The reduced schedule under the machine's fiber ids: `rowOf` row by row, over the fiber
-states the runner observes (DI-75, 2026-09-13). `reduce` renames these rows to the recorder's
-numbers.
-
-* A `started f` row is a fiber's transition into running — fresh, or parked and resumed —
-  which is what the recorder's `context` hook can see. The machine's `started` event is its
-  evaluation loop entering a fiber, and the loop re-enters the parent after a fork's
-  commands (`Cmd.evaluate` on a fiber the residue marked not running, `Fibers.lean`), an
-  internal re-entry rc.112's `runLoop` has no counterpart for; a `started` of a fiber that
-  is already running is therefore no row.
-* A fork appears exactly where the runner can observe it. An *immediate* child's fork is
-  placed at the child's first step, daemon or not: the recorder attributes a fresh fiber's
-  first primitive to the fiber on the stack. A *scheduled* non-daemon child joins
-  `fiber._children` before it runs (`:5280-5281`) and is seen at the parent's next
-  primitive, so its fork stays where the machine emits it. A scheduled daemon child is never
-  registered and starts from the scheduler with no parent on the stack, so its fork stays in
-  `events` only.
-* **A `resumed k` row: a fiber that the trace last showed parked runs again, whatever woke
-  it.** The recorder has the same definition (`context`, `harness/truth/run-truth.ts`): it
-  writes `resumed k` and then `started k` at the first primitive of a fiber whose recorded
-  state is parked. Two causes wake a parked fiber. A token's resume emits `resumedWith`
-  (`Cmd.resume`, `Fibers.lean`). An interrupt that applies now emits `interruptRecorded` and
-  then `started`, with no token (`interruptRecord`, then `Cmd.evaluate`). One restart is one
-  row. `go` keeps the fibers that the trace last showed parked: a `parkedOn` adds the fiber, a
-  `resumedWith` writes the row and removes the fiber, and a `started` of a fiber still in the
-  set writes the row itself. So the `started` after a `resumedWith` writes no second row.
-  Before 2026-10-06 the row came from `resumedWith` alone, and it meant a token's resume. No
-  truth program then woke a parked fiber by an interrupt (seat MASK; the control is
-  `pInterruptedWait`, with a red guard on its trace in the receipts). -/
-def machineRows (trace : List Event) : List Row :=
-  go trace [] [] []
-where
-  go : List Event → List (FiberId × FiberId) → List Nat → List Nat → List Row
-    | [], _, _, _ => []
-    | .forked p c daemon :: rest, pending, running, parked =>
-      if immediateFork p c rest then go rest ((c, p) :: pending) running parked
-      else (if daemon then [] else [.forked p.value c.value]) ++
-        go rest pending running parked
-    | .started f :: rest, pending, running, parked =>
-      if running.contains f.value then go rest pending running parked
-      else
-        let running := f.value :: running
-        match pending.find? (fun x => x.1.value = f.value) with
-        | some (_, p) =>
-          .forked p.value f.value :: .started f.value ::
-            go rest (pending.filter (fun x => x.1.value ≠ f.value)) running parked
-        | none =>
-          -- a parked fiber that starts with no resume of its token: an interrupt applied now
-          (if parked.contains f.value then [.resumed f.value] else []) ++
-            .started f.value :: go rest pending running (parked.filter (· ≠ f.value))
-    | .parkedOn f t :: rest, pending, running, parked =>
-      (rowOf (.parkedOn f t)).toList ++
-        go rest pending (running.filter (· ≠ f.value)) (f.value :: parked)
-    | .resumedWith f t answer :: rest, pending, running, parked =>
-      (rowOf (.resumedWith f t answer)).toList ++
-        go rest pending running (parked.filter (· ≠ f.value))
-    | .exited f e :: rest, pending, running, parked =>
-      (rowOf (.exited f e)).toList ++
-        go rest pending (running.filter (· ≠ f.value)) (parked.filter (· ≠ f.value))
-    | e :: rest, pending, running, parked => (rowOf e).toList ++ go rest pending running parked
-
-/-! ### The fiber numbers of the compared fields (2026-10-06)
-
-The machine numbers a fiber when it allocates it. The recorder numbers a fiber when it first
-sees it (`see`, `harness/truth/run-truth.ts`). It calls `see` at three places, and it writes a
-row at each:
-
-* `context`, the first call: a fiber at its first primitive while the primitive of another
-  fiber is on the stack. The recorder writes `forked parent child`, and then `started child`.
-* `context`, the second call: a fiber at its first primitive while no fiber is on the stack.
-  This is the root, and a scheduled daemon child at its first run. The recorder writes
-  `started fiber`.
-* `scanChildren`: a child in `_children` that the recorder has not seen, at the next primitive
-  of the parent. The recorder writes `forked parent child`.
-
-So the index of a fiber on rc.112 is the rank of its first row among two kinds of row: a
-`forked` row that names it as the child, and a `started` row that names it. `Row.sight` is that
-rule. The parent of a `forked` row is on the stack or runs the scan, so the recorder has seen
-it.
-
-**A `scheduled` row and a `ran` row give no index, on either face.** On rc.112 each names the
-fiber that made the dispatcher (`TracedScheduler.makeDispatcher`), which `currentFiber` reads
-off the stack: the recorder has seen it. The machine writes `scheduledTask` at two places
-(`start` and `RunMachine.postTask`, `src/Effect4/Machine/Fibers.lean`). A deferred start names
-the parent, which runs. `postTask` posts an owed resume on a stored dispatcher, and no store
-builds a scheduled wake today (`WakeMode.scheduled` has no construction site). If a later
-machine writes such a row for a fiber before its first sight, the recorder decides: `see` does
-not run at a `scheduled` row. The row then takes the number that the later sight gives.
-
-The two orders differ when the recorder sees a fiber late. A scheduled daemon child has no
-`forked` row on either face (`machineRows`), so the recorder first sees it at its first run. A
-fiber that is forked after it and seen before that run takes the smaller index on rc.112, and
-the larger id on the machine. In `pQueueOrder` the helper of the root's offer is the machine's
-fiber `3` and the recorder's `4`.
-
-`numbering` reads the recorder's order from the Lean face's own rows, by the same rule. Each
-compared field that holds a fiber writes the fiber's position in it:
-
-* every row of `run.schedule` (`reduce`): `forked`, `started`, `scheduled`, `ran`, `parked`,
-  `resumed` and `exited`;
-* `run.exit` and `runSync.exit` (`exitJsonAt`): an interruptor, a fiber handle and the handles
-  of a snapshot. The sync run has its own trace, and so its own numbering.
-
-Four fields keep the machine's ids. `run.events`, `run.internal` and `run.fibers` are the
-machine's own record, and no comparison reads a fiber number in them. The runner reads
-`run.fibers` once, for the root's park (`leanVerdict`, `f.id === 0`), and the root is `0` under
-both numberings. A tape row's `fiber` is written by the recorder, and this file does not read
-it (`tapeAnswer`).
-
-What the comparison no longer checks: the machine's allocation order. A fiber's machine id is
-compared in no field, so the two faces agree up to one renaming of the fibers.
-
-Limits, stated and not solved:
-
-* **A literal interruptor (DI-74).** `Cause.interrupt(n)` of a computed number is a number on
-  both faces. The recorder writes the index of the run's fiber whose rc.112 id is `n`, when
-  there is one (`reasonJson`, case `Interrupt`). This file writes the number of the machine's
-  fiber `n`, when there is one. The two tests read different ids.
-* **A fiber that the recorder never sees.** Its handle in a value takes an index of another
-  table on rc.112 (`wire`, the table `fiber?`). Here it takes a position after every seen
-  fiber.
-* **A number that a program computes from an id (DI-73).** It is a number in the wire, and no
-  face renames it.
-* **The `exited` row of a fiber that is awaited before its first sight.** The rows differ in
-  order, and no renaming repairs that. `reduce` states the cause and the evidence. -/
-
-/-- The fibers of a list of rows in the order that the recorder first sees them: the first
-sight of each (`Row.sight`), in row order. -/
-def firstSeen (rows : List Row) : List Nat := (rows.filterMap Row.sight).eraseDups
-
-/-- The machine's fibers of a trace in allocation order: the root, then the child of each fork
-(`spawn`, `src/Effect4/Machine/Fibers.lean`, the one place that allocates a child). -/
-def allocated (trace : List Event) : List Nat :=
-  Api.root.value :: trace.filterMap fun
-    | .forked _ child _ => some child.value
-    | _ => none
-
-/-- The fibers of some rows in the recorder's order: the fibers that the rows show, in the order
-of their first sight, and then every other allocated fiber in allocation order. A fiber's
-number is its position in this list. -/
-def numberingOf (allocated : List Nat) (rows : List Row) : List Nat :=
-  let seen := firstSeen rows
-  seen ++ allocated.filter (!seen.contains ·)
-
-/-- The machine's fibers of a run in the recorder's order (`numberingOf`). The list is a
-permutation of the run's fibers (`allocated`), and it is `allocated` itself when the recorder
-sees the fibers in allocation order. -/
-def numbering (trace : List Event) : List Nat := numberingOf (allocated trace) (machineRows trace)
-
-/-- A fiber's number in an order: its position. A number that names no fiber of the order
-stays as it is: a literal interruptor outside the run (DI-74). -/
-def numberIn (order : List Nat) (fiber : Nat) : Nat := (order.idxOf? fiber).getD fiber
-
-/-- The number that a run's compared fields write for a machine fiber id. This is the one
-renaming of the Lean face: `reduce` and `exitJsonAt` take it, and nothing else renames. -/
-def numberOf (trace : List Event) : Nat → Nat := numberIn (numbering trace)
-
-/-- The fibers that a run's numbering moves: each as `(machine id, number)`, in the order of
-the numbers. The list is empty exactly when the recorder's order is the allocation order. -/
-def moved (trace : List Event) : List (Nat × Nat) :=
-  (numbering trace).zipIdx.filter fun entry => entry.1 != entry.2
-
-/-- The lane's programs whose numbering is not the allocation order, each with the fibers that
-it moves (`moved`), in its fork run and in its sync run. The receipts hold every other program
-of the lane at the allocation order, and `main` holds the same on each run with its tape. A new
-entry is a reviewed change: the lane then compares that program up to this renaming. -/
-def lateSights : List (String × List (Nat × Nat)) :=
-  [("pQueueOrder", [(4, 3), (3, 4)]), ("pLateSeen", [(2, 1), (3, 2), (1, 3)])]
-
-/-- The lane's programs whose sync run alone is numbered apart from the allocation order, each
-with the fibers that its sync run moves. The fork run of each is numbered in the allocation
-order. In each a child's return posts a helper on that child's dispatcher, which the sync entry
-does not flush, so the recorder never sees that helper there. The root's close posts a later
-helper on the root's dispatcher, and the recorder sees it. No compared field reads a moved
-number: the schedule is the fork run's, and the sync exit of each holds no fiber (a receipt
-holds both). A new entry is a reviewed change, as an entry of `lateSights` is. -/
-def lateSightsSync : List (String × List (Nat × Nat)) :=
-  [("pPoolWaiters", [(5, 4), (4, 5)]), ("pPoolLateWake", [(5, 4), (4, 5)]),
-    ("pPoolWake", [(4, 3), (3, 4)])]
-
-/-- Rows under the numbers of an order. -/
-def renumbered (order : List Nat) (rows : List Row) : List Row :=
-  rows.map fun row => row.rename (numberIn order)
-
-/-- The compared schedule: the rows of `machineRows`, each fiber under its number in the
-recorder's order (`numbering`). The recorder writes its rows under its own indices, so the two
-faces are compared up to one renaming of the fibers.
-
-**What the lane no longer checks.** After this renaming the lane does not check the machine's
-allocation order. The id that the machine gives a fiber is compared in no field. So the
-position in that order of a fiber that the recorder sees late is not checked.
-
-**A limit of the recorder: a fiber that is awaited before its first sight.** The recorder adds
-its exit observer when it first sees a fiber. An awaiter that registered before that sight has
-its observer in front. rc.112 runs the observers in order, so the recorder writes `exited k`
-after the rows of the awaiter's resumption, and the machine writes `exited k` at the exit. The
-rows then differ in order, and no renaming repairs that. One run on rc.112 reproduced it: a
-detached child with a deferred start that the root joins before the child's first run
-(`docs/research/2026-10-06-seat-pub-evidence/late-seen-joined.probe.json`). No lane program
-awaits such a fiber, and the Queue's posted helpers are never awaited. The recorder is not
-repaired. The section above lists this limit with the three others. -/
-def reduce (trace : List Event) : List String :=
-  (renumbered (numbering trace) (machineRows trace)).map Row.text
-
-/-- The rows that the runner compares: every row but the `scheduled` rows (`compareSchedules`,
-`harness/truth/run-truth.ts`). -/
-def compared (rows : List String) : List String :=
-  rows.filter fun row => !row.startsWith "scheduled "
-
-/-- The events that are neither observable nor frame rows: recorded, never compared. -/
-def internal : Event → Option String
-  | .interruptRecorded who t =>
-    some s!"interruptRecorded by={(who.map (·.value)).getD 0} target={t.value}"
-  | .interruptDeferred t => some s!"interruptDeferred {t.value}"
-  | .childrenInterrupted p cs => some s!"childrenInterrupted {p.value} n={cs.length}"
-  | .observerFired f _ => some s!"observerFired {f.value}"
-  | .finalizerProgram f _ e => some s!"finalizerProgram {f.value} {exitKind e}"
-  | .scopeLinked _ sc k f => some s!"scopeLinked scope={sc} key={k} fiber={f.value}"
-  | .scopeClosedOnLink sc f => some s!"scopeClosedOnLink scope={sc} fiber={f.value}"
-  | .raceStarted r h n => some s!"raceStarted {r} host={h.value} entrants={n}"
-  | .raceLaunched r e => some s!"raceLaunched {r} entrant={e.value}"
-  | .raceSettled r e => some s!"raceSettled {r} {exitKind e}"
-  | .contextSet f _ => some s!"contextSet {f.value}"
-  | .callback k e => some s!"callback key={k} {exitKind e}"
-  | _ => none
-
-def isFrame : Event → Bool
-  | .frame _ _ => true
-  | _ => false
 
 /-! ## One program's entry -/
 
@@ -1720,12 +1354,13 @@ def requireJson (sig : Signature NativeOp) (key : ServiceKey) : J :=
         | some t => Lean.Json.str t.render
         | none => Lean.Json.null) ]
 
+/-- The program's type as the target lane reads it (`tools/target/profile.ts`): the answer, the
+error and each required key. -/
 def typeJson (sig : Signature NativeOp) (ty : EffTy) : J :=
   Lean.Json.mkObj
     [ ("answer", Lean.Json.str ty.answer.render)
     , ("error", Lean.Json.str ty.error.render)
-    , ("requires", Lean.Json.arr (ty.requires.elems.map (requireJson sig)).toArray)
-    , ("requiresEmpty", Lean.Json.bool (decide (ty.requires = Machine.Env.Requirement.empty))) ]
+    , ("requires", Lean.Json.arr (ty.requires.elems.map (requireJson sig)).toArray) ]
 
 /-- Why a module cannot declare a payload class (`ClassRefusal`, decisions row 120). -/
 def classRefusalText : ClassRefusal → String
@@ -1753,19 +1388,7 @@ def refusalText : PrintRefusal → String
   | .declarations services types =>
     s!"an application that declares {services} services and {types} named types"
 
-/-- One fiber of the machine's own record, under the machine's ids: its exit is recorded and
-never compared. -/
-def fiberJson (names : KeyNames) (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) :
-    J :=
-  Lean.Json.mkObj
-    [ ("id", toJson f.id.value)
-    , ("exited", Lean.Json.bool f.exit.isSome)
-    , ("exit", match f.exit with | some e => exitJson names id e | none => Lean.Json.null)
-    , ("parkedToken", match f.parked with | .withGuard t => toJson t | .notParked => Lean.Json.null) ]
-
-def strings (xs : List String) : J := Lean.Json.arr (xs.map Lean.Json.str).toArray
-
-/-- The exits of a list of host answers. A tape row decodes to an exit alone (`tapeAnswer`). -/
+/-- The exits of a list of host answers. -/
 def exitsOf (answers : List (Completion Val Err Defect FiberId Ann)) : List ExitV :=
   answers.filterMap fun | .ofExit ex => some ex | .ofRefGet _ => none
 
@@ -1783,39 +1406,21 @@ def fixtureRun (name : String) (p : Api.Program) (fuel : Nat) (table : RowTable)
     | some run => run.inspect
     | none => Api.run p fuel table
 
-def runJson (names : KeyNames) (p : Api.Program) (fuel : Nat) (table : RowTable := [])
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) (name : String := "") : J :=
+/-- Lean's run of the program at `fuel`: its outcome, its exit, the exit's kind and its number
+of fibers, the four fields that the OCaml engine's cross face reads
+(`Corpora.truth_expectations`, `ocaml/engine/test/reference/corpora.ml`). The exit's fibers are
+the machine's ids. -/
+def runJson (names : KeyNames) (p : Api.Program) (fuel : Nat) (table : RowTable)
+    (answers : List (Completion Val Err Defect FiberId Ann)) (name : String) : J :=
   let r := fixtureRun name p fuel table answers
-  let trace := r.trace
   let errorTy := (Api.typeOf p table).map (·.error)
-  -- the run's fibers under the recorder's numbers, in the two compared fields
-  let fiber := numberOf trace
   Lean.Json.mkObj
     [ ("outcome", Lean.Json.str (outcomeText r.outcome))
     , ("exit", match r.exit with
-        | some e => exitJsonAt names fiber errorTy e
+        | some e => exitJsonAt names id errorTy e
         | none => Lean.Json.null)
     , ("exitKind", match r.exit with | some e => Lean.Json.str (exitKind e) | none => Lean.Json.null)
-    , ("fiberCount", toJson r.fiberCount)
-    , ("fibers", Lean.Json.arr (r.machine.fibers.map (fiberJson names)).toArray)
-    , ("events", strings (trace.filterMap (observable names)))
-    , ("schedule", strings (reduce trace))
-    , ("internal", strings (trace.filterMap internal))
-    , ("frames", toJson (trace.filter isFrame).length) ]
-
-def runSyncJson (names : KeyNames) (p : Api.Program) (fuel : Nat) (table : RowTable := []) : J :=
-  let (machine, exit) := Api.runSync p fuel table
-  Lean.Json.mkObj
-    -- the sync run has its own trace, and so its own numbering
-    [ ("exit", exitJsonAt names (numberOf machine.trace) ((Api.typeOf p table).map (·.error)) exit)
-    , ("exitKind", Lean.Json.str (exitKind exit))
-    , ("sync", Lean.Json.bool (!isAsyncFiberDefect exit)) ]
-
-/-- A declaration with its type annotation removed: the same initializer, typed by the host's
-compiler alone. -/
-def unannotated : TypeScript.Decl → TypeScript.Decl
-  | .const c => .const { c with type := none }
-  | d => d
+    , ("fiberCount", toJson r.fiberCount) ]
 
 /-- The path a truth module imports its prelude from: the folder above `generated/`. -/
 def preludePath : String := "../prelude.ts"
@@ -1848,932 +1453,69 @@ def moduleOf (header : List String) (name : String) (p : Api.Program) :
       | none => m
     ({ hostImports table m with header }, checked)
 
-/-- The initializer of a module's `main`, as the house prints it flat. -/
-def mainInitializer (m : TypeScript.Module) : Option String :=
-  m.decls.findSome? fun
-    | .const c => if c.name == "main" then some (TypeScript.Render.expr house0 0 c.value) else none
-    | _ => none
-
-/-- The header of the lane's module, and of the corpus lane's (`--corpus`). -/
+/-- The header of every printed module. -/
 def truthHeader : List String :=
-  ["GENERATED by harness/truth/Truth.lean from the truth corpus; do not edit.", "Regenerate: make gen-truth"]
-def corpusHeader : List String :=
-  ["GENERATED by harness/truth/Truth.lean --corpus from the generated corpus; do not edit.",
-   "Regenerate: make check-corpus"]
+  ["GENERATED by harness/truth/Truth.lean from the truth corpus; do not edit.",
+   "Regenerate: make gen-truth-corpus"]
 
-def entry (header : List String) (fuel : Nat)
-    (tapes : String → List (Completion Val Err Defect FiberId Ann)) (name : String) (p : Api.Program) :
-    J :=
-  let (table, builtIn) := hostInputs name
+/-- A program's module text, laid out by the one writer (`Tools.Code.moduleText`), or the
+printer's refusal. -/
+def moduleText (name : String) (p : Api.Program) : Except PrintRefusal String :=
+  (moduleOf truthHeader name p).map fun (m, _) => Tools.Code.moduleText Tools.Code.Ts.width m
+
+/-- One program's manifest entry: its name, Lean's type under its table, and Lean's run. -/
+def entry (fuel : Nat) (name : String) (p : Api.Program) : J :=
+  let (table, answers) := hostInputs name
   -- the key names of the table that prints the module: a missing service's defect spells its key
   -- as the module's tag does (`defectJson`)
   let names := (nativeSignature table).keyNames
-  let runtimeTable := fixtureRuntimeTable name p table
-  let answers := builtIn ++ tapes name
-  let ty := Api.typeOf p table
-  let written := moduleOf header name p
-  let text (m : TypeScript.Module) := Lean.Json.str (Tools.Code.moduleText Tools.Code.Ts.width m)
-  Lean.Json.mkObj <|
-    [ ("name", Lean.Json.str name)
-    , ("scenario", if name == "pInterruptEscape" then Lean.Json.str "U-01" else Lean.Json.null)
-    , ("wellTyped", Lean.Json.bool ty.isSome)
-    , ("straight", Lean.Json.bool (Effect4.Program.Denote.Straight p))
-    , ("type", match ty with | some t => typeJson (nativeSignature table) t | none => Lean.Json.null)
-    , ("moduleSource", match written with
-        | .ok (_, true) => Lean.Json.str "decl"
-        | .ok (_, false) => Lean.Json.str "expr"
-        | .error _ => Lean.Json.null)
-    , ("moduleRefusal", match written with
-        | .ok _ => Lean.Json.null
-        | .error why => Lean.Json.str (refusalText why))
-    , ("expr", match written with
-        | .ok (m, _) => (mainInitializer m).map Lean.Json.str |>.getD Lean.Json.null
-        | .error _ => Lean.Json.null)
-    , ("module", match written with
-        | .ok (m, _) => text m
-        | .error _ => Lean.Json.null)
-    -- the checked module with every annotation removed, under the same imports: what the host's
-    -- compiler infers for the printed program on its own, which the type oracle compares with
-    -- Lean's rendered type (an annotated `main` would only hand Lean's type back to itself)
-    , ("moduleInferred", match written with
-        | .ok (m, true) => text { m with decls := m.decls.map unannotated }
-        | _ => Lean.Json.null)
-    , ("run", (runtimeTable.map fun rows => runJson names p fuel rows answers name).getD
-        Lean.Json.null)
-    , ("runSync", (runtimeTable.map fun rows => runSyncJson names p fuel rows).getD
-        Lean.Json.null) ] ++
-    (if name == "pJoinedFirstNumber" || name == "pJoinedFirstString" then
-      [("genericRows", Lean.Json.arr (table.map Tools.ProfileJson.rowJson).toArray),
-       ("runtimeInstanceRows", match runtimeTable with
-        | some rows => Lean.Json.arr (rows.map Tools.ProfileJson.rowJson).toArray
-        | none => Lean.Json.null)]
-     else []) ++
-    -- a service's client through its key (slice CO-6b S3), a declaration of the module: only the
-    -- programs that have one
-    (if (serviceClients.lookup name).isSome then [("client", Lean.Json.bool true)] else [])
-
-/-- The whole manifest; `tapes` gives each program the answers rc.112 recorded for its package
-rows (the empty list for a program without a tape, which then parks at its first row). -/
-def manifest (fuel : Nat) (tapes : String → List (Completion Val Err Defect FiberId Ann)) : J :=
   Lean.Json.mkObj
-    [ ("format", Lean.Json.str "effect4-truth-manifest-v1")
-    , ("generated", Lean.Json.str "GENERATED by harness/truth/Truth.lean — do not edit")
-    , ("regenerate", Lean.Json.str "lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes")
-    , ("fuel", toJson fuel)
+    [ ("name", Lean.Json.str name)
+    , ("type", match Api.typeOf p table with
+        | some t => typeJson (nativeSignature table) t
+        | none => Lean.Json.null)
+    , ("run", ((fixtureRuntimeTable name p table).map fun rows =>
+        runJson names p fuel rows answers name).getD Lean.Json.null) ]
+
+/-- The manifest: the generated mark, the scope's key, the host fixture's rows and one entry
+per program of the corpus, in its order. -/
+def manifest (fuel : Nat) : J :=
+  Lean.Json.mkObj
+    [ ("generated", Lean.Json.str "GENERATED by harness/truth/Truth.lean — do not edit")
     , ("scopeKey", Tools.ProfileJson.flatKeyJson nativeScopeKey)
     , ("hostRows", Lean.Json.arr (acquireHandleTable.map Tools.ProfileJson.rowJson).toArray)
-    , ("programs", Lean.Json.arr (corpus.map fun (name, p) => entry truthHeader fuel tapes name p).toArray) ]
-
-/-- The generated corpus: `count` programs of the seeded generator at `depth`, named as the
-printed corpus names them. -/
-def corpusPrograms (count depth : Nat) : List (String × Api.Program) :=
-  (List.range count).map fun i => (s!"g{i}", Test.Program.Gen.program i depth)
-
-/-- The manifest of the generated corpus: the same shape as `manifest`, no tapes, the empty
-table, so `run-truth.ts` and `tools/target/corpus.ts` read it unchanged. -/
-def corpusManifest (fuel count depth : Nat) : J :=
-  Lean.Json.mkObj
-    [ ("format", Lean.Json.str "effect4-truth-manifest-v1")
-    , ("generated", Lean.Json.str "GENERATED by harness/truth/Truth.lean --corpus — do not edit")
-    , ("regenerate", Lean.Json.str s!"lake env lean -M4096 --run harness/truth/Truth.lean --corpus <out> {count} {depth}")
-    , ("fuel", toJson fuel)
-    , ("scopeKey", Tools.ProfileJson.flatKeyJson nativeScopeKey)
-    , ("hostRows", Lean.Json.arr #[])
-    , ("programs", Lean.Json.arr
-        ((corpusPrograms count depth).map fun (name, p) =>
-          entry corpusHeader fuel (fun _ => []) name p).toArray)]
-
-/-! ## The tapes: rc.112's recorded answers, read by a host that answers from a list
-
-**What a tape is, and the quantifier on the claim it supports (DI-23).** A tape is the list
-of package-row completions rc.112 gave *one* program on *one* run of the pinned host, in call
-order, one JSON Lines row per call (`harness/truth/tapes/<name>.jsonl`, written by
-`harness/truth/run-truth.ts`). Replaying it here is an agreement claim of exactly this shape:
-
-* **single-fiber.** The rows carry the calling fiber's index but are taken in file order, in
-  the order the session meets the calls, so a tape is a faithful host only while every row of a
-  program is made by one fiber. Every fixture with a tape is single-fiber today, and there is no
-  fork-using host fixture. The first one is an obligation, not an extension: rows would have to
-  be selected per fiber, and a schedule the machine chose differently would take them in a
-  different order. Nothing in this file detects that; the fixture's author must.
-* **a host call parks.** On this face every host call parks its fiber, and the answer resumes
-  it, so a host program's compared schedule holds a `parked` and a `resumed` row for each call,
-  and its `runSync` exit is the `AsyncFiberError` defect when its root waits on its host. The
-  pinned host answers a package row inside the call, with no park. `compareSchedules`
-  (`run-truth.ts`) compares the two faces' `started`/`forked`/`parked`/`resumed`/`ran`/`exited`
-  rows, so a host fixture's schedule and sync exit differ on the two faces until its host
-  answers after a park on rc.112 too (the keyed lane) or the immediate-answer lowering lands
-  (HC-6 of `docs/research/2026-10-09-host-calls-and-cleanup.md`).
-* **pinned host.** `effect@4.0.0-rc.112` and `@effect/sql-sqlite-bun@4.0.0-rc.112`, the
-  versions `scripts/check-truth.py` refuses to run without, on bun. A tape is evidence about
-  those bytes and no others.
-* **the corpus.** The programs of `corpus` (`main` prints how many); the gate re-records every
-  tape under `harness/truth/tapes` on every run and refuses a byte that moved, so a committed
-  tape is the answer rc.112 *just* gave, not a remembered one.
-* **the error column.** A `failed` row is the DB-15 pair, made at the adapter before the
-  program sees it (`prelude.ts` `toPair`, DI-59), so the value replayed here, the value the
-  printed program's own handler observed and the value on the tape are one value.
-
-The evidence word is *reproduced* (the gate regenerates and compares bytes) together with
-*tested* (a finite corpus under a named observer) — never *proved*. `Test/contracts/faces.contract.md`
-states the same quantifiers for the reader who is not in this file. -/
-
-/-- The value wire, read back: `null` a unit, a number a natural, a string, a boolean, an
-array a list, `{"external":i}` the next allocation index a resource reply names (the machine
-mints the handle, `externalValue`), `{"some":v}` / `{"none":true}` an option. Anything else is
-no value: a tape row that does not decode stops the driver rather than replaying a guess. -/
-partial def jsonToVal : J → Option Val
-  | .null => some .unit
-  | .bool b => some (.bool b)
-  | .str s => some (.str s)
-  | .arr xs => (xs.toList.mapM jsonToVal).map .list
-  | j@(.num _) => match j.getNat? with | .ok n => some (.nat n) | .error _ => none
-  | j@(.obj _) =>
-    match j.getObjVal? "external" with
-    | .ok i => match i.getNat? with | .ok n => some (.nat n) | .error _ => none
-    | .error _ =>
-      match j.getObjVal? "some" with
-      | .ok v => (jsonToVal v).map .some
-      | .error _ => match j.getObjVal? "none" with | .ok _ => some .none | .error _ => none
-
-/-- A host answer: what a tape row decodes to. -/
-abbrev Answer := Completion Val Err Defect FiberId Ann
-
-/-- One tape row as a completion: `answer` a success, `failed` the tagged pair of DB-15 (the
-runner's informational `error`, the outer tag, beside it is not read). A legacy `died` row is an unstructured diagnostic, so this legacy reader refuses it.
-The versioned session reader separately supports selected represented defects; it does not
-retroactively supply missing category/payload provenance to old rows. -/
-def tapeAnswer (row : J) : Except String Answer :=
-  match row.getObjVal? "answer" with
-  | .ok a => match jsonToVal a with
-    | some v => .ok (.ofExit (.success v))
-    | none => .error s!"undecodable answer {a.compress}"
-  | .error _ =>
-    match row.getObjVal? "failed" with
-    | .ok (.arr #[.str tag, .str message]) => .ok (.ofExit (.failure (Cause.fail (.tagged tag message))))
-    | .ok other => .error s!"undecodable failure {other.compress}"
-    | .error _ =>
-      match row.getObjVal? "died" with
-      | .ok defect => .error s!"a host defect on the tape cannot be replayed as a typed failure: {defect.compress}"
-      | .error _ => .error s!"a tape row with neither answer nor failed: {row.compress}"
-
-def tapeAnswers (lines : List String) : Except String (List Answer) :=
-  (lines.filter (· ≠ "")).mapM fun line => do
-    let row ← Lean.Json.parse line
-    tapeAnswer row
+    , ("programs", Lean.Json.arr (corpus.map fun (name, p) => entry fuel name p).toArray) ]
 
 /-! ## Receipts -/
 
+-- One module file per program: the corpus's names are unique.
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
-#guard (corpus.map (·.1)) =
-  ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
-   "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle",
-   "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
-   "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
-   "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pFailPayload", "pTagPayload",
-   "pInterruptEscape", "pJoinedFirstNumber", "pJoinedFirstString", "pJoinedModifyNumber", "pJoinedModifyString",
-   "pFold", "pModifyFold", "pQueueOffer", "pRateRequest", "pDeferredGate",
-   "pInterruptedWait", "pMaskWait", "pMaskedRestore", "pLateSeen", "pQueueWake", "pQueueFull",
-   "pQueueInterrupted", "pQueueMasked", "pQueueOrder", "pSemaphoreProtectedJoined",
-   "pSemaphoreScan", "pSemaphoreOvertake", "pSemaphoreBodiesJoined", "pSemaphoreInterrupted",
-   "pSemaphoreIfAvailable", "pSemaphoreMasked", "pSemaphoreHandoff", "pSemaphoreProtected",
-   "pSemaphoreBodies", "pPoolReuse", "pPoolOrder", "pPoolWaiters", "pPoolLateWake", "pPoolWake",
-   "pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing",
-   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pDefsModuleLayer",
-   "pDefsBodyLayerCalls", "pDefsBodyLayerShared", "pDefsBodyLayerNested", "pInvokeTwice",
-   "pInvokeForward", "pInvokeForked", "pQueueDefs",
-   "pQueueService", "pSemaphoreService", "poisonNoHandler", "closeInterruptedMidFinalizer"]
--- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
--- answers `8` on the machine, and reads back whole.
-#guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
-#guard (Api.run pFold 1000).exit = some (.success (.nat 8))
-#guard Api.roundTrip pFold = .ok pFold
--- The fold inside a `Ref.modify` with an outer capture types at a pair of numbers, answers
--- `[21, 7]` on the machine, and reads back whole.
-#guard Api.typeOf pModifyFold = some ⟨.prod .nat .nat, .never, Env.Requirement.empty⟩
-#guard (Api.run pModifyFold 1000).exit = some (.success (.list [.nat 21, .nat 7]))
-#guard Api.roundTrip pModifyFold = .ok pModifyFold
--- its printed expression: the term's value is `a2`, the fold's binders `a3` and `a4`
-#guard (Api.print pModifyFold).toOption.map (TypeScript.Render.expr house0 0) = some
-  "Effect.flatMap(Effect.succeed(2), (a0) => Effect.flatMap(Ref.make(5), (a1) => Effect.flatMap(Ref.modify(a1, (a2) => pair(fold(cons(succ(a0), cons(a0, cons(3, nil()))), a2, (a3, a4) => add(a3, mul(a4, a0))), add(a2, a0))), (a2) => Effect.flatMap(Ref.get(a1), (a3) => Effect.succeed(pair(a2, a3))))))"
--- The probe's offer step, twice: the source elaborates (its first node makes the cell; a source
--- that did not elaborate is a `fail`), types at the triple, answers on the machine, and reads
--- back whole.
-#guard match pQueueOffer with | .bind (.perform .refMake _) _ => true | _ => false
-#guard Api.typeOf pQueueOffer = some ⟨.tuple [.bool, .nat, .nat], .never, Env.Requirement.empty⟩
-#guard (Api.run pQueueOffer 1000).exit = some (.success (.list [.bool false, .nat 2, .nat 0]))
-#guard Api.roundTrip pQueueOffer = .ok pQueueOffer
--- The rate limiter's request, four times: the source elaborates (its first node makes the
--- window's cell), types at the five answers, answers on the machine, and reads back whole.
-#guard match pRateRequest with | .bind (.perform .refMake _) _ => true | _ => false
-#guard Api.typeOf pRateRequest =
-  some ⟨.tuple [.bool, .bool, .nat, .nat, .nat], .never, Env.Requirement.empty⟩
-#guard (Api.run pRateRequest 1000).exit =
-  some (.success (.list [.bool true, .bool false, .nat 3, .nat 1, .nat 3]))
-#guard Api.roundTrip pRateRequest = .ok pRateRequest
--- The gate at `Deferred<void, never>` types at the four answers with no failure, answers on
--- the machine, and reads back whole: its type arguments are read from the call's head.
-#guard Api.typeOf pDeferredGate =
-  some ⟨.tuple [.bool, .bool, .bool, .nat], .never, Env.Requirement.empty⟩
-#guard (Api.run pDeferredGate 1000).exit =
-  some (.success (.list [.bool false, .bool true, .bool false, .nat 7]))
-#guard Api.roundTrip pDeferredGate = .ok pDeferredGate
--- its printed expression: the gate's two types stand on the call's head
-#guard (Api.print pDeferredGate).toOption.map (TypeScript.Render.expr house0 0) = some
-  "Effect.flatMap(Deferred.make<void, never>(), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Deferred.await(a0), (a1) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Effect.yieldNowWith(0), (a2) => Effect.flatMap(Deferred.isDone(a0), (a3) => Effect.flatMap(Deferred.succeed(a0, undefined), (a4) => Effect.flatMap(Deferred.succeed(a0, undefined), (a5) => Effect.flatMap(Fiber.join(a1), (a6) => Effect.succeed(tuple(a3, a4, a5, a6)))))))))"
--- red control: a bare `Deferred.make()` in the gate's place is refused by its spelling
-#guard match Api.print pDeferredGate with
-  | .ok (.call f [.call (.generic head _) [], rest]) =>
-    (match Api.read (.call f [.call head [], rest]) with
-      | .error (.arity "Deferred.make") => true
-      | _ => false)
-  | _ => false
--- A parked fiber that an interrupt wakes (the `resumed` row's second cause). The source
--- elaborates, types at the pair, answers on the machine, and reads back whole.
-#guard match pInterruptedWait with
-  | .bind (.perform (.deferredMakeOf .nat .never) _) _ => true
-  | _ => false
-#guard Api.typeOf pInterruptedWait = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
-#guard (Api.run pInterruptedWait 1000).exit = some (.success (.list [.bool true, .nat 1]))
-#guard Api.roundTrip pInterruptedWait = .ok pInterruptedWait
--- Its compared rows are the rows the recorder wrote on rc.112 (`harness/truth/result.json`):
--- the child parks, is resumed and started by the interrupt, and exits interrupted.
-#guard reduce (Api.run pInterruptedWait 1000).trace =
-  ["started 0", "forked 0 1", "started 1", "parked 1", "resumed 1", "started 1",
-   "exited 1 interrupt", "exited 0 success"]
--- Red control of the rule. The trace holds no resume of a token: the row-by-row projection
--- (`reduced`), which wrote every `resumed` row before 2026-10-06, has no `resumed 1` here, so
--- it differs from the recorder at that one row. The interrupt is recorded instead.
-#guard !((Api.run pInterruptedWait 1000).trace.filterMap reduced).contains "resumed 1"
-#guard ((Api.run pInterruptedWait 1000).trace.filterMap internal).contains
-  "interruptRecorded by=0 target=1"
--- One restart is one row, at either cause: a token's resume in `pDeferredGate`, where the
--- projection already has the row and the reduction adds none, and the interrupt here.
-#guard ((reduce (Api.run pDeferredGate 1000).trace).filter (· == "resumed 1")).length = 1
-#guard (((Api.run pDeferredGate 1000).trace.filterMap reduced).filter (· == "resumed 1")).length = 1
-#guard ((reduce (Api.run pInterruptedWait 1000).trace).filter (· == "resumed 1")).length = 1
--- The mask that restores (decisions rows 244 to 246). Each source elaborates (its first node
--- makes the promise; a source that did not elaborate is a `fail`), types at its answer, answers
--- on the machine, and reads back whole.
-#guard match pMaskWait with
-  | .bind (.perform (.deferredMakeOf .nat .never) _) _ => true
-  | _ => false
-#guard match pMaskedRestore with
-  | .bind (.perform (.deferredMakeOf .nat .never) _) _ => true
-  | _ => false
-#guard Api.typeOf pMaskWait = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
-#guard (Api.run pMaskWait 1000).exit = some (.success (.list [.bool true, .nat 1]))
-#guard Api.roundTrip pMaskWait = .ok pMaskWait
-#guard Api.typeOf pMaskedRestore =
-  some ⟨.tuple [.nat, .bool, .nat], .never, Env.Requirement.empty⟩
-#guard (Api.run pMaskedRestore 1000).exit =
-  some (.success (.list [.nat 1, .bool true, .nat 18]))
-#guard Api.roundTrip pMaskedRestore = .ok pMaskedRestore
--- the printed expression of the first: the getter under a `flatMap`, the body's mask, and the
--- restore site as `pipe(body, saved)`
-#guard (Api.print pMaskWait).toOption.map (TypeScript.Render.expr house0 0) = some
-  "Effect.flatMap(Deferred.make<number, never>(), (a0) => Effect.flatMap(Ref.make(0), (a1) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.uninterruptibleMask((a2) => Effect.succeed(a2)), (a2) => Effect.uninterruptible(Effect.flatMap(Ref.update(a1, (a3) => add(a3, 1)), (a3) => Effect.flatMap(pipe(Deferred.await(a0), a2), (a4) => Ref.update(a1, (a5) => add(a5, 10)))))), { startImmediately: true, uninterruptible: \"inherit\" }), (a2) => Effect.flatMap(Fiber.interrupt(a2), (a3) => Effect.flatMap(Fiber.await(a2), (a4) => Effect.flatMap(Ref.get(a1), (a5) => Effect.succeed(tuple(causeIsInterrupt(a4), a5))))))))"
--- The mask adds no compared row: the masked wait's rows are the plain wait's, and under a
--- masked caller the child is resumed by the promise's token, after the helper parks.
-#guard reduce (Api.run pMaskWait 1000).trace = reduce (Api.run pInterruptedWait 1000).trace
-#guard reduce (Api.run pMaskedRestore 1000).trace =
-  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
-   "resumed 1", "started 1", "exited 1 interrupt", "resumed 2", "started 2",
-   "exited 2 success", "exited 0 success"]
--- red control: the two programs differ by the caller's mask and the helper, and by their answers
-#guard pMaskWait != pMaskedRestore &&
-  (Api.run pMaskWait 1000).exit != (Api.run pMaskedRestore 1000).exit
--- The two programs of the alignment plan (2026-10-12). Each elaborates (its first node makes a
--- cell; a source that did not elaborate is a `fail`) and reads back whole. Both answer latest's
--- value (decisions row 359). The failed child's exit carries the recorded interrupt beside its
--- `Fail` (Effect 4.0.1 `internal/core.ts:580-608`). The machine masks an explicit close
--- (`internal/effect.ts:3929-3935`), so the interrupted closer runs the release.
-#guard match poisonNoHandler, closeInterruptedMidFinalizer with
-  | .bind (.perform (.deferredMakeOf .nat .never) _) _, .bind (.perform .refMake _) _ => true
-  | _, _ => false
-#guard Api.roundTrip poisonNoHandler = .ok poisonNoHandler
-#guard Api.roundTrip closeInterruptedMidFinalizer = .ok closeInterruptedMidFinalizer
-#guard match (Api.run poisonNoHandler 1000).exit with
-  | some (.success (.list [_, .bool true, .bool true])) => true
-  | _ => false
-#guard (Api.run closeInterruptedMidFinalizer 1000).exit = some (.success (.nat 1))
--- The fiber numbers of the compared fields (`numbering`). The rule on rows: a fiber's first
--- sight is its first `forked` row as the child or its first `started` row.
-#guard firstSeen [.started 0, .forked 0 2, .started 2, .parked 2, .started 1, .started 2] = [0, 2, 1]
--- A `scheduled` row and a `ran` row give no number: the fiber `5` is first seen at its start,
--- and its two earlier rows take the number that the start gives.
-#guard firstSeen [.started 0, .scheduled 5 0, .forked 0 7, .ran 5, .started 5] = [0, 7, 5]
-#guard (renumbered (numberingOf [] [.started 0, .scheduled 5 0, .forked 0 7, .ran 5, .started 5])
-    [.started 0, .scheduled 5 0, .forked 0 7, .ran 5, .started 5]).map Row.text =
-  ["started 0", "scheduled 2 0", "forked 0 1", "ran 2", "started 2"]
--- A fiber that no row shows takes a number after every seen fiber, in allocation order.
-#guard numberingOf [0, 1, 2, 3, 4] [.started 0, .forked 0 3, .started 3] = [0, 3, 1, 2, 4]
--- A number that names no fiber of the order stays: a literal interruptor outside the run.
-#guard numberIn [0, 2, 3, 1] 3 = 2 && numberIn [0, 2, 3, 1] 1 = 3 && numberIn [0, 2, 3, 1] 9 = 9
--- The three fields of an exit that hold a fiber, under an order: an interruptor, a fiber
--- handle, and the handles of a snapshot. Red control of each: under `id` the machine's id stays.
-#guard (reasonJson [] (numberIn [0, 2, 3, 1]) (.interrupt (some ⟨3⟩) .empty)).compress =
-  "{\"interrupt\":2}"
-#guard (valJson [] (numberIn [0, 2, 3, 1]) (Value.fiber 1)).compress = "{\"fiber\":3}"
-#guard (valJson [] (numberIn [0, 2, 3, 1])
-    (Value.fiberSnapshot (.list [Value.fiber 1, Value.fiber 3]))).compress = "{\"fibers\":[3,2]}"
-#guard (reasonJson [] id (.interrupt (some ⟨3⟩) .empty)).compress = "{\"interrupt\":3}"
-#guard (valJson [] id (Value.fiber 1)).compress = "{\"fiber\":1}"
-#guard (valJson [] id (Value.fiberSnapshot (.list [Value.fiber 1, Value.fiber 3]))).compress =
-  "{\"fibers\":[1,3]}"
--- The limit of DI-74, as a control: a literal interruptor that equals a machine id of the run
--- is written like that fiber, and one outside the run is written as it is.
-#guard (reasonJson [] (numberIn [0, 2, 3, 1]) (.interrupt (some ⟨9⟩) .empty)).compress =
-  "{\"interrupt\":9}"
--- Measured over the lane: the numbering of each program is the allocation order, in the fork
--- run and in the sync run, but for the programs of `lateSights`, which are pinned with the
--- fibers that they move. The driver holds the same on each run with its tape (`main`). A
--- program of `lateSightsSync` is pinned apart in its sync run alone.
-#guard corpus.all fun (name, p) =>
-  let (table, answers) := hostInputs name
-  let pinned := (lateSights.lookup name).getD []
-  moved (fixtureRun name p 1000 table answers).trace == pinned &&
-    moved (Api.runSync p 1000 table).1.trace == (lateSightsSync.lookup name).getD pinned
--- No program is in both tables, and each sync pin moves a fiber.
-#guard lateSightsSync.all fun entry => (lateSights.lookup entry.1).isNone && entry.2 != []
-#guard moved (Api.run pQueueOrder 1000).trace = [(4, 3), (3, 4)] &&
-  moved (Api.runSync pQueueOrder 1000).1.trace = [(4, 3), (3, 4)]
-#guard moved (Api.run pLateSeen 1000).trace = [(2, 1), (3, 2), (1, 3)] &&
-  moved (Api.runSync pLateSeen 1000).1.trace = [(2, 1), (3, 2), (1, 3)]
-#guard lateSights.lookup "pQueueOrder" = some [(4, 3), (3, 4)] &&
-  lateSights.lookup "pLateSeen" = some [(2, 1), (3, 2), (1, 3)]
--- red control of the measure: a single-fiber program moves no fiber, and it is no late sight
-#guard moved (Api.run pFold 1000).trace = [] && lateSights.lookup "pFold" = none
--- The recorder sees every fiber of every lane program, so no number comes from the allocation
--- order's tail, and the trace's forks give the machine's own list of fibers.
-#guard corpus.all fun (name, p) =>
-  let (table, answers) := hostInputs name
-  let run := fixtureRun name p 1000 table answers
-  allocated run.trace == run.machine.fibers.map (·.id.value) &&
-    (firstSeen (machineRows run.trace)).length == run.fiberCount &&
-    (numbering run.trace).mergeSort == allocated run.trace
--- `pQueueOrder`, the program that showed the two orders. The root's offer posts a helper: the
--- machine's fiber `3`, a detached fork with a deferred start. The next taker is forked and
--- started at once: the machine's fiber `4`. The recorder sees that taker first.
-#guard allocated (Api.run pQueueOrder 1000).trace = [0, 1, 2, 3, 4, 5, 6, 7]
-#guard numbering (Api.run pQueueOrder 1000).trace = [0, 1, 2, 4, 3, 5, 6, 7]
--- Under the machine's ids the compared rows differ from the recorder's at row 7, and in nine
--- rows in all. This is the difference that the run of 2026-10-06 showed on rc.112:
--- `Lean "forked 0 4", rc.112 "forked 0 3"`.
-#guard (compared ((machineRows (Api.run pQueueOrder 1000).trace).map Row.text))[7]? =
-  some "forked 0 4"
-#guard (compared (reduce (Api.run pQueueOrder 1000).trace))[7]? = some "forked 0 3"
-#guard ((compared ((machineRows (Api.run pQueueOrder 1000).trace).map Row.text)).zip
-    (compared (reduce (Api.run pQueueOrder 1000).trace))).countP (fun rows => rows.1 != rows.2) = 9
--- Its compared rows under the recorder's numbers are the rows that the recorder wrote on
--- rc.112 (`harness/truth/result.json`).
-#guard reduce (Api.run pQueueOrder 1000).trace =
-  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
-   "scheduled 0 0", "forked 0 3", "started 3", "scheduled 3 0", "parked 3", "parked 0", "ran 0",
-   "started 4", "resumed 1", "started 1", "scheduled 1 0", "scheduled 1 0", "exited 1 success",
-   "resumed 0", "started 0", "parked 0", "exited 4 success", "ran 3", "started 5",
-   "exited 5 success", "ran 1", "started 6", "resumed 3", "started 3", "exited 3 success",
-   "exited 6 success", "ran 1", "started 7", "resumed 2", "started 2", "exited 2 success",
-   "resumed 0", "started 0", "exited 0 success", "exited 7 success"]
--- A renaming is no difference: the machine's rows with the fibers `3` and `4` exchanged have the
--- same rows under their own numbering.
-#guard
-  let rows := machineRows (Api.run pQueueOrder 1000).trace
-  let exchanged := rows.map fun row =>
-    row.rename fun fiber => if fiber == 3 then 4 else if fiber == 4 then 3 else fiber
-  exchanged != rows &&
-    renumbered (numberingOf [] exchanged) exchanged == renumbered (numberingOf [] rows) rows
--- Red control: a real difference survives the renaming. Here the helper's exit and the next
--- task's run change places (rows 23 and 24): the rows differ by more than a renaming of the
--- fibers, and they differ under their own numbering too, at those two rows.
-#guard
-  let rows := machineRows (Api.run pQueueOrder 1000).trace
-  let other := rows.take 23 ++ ((rows.drop 23).take 2).reverse ++ rows.drop 25
-  let own := (renumbered (numberingOf [] rows) rows).map Row.text
-  let others := (renumbered (numberingOf [] other) other).map Row.text
-  own[23]? == some "exited 4 success" && own[24]? == some "ran 3" &&
-    others[23]? == some "ran 3" && others[24]? == some "exited 4 success" &&
-    (own.zip others).countP (fun pair => pair.1 != pair.2) == 2
--- Red control: a fiber that starts at another time takes another number, and the rows then
--- differ in every row that names it. No renaming of fibers makes the two lists equal.
-#guard
-  let late : List Row :=
-    [.started 0, .forked 0 1, .started 1, .parked 1, .ran 0, .started 2, .exited 2 "success"]
-  let early : List Row :=
-    [.started 0, .ran 0, .started 2, .exited 2 "success", .forked 0 1, .started 1, .parked 1]
-  (renumbered (numberingOf [] late) late).map Row.text !=
-    (renumbered (numberingOf [] early) early).map Row.text
--- `pLateSeen`, the control of the numbers in an exit. The source elaborates (its first node
--- makes the promise), types at the pair, and reads back whole.
-#guard match pLateSeen with
-  | .bind (.perform (.deferredMakeOf .unit .never) _) _ => true
-  | _ => false
-#guard Api.typeOf pLateSeen =
-  some ⟨.prod (.exitOf .unit .never) (.fiberOf .nat .never), .never, Env.Requirement.empty⟩
-#guard Api.roundTrip pLateSeen = .ok pLateSeen
-#guard numbering (Api.run pLateSeen 1000).trace = [0, 2, 3, 1]
--- Its exit names the interruptor and the helper. Under the machine's ids they are `3` and `1`.
--- Under the recorder's numbers they are `2` and `3`, in the fork run and in the sync run: the
--- exit that rc.112 gave on both entries (`harness/truth/result.json`).
-#guard ((Api.run pLateSeen 1000).exit.map fun e => (exitJsonAt [] id none e).compress) =
-  some "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":3}]}},{\"fiber\":1}]}"
-#guard ((Api.run pLateSeen 1000).exit.map fun e =>
-    (exitJsonAt [] (numberOf (Api.run pLateSeen 1000).trace) none e).compress) =
-  some "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":2}]}},{\"fiber\":3}]}"
-#guard (exitJsonAt [] (numberOf (Api.runSync pLateSeen 1000).1.trace) none
-    (Api.runSync pLateSeen 1000).2).compress =
-  "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":2}]}},{\"fiber\":3}]}"
--- Its rows under the recorder's numbers: the helper is first seen at its start, as `3`.
-#guard reduce (Api.run pLateSeen 1000).trace =
-  ["started 0", "scheduled 0 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2",
-   "resumed 1", "started 1", "exited 1 interrupt", "exited 2 success", "parked 0", "ran 0",
-   "started 3", "exited 3 success", "ran 0", "resumed 0", "started 0", "exited 0 success"]
--- The Queue's first operations (decisions rows 219 to 222, 233, 238 and 240). Each program is
--- the program that the Queue's batteries build from the same scenario, so rc.112 runs what the
--- batteries run on the Lean machine.
-#guard [(Test.Program.QueueScenarios.r2, pQueueWake), (Test.Program.QueueScenarios.r4, pQueueFull),
-    (Test.Program.QueueScenarios.r5, pQueueInterrupted),
-    (Test.Program.QueueMask.maskedCaller, pQueueMasked),
-    (Test.Program.QueueScenarios.r8, pQueueOrder)].all fun (source, program) =>
-  ((Effect4.Api.Author.build (Test.Program.QueueScenarios.mk source)).toOption.map
-    (·.program)) == some program
--- Each source elaborates (its first node makes the queue's cell; a source that did not
--- elaborate is a `fail`), types with no failure and no requirement, answers on the machine, and
--- reads back whole.
-#guard [pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked, pQueueOrder].all fun p =>
-  match p with
-  | .bind (.perform .refMake _) _ => true
-  | _ => false
-#guard Api.typeOf pQueueWake = some ⟨.nat, .never, Env.Requirement.empty⟩
-#guard Api.typeOf pQueueFull =
-  some ⟨.tuple [.bool, .nat, .bool, .nat], .never, Env.Requirement.empty⟩
-#guard Api.typeOf pQueueInterrupted = some ⟨.prod .nat .nat, .never, Env.Requirement.empty⟩
-#guard Api.typeOf pQueueMasked =
-  some ⟨.tuple [.nat, .nat, .bool, .nat, .nat], .never, Env.Requirement.empty⟩
-#guard Api.typeOf pQueueOrder = some ⟨.list .nat, .never, Env.Requirement.empty⟩
-#guard (Api.run pQueueWake 1000).exit = some (.success (.nat 7))
-#guard (Api.run pQueueFull 1000).exit =
-  some (.success (.list [.bool true, .nat 1, .bool true, .nat 2]))
-#guard (Api.run pQueueInterrupted 1000).exit = some (.success (.list [.nat 5, .nat 0]))
-#guard (Api.run pQueueMasked 1000).exit =
-  some (.success (.list [.nat 1, .nat 9, .bool true, .nat 0, .nat 0]))
-#guard (Api.run pQueueOrder 1000).exit = some (.success (.list [.nat 1, .nat 101, .nat 2]))
-#guard [pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked, pQueueOrder].all fun p =>
-  decide (Api.roundTrip p = .ok p)
--- The sync entry settles the first four. It does not settle the fifth: the root is parked
--- when its dispatcher has run once, which is the `AsyncFiberError` defect on both faces.
-#guard [pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked].all fun p =>
-  !isAsyncFiberDefect (Api.runSync p 1000).2
-#guard isAsyncFiberDefect (Api.runSync pQueueOrder 1000).2
--- The taker that waits and is woken. Its compared rows are the rows that the recorder wrote on
--- rc.112 (`harness/truth/result.json`). The posted helper is the fiber `2`: it has no `forked`
--- row, the root's dispatcher starts it after the root parks, and its task resumes the taker.
-#guard reduce (Api.run pQueueWake 1000).trace =
-  ["started 0", "forked 0 1", "started 1", "parked 1", "scheduled 0 0", "parked 0", "ran 0",
-   "started 2", "resumed 1", "started 1", "exited 1 success", "resumed 0", "started 0",
-   "exited 0 success", "exited 2 success"]
--- red control: the five programs have five answers. The first two have the same rows: one
--- fiber waits, one helper is posted, and the root joins. The alphabet erases what the helper
--- carries, a wake in the first and the offer's answer in the second.
-#guard ([pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked, pQueueOrder].map fun p =>
-  (Api.run p 1000).exit).eraseDups.length = 5
-#guard reduce (Api.run pQueueWake 1000).trace = reduce (Api.run pQueueFull 1000).trace
-#guard ([pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked, pQueueOrder].map fun p =>
-  reduce (Api.run p 1000).trace).eraseDups.length = 4
--- Semaphore's first operations (decisions rows 259 to 261 and 276). Each program is the program
--- that Semaphore's battery builds from the same scenario, so rc.112 runs what the battery runs
--- on the Lean machine.
-#guard [(Test.Program.SemaphoreScenarios.p1Joined, pSemaphoreProtectedJoined),
-    (Test.Program.SemaphoreScenarios.p2, pSemaphoreScan),
-    (Test.Program.SemaphoreScenarios.p3, pSemaphoreOvertake),
-    (Test.Program.SemaphoreScenarios.p4Joined, pSemaphoreBodiesJoined),
-    (Test.Program.SemaphoreScenarios.p7, pSemaphoreInterrupted),
-    (Test.Program.SemaphoreScenarios.ifAvailable, pSemaphoreIfAvailable),
-    (Test.Program.SemaphoreScenarios.maskedCaller, pSemaphoreMasked),
-    (Test.Program.SemaphoreScenarios.handoff, pSemaphoreHandoff),
-    (Test.Program.SemaphoreScenarios.p1, pSemaphoreProtected),
-    (Test.Program.SemaphoreScenarios.p4, pSemaphoreBodies)].all fun (source, program) =>
-  ((Effect4.Api.Author.build (Test.Program.SemaphoreScenarios.mk source)).toOption.map
-    (·.program)) == some program
--- Each source elaborates (its first node makes the semaphore's cell; a source that did not
--- elaborate is a `fail`), types with no failure and no requirement, answers on the machine, and
--- reads back whole.
-#guard [pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
-    pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff,
-    pSemaphoreProtected, pSemaphoreBodies].all
-  fun p => match p with
-    | .bind (.perform .refMake _) _ => true
-    | _ => false
-#guard [pSemaphoreProtectedJoined, pSemaphoreOvertake, pSemaphoreBodiesJoined,
-    pSemaphoreProtected, pSemaphoreBodies].all fun p =>
-  decide (Api.typeOf p = some ⟨.tuple [.tuple [.nat, .nat, .list .nat, .list .nat],
-    .tuple [.nat, .nat, .list .nat, .list .nat], .list .nat], .never, Env.Requirement.empty⟩)
-#guard Api.typeOf pSemaphoreScan = some ⟨.tuple [.tuple [.nat, .nat, .list .nat, .list .nat],
-  .nat, .tuple [.nat, .nat, .list .nat, .list .nat], .list .nat], .never, Env.Requirement.empty⟩
-#guard Api.typeOf pSemaphoreIfAvailable = some ⟨.tuple [.option .nat,
-  .tuple [.nat, .nat, .list .nat, .list .nat], .option .nat, .bool, .bool,
-  .tuple [.nat, .nat, .list .nat, .list .nat], .list .nat], .never, Env.Requirement.empty⟩
-#guard Api.typeOf pSemaphoreMasked = some ⟨.tuple [.tuple [.nat, .nat, .list .nat, .list .nat],
-  .nat, .bool, .tuple [.nat, .nat, .list .nat, .list .nat]], .never, Env.Requirement.empty⟩
-#guard Api.typeOf pSemaphoreHandoff = some ⟨.prod .nat .nat, .never, Env.Requirement.empty⟩
-#guard (Api.typeOf pSemaphoreInterrupted).map (·.error) = some .never
-#guard (Api.run pSemaphoreProtectedJoined 1000).exit = some (.success (.list
-  [Test.Program.SemaphoreScenarios.count 2 [2, 1] [0, 1],
-   Test.Program.SemaphoreScenarios.count 2 [1] [1], Test.Program.SemaphoreScenarios.marks [22]]))
-#guard (Api.run pSemaphoreScan 1000).exit = some (.success (.list
-  [Test.Program.SemaphoreScenarios.count 2 [2, 1] [0, 1], .nat 1,
-   Test.Program.SemaphoreScenarios.count 2 [2] [0], Test.Program.SemaphoreScenarios.marks [31]]))
-#guard (Api.run pSemaphoreOvertake 1000).exit = some (.success (.list
-  [Test.Program.SemaphoreScenarios.count 2 [1, 1] [0, 1],
-   Test.Program.SemaphoreScenarios.count 2 [1] [1],
-   Test.Program.SemaphoreScenarios.marks [21, 22]]))
-#guard (Api.run pSemaphoreBodiesJoined 1000).exit = some (.success (.list
-  [Test.Program.SemaphoreScenarios.count 2 [2, 1] [0, 1],
-   Test.Program.SemaphoreScenarios.count 0 [] [],
-   Test.Program.SemaphoreScenarios.marks [22, 31]]))
-#guard (Api.run pSemaphoreInterrupted 1000).exit = some (.success (.list
-  [Test.Program.SemaphoreScenarios.count 1 [1] [0], Test.Program.SemaphoreScenarios.count 1 [] [],
-   Test.Program.SemaphoreScenarios.count 1 [1] [1], Test.Program.SemaphoreScenarios.count 1 [] [],
-   .nat 1, Test.Program.SemaphoreScenarios.count 0 [] []]))
-#guard (Api.run pSemaphoreIfAvailable 1000).exit = some (.success (.list
-  [.some (.nat 7), Test.Program.SemaphoreScenarios.count 0 [] [], .none, .bool true, .bool false,
-   Test.Program.SemaphoreScenarios.count 2 [] [], Test.Program.SemaphoreScenarios.marks [2]]))
-#guard (Api.run pSemaphoreMasked 1000).exit = some (.success (.list
-  [Test.Program.SemaphoreScenarios.count 1 [1] [0], .nat 11, .bool true,
-   Test.Program.SemaphoreScenarios.count 0 [] []]))
-#guard (Api.run pSemaphoreHandoff 1000).exit = some (.success (.list [.nat 1, .nat 7]))
-#guard [pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
-    pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff,
-    pSemaphoreProtected, pSemaphoreBodies].all
-  fun p => decide (Api.roundTrip p = .ok p)
--- The sync entry settles six of the ten on the fork run's exit: in each the root releases, or
--- nobody waits.
-#guard [pSemaphoreScan, pSemaphoreOvertake, pSemaphoreInterrupted, pSemaphoreIfAvailable,
-    pSemaphoreMasked, pSemaphoreHandoff].all fun p =>
-  !isAsyncFiberDefect (Api.runSync p 1000).2 &&
-    some (Api.runSync p 1000).2 == (Api.run p 1000).exit
--- The two joined forms end the sync entry in the `AsyncFiberError` defect. The root waits in
--- its join, and the helper is on a child's dispatcher, which the sync entry does not flush.
-#guard [pSemaphoreProtectedJoined, pSemaphoreBodiesJoined].all fun p =>
-  isAsyncFiberDefect (Api.runSync p 1000).2
--- The cases P1 and P4 as the batteries write them: the two entries settle on two exits. The
--- sync run settles before the walk: the release is in the cell, both waiters still wait, and no
--- mark is written. The fork run gives the joined form's exit. The runner's exit column compares
--- the fork entry on both faces, and its sync column compares the sync entry, so the lane holds
--- both programs (decisions row 279, point 1).
-#guard [pSemaphoreProtected, pSemaphoreBodies].all fun p =>
-  (Api.runSync p 1000).2 == .success (.list
-    [Test.Program.SemaphoreScenarios.count 2 [2, 1] [0, 1],
-     Test.Program.SemaphoreScenarios.count 0 [2, 1] [0, 1],
-     Test.Program.SemaphoreScenarios.marks []]) &&
-  some (Api.runSync p 1000).2 != (Api.run p 1000).exit
-#guard [(pSemaphoreProtected, pSemaphoreProtectedJoined),
-    (pSemaphoreBodies, pSemaphoreBodiesJoined)].all fun (written, joined) =>
-  (Api.run written 1000).exit == (Api.run joined 1000).exit
--- The README's example. Its compared rows are the rows of the Queue's taker that waits and is
--- woken: one fiber waits, the root posts one helper and joins. The alphabet erases what the
--- helper does, one `Deferred.succeed` there and a walk of one visit here.
-#guard reduce (Api.run pSemaphoreHandoff 1000).trace = reduce (Api.run pQueueWake 1000).trace
--- The protected case: A's hook posts the helper on A's dispatcher (`scheduled 1 0`), and A
--- exits. The helper, fiber 4, resumes B. B's exit resumes the root inside the helper's task.
--- The root reads the cell and ends, and C is interrupted at the root's end. The helper exits
--- last, after the root.
-#guard reduce (Api.run pSemaphoreProtectedJoined 1000).trace =
-  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
-   "forked 0 3", "started 3", "parked 3", "parked 0", "ran 0", "resumed 0", "started 0",
-   "resumed 1", "started 1", "scheduled 1 0", "exited 1 success", "parked 0", "ran 1",
-   "started 4", "resumed 2", "started 2", "exited 2 success", "resumed 0", "started 0",
-   "resumed 3", "started 3", "exited 3 interrupt", "exited 0 success", "exited 4 success"]
--- The sync run of the same program stops where the root waits in its join: A has exited, and
--- the helper's task has not run.
-#guard reduce (Api.runSync pSemaphoreProtectedJoined 1000).1.trace =
-  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
-   "forked 0 3", "started 3", "parked 3", "parked 0", "ran 0", "resumed 0", "started 0",
-   "resumed 1", "started 1", "scheduled 1 0", "exited 1 success", "parked 0"]
--- red control: the first eight programs have eight answers and eight lists of compared rows.
--- The rows of the scan and of the overtaking differ only in which waiter the helper resumes.
--- The two cases as the batteries write them share the fork exits of their joined forms.
-#guard ([pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
-    pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff].map
-  fun p => (Api.run p 1000).exit).eraseDups.length = 8
-#guard ([pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
-    pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff].map
-  fun p => reduce (Api.run p 1000).trace).eraseDups.length = 8
--- Each of the eight is numbered in the allocation order: no fiber is forked between a helper's
--- post and its first run. The guard over the whole corpus above holds them there.
-#guard [pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
-    pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff].all
-  fun p => moved (Api.run p 1000).trace == [] && moved (Api.runSync p 1000).1.trace == []
--- Pool's first operations (decisions rows 267 to 269, 276 and 279). Each program is the program
--- that Pool's battery builds from the same case, so rc.112 runs what the battery runs on the
--- Lean machine. The lane's run gives each answer that the battery pins on its own run, the
--- checked session at the tape `[evaluate root, flush]`.
-#guard [(Test.Program.PoolPublic.pp1, pPoolReuse), (Test.Program.PoolPublic.pp2, pPoolOrder),
-    (Test.Program.PoolPublic.pp3, pPoolWaiters), (Test.Program.PoolPublic.pp4, pPoolLateWake),
-    (Test.Program.PoolPublic.pp5, pPoolWake), (Test.Program.PoolPublic.pp6, pPoolMakeFails),
-    (Test.Program.PoolPublic.pp7, pPoolCloseWaits),
-    (Test.Program.PoolPublic.pp8, pPoolWithdrawn), (Test.Program.PoolPublic.closed, pPoolClosed),
-    (Test.Program.PoolPublic.closing, pPoolClosing)].all fun (source, program) =>
-  ((Effect4.Api.Author.build (Test.Program.PoolScenarios.mk source)).toOption.map
-    (·.program)) == some program &&
-  (Api.run program 1000).exit.isSome &&
-    (Api.run program 1000).exit == Test.Program.PoolScenarios.exitOf source
--- Each source elaborates (its first node makes the log's cell; a source that did not elaborate
--- is a `fail`), types with no failure and no requirement, and reads back whole.
-#guard poolPrograms.all fun p => match p with
-    | .bind (.perform .refMake _) _ => true
-    | _ => false
-#guard poolPrograms.all fun p =>
-  decide ((Api.typeOf p).map (fun ty => (ty.error, ty.requires)) =
-    some (.never, Env.Requirement.empty))
--- The closed pool's answer type: L's exit has no failure type, because an interruption is
--- outside the failure column.
-#guard (Api.typeOf pPoolClosed).map (·.answer) = some (.tuple [.exitOf .unit .never,
-  .tuple [.list .nat, .list .nat, .list .nat, .nat, .bool, .nat], .list (.list .nat)])
-#guard poolPrograms.all fun p => decide (Api.roundTrip p = .ok p)
--- The sync entry settles five of the ten on the fork run's exit: in each no return finds a
--- waiter, so no helper is posted.
-#guard [pPoolReuse, pPoolOrder, pPoolMakeFails, pPoolWithdrawn, pPoolClosed].all fun p =>
-  !isAsyncFiberDefect (Api.runSync p 1000).2 &&
-    some (Api.runSync p 1000).2 == (Api.run p 1000).exit
-#guard [pPoolReuse, pPoolOrder, pPoolMakeFails, pPoolWithdrawn, pPoolClosed].all fun p =>
-  !(reduce (Api.run p 1000).trace).any (·.startsWith "scheduled")
--- The two programs of a close that waits end the sync entry in the `AsyncFiberError` defect.
--- The closer waits, and the helper of H's return is on H's dispatcher, which the sync entry
--- does not flush.
-#guard [pPoolCloseWaits, pPoolClosing].all fun p => isAsyncFiberDefect (Api.runSync p 1000).2
--- The cases PP3, PP4 and PP5 as the batteries write them: the two entries settle on two exits.
--- Under the sync entry the root's yields end before a wake. The item stays idle beside its
--- waiters, no borrower but H runs, and the finalizer's row follows H's two rows. The runner's
--- exit column compares the fork entry on both faces, and its sync column compares the sync
--- entry, so the lane holds the three programs (decisions row 279, point 1).
-#guard (Api.runSync pPoolWaiters 1000).2 == .success (.list
-  [.list [Test.Program.PoolScenarios.snap [] [0] [0] 2 false 1,
-    Test.Program.PoolScenarios.snap [0] [] [] 2 false 1,
-    Test.Program.PoolScenarios.snap [0] [] [] 2 false 1,
-    Test.Program.PoolScenarios.snap [0] [] [] 2 false 1],
-   Test.Program.PoolScenarios.rows [[1, 9, 1], [2, 9, 1], [9, 1]]])
-#guard (Api.runSync pPoolLateWake 1000).2 == .success (.list
-  [.list [Test.Program.PoolScenarios.snap [] [0] [0] 2 false 1,
-    Test.Program.PoolScenarios.snap [0] [] [] 2 false 1,
-    Test.Program.PoolScenarios.snap [0] [] [] 1 false 1,
-    Test.Program.PoolScenarios.snap [0] [] [] 1 false 1],
-   Test.Program.PoolScenarios.rows [[1, 9, 1], [2, 9, 1], [9, 1]]])
-#guard (Api.runSync pPoolWake 1000).2 == .success (.list
-  [.list [Test.Program.PoolScenarios.snap [] [0] [0] 1 false 1,
-    Test.Program.PoolScenarios.snap [0] [] [] 1 false 1,
-    Test.Program.PoolScenarios.snap [0] [] [] 1 false 1],
-   Test.Program.PoolScenarios.rows [[1, 9, 1], [2, 9, 1], [9, 1]]])
-#guard [pPoolWaiters, pPoolLateWake, pPoolWake].all fun p =>
-  !isAsyncFiberDefect (Api.runSync p 1000).2 &&
-    some (Api.runSync p 1000).2 != (Api.run p 1000).exit
--- Each of the ten is numbered in the allocation order in its fork run. The sync runs of the
--- three programs of two exits are not: the helper of a child's return is never seen there, and
--- the helper of the root's close, which is forked later, is seen. `lateSightsSync` pins the
--- three, and the sync run of every other program is in the allocation order.
-#guard poolPrograms.all fun p => moved (Api.run p 1000).trace == []
-#guard [pPoolWaiters, pPoolLateWake, pPoolWake].map
-    (fun p => moved (Api.runSync p 1000).1.trace) =
-  [[(5, 4), (4, 5)], [(5, 4), (4, 5)], [(4, 3), (3, 4)]]
-#guard [pPoolReuse, pPoolOrder, pPoolMakeFails, pPoolCloseWaits, pPoolWithdrawn, pPoolClosed,
-    pPoolClosing].all fun p => moved (Api.runSync p 1000).1.trace == []
--- No compared field reads a moved number: each of the three sync exits holds no fiber, so it is
--- one text under the machine's ids and under the sync run's numbers. `pLateSeen` above is the
--- red control: its exit holds a fiber, and its two texts differ.
-#guard [pPoolWaiters, pPoolLateWake, pPoolWake].all fun p =>
-  (exitJsonAt [] id none (Api.runSync p 1000).2).compress ==
-    (exitJsonAt [] (numberOf (Api.runSync p 1000).1.trace) none (Api.runSync p 1000).2).compress
--- The two borrows at a closed pool: L's exit names L's own fiber, 1 and then 3, and the
--- allocation order is the recorder's order in both runs.
-#guard ((Api.run pPoolClosed 1000).exit.map fun e =>
-    (exitJsonAt [] (numberOf (Api.run pPoolClosed 1000).trace) none e).compress) = some
-  "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":1}]}},[[0],[],[],0,true,0],[[9,1]]]}"
-#guard ((Api.run pPoolClosing 1000).exit.map fun e =>
-    (exitJsonAt [] (numberOf (Api.run pPoolClosing 1000).trace) none e).compress) = some
-  "{\"success\":[[[],[0],[0],1,false,1],{\"failure\":{\"reasons\":[{\"interrupt\":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]]}"
--- The closed pool's compared rows: L starts and exits with an interruption, and no row of
--- another fiber stands between. Nobody interrupts L: it fails with its own interruption.
-#guard reduce (Api.run pPoolClosed 1000).trace =
-  ["started 0", "forked 0 1", "started 1", "exited 1 interrupt", "exited 0 success"]
--- The close that waits. H is fiber 1, W fiber 2 and the gate's opener fiber 3. The root's close
--- posts its helper (`scheduled 0 0`) and waits. The helper, fiber 4, wakes W, which exits with
--- its own interruption. W's exit resumes the opener, which opens H's gate. H's return posts
--- the next helper on H's dispatcher (`scheduled 1 0`). That helper, fiber 5, wakes the closer:
--- the root runs to its exit inside the helper's task.
-#guard reduce (Api.run pPoolCloseWaits 1000).trace =
-  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
-   "forked 0 3", "started 3", "parked 3", "scheduled 0 0", "parked 0", "ran 0", "started 4",
-   "resumed 2", "started 2", "exited 2 interrupt", "resumed 3", "started 3", "resumed 1",
-   "started 1", "scheduled 1 0", "exited 1 success", "exited 3 success", "exited 4 success",
-   "ran 1", "started 5", "resumed 0", "started 0", "exited 0 success", "exited 5 success"]
--- The sync run of the same program stops where the closer waits: H's return has posted its
--- helper, and that task has not run.
-#guard reduce (Api.runSync pPoolCloseWaits 1000).1.trace =
-  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
-   "forked 0 3", "started 3", "parked 3", "scheduled 0 0", "parked 0", "ran 0", "started 4",
-   "resumed 2", "started 2", "exited 2 interrupt", "resumed 3", "started 3", "resumed 1",
-   "started 1", "scheduled 1 0", "exited 1 success", "exited 3 success", "exited 4 success"]
--- red control: the ten programs have ten answers and ten lists of compared rows.
-#guard (poolPrograms.map fun p => (Api.run p 1000).exit).eraseDups.length = 10
-#guard (poolPrograms.map fun p => reduce (Api.run p 1000).trace).eraseDups.length = 10
-#guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
-#guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
-#guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))
-#guard (Api.run pOptionNone 1000).exit = some (.success (.list [.bool false, .nat 9]))
--- DI-17: mixed columns retain every possible failure; runtime selection is unchanged.
-#guard Api.typeOf pTagHit =
-  some ⟨.nat, .union .string (.prod (.lit "A") (.lit "m")), Env.Requirement.empty⟩
-#guard Api.typeOf pTagMiss =
-  some ⟨.nat, .union .string (.prod (.lit "A") (.lit "m")), Env.Requirement.empty⟩
-#guard Api.typeOf pTagTwoFail =
-  some ⟨.nat, .union (.prod (.lit "A") (.lit "m")) (.prod (.lit "B") (.lit "x")), Env.Requirement.empty⟩
-#guard (Api.run pTagHit 1000).exit = some (.success (.nat 1))
-#guard (Api.run pTagMiss 1000).exit = some (.failure (Cause.fail (.tagged "A" "m")))
-#guard (Api.run pTagTwoFail 1000).exit =
-  some (.failure ⟨[.fail (.tagged "B" "x") .empty, .fail (.tagged "A" "m") .empty]⟩)
--- S2 wire identities are distinct before any host comparison.
-#guard errJson .boom == Lean.Json.mkObj [("boom", Lean.Json.null)]
-#guard errJson (.text "boom") == Lean.Json.str "boom"
-#guard errJson .boom != errJson (.text "boom")
--- a record payload (decisions row 120) is the codec's image, apart from the other four shapes
-#guard ((Payload.image.ofVal (.ctor 0 [.list [.str "boom"], .list [.unit]])).map fun p =>
-  errJson (.payload p) != errJson .boom && errJson (.payload p) ==
-    Lean.Json.mkObj [("payload", Lean.Json.str (Effect4.Schema.Codec.payloadHex p))]) = some true
--- a defect is written as rc.112 writes the thrown value (`Schema.Codec.encodeDefect`, move G)
-#guard defectJson [] (.error (.text "lost")) == Lean.Json.str "lost"
-#guard defectJson [] (.user 7) == toJson (7 : Nat)
-#guard defectJson [] .asyncFiber == Lean.Json.mkObj
-  [("message", Lean.Json.str "An asynchronous Effect was executed with Effect.runSync"),
-    ("name", Lean.Json.str "AsyncFiberError")]
-#guard defectJson [] (.missingService Env.scopeKey) == Lean.Json.mkObj
-  [("message", Lean.Json.str "Service not found: effect/Scope"), ("name", Lean.Json.str "Error")]
--- control: a defect outside the canonical alphabet is named, never written as another's image
-#guard defectJson [] (.error (.tag 7)) != defectJson [] (.user 7)
--- decisions row 120, part E2: the payload programs type at their record, print with their class,
--- read back, and the program's exit writes the payload through its error column (`errJsonAt`)
-#guard (Api.typeOf pFailPayload).map (·.error) =
-  some (.record [("_tag", false, .lit "NotFound"), ("id", false, .nat)])
-#guard (Api.typeOf pTagPayload).map (·.answer) = some .nat
-#guard Api.roundTrip pFailPayload = .ok pFailPayload
-#guard Api.roundTrip pTagPayload = .ok pTagPayload
-#guard (Api.printModule "main" pFailPayload).map (fun m =>
-    String.join (m.decls.map (TypeScript.Render.decl house0))) = some
-  ("export class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\n" ++
-   "export const main: Effect.Effect<never, NotFound, never> = Effect.fail(new NotFound({ id: 9 }))\n")
-#guard ((Api.run pFailPayload 1000).exit.map fun e =>
-    (exitJsonAt [] id ((Api.typeOf pFailPayload).map (·.error)) e).compress) =
-  some "{\"failure\":{\"reasons\":[{\"fail\":{\"payload\":{\"_tag\":\"NotFound\",\"id\":9}}}]}}"
-#guard (Api.run pTagPayload 1000).exit = some (.success (.nat 1))
--- untyped, a payload keeps the hexadecimal of its canonical bytes
-#guard ((Api.run pFailPayload 1000).exit.map fun e =>
-    (exitJsonAt [] id none e).compress == (exitJson [] id e).compress) = some true
-#guard Api.typeOf pFailText = some ⟨.never, .string, Env.Requirement.empty⟩
-#guard Api.typeOf pFailBoomText = some ⟨.never, .string, Env.Requirement.empty⟩
-#guard (Api.run pFailText 1000).exit = some (.failure (Cause.fail (.text "lost")))
-#guard (Api.run pFailBoomText 1000).exit = some (.failure (Cause.fail (.text "boom")))
-#guard Api.wellTyped pTextOrDie
-#guard (Api.run pTextOrDie 1000).exit = some (.failure (Cause.die (.error (.text "lost"))))
--- the error-path fixtures type only under the sqlite table and read back
-#guard sqliteFixtures.all fun name => (corpus.lookup name).isSome
-#guard Api.wellTyped pSqlFail Packages.sqliteBun
-#guard Api.wellTyped pSqlCatch Packages.sqliteBun
-#guard Api.wellTyped pSqlExit Packages.sqliteBun
-#guard Api.wellTyped pSqlOrDie Packages.sqliteBun
-#guard !Api.wellTyped pSqlFail
-#guard !Api.wellTyped pSqlCatch
-#guard !Api.wellTyped pSqlExit
-#guard !Api.wellTyped pSqlOrDie
-#guard Api.roundTrip pSqlFail Packages.sqliteBun = .ok pSqlFail
-#guard Api.roundTrip pSqlCatch Packages.sqliteBun = .ok pSqlCatch
-#guard Api.roundTrip pSqlExit Packages.sqliteBun = .ok pSqlExit
-#guard Api.roundTrip pSqlOrDie Packages.sqliteBun = .ok pSqlOrDie
--- their types: the failure escapes, is caught, is reified, becomes a defect
-#guard (Api.typeOf pSqlFail Packages.sqliteBun).map (fun t => (t.answer, t.error)) =
-  some (Packages.sqlRows, Packages.sqlError)
-#guard (Api.typeOf pSqlCatch Packages.sqliteBun).map (fun t => (t.answer, t.error)) = some (.string, .never)
-#guard (Api.typeOf pSqlExit Packages.sqliteBun).map (fun t => (t.answer, t.error)) =
-  some (.exitOf Packages.sqlRows Packages.sqlError, .never)
-#guard (Api.typeOf pSqlOrDie Packages.sqliteBun).map (fun t => (t.answer, t.error)) = some (.nat, .never)
--- the two package fixtures type only under their tables and read back; their runs are the
--- tapes' (the batteries of `Test/Api/PackagesContract.lean` pin the shapes over fixed answers)
-#guard Api.wellTyped pSqlite Packages.sqliteBun
-#guard Api.wellTyped pKv Packages.keyValueStoreMemory
-#guard !Api.wellTyped pSqlite
-#guard !Api.wellTyped pKv
-#guard Api.roundTrip pSqlite Packages.sqliteBun = .ok pSqlite
-#guard Api.roundTrip pKv Packages.keyValueStoreMemory = .ok pKv
--- the tape decoder: the wire read back
-#guard jsonToVal (Lean.Json.mkObj [("external", 0)]) = some (.nat 0)
-#guard jsonToVal (Lean.Json.mkObj [("some", "1")]) = some (.some (.str "1"))
-#guard jsonToVal (Lean.Json.mkObj [("none", true)]) = some .none
-#guard jsonToVal (Lean.Json.arr #[Lean.Json.arr #[Lean.Json.arr #["a", "7"]]]) = some (.list [.list [.list [.str "a", .str "7"]]])
-#guard (tapeAnswers ["{\"fiber\":0,\"op\":\"has\",\"request\":[],\"answer\":true}", "", "{\"failed\":[\"SqlError\",\"m\"]}"]).toOption =
-  some [.ofExit (.success (.bool true)), .ofExit (.failure (Cause.fail (.tagged "SqlError" "m")))]
-#guard (tapeAnswers ["{\"answer\":{\"raw\":1}}"]).toOption = none
--- the runner's informational field beside `failed` is not read; a `died` row is refused
-#guard (tapeAnswers ["{\"fiber\":0,\"op\":\"unsafe\",\"request\":[],\"failed\":[\"UnknownError\",\"no such table: missing\"],\"error\":\"SqlError\"}"]).toOption =
-  some [.ofExit (.failure (Cause.fail (.tagged "UnknownError" "no such table: missing")))]
-#guard (tapeAnswers ["{\"fiber\":0,\"op\":\"Sql.open\",\"request\":[\"/nowhere/x.db\"],\"died\":\"SQLiteError: unable to open database file\"}"]).toOption = none
--- the tagged failure types at the pair of its two literals (the literal rule, part 4: the
--- const-generic prelude `pair` infers `readonly ["SqlError", "boom"]`), evaluates to
--- `Err.tagged`, and reads back
-#guard Api.typeOf pFailTagged =
-  some ⟨.never, .prod (.lit "SqlError") (.lit "boom"), Env.Requirement.empty⟩
-#guard (Api.run pFailTagged 1000).exit = some (.failure (Cause.fail (.tagged "SqlError" "boom")))
-#guard Api.roundTrip pFailTagged = .ok pFailTagged
--- the join's fixtures are well-typed, so they cross as declarations
-#guard Api.wellTyped pProvide
-#guard Api.wellTyped pProvideMerge
-#guard Api.wellTyped pProvideTwice
--- the host rows slice: the reference is well formed and typed by expansion, the diamond
--- prints as a two-declaration block, and both read back whole
-#guard pDiamond.layerRefsWF
-#guard (pDiamond.refSites []).length = 2
-#guard (pProvideTwice.refSites []).isEmpty
-#guard (Api.run pDiamond 1000).stores.refs = [.nat 1]
-#guard (Api.run pProvideTwice 1000).stores.refs = [.nat 2]
-#guard Api.wellTyped pDiamond
-#guard Api.wellTyped pMergeAll
-#guard (Api.printModule "main" pDiamond).map (·.decls.length) = some 2
-#guard (Api.printModule "main" pMergeAll).map (·.decls.length) = some 1
-#guard (Api.printModule "main" pDiamond).map Api.readModule = some (.ok pDiamond)
-#guard (Api.printModule "main" pMergeAll).map Api.readModule = some (.ok pMergeAll)
-#guard (Api.printModule "main" pProvideTwice).map Api.readModule = some (.ok pProvideTwice)
-
-#guard LawfulTable acquireHandleTable
-#guard Api.wellTyped pAcquireHandle acquireHandleTable
-#guard (fixtureRun "pAcquireHandle" pAcquireHandle 1000 acquireHandleTable acquireHandleAnswers).exit =
-  some (.success (.list [.handle 7 0, .nat 1]))
-#guard (fixtureRun "pAcquireHandle" pAcquireHandle 1000 acquireHandleTable
-  acquireHandleAnswers).stores.externals.allocated = ["Host.Resource"]
-
-/-- P2b finite check of the amended observation equations on a final machine. The decision
-reason names a runnable fiber or an armed owner (decisions row 201 (b), `awaitDecision_iff`). -/
-def observesReasons (why : Exhaustion) (m : Api.Machine) : Bool :=
-  let rs := Api.frontierReasons why m
-  let host := rs.any fun | .awaitHost _ => true | _ => false
-  let observation := Api.HostProtocol.observe m
-  ((observation == .awaitingAsync) == host) &&
-    ((observation == .terminated) == (!host && m.fibers.all (fun f => f.exit.isSome))) &&
-    ((observation == .idle) == (!host && Api.hasRunnable m)) &&
-    (rs.contains .awaitDecision == (why == .tape && (Api.hasRunnable m || !m.armed.isEmpty)))
-
-#guard corpus.all fun (name, p) =>
-  let (table, answers) := hostInputs name
-  let m := (fixtureRun name p 1000 table answers).machine
-  observesReasons .fuel m && observesReasons .tape m
-
--- The universal law instantiates at every corpus member.
-example (p : Api.Program) (fuel : Nat) (table : RowTable) (why : Exhaustion) :
-    Api.HostProtocol.observe (Api.run p fuel table).machine = .awaitingAsync ↔
-      ∃ key, .awaitHost key ∈ Api.frontierReasons why (Api.run p fuel table).machine :=
-  (Api.observe_of_reasons why _).1
 
 end OCaml5.Truth
 
-/-- The tapes under `dir`: `<name>.jsonl` per corpus program that has one, decoded into that
-program's host answers; a program without a tape gets none. A row that does not decode is an
-error, not a guess. -/
-def readTapes (dir : System.FilePath) : IO (String → List OCaml5.Truth.Answer) := do
-  let mut table : List (String × List OCaml5.Truth.Answer) := []
-  for (name, _) in OCaml5.Truth.corpus do
-    let file := dir / (name ++ ".jsonl")
-    if ← file.pathExists then
-      let text ← IO.FS.readFile file
-      match OCaml5.Truth.tapeAnswers (text.splitOn "\n") with
-      | .ok answers => table := (name, answers) :: table
-      | .error why => throw (IO.userError s!"tape {file}: {why}")
-  return fun name => ((table.find? (·.1 == name)).map (·.2)).getD []
-
-/-- The driver: `<out> [--tapes <dir>]` writes the manifest there, else prints it (with the
-tapes of `harness/truth/tapes`). The fuel is fixed at `1000`, enough for every corpus program
-to settle or park. -/
-def main (args : List String) : IO Unit := do
+/-- The driver: `--corpus <dir>` writes the manifest to `<dir>/corpus.json` and each program's
+module to `<dir>/generated/<name>.ts`, and it removes every other `.ts` file of that folder. A
+program whose module the printer refuses stops the driver before it writes. The fuel is fixed
+at `1000`, enough for every corpus program to settle or park. -/
+def main (args : List String) : IO UInt32 := do
+  let ["--corpus", dir] := args | do
+    IO.eprintln "usage: lake env lean --run harness/truth/Truth.lean --corpus <dir>"; return 2
   let fuel := 1000
-  if let ["--corpus", out, count, depth] := args then
-    let count := count.toNat!
-    let depth := depth.toNat!
-    IO.FS.writeFile out ((OCaml5.Truth.corpusManifest fuel count depth).pretty 100 ++ "\n")
-    IO.println s!"wrote {count} generated programs at depth {depth} to {out}"
-    return
-  let (out?, tapeDir) := match args with
-    | [out, "--tapes", dir] => (some out, dir)
-    | [out] => (some out, "harness/truth/tapes")
-    | _ => (none, "harness/truth/tapes")
-  let tapes ← readTapes tapeDir
+  let mut modules : Array (String × String) := #[]
   for (name, p) in OCaml5.Truth.corpus do
-    let (table, builtIn) := OCaml5.Truth.hostInputs name
-    let some runtimeTable := OCaml5.Truth.fixtureRuntimeTable name p table
-      | throw (IO.userError s!"runtime call instance missing for {name}")
-    let m := (OCaml5.Truth.fixtureRun name p fuel runtimeTable (builtIn ++ tapes name)).machine
-    unless OCaml5.Truth.observesReasons .fuel m && OCaml5.Truth.observesReasons .tape m do
-      throw (IO.userError s!"observation reasons disagree for {name}")
-    -- the fiber numbers: the allocation order, or the pinned late sights (`lateSights`)
-    unless OCaml5.Truth.moved m.trace == (OCaml5.Truth.lateSights.lookup name).getD [] do
-      throw (IO.userError s!"the fiber numbering of {name} is not the one that `lateSights` pins")
-  let text := (OCaml5.Truth.manifest fuel tapes).pretty 100 ++ "\n"
-  match out? with
-  | some out =>
-    IO.FS.writeFile out text
-    IO.println s!"wrote {OCaml5.Truth.corpus.length} programs to {out}"
-  | _ => IO.println text
+    match OCaml5.Truth.moduleText name p with
+    | .ok text => modules := modules.push (name, text)
+    | .error why => do
+      IO.eprintln s!"FAIL truth corpus: the printer refuses {name}: {OCaml5.Truth.refusalText why}"
+      return 1
+  let generated := (dir : System.FilePath) / "generated"
+  IO.FS.createDirAll generated
+  for file in ← generated.readDir do
+    if file.fileName.endsWith ".ts" && !modules.any (·.1 ++ ".ts" == file.fileName) then
+      IO.FS.removeFile file.path
+  for (name, text) in modules do
+    IO.FS.writeFile (generated / (name ++ ".ts")) text
+  IO.FS.writeFile ((dir : System.FilePath) / "corpus.json")
+    ((OCaml5.Truth.manifest fuel).pretty 100 ++ "\n")
+  IO.println s!"wrote {modules.size} programs to {dir}: corpus.json and generated/"
+  return 0

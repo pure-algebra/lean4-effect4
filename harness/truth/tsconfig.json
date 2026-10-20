@@ -1,7 +1,7 @@
 {
   "//": [
-    "DI-49: type-check the printed modules, their prelude, the actual recorder, and the new session boundary under the pinned compiler.",
-    "check-truth.py keeps fresh generated modules beside this config and explicitly names the original recorder/session sources so their relative imports retain the repository topology.",
+    "DI-49: the compiler options of the printed modules, their prelude, the recorder and the session boundary under the pinned compiler. src/Effect4/Codegen/Diagnostics.lean (HostConfig) and the probes under ts/eff/probe copy them.",
+    "The truth check that compiled this project beside fresh modules was deleted with the differential on 2026-10-20 (git:fa7bdc304:scripts/check-truth.py).",
     "TracedScheduler delegates to the pinned MixedScheduler and wraps only dispatch recording; the focused scheduler comparison checks the observed event sequences.",
     "These are finite compiler/execution receipts, not a host adequacy theorem."
   ],
@@ -23,14 +23,6 @@
   },
   "include": [
     "prelude.ts",
-    "records.typecheck.ts",
-    "tuples.typecheck.ts",
-    "folds.typecheck.ts",
-    "term-rows.typecheck.ts",
-    "literals.typecheck.ts",
-    "queue-steps.typecheck.ts",
-    "mask.typecheck.ts",
-    "select-controls.ts",
     "generated",
     "run-truth.ts",
     "session/*.ts"
