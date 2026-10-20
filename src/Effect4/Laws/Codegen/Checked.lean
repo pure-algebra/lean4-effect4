@@ -21,7 +21,7 @@ variable {program : NativeEff} {table : RowTable} {name : String}
 /-- Retaining raw formation and typing evidence does not change successful printing. -/
 theorem emitFormedModule_ok (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
-    (inProfile : natLiteralsInProfile program = true)
+    (inProfile : rc112.literalRefusal program = none)
     {declarations : List TypeScript.ConstDecl}
     (printed : Program.printEntryWith Program.shippedPieces table (nativeSignature table) name
       typing.ty program = .ok declarations)
@@ -55,7 +55,7 @@ theorem emitFormedModule_ok (formed : Formation.InputFormed program table)
 /-- The typed entry still checks raw formation before printing (`raw-formation`). -/
 theorem emitTypedModule_ok (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
-    (inProfile : natLiteralsInProfile program = true)
+    (inProfile : rc112.literalRefusal program = none)
     {declarations : List TypeScript.ConstDecl}
     (printed : Program.printEntryWith Program.shippedPieces table (nativeSignature table) name
       typing.ty program = .ok declarations)
@@ -95,7 +95,7 @@ refused before normalization (rows 192 and 193), and a natural literal outside t
 before printing (`E4-PRINT-CE-002`). -/
 theorem emitModule_erasure (name : String) (program : NativeEff) (table : RowTable)
     (formed : Formation.InputFormed program table)
-    (inProfile : natLiteralsInProfile program = true) :
+    (inProfile : rc112.literalRefusal program = none) :
     (emitModule name program table).toOption.map (·.module) =
       match typeOfProgram (nativeSignature table) program with
       | some ty =>

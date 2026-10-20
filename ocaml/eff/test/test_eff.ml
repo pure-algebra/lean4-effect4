@@ -64,7 +64,7 @@ let json_reads_back (p : NativeOp.t Eff.t) : bool =
   in
   match G.store_shape_doc_read_located G.run_kit_program_shape tree with
   | Ok v -> G.run_kit_program_of_val v = Some p
-  | Error { G.reason = G.JsonReason_naturalOutsideProfile _; _ } -> true
+  | Error { Eff_types.Located.reason = G.JsonReason_naturalOutsideProfile _; _ } -> true
   | Error _ -> false
 ;;
 

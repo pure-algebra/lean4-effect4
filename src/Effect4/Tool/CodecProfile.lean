@@ -1,15 +1,18 @@
 module
 public import Effect4.Store.Domain.ShapeJson
 public import Effect4.Store.Domain.JsonText
+public import Effect4.Program.ProfileSupport
 
 /-!
 # Tool.CodecProfile — the tool's JSON profile
 
 The tool reads and writes its carriers as JSON through one profile. It refuses option shapes whose
-item can print null (`supports`). It carries naturals up to I-JSON's safe bound (`natLimit`, RFC
-7493 §2.2), which every JSON client reads exactly: the reader refuses a natural past it at its
-place, and both drivers refuse a value past it on write (`carries`). Each written value rechecks
-its own JSON read, so a rounded number cannot change a value silently.
+item can print null (`supports`). It carries the values rc.112's profile supports (profile support,
+`ProfileData.valueRefusal` at `rc112`, `Program/ProfileSupport.lean`): every natural, negative
+integer's magnitude, constructor index and handle key is at most `2^53 - 1`, which is also I-JSON's
+safe bound (RFC 7493 §2.2) and so read exactly by every JSON client. The reader refuses a natural
+past it at its place, and both drivers refuse a value outside the profile on write. Each written
+value rechecks its own JSON read, so a rounded number cannot change a value silently.
 
 The reader is located (`readLocated`): it reads the profile's tree (`Effect4.NatJson`) by the
 located reader of `Store/Domain/ShapeJson.lean`, and a refusal names a site and a reason. The
@@ -70,28 +73,6 @@ end
 def supports (doc : ShapeDoc) : Bool :=
   supported doc.defs doc.root && supportedFields doc.defs doc.defs
 
-/-- The largest natural the profile carries: `2^53 - 1`, I-JSON's safe integer bound, the largest
-natural the profile's tree reads (`NatJson.limit`). -/
-def natLimit : Nat := NatJson.limit
-
-mutual
-/-- **A value tree the profile carries**: every natural, and every handle key, at most `natLimit`.
-The JSON driver and the native shell both refuse a tree outside it. -/
-def carries : Val → Bool
-  | .nat n => decide (n ≤ natLimit)
-  | .handle _ key => decide (key ≤ natLimit)
-  | .list xs => carriesList xs
-  | .pair a b => carries a && carries b
-  | .some a => carries a
-  | .ctor _ args => carriesList args
-  | .unit | .bool _ | .str _ | .bytes _ | .none | .ref .. | .negInt _ | .float _ => true
-
-/-- `carries` over a list of trees. -/
-def carriesList : List Val → Bool
-  | [] => true
-  | x :: xs => carries x && carriesList xs
-end
-
 /-- **Read a carrier from the profile's tree, or refuse at a place**: a shape the profile does not
 carry is refused at the shape's root; otherwise the located reader (`Canonical.readLocated`). -/
 def readLocated {α : Type} [Canonical α] (t : Effect4.NatJson) : Except JsonRefusal α :=
@@ -105,7 +86,7 @@ def read {α : Type} [Canonical α] (json : Effect4.Json) : Except Refusal α :=
 
 def write {α : Type} [Canonical α] (value : α) : Except Refusal Effect4.Json :=
   if supports (Canonical.shape α) then
-    if !carries (Canonical.toVal value) then .error .unprintable else
+    if (Program.rc112.valueRefusal (Canonical.toVal value)).isSome then .error .unprintable else
     let json := Canonical.print value
     match read (α := α) json with
     | .ok decoded =>

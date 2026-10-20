@@ -1072,6 +1072,9 @@ def registry : Registry where
     { id := "profile-mul-exact", concept := "translation-simulation", role := .compatibility
       title := "The checked natural multiplication answers exactly for the represented atom product inside the supplied bound; target rows remain trusted implementations with finite controls (DI-56)"
       pointer := .witness `Effect4.Program.mulIn_eq_some_iff },
+    { id := "profile-support-located", concept := "translation-simulation", role := .decidability
+      title := "Profile support's located refusal is complete against its judgment: a value's refusal is absent exactly when every number of its tree is inside the profile's bound (ProfileData.supports), and a program's exactly when every literal of the literal fold is (literalRefusal_eq_none_iff, beside it); one Lean judgment, its bound ProfileData's, lowered at the engine's and the kit's ingress; nothing of which face reads a supported value, nor of arithmetic inside a run, which the builtin rows' crossing refuses until M4 (DI-56; decisions rows 108 and 417 (1); M2)"
+      pointer := .witness `Effect4.Program.ProfileData.valueRefusal_eq_none_iff },
     { id := "rows-denotation-straight", concept := "translation-simulation", role := .compatibility
       title := "The call tree over the stores and the host rows extends denote: on Straight it is denote's tree injected on the left of the coproduct (DI-69; the fragment StraightRows admits catchIf, decisions row 310)"
       pointer := .witness `Effect4.Program.Denote.denoteRows_straight },

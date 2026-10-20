@@ -399,7 +399,7 @@ theorem emitModule_complete {program : NativeEff} {table : RowTable} {name : Str
     (readable : moduleReadable classes (nativeSignature table) program = true)
     (types : declarationTypeRepresentable typing.ty = true)
     (annotations : annotationRefusal program = none)
-    (inProfile : natLiteralsInProfile program = true) :
+    (inProfile : rc112.literalRefusal program = none) :
     ∃ emission, emitModule name program table = .ok emission := by
   obtain ⟨decls, printed⟩ :=
     printModuleWith_readable shippedPieces_prints readable name typing.ty types

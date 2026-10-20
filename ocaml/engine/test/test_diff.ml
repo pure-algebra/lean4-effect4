@@ -112,7 +112,7 @@ let classification_controls () =
   let refused =
     Error
       (E4_clock.Profile_refusal
-         { E4_clock.crossing = E4_clock.Reply; reason = "classification control" })
+         { E4_clock.crossing = E4_clock.Arithmetic; reason = "classification control" })
   in
   let raised = Error (Failure "classification control") in
   let incomplete name runs ~profile ~error =

@@ -299,3 +299,6 @@ module Completion :
         OfExit of ('b, 'e, 'd, 'i, 'a) Exit.t
       | OfRefGet of RefKey.t
   end
+module Located :
+  sig type ('site, 'reason) t = { site : 'site; reason : 'reason; } end
+module ProfileReason : sig type t = AboveBound of int | BelowBound of int end

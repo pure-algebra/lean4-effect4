@@ -165,35 +165,25 @@ type eng =
 module Mk (En : E4_engine.ENGINE) = struct
   let eng : eng =
     { e_name = En.name
-    ; e_api =
-        (fun p ~fuel ->
-          let cp = En.compile p in
-          fun () -> ignore (Sys.opaque_identity (En.api_run cp ~fuel)))
+    ; e_api = (fun p ~fuel -> fun () -> ignore (Sys.opaque_identity (En.api_run p ~fuel)))
     ; e_drive =
         (fun p ~fuel ->
-          let cp = En.compile p in
-          let t0 = En.load_program cp ~fuel in
+          let t0 = En.load_program p ~fuel in
           fun () -> ignore (Sys.opaque_identity (En.drive t0)))
     ; e_stats =
         (fun p ~fuel ->
-          let t = En.run_program (En.compile p) ~fuel in
+          let t = En.run_program p ~fuel in
           En.trace_length t, En.fiber_count t, En.outcome t)
-    ; e_held =
-        (fun p ~fuel ->
-          let cp = En.compile p in
-          held (fun () -> En.run_program cp ~fuel))
+    ; e_held = (fun p ~fuel -> held (fun () -> En.run_program p ~fuel))
     ; e_batch =
         (fun ps ~fuel ->
-          let cps = List.map En.compile ps in
           fun () ->
-            List.fold_left
-              (fun acc cp -> acc + En.trace_length (En.run_program cp ~fuel))
-              0
-              cps)
+          List.fold_left
+            (fun acc cp -> acc + En.trace_length (En.run_program cp ~fuel))
+            0
+            ps)
     ; e_batch_held =
-        (fun ps ~fuel ->
-          let cps = List.map En.compile ps in
-          held (fun () -> List.map (fun cp -> En.run_program cp ~fuel) cps))
+        (fun ps ~fuel -> held (fun () -> List.map (fun cp -> En.run_program cp ~fuel) ps))
     }
   ;;
 end
@@ -652,13 +642,11 @@ module F = E4_engine.Fast
 let observe = ref true
 
 let sweep_programs : (string * F.program) list =
-  ("pTwo", F.compile p_two_bridge)
+  ("pTwo", p_two_bridge)
   :: List.filter_map
        (fun (label, n) ->
           match by_name goldens n with
-          | Some p ->
-            (try Some (label, F.compile p.Corpora.eff) with
-             | _ -> None)
+          | Some p -> Some (label, p.Corpora.eff)
           | None -> None)
        [ "pTwoGolden", "pTwo"; "pFork", "pFork"; "p42", "p42"; "pAwait", "pAwait" ]
 ;;

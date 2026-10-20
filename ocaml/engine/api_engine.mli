@@ -360,6 +360,18 @@ module Make :
         to_val : 'a -> Eff_types.Val.t;
         of_val : Eff_types.Val.t -> 'a option;
       }
+      and call_class =
+          CallClass_row of Eff_types.RowKind.t
+        | CallClass_external
+      and invocation_forms = { perform : bool; callback : bool; }
+      and profile_data = {
+        name : string;
+        nat_bound : int;
+        admitted_forms : (call_class * invocation_forms) list;
+        adapters : (string * string) list;
+        imports : string list;
+        error_projection : string;
+      }
       and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
           ScopeState_empty
         | ScopeState_openEmpty
@@ -769,6 +781,22 @@ module Make :
         op : Eff_types.NativeOp.t;
         request : Eff_types.Val.t;
       }
+      and 'r_val_ val_algebra = {
+        val_unit : 'r_val_;
+        val_bool : bool -> 'r_val_;
+        val_nat : int -> 'r_val_;
+        val_str : string -> 'r_val_;
+        val_bytes : int list -> 'r_val_;
+        val_list : 'r_val_ list -> 'r_val_;
+        val_pair : 'r_val_ -> 'r_val_ -> 'r_val_;
+        val_none : 'r_val_;
+        val_some : 'r_val_ -> 'r_val_;
+        val_ctor : int -> 'r_val_ list -> 'r_val_;
+        val_ref : int -> int list -> 'r_val_;
+        val_handle : int -> int -> 'r_val_;
+        val_neg_int : int -> 'r_val_;
+        val_float : int -> 'r_val_;
+      }
       and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) race = {
         id : int;
         host : fiber_id;
@@ -869,6 +897,32 @@ module Make :
       }
       and combine_mode = CombineMode_provide | CombineMode_provideMerge
       and service_universe = unit
+      and ('op, 'a) arg_reader = {
+        child : int -> eff_fam -> 'a;
+        term : int -> Eff_types.Term.t -> 'a;
+        cause : int -> Eff_types.CauseTerm.t -> 'a;
+        op : int -> 'op -> 'a;
+        nat : int -> int -> 'a;
+        mode : int -> Eff_types.ObserverMode.t -> 'a;
+        bool : int -> bool -> 'a;
+        key : int -> Eff_types.ServiceKey.t -> 'a;
+        decision : int -> Eff_types.Decision.t -> 'a;
+        opt_ty : int -> Eff_types.Ty.t option -> 'a;
+        decls : int -> Eff_types.DefDecl.t list -> 'a;
+        fork_options : int -> Eff_types.ForkOptions.t -> 'a;
+        opt_term : int -> Eff_types.Term.t option -> 'a;
+        keys : int -> Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'a;
+        lit : int -> Eff_types.Lit.t -> 'a;
+        path : int -> int list -> 'a;
+      }
+      and eff_fam =
+          EffFam_eff
+        | EffFam_stmt
+        | EffFam_stmts
+        | EffFam_effs
+        | EffFam_action
+        | EffFam_layer
+        | EffFam_layers
       and wake_mode = WakeMode_now | WakeMode_scheduled of fiber_id * int
       and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =
           Task_start of fiber_id
@@ -973,6 +1027,17 @@ module Make :
         | FrameEvent_substituted of ('e, 'd, 'i, 'a) Eff_types.Cause.t
         | FrameEvent_deferred of ('e, 'd, 'i, 'a) Eff_types.Cause.t
         | FrameEvent_yielded of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+      and 'r_cause cause_term_algebra = {
+        cause_fail : Eff_types.Term.t -> 'r_cause;
+        cause_die : Eff_types.Term.t -> 'r_cause;
+        cause_interrupt : Eff_types.Term.t option -> 'r_cause;
+        cause_both : 'r_cause -> 'r_cause -> 'r_cause;
+      }
+      and fn_shape =
+          FnShape_update
+        | FnShape_updateSome
+        | FnShape_modify
+        | FnShape_modifySome
       and 't wait_state = {
         targets : fiber_id list;
         published : fiber_id list;
@@ -1262,4 +1327,16 @@ module Make :
         (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
          Eff_types.Defect.t, int, unit)
         run_decision -> refusal option
+      val program_rc112 : profile_data
+      val program_profile_data_value_refusal :
+        profile_data ->
+        Eff_types.Val.t ->
+        (int list, Eff_types.ProfileReason.t) Eff_types.Located.t option
+      val program_profile_data_literal_refusal :
+        profile_data ->
+        Eff_types.NativeOp.t Eff_types.Eff.t ->
+        (int list, Eff_types.ProfileReason.t) Eff_types.Located.t option
+      val program_answer_tree :
+        (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+        Eff_types.Completion.t -> Eff_types.Val.t
     end

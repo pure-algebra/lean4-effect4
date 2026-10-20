@@ -7,8 +7,6 @@
 type t = Z.t
 
 type crossing =
-  | Literal
-  | Reply
   | Arithmetic
   | Clock
   | Index
@@ -22,8 +20,6 @@ type refusal =
 exception Profile_refusal of refusal
 
 let crossing_name = function
-  | Literal -> "literal"
-  | Reply -> "reply"
   | Arithmetic -> "arithmetic"
   | Clock -> "clock"
   | Index -> "index"
@@ -60,7 +56,7 @@ let of_decimal text =
 let literal text =
   match of_decimal text with
   | Some value -> value
-  | None -> refuse Literal "a noncanonical generated literal"
+  | None -> invalid_arg "E4_clock.literal: a noncanonical generated literal"
 ;;
 
 (* The number-valued rows keep the rc.112 profile. A narrower native int must also be
@@ -74,10 +70,6 @@ let observe crossing what value =
 ;;
 
 let to_profile_nat value = observe Clock "milliseconds" value
-
-let check_nat crossing value =
-  ignore (observe crossing "a natural" (natural crossing value))
-;;
 
 let profile_add a b =
   observe Arithmetic "a sum" (Z.add (natural Arithmetic a) (natural Arithmetic b))

@@ -142,7 +142,7 @@ val row
 
 (** Why elaboration refused, at the address where it did ([Authoring.Refusal], a [Located]
     reason). *)
-type refusal = (int list, Effect4_gen.Api_gen.reason) Effect4_gen.Api_gen.located
+type refusal = (int list, Effect4_gen.Api_gen.reason) Eff_types.Located.t
 
 val refusal_text : refusal -> string
 
@@ -157,7 +157,6 @@ val build_checked
   -> t
   -> ( Kit.program * Eff_types.EffTy.t
        , [ `Name of refusal
-         | `Type of
-             (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located
+         | `Type of (int list, Effect4_gen.Api_gen.type_reason) Eff_types.Located.t
          ] )
        result

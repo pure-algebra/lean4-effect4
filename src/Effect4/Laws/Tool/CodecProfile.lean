@@ -45,12 +45,12 @@ theorem write_read {α : Type} [Canonical α] (value : α) (json : Effect4.Json)
     (h : write value = .ok json) : read json = .ok value := by
   unfold write at h
   split at h
-  · cases hc : carries (Canonical.toVal value) with
-    | false =>
-      simp only [hc, Bool.not_false, ↓reduceIte] at h
-      cases h
+  · cases hc : (Program.rc112.valueRefusal (Canonical.toVal value)).isSome with
     | true =>
-      simp only [hc, Bool.not_true, Bool.false_eq_true, ↓reduceIte] at h
+      simp only [hc, ↓reduceIte] at h
+      cases h
+    | false =>
+      simp only [hc, Bool.false_eq_true, ↓reduceIte] at h
       cases hr : read (α := α) (Canonical.print value) with
       | error r =>
         rw [hr] at h

@@ -77,7 +77,7 @@ printed header cannot carry (Codex's HO3-REQ-01, `Codegen/CallbackRequirements.l
 theorem printModule_erasure (name : String) (program : Program) (table : RowTable)
     (formed : Formation.InputFormed program table)
     (callbacks : Effect4.Codegen.invokeRequirementFault (nativeSignature table) program = none)
-    (inProfile : Effect4.Codegen.natLiteralsInProfile program = true) :
+    (inProfile : Effect4.Program.rc112.literalRefusal program = none) :
     printModule name program table =
       match typeOf program table with
       | some ty =>

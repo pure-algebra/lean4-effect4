@@ -46,7 +46,18 @@
                                                                             tested
    T11 Exploration: the replies drawn from a row's types fit its row; a program that branches on
        a list's length has a path for each branch and for each failure of its error column; each
-       path's tape replays the path on the machine.                         tested *)
+       path's tape replays the path on the machine.                         tested
+   T12 Ingress (Kit B7, M2): the review's A1.1 reply (`NegInt max_int`, -2^62, at an `int` row)
+       is not applied, on the tape route with and without the machine's cross-check and on a
+       native host: the run stops refused at that call, Lean's profile support naming the
+       negative integer at its path in the reply's value tree; the machine refuses it too. Red
+       control: the reply -2 finishes with 1, as Lean answers. A program that states a literal
+       outside the profile is unsupported at its node, and neither runner starts; the largest
+       literal inside runs. A reply that is no Lean value (a natural below zero) is refused as
+       not a value; the largest natural inside the profile is applied.       tested
+   T13 The command line's numeric options (Kit_serve S4, the review's A5.2): a negative, a
+       malformed, an empty, a fractional, a hexadecimal and an overflowing value are input
+       errors for `--limit`, `--budget` and `--width`; zero and five read.  tested *)
 
 open Eff_types
 open Effect4_kit
@@ -80,12 +91,13 @@ let doubling_src =
     (fun c -> A.perform "echo" c)
 ;;
 
-let build ?defs p =
+let build_in app ?defs p =
   match A.build ~app ?defs p with
   | Ok e -> e
   | Error r -> failwith (A.refusal_text r)
 ;;
 
+let build ?defs p = build_in app ?defs p
 let doubling = build doubling_src
 
 let forever =
@@ -111,6 +123,7 @@ let stop_text : Kit.stop -> string = function
   | Kit.Waiting (i, Val.Nat n) -> Printf.sprintf "waiting %d %d" i n
   | Kit.Waiting (i, _) -> Printf.sprintf "waiting %d" i
   | Kit.Refused (i, _, _, _) -> Printf.sprintf "refused %d" i
+  | Kit.Unsupported _ -> "unsupported"
   | Kit.Stopped why -> "stopped " ^ why
 ;;
 
@@ -197,8 +210,10 @@ let t2 () =
     (match
        Kit.Json.read { G.root = G.Shape_nat; defs = [] } (J.NatJson_numeral "1.5")
      with
-     | Error { G.site = G.JsonSite_value []; reason = G.JsonReason_expected G.Shape_nat }
-       -> true
+     | Error
+         { Located.site = G.JsonSite_value []
+         ; reason = G.JsonReason_expected G.Shape_nat
+         } -> true
      | _ -> false);
   check "T2 refuses trailing text" (not (ok "[1] 2"));
   check "T2 refuses a bad escape" (not (ok {|"\q"|}));
@@ -212,7 +227,7 @@ let t2 () =
     match Kit.Json.parse text with
     | Ok j ->
       (match Kit.Json.read nat_doc j with
-       | Error { G.site = G.JsonSite_value []; reason = r } -> r = reason
+       | Error { Located.site = G.JsonSite_value []; reason = r } -> r = reason
        | _ -> false)
     | Error _ -> false
   in
@@ -235,8 +250,10 @@ let t2 () =
     (match Kit.Json.parse {|{"a":1,"b":2,"a":3}|} with
      | Ok j ->
        (match Kit.Json.read pair_doc j with
-        | Error { G.site = G.JsonSite_value []; reason = G.JsonReason_duplicateField "a" }
-          -> true
+        | Error
+            { Located.site = G.JsonSite_value []
+            ; reason = G.JsonReason_duplicateField "a"
+            } -> true
         | _ -> false)
      | Error _ -> false);
   (* Controls: where yojson's text was wider than RFC 8259, Lean's grammar refuses, at the byte. *)
@@ -385,9 +402,7 @@ let t4 () =
   | Error _ -> check "T4 doubling types" false
 ;;
 
-let reason_head
-      (r : (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located)
-  =
+let reason_head (r : (int list, Effect4_gen.Api_gen.type_reason) Located.t) =
   match Kit.Json.refusal_json r with
   | J.NatJson_obj fields ->
     (match List.assoc_opt "reason" fields with
@@ -397,9 +412,7 @@ let reason_head
   | _ -> "?"
 ;;
 
-let path_text
-      (r : (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located)
-  =
+let path_text (r : (int list, Effect4_gen.Api_gen.type_reason) Located.t) =
   if r.site = [] then "." else String.concat "." (List.map string_of_int r.site)
 ;;
 
@@ -459,7 +472,7 @@ let t7 () =
          ( 0
          , Val.Nat 2
          , Kit.succeed (Val.Str "oops")
-         , Some (Kit.ReplyFault_answerType Ty.Unit) ));
+         , Kit.Fault (Kit.ReplyFault_answerType Ty.Unit) ));
   check "T7 the refused reply is not applied" (List.length (Kit.calls r.trace) = 1);
   check "T7 the machine refuses it too" (r.agrees = Some true);
   let failing_row =
@@ -644,6 +657,124 @@ let t11 () =
       (List.for_all (fun t -> Kit.replays app p t = Some true) paths)
 ;;
 
+let t12 () =
+  let module E4_engine = Effect4_engine.E4_engine in
+  let source = A.row "source" ~request:Ty.Unit ~answer:Ty.Int () in
+  let app = Kit.app ~rows:[ source ] () in
+  (* the review's probe (codex-review/probes/a1.ml): -1 minus the host's reply *)
+  let p =
+    build_in
+      app
+      A.(
+        let* x = perform "source" unit in
+        succeed (atom "minus" [ atom "minus" [ nat 0; nat 1 ]; x ]))
+  in
+  let a1 = Kit.succeed (Val.NegInt max_int) in
+  let at_ingress = function
+    | Kit.Refused
+        ( 0
+        , Val.Unit
+        , _
+        , Kit.Ingress
+            (E4_engine.Unsupported
+               { Located.site = [ 0 ]; reason = ProfileReason.BelowBound n }) ) ->
+      n = max_int
+    | _ -> false
+  in
+  List.iter
+    (fun check_machine ->
+       let r = Kit.run ~limit:8 ~check:check_machine app Kit.Reactor.tape [ a1 ] p in
+       check
+         (Printf.sprintf
+            "T12 A1.1's reply is refused at ingress, tape, check=%b"
+            check_machine)
+         (at_ingress r.trace.stop && Kit.calls r.trace = []);
+       if check_machine then check "T12 the machine refuses it too" (r.agrees = Some true))
+    [ false; true ];
+  let native = fun _ _ () -> Some (Completion.OfExit a1, ()) in
+  check
+    "T12 A1.1's reply is refused at ingress, native host"
+    (at_ingress (Kit.run ~limit:8 ~check:false app native () p).trace.stop);
+  check
+    "T12 red control: the reply -2 finishes with 1, as Lean answers"
+    ((Kit.run ~limit:8 app Kit.Reactor.tape [ Kit.succeed (Val.NegInt 1) ] p).trace.stop
+     = Kit.Finished (Exit.Success (Val.Nat 1)));
+  let edge = Int64.to_int 9007199254740991L in
+  let literal n = build_in (Kit.app ()) (A.succeed (A.nat n)) in
+  let r = Kit.run (Kit.app ()) Kit.Reactor.silent () (literal (edge + 1)) in
+  check
+    "T12 a literal outside the profile is unsupported at its node, and nothing runs"
+    (r.trace.stop
+     = Kit.Unsupported { Located.site = []; reason = ProfileReason.AboveBound (edge + 1) }
+     && r.trace.steps = []);
+  check
+    "T12 its report says refused, with the profile's refusal"
+    (match Kit.Json.report_json (Kit.app ()) r with
+     | J.NatJson_obj fields ->
+       List.assoc_opt "status" fields = Some (J.NatJson_str "refused")
+       && List.assoc_opt "profile" fields
+          = Some
+              (J.NatJson_obj
+                 [ "at", J.NatJson_arr []; "aboveBound", J.NatJson_nat (edge + 1) ])
+     | _ -> false);
+  check
+    "T12 red control: the largest literal inside the profile runs"
+    ((Kit.run (Kit.app ()) Kit.Reactor.silent () (literal edge)).trace.stop
+     = Kit.Finished (Exit.Success (Val.Nat edge)));
+  let r = Kit.run ~limit:8 app Kit.Reactor.tape [ Kit.succeed (Val.Nat (-1)) ] p in
+  check
+    "T12 a reply that is no Lean value is refused as not a value"
+    (match r.trace.stop with
+     | Kit.Refused (0, _, _, Kit.Ingress E4_engine.Not_a_value) -> true
+     | _ -> false);
+  let echo_app = Kit.app ~rows:[ A.row "echo" ~request:Ty.Unit ~answer:Ty.Nat () ] () in
+  let echo = build_in echo_app (A.perform "echo" A.unit) in
+  check
+    "T12 red control: the largest natural inside the profile is applied"
+    ((Kit.run ~limit:8 echo_app Kit.Reactor.tape [ Kit.succeed (Val.Nat edge) ] echo)
+       .trace
+       .stop
+     = Kit.Finished (Exit.Success (Val.Nat edge)))
+;;
+
+let t13 () =
+  let base : Kit_serve.request =
+    { op = "run"
+    ; program = None
+    ; rows = []
+    ; tape = None
+    ; limit = 1024
+    ; frames = false
+    ; budget = 64
+    ; width = 64
+    ; fast = false
+    }
+  in
+  let read flags =
+    match Kit_serve.with_flags base flags with
+    | r -> Some r
+    | exception Kit_serve.Input _ -> None
+  in
+  List.iter
+    (fun (flag, field) ->
+       List.iter
+         (fun text ->
+            check
+              (Printf.sprintf "T13 %s %S is an input error" flag text)
+              (Option.is_none (read [ flag; text ])))
+         [ "-1"; "x"; ""; "1.5"; "0x10"; "99999999999999999999" ];
+       List.iter
+         (fun n ->
+            check
+              (Printf.sprintf "T13 %s %d reads" flag n)
+              (Option.map field (read [ flag; string_of_int n ]) = Some n))
+         [ 0; 5 ])
+    [ ("--limit", fun (r : Kit_serve.request) -> r.limit)
+    ; ("--budget", fun (r : Kit_serve.request) -> r.budget)
+    ; ("--width", fun (r : Kit_serve.request) -> r.width)
+    ]
+;;
+
 let () =
   let corpus = fixture () in
   t1 ();
@@ -657,6 +788,8 @@ let () =
   t9 ();
   t10 ();
   t11 ();
+  t12 ();
+  t13 ();
   Printf.printf "test_kit: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
 ;;

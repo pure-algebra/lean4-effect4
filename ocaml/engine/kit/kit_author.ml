@@ -3,7 +3,7 @@
 open Eff_types
 module G = Effect4_gen.Api_gen
 
-type refusal = (int list, G.reason) G.located
+type refusal = (int list, G.reason) Eff_types.Located.t
 type term = G.env -> int list -> (Eff_types.Term.t, refusal) result
 type t = G.env -> int list -> (NativeOp.t Eff.t, refusal) result
 

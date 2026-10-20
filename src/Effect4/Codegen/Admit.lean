@@ -49,9 +49,10 @@ inductive SurfaceRefusal where
   /-- The block's leading class declarations are not the payload classes the printer declares
   for the program it reads to (decisions row 120). -/
   | classDeclarations
-  /-- A natural literal above the TypeScript face's bound: JavaScript reads the module's text as
-  another number than the program holds (DI-56; `E4-PRINT-CE-002`, decisions row 357). -/
-  | outsideProfile (value : Nat)
+  /-- A natural literal above the TypeScript face's bound, at the address of the node that states
+  it (`ProfileData.literalRefusal`): JavaScript reads the module's text as another number than the
+  program holds (DI-56; `E4-PRINT-CE-002`, decisions row 357). -/
+  | outsideProfile (why : ProfileRefusal)
   /-- The lexical check refused an import: a local name imported twice or no identifier, or an
   origin the reading does not allow (`Bindings.lawfulImports`). -/
   | imports
@@ -119,7 +120,7 @@ structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindi
   module : TypeScript.Module
   program : NativeEff
   formed : Formation.InputFormed program table
-  inProfile : natLiteralsInProfile program = true
+  inProfile : rc112.literalRefusal program = none
   typing : TypedProgram (nativeSignature table) program
   classes : Classes.Classes
   classDecls : List TypeScript.ClassDecl
@@ -162,10 +163,9 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
       match hformed : Formation.checkInput program table with
       | some why => .error (.formation why)
       | none =>
-      match hprofile : natLiteralsInProfile program with
-      | false => .error (.outsideProfile
-          (((natLiterals program).find? fun n => decide (rc112.natBound < n)).getD 0))
-      | true =>
+      match hprofile : rc112.literalRefusal program with
+      | some why => .error (.outsideProfile why)
+      | none =>
       match checkTypedProgram (nativeSignature table) program with
       | none => .error .illTyped
       | some typing =>

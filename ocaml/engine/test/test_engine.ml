@@ -22,11 +22,12 @@
         (Test/Program/FoldContract.lean).
      2  The goldens' Gen = Fast differential is `test_diff`'s (every corpus, every position),
         and `replay_steps` is `test_replay_steps`': this file repeats neither since 2026-10-15.
-     3  The numeric profile at load: a natural literal outside it is refused, from a value
-        and from the wire (EN8). The ordinal pin went with the conversion on 2026-10-15:
-        both instances open `Eff_types`, so `ocamlopt` holds the one alphabet. A host's
-        answer passes the same profile before the machine reads it (EN9,
-        `answer_ingress_check`): a reactor's answer with a natural outside it is refused.
+     3  The profile at ingress, Lean's profile support lowered on both instances: a natural
+        literal outside it is refused at its node's address, from a value and from the wire
+        (EN8, `numeric_ingress_check`). A host's answer is refused at ingress when it is no
+        Lean value or the profile does not support it, at its path (EN9,
+        `answer_ingress_check`). The ordinal pin went with the conversion on 2026-10-15:
+        both instances open `Eff_types`, so `ocamlopt` holds the one alphabet.
      5  The two `failwith` rows of the generated prelude (`sh_dispatcher_mk`,
         `sh_memo_map_mk`, api_engine.ml's PRELUDE) never fire in this file's runs: counted.
         Over every corpus, a raise fails `test_diff`.
@@ -294,9 +295,7 @@ module Rep (En : E4_engine.ENGINE) = struct
 
   (* The instance's OWN generated `Effect4.Api.run`, so the drive loop is checked against
      the function it is a re-implementation of. *)
-  let api_outcome (p : E.NativeOp.t E.Eff.t) ~(fuel : int) : string =
-    En.api_run (En.compile p) ~fuel
-  ;;
+  let api_outcome (p : E.NativeOp.t E.Eff.t) ~(fuel : int) : string = En.api_run p ~fuel
 end
 
 module RF = Rep (En_fast)
@@ -603,123 +602,143 @@ let multiplication_profile_check () =
   check_instance (module En_fast)
 ;;
 
-(* Public engine inputs refuse before narrowing or constructing a decision. *)
+(* EN8: a program's literals are profile support's, Lean's, lowered (`literal_refusal`, at
+   rc.112's profile): the first literal above the bound is refused at the address of its node,
+   from a value and from the wire, on both instances. The decision constructors check nothing:
+   a raw decision is a trusted input, and ingress is the driver's question. *)
 let numeric_ingress_check () =
-  let refused_at crossing f =
-    match f () with
-    | _ -> false
-    | exception E4_clock.Profile_refusal r -> r.E4_clock.crossing = crossing
-  in
-  let reply f = refused_at E4_clock.Reply f
-  and literal f = refused_at E4_clock.Literal f in
+  let edge = Int64.to_int 9007199254740991L in
+  let lit n = E.Eff.Succeed (E.Term.Lit (E.Lit.Nat n)) in
+  let above at n = Some { E.Located.site = at; reason = E.ProfileReason.AboveBound n } in
   let check_instance (module En : E4_engine.ENGINE) =
     let prefix = En.name ^ " numeric ingress: " in
     check
-      (prefix ^ "negative natural refused, at the reply")
-      (reply (fun () -> En.answer_async_success 0 0 (-1)));
+      (prefix ^ "the largest literal inside the profile")
+      (En.literal_refusal (lit edge) = None);
     check
-      (prefix ^ "large natural refused, at the reply")
-      (reply (fun () -> En.answer_async_success 0 0 (Int64.to_int 9007199254740992L)));
-    ignore (En.answer_async_success 0 0 0);
-    ignore (En.answer_async_success 0 0 (Int64.to_int 9007199254740991L));
+      (prefix ^ "a literal above the profile, refused at its node")
+      (En.literal_refusal (lit (edge + 1)) = above [] (edge + 1));
     check
-      (prefix ^ "negative literal refused, at the literal")
-      (literal (fun () -> En.compile (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (-1))))));
+      (prefix ^ "a literal in a bind's continuation, refused at its address")
+      (En.literal_refusal (E.Eff.Bind (p42, lit (edge + 1))) = above [ 1 ] (edge + 1));
     check
-      (prefix ^ "large literal refused, at the literal")
-      (literal (fun () ->
-         En.compile
-           (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Int64.to_int 9007199254740992L))))));
+      (prefix ^ "a literal above the profile from the wire, refused")
+      (match Eff_wire.decode_program_exact (Eff_wire.encode_program (lit (edge + 1))) with
+       | Some p -> En.literal_refusal p = above [] (edge + 1)
+       | None -> false);
     check
-      (prefix ^ "large wire literal refused, at the literal")
-      (literal (fun () ->
-         En.of_bytes
-           (Eff_wire.encode_program
-              (E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Int64.to_int 9007199254740992L)))))));
-    ignore (En.answer_async_float 0 0 0.0);
-    ignore (En.answer_async_float 0 0 1.5);
-    ignore (En.answer_async_float 0 0 (Int64.float_of_bits (Int64.of_int max_int)));
-    List.iter
-      (fun value ->
-         check
-           (prefix ^ "unrepresentable float refused, at the reply")
-           (reply (fun () -> En.answer_async_float 0 0 value)))
-      [ 2.0; -0.0; -1.0; infinity; nan ]
+      (prefix ^ "a constructor checks nothing")
+      (match En.answer_async_success 0 0 (edge + 1) with
+       | _ -> true
+       | exception _ -> false)
   in
-  check_instance (module En_fast)
+  check_instance (module En_fast);
+  check_instance (module En_gen)
 ;;
 
-(* EN9: a host's answer is host ingress. A reactor, as a driver holds one, answers; the driver
-   applies E4_engine.check_answer before the machine reads the answer. The red controls are
-   reactors that answer a natural outside the profile or a string that is not valid UTF-8, at
-   the top and nested, each refused at the reply crossing; the green ones answer naturals inside
-   the profile, valid UTF-8 outside ASCII, and fields that are no naturals. *)
+(* EN9: a host's answer is host ingress (`ingress`): an answer that is no Lean value is
+   `Not_a_value` (`Eff_val.valid` over its value tree), and one that Lean's profile support
+   refuses is `Unsupported`, at its path in the answer's value tree (`answerTree`, lowered), on
+   both instances. The red controls answer a natural outside the profile or a string that is
+   not valid UTF-8, at the top and nested; the green ones answer naturals inside the profile,
+   valid UTF-8 outside ASCII, and fields that are no naturals. *)
 let answer_ingress_check () =
-  let reactor answer = fun () (_ : E.Val.t) state -> Some (answer, state) in
-  let driven r =
-    match r () E.Val.Unit 0 with
-    | None -> ()
-    | Some (answer, _) -> E4_engine.check_answer answer
-  in
-  let refused answer =
-    match driven (reactor answer) with
-    | () -> false
-    | exception E4_clock.Profile_refusal r -> r.E4_clock.crossing = E4_clock.Reply
-  in
   let success v = E.Completion.OfExit (E.Exit.Success v) in
   let failure reasons = E.Completion.OfExit (E.Exit.Failure reasons) in
   let top = Int64.to_int 9007199254740991L
   and above = Int64.to_int 9007199254740992L in
-  List.iter
-    (fun (label, answer) ->
-       check ("answer ingress: " ^ label ^ " refused") (refused answer))
-    [ "a natural above the profile", success (E.Val.Nat above)
-    ; "a negative natural", success (E.Val.Nat (-1))
-    ; ( "a nested natural"
-      , success (E.Val.List [ E.Val.Pair (E.Val.Unit, E.Val.Some (E.Val.Nat above)) ]) )
-    ; "a constructor index", success (E.Val.Ctor (above, []))
-    ; "a handle key", success (E.Val.Handle (0, -1))
-    ; "a negative integer's magnitude", success (E.Val.NegInt above)
-    ; "an error code", failure [ E.Reason.Fail (E.Err.Tag above, []) ]
-    ; "an error's payload", failure [ E.Reason.Fail (E.Err.Payload (E.Val.Nat (-1)), []) ]
-    ; "a defect's payload", failure [ E.Reason.Die (E.Defect.User above, []) ]
-    ; "an interrupting fiber", failure [ E.Reason.Interrupt (Some (-1), []) ]
-    ; "a ref key", E.Completion.OfRefGet (-1)
-    ; (* a Lean String is valid UTF-8, so a reply's string must be (2.2a's open item) *)
-      "a string with a byte no UTF-8 starts with", success (E.Val.Str "\xff")
-    ; ( "a nested truncated sequence"
-      , success (E.Val.List [ E.Val.Some (E.Val.Str "caf\xc3") ]) )
-    ; "an encoded surrogate", success (E.Val.Str "\xed\xa0\x80")
-    ; "an error's text", failure [ E.Reason.Fail (E.Err.Text "\xff", []) ]
-    ; ( "an error's tag"
-      , failure [ E.Reason.Fail (E.Err.Tagged ("\xc0\xaf", "message"), []) ] )
-    ; ( "an error's tagged message"
-      , failure [ E.Reason.Fail (E.Err.Tagged ("tag", "\xff"), []) ] )
-    ; "an annotation's key", failure [ E.Reason.Die (E.Defect.BadName, [ "\xff", () ]) ]
-    ];
-  List.iter
-    (fun (label, answer) ->
-       check ("answer ingress: " ^ label ^ " passes") (not (refused answer)))
-    [ "the top natural", success (E.Val.Nat top)
-    ; "nested naturals", success (E.Val.Ctor (0, [ E.Val.Nat top; E.Val.NegInt 0 ]))
-    ; ( "no natural"
-      , success
-          (E.Val.List
-             [ E.Val.Str "x"; E.Val.Bytes [ 255 ]; E.Val.Float 1; E.Val.Ref (1, [ 2 ]) ])
-      )
-    ; ( "a failure"
-      , failure
-          [ E.Reason.Die (E.Defect.Error (E.Err.Tag top), [])
-          ; E.Reason.Interrupt (Some 0, [])
-          ] )
-    ; "a ref key", E.Completion.OfRefGet top
-    ; (* the red controls' green twins: valid UTF-8 outside ASCII passes *)
-      "a string outside ASCII", success (E.Val.Str "caf\xc3\xa9 \xf0\x9f\x98\x80")
-    ; ( "texts outside ASCII"
-      , failure
-          [ E.Reason.Fail (E.Err.Tagged ("t\xc3\xa9", "\xe2\x82\xac"), [ "k\xc3\xa9", () ])
-          ] )
-    ]
+  let unsupported = function
+    | Some (E4_engine.Unsupported _) -> true
+    | _ -> false
+  and not_a_value = function
+    | Some E4_engine.Not_a_value -> true
+    | _ -> false
+  in
+  let check_instance (module En : E4_engine.ENGINE) =
+    let prefix = En.name ^ " answer ingress: " in
+    List.iter
+      (fun (label, refused, answer) ->
+         check (prefix ^ label ^ " refused") (refused (En.ingress answer)))
+      [ "a natural above the profile", unsupported, success (E.Val.Nat above)
+      ; "a negative natural", not_a_value, success (E.Val.Nat (-1))
+      ; ( "a nested natural"
+        , unsupported
+        , success (E.Val.List [ E.Val.Pair (E.Val.Unit, E.Val.Some (E.Val.Nat above)) ]) )
+      ; "a constructor index", unsupported, success (E.Val.Ctor (above, []))
+      ; "a handle key", not_a_value, success (E.Val.Handle (0, -1))
+      ; "a negative integer's magnitude", unsupported, success (E.Val.NegInt above)
+      ; ( "the least negative integer past the profile"
+        , unsupported
+        , success (E.Val.NegInt top) )
+      ; "an error code", unsupported, failure [ E.Reason.Fail (E.Err.Tag above, []) ]
+      ; ( "an error's payload"
+        , not_a_value
+        , failure [ E.Reason.Fail (E.Err.Payload (E.Val.Nat (-1)), []) ] )
+      ; ( "a defect's payload"
+        , unsupported
+        , failure [ E.Reason.Die (E.Defect.User above, []) ] )
+      ; ( "an interrupting fiber"
+        , not_a_value
+        , failure [ E.Reason.Interrupt (Some (-1), []) ] )
+      ; "a ref key", not_a_value, E.Completion.OfRefGet (-1)
+      ; (* a Lean String is valid UTF-8, so a reply's string must be (2.2a's open item) *)
+        ( "a string with a byte no UTF-8 starts with"
+        , not_a_value
+        , success (E.Val.Str "\xff") )
+      ; ( "a nested truncated sequence"
+        , not_a_value
+        , success (E.Val.List [ E.Val.Some (E.Val.Str "caf\xc3") ]) )
+      ; "an encoded surrogate", not_a_value, success (E.Val.Str "\xed\xa0\x80")
+      ; "an error's text", not_a_value, failure [ E.Reason.Fail (E.Err.Text "\xff", []) ]
+      ; ( "an error's tag"
+        , not_a_value
+        , failure [ E.Reason.Fail (E.Err.Tagged ("\xc0\xaf", "message"), []) ] )
+      ; ( "an error's tagged message"
+        , not_a_value
+        , failure [ E.Reason.Fail (E.Err.Tagged ("tag", "\xff"), []) ] )
+      ; ( "an annotation's key"
+        , not_a_value
+        , failure [ E.Reason.Die (E.Defect.BadName, [ "\xff", () ]) ] )
+      ];
+    (* The refusal is located: the nested natural's path in the exit's value tree, the success
+       frame's child 0, the list's item 0, the pair's child 1, the option's child 0. *)
+    check
+      (prefix ^ "a nested natural is refused at its path")
+      (En.ingress
+         (success (E.Val.List [ E.Val.Pair (E.Val.Unit, E.Val.Some (E.Val.Nat above)) ]))
+       = Some
+           (E4_engine.Unsupported
+              { E.Located.site = [ 0; 0; 1; 0 ]
+              ; reason = E.ProfileReason.AboveBound above
+              }));
+    List.iter
+      (fun (label, answer) ->
+         check (prefix ^ label ^ " passes") (Option.is_none (En.ingress answer)))
+      [ "the top natural", success (E.Val.Nat top)
+      ; "nested naturals", success (E.Val.Ctor (0, [ E.Val.Nat top; E.Val.NegInt 0 ]))
+      ; "the least negative integer inside the profile", success (E.Val.NegInt (top - 1))
+      ; ( "no natural"
+        , success
+            (E.Val.List
+               [ E.Val.Str "x"; E.Val.Bytes [ 255 ]; E.Val.Float 1; E.Val.Ref (1, [ 2 ]) ])
+        )
+      ; ( "a failure"
+        , failure
+            [ E.Reason.Die (E.Defect.Error (E.Err.Tag top), [])
+            ; E.Reason.Interrupt (Some 0, [])
+            ] )
+      ; "a ref key", E.Completion.OfRefGet top
+      ; (* the red controls' green twins: valid UTF-8 outside ASCII passes *)
+        "a string outside ASCII", success (E.Val.Str "caf\xc3\xa9 \xf0\x9f\x98\x80")
+      ; ( "texts outside ASCII"
+        , failure
+            [ E.Reason.Fail
+                (E.Err.Tagged ("t\xc3\xa9", "\xe2\x82\xac"), [ "k\xc3\xa9", () ])
+            ] )
+      ]
+  in
+  check_instance (module En_fast);
+  check_instance (module En_gen)
 ;;
 
 (* ================================================================ the bench *)
@@ -751,8 +770,8 @@ let bench () =
       (2.0 *. float_of_int iters /. (ms /. 1000.0))
   in
   let w1_pair prog (p : E.NativeOp.t E.Eff.t) =
-    let pf = En_fast.compile p
-    and pg = En_gen.compile p in
+    let pf = p
+    and pg = p in
     w1 prog "Fast" (fun () ->
       for _ = 1 to iters do
         ignore (En_fast.api_run pf ~fuel:100)
@@ -785,14 +804,14 @@ let bench () =
     (fun n ->
        let p = chain n in
        let fuel = (8 * n) + 400 in
-       let w2 name compile api_run load_program run trace_length refs =
-         let prog = compile p in
+       let w2 name api_run load_program run trace_length refs =
+         let prog = p in
          let t = run prog ~fuel in
          let steps = trace_length t
          and nrefs = List.length (refs t) in
          let load_ms = best_of 5 (fun () -> ignore (load_program prog ~fuel)) *. 1000.0 in
          let ms = best_of 5 (fun () -> ignore (api_run prog ~fuel)) *. 1000.0 in
-         let words = held_words (fun () -> run (compile p) ~fuel) in
+         let words = held_words (fun () -> run p ~fuel) in
          Printf.printf
            "  %-5d %-9s %-6d %-5d %-9.3f %-10.3f %-12.0f %-12d %d\n"
            n
@@ -807,7 +826,6 @@ let bench () =
        in
        w2
          "Fast"
-         En_fast.compile
          (fun p ~fuel -> En_fast.api_run p ~fuel)
          (fun p ~fuel -> En_fast.load_program p ~fuel)
          (fun p ~fuel -> En_fast.run_program p ~fuel)
@@ -815,7 +833,6 @@ let bench () =
          En_fast.refs;
        w2
          "Gen"
-         En_gen.compile
          (fun p ~fuel -> En_gen.api_run p ~fuel)
          (fun p ~fuel -> En_gen.load_program p ~fuel)
          (fun p ~fuel -> En_gen.run_program p ~fuel)

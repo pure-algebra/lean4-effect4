@@ -260,7 +260,9 @@ let () =
                      (G.run_kit_program_to_val p))
               with
               | Ok v -> G.run_kit_program_of_val v = Some p
-              | Error { G.reason = G.JsonReason_naturalOutsideProfile _; _ } -> true
+              | Error
+                  { Eff_types.Located.reason = G.JsonReason_naturalOutsideProfile _; _ }
+                -> true
               | Error _ -> false);
            check
              (name ^ ": a trailing byte is refused")

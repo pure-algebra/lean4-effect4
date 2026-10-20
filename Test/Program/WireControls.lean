@@ -13,7 +13,7 @@ state as it was. An accepted request through `serveJson` appends one action.
 
 The profile's located reader (`Store/Domain/ShapeJson.lean`, Codex's R4.1) names a site and a
 reason for each refusal. Its red controls: a repeated key, a key that names no field, a misspelt
-case, a natural above `natLimit` and a number that is no natural refuse, and `Option Unit` refuses
+case, a natural above the profile's bound and a number that is no natural refuse, and `Option Unit` refuses
 as outside the profile. Objects in any order and both spellings of a list family read the same
 value, and an array's element keeps its index. Probe 1's four `unreadable` refusals
 (`docs/research/2026-10-18-authoring-probe/session/locate.txt`) now name their places, relative to
@@ -45,8 +45,14 @@ open Effect4.Tool.Wire (Envelope Connection decode serveJson)
   | .error .unprintable => true | _ => false
 #guard match CodecProfile.read (α := Nat) (Canonical.print (9007199254740992 : Nat)) with
   | .error (.unreadable ⟨.value [], .naturalOutsideProfile 9007199254740991⟩) => true | _ => false
-#guard !CodecProfile.carries (.list [.nat 1, .pair .unit (.nat 9007199254740992)])
-#guard CodecProfile.carries (.ctor 0 [.nat 9007199254740991, .negInt 9007199254740992])
+-- The profile the tool carries is rc.112's (profile support, `ProfileData.valueRefusal`): a natural
+-- past 2^53 - 1 refuses at its path, the child indices from the root.
+#guard rc112.valueRefusal (.list [.nat 1, .pair .unit (.nat 9007199254740992)]) =
+  some ⟨[1, 1], .aboveBound 9007199254740992⟩
+-- A negative integer refuses past the magnitude 2^53 - 1, as the int wire does; the edge carries.
+#guard rc112.valueRefusal (.ctor 0 [.nat 9007199254740991, .negInt 9007199254740992]) =
+  some ⟨[1], .belowBound 9007199254740992⟩
+#guard rc112.valueRefusal (.ctor 0 [.nat 9007199254740991, .negInt 9007199254740990]) = none
 
 /-! ## The Check codecs -/
 

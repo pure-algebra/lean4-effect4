@@ -6,13 +6,15 @@
     carrier's canonical image. The machine is the engine ([Kit_machine], [E4_host]). [run] is the
     one call: it picks the runner, as Lean's [Effect4.Run.atBudget] does, so a caller never asks
     which part of the language a program uses.
-    Depends on: Eff_types, Effect4_gen.Api_gen (generated), Kit_machine, Yojson (the text).
+    Depends on: Eff_types, Effect4_gen.Api_gen (generated), Kit_machine, E4_engine (ingress),
+    Yojson (the text).
 
     Behaviours it holds itself to, each by construction over the generated code:
     B1  The checker is Lean's: [check] answers what [Api.check] answers, a type or a located
         refusal, never both and never neither.
-    B2  A run stops one of five ways: finished, waiting on a call the host has no reply for,
-        refused (the host's reply does not fit the call's row), unsettled (the budget, the fuel or
+    B2  A run stops one of six ways: finished, waiting on a call the host has no reply for,
+        refused (the host's reply does not cross at ingress or does not fit the call's row),
+        unsupported (the program is outside the profile, B7), unsettled (the budget, the fuel or
         the rounds ended first: a finite probe, never a divergence), or stopped otherwise.
     B3  A program the call tree covers settles at the least budget whose run is not cut, checked
         (Lean's [settle_sound]); every other program runs on the machine.
@@ -24,7 +26,13 @@
         Lean's lowered reader and printer do the rest ([ShapeDoc.readLocated],
         [ShapeDoc.printTree], [NatJson.render]). A carrier read from JSON is the carrier whose
         canonical print is the JSON, normalised ([ShapeDoc.readLocated_exact]); a refusal names
-        its site and its reason. *)
+        its site and its reason.
+    B7  Ingress comes first, the engine's ([E4_engine.ingress], [E4_engine.literal_refusal]):
+        Lean's profile support at rc.112's profile, lowered. A program that states a literal
+        outside the profile is [Unsupported], and neither runner starts. A reply that is no Lean
+        value, or that the profile does not support, is not applied, on either runner, and the
+        stop names it at its path. A refusal is never the program's result (decisions rows 108
+        and 417 (1)). *)
 
 (** {1 The carriers} *)
 
@@ -63,7 +71,7 @@ val check
   :  app
   -> program
   -> ( Eff_types.EffTy.t
-       , (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located )
+       , (int list, Effect4_gen.Api_gen.type_reason) Eff_types.Located.t )
        result
 
 (** Program admission ([Program.admitProgram]) beyond typing: the application's own admission
@@ -109,13 +117,23 @@ type reply_fault = Effect4_gen.Api_gen.reply_fault =
   | ReplyFault_reservedDefect
   (** a failure carrying one of the machine's markers of malformed code *)
 
+(** Why a host's reply is not applied. *)
+type reply_refusal =
+  | Fault of reply_fault (** reply admission: the reply does not fit the call's row *)
+  | Ingress of Effect4_engine.E4_engine.outside
+  (** ingress (B7): the reply is no Lean value, or the profile does not support it, at its
+          path in the reply's value tree *)
+  | Engine (** the engine refused a reply the kit admits *)
+
 type stop =
   | Finished of exit (** the program ended with this exit *)
   | Waiting of int * Eff_types.Val.t
   (** the host has no reply for a call of this row with this request *)
-  | Refused of int * Eff_types.Val.t * exit * reply_fault option
-  (** the host's reply to this call does not fit the row: the fault, or [None] when the
-          engine refused a reply the kit admits *)
+  | Refused of int * Eff_types.Val.t * exit * reply_refusal
+  (** the host's reply to this call is not applied, and why *)
+  | Unsupported of Effect4_engine.E4_engine.profile_refusal
+  (** the program states a natural literal outside the profile, at its node's address (B7):
+          neither runner starts *)
   | Unsettled
   (** the budget, the fuel or the rounds ended first: a finite probe, not a divergence *)
   | Stopped of string
@@ -141,7 +159,9 @@ val calls : trace -> (int * Eff_types.Val.t * exit) list
 val tape_of : trace -> exit list
 
 type 's report =
-  { by_tree : bool (** the call tree answered; otherwise the machine *)
+  { by_tree : bool
+    (** the call tree answered; otherwise the machine. For an unsupported program, the runner it
+      would have run on *)
   ; budget : int option (** the least budget whose tree run is not cut *)
   ; trace : trace (** the run *)
   ; state : 's (** the reactor's state at the end *)
@@ -210,9 +230,7 @@ module Json : sig
 
   (** A refusal of the profile's reader: a reason at a site ([Store.JsonRefusal]). *)
   type refusal =
-    ( Effect4_gen.Api_gen.json_site
-      , Effect4_gen.Api_gen.json_reason )
-      Effect4_gen.Api_gen.located
+    (Effect4_gen.Api_gen.json_site, Effect4_gen.Api_gen.json_reason) Eff_types.Located.t
 
   (** The tree of one JSON text, or why it is none: Lean's text grammar over the text's bytes
       ([NatJson.parse], src/Effect4/Store/Domain/JsonText.lean, lowered), the one both session
@@ -254,11 +272,7 @@ module Json : sig
   val value_json : Eff_types.Val.t -> t
   val ty_json : Eff_types.Ty.t -> t
   val eff_ty_json : Eff_types.EffTy.t -> t
-
-  val refusal_json
-    :  (int list, Effect4_gen.Api_gen.type_reason) Effect4_gen.Api_gen.located
-    -> t
-
+  val refusal_json : (int list, Effect4_gen.Api_gen.type_reason) Eff_types.Located.t -> t
   val admit_json : Effect4_gen.Api_gen.admit_refusal -> t
 
   (** The checker's answer, then admission's: [{"status":"ok","type":…,"text":"Effect<A, E>"}],
@@ -266,7 +280,10 @@ module Json : sig
       [{"status":"refused","admission":…}]. *)
   val check_json : app -> program -> t
 
-  (** How a run stopped, as an answer's fields: its "status" and what the status names. *)
+  (** How a run stopped, as an answer's fields: its "status" and what the status names. A reply
+      refused at ingress names "fault": "outsideProfile" with its path ("at") and the number
+      ("aboveBound" or "belowBound"), or "fault": "notAValue"; a program refused at ingress is
+      "status": "refused" with its "profile" refusal. *)
   val stop_json : app -> stop -> (string * t) list
 
   (** A trace: how it stopped, its calls (each row by position and name) and its tape. *)

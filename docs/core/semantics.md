@@ -1792,6 +1792,17 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   The OCaml row and the TypeScript helper stay trusted rows, each run by a finite control
   (decisions rows 108 and 321).
   (`intAddIn_eq_some_iff`, `mulIn_eq_some_iff` (`src/Effect4/Laws/Machine/IntegerProfile.lean`)).
+- **Profile support refuses at ingress, located (`profile-support-located`)**: Profile support is
+  one judgment over the value tree and over a program's literals. Its bound is
+  `ProfileData.natBound`, and `admitsNat` is its leaf.
+  A value's refusal is absent exactly when every number of its tree is inside the bound.
+  A program's refusal is absent exactly when every literal of the literal fold is.
+  The refusal names the path of the first number outside, or the address of its node.
+  The engine and the kit run it at ingress, lowered by the LCNF route, before a reply is applied
+  or a program runs.
+  It establishes nothing of which face reads a supported value, nor of arithmetic inside a run.
+  (`ProfileData.valueRefusal_eq_none_iff`, `ProfileData.literalRefusal_eq_none_iff`
+  (`src/Effect4/Laws/Program/ProfileSupport.lean`)).
 - **The mask's printed form (`mask-printed-form-profile`)**: The mask is a derived form: the
   getter bound to its body under `uninterruptible` (decisions rows 245 and 246).
   The surface's builder is that expansion, and the form types as its body does under the saved

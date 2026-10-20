@@ -11,7 +11,8 @@
     {
       "out": "ocaml/eff/eff_types.ml",
       "import": [
-        "Effect4.Api"
+        "Effect4.Api",
+        "Effect4.Program.ProfileSupport"
       ],
       "cap": 0,
       "modules": true,
@@ -52,7 +53,9 @@
         "Effect4.Machine.Defect",
         "Effect4.Reason",
         "Effect4.Exit",
-        "Effect4.Machine.Completion"
+        "Effect4.Machine.Completion",
+        "Effect4.Located",
+        "Effect4.Program.ProfileReason"
       ]
     },
     {
@@ -199,7 +202,11 @@
         "Effect4.Program.awaits",
         "Effect4.Program.NativeOp.syncOpOf",
         "Effect4.Machine.syncOpStep",
-        "Effect4.Machine.Stores.empty"
+        "Effect4.Machine.Stores.empty",
+        "Effect4.Program.rc112",
+        "Effect4.Program.ProfileData.valueRefusal",
+        "Effect4.Program.ProfileData.literalRefusal",
+        "Effect4.Program.answerTree"
       ],
       "coverage": [
         "Effect4.Machine.Dispatcher.empty",
@@ -370,7 +377,8 @@
     {
       "out": "ocaml/engine/api_engine.ml",
       "import": [
-        "Effect4.Api"
+        "Effect4.Api",
+        "Effect4.Program.ProfileSupport"
       ],
       "cap": 2000,
       "types": [
@@ -393,7 +401,11 @@
         "Effect4.Program.Prepared.admit",
         "Effect4.Api.evaluate",
         "Effect4.Program.awaits",
-        "Effect4.Machine.reifyExitVal"
+        "Effect4.Machine.reifyExitVal",
+        "Effect4.Program.rc112",
+        "Effect4.Program.ProfileData.valueRefusal",
+        "Effect4.Program.ProfileData.literalRefusal",
+        "Effect4.Program.answerTree"
       ],
       "internal": [
         "Effect4.Scope.make",

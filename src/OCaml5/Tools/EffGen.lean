@@ -12,8 +12,8 @@ import Effect4.Program.Definitions
 Writes into `<outdir>`:
 
 * `eff_ctors.ml`    — `ctor_index_<t>`, `wire_tag_<t>`, `ctor_name_<t>`, `ctor_names_<t>` per
-                      type of the closed world below, and the literal visitor `lits_<t>`. The
-                      types are the LCNF route's `eff_types.ml`;
+                      type of the closed world below. The types are the LCNF route's
+                      `eff_types.ml`;
 * `eff_wire.ml`     — the canonical byte encoding (`src/Effect4/Store/Domain/Canonical.lean` framing,
                       constructor tag 10 with the index as a `Nat` frame) and its exact,
                       length-directed decoder, per type, over the hand-written `Eff_frame`;

@@ -353,7 +353,7 @@ theorem admitModule_complete {module : TypeScript.Module} {program : NativeEff}
     (read : Program.readModuleTyped (nativeSignature table) (nativeSpell table) NativeOp.call
       NativeOp.param [] module.decls = .ok program)
     (formed : Formation.InputFormed program table)
-    (inProfile : natLiteralsInProfile program = true)
+    (inProfile : rc112.literalRefusal program = none)
     (typing : TypedProgram (nativeSignature table) program)
     {classes : Classes.Classes} {classDecls : List TypeScript.ClassDecl}
     (classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =

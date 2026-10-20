@@ -4,63 +4,18 @@
 open Eff_types
 include E4_engine_intf
 
-(* EN9: every natural of a host's answer passes the profile a natural reply passes (EN8), and
-   every string is valid UTF-8, as a Lean `String` is; each refusal names the reply crossing (D9).
-   The matches name every constructor, so a constructor added to the answer's types is a compile
-   error here rather than a field this walk skips. *)
-let check_answer (answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t) : unit =
-  let nat n = E4_clock.check_nat E4_clock.Reply n in
-  let str s =
-    if not (String.is_valid_utf_8 s)
-    then E4_clock.refuse E4_clock.Reply "a string that is not valid UTF-8"
-  in
-  let rec value = function
-    | Val.Nat n | Val.NegInt n -> nat n
-    | Val.Str s -> str s
-    | Val.Ctor (index, args) ->
-      nat index;
-      List.iter value args
-    | Val.Handle (_, key) -> nat key
-    | Val.List items -> List.iter value items
-    | Val.Pair (a, b) ->
-      value a;
-      value b
-    | Val.Some a -> value a
-    | Val.Unit | Val.Bool _ | Val.Bytes _ | Val.None | Val.Ref _ | Val.Float _ -> ()
-  in
-  let error = function
-    | Err.Tag code -> nat code
-    | Err.Tagged (tag, message) ->
-      str tag;
-      str message
-    | Err.Text message -> str message
-    | Err.Payload payload -> value payload
-    | Err.Boom -> ()
-  in
-  let defect = function
-    | Defect.User payload -> nat payload
-    | Defect.Error e -> error e
-    | Defect.MissingService key ->
-      nat key.name;
-      nat key.service
-    | Defect.NotImplemented | Defect.AsyncFiber | Defect.BadName -> ()
-  in
-  let keys annotations = List.iter (fun (key, ()) -> str key) annotations in
-  let reason = function
-    | Reason.Fail (e, annotations) ->
-      error e;
-      keys annotations
-    | Reason.Die (d, annotations) ->
-      defect d;
-      keys annotations
-    | Reason.Interrupt (fiber, annotations) ->
-      Option.iter nat fiber;
-      keys annotations
-  in
-  match answer with
-  | Completion.OfExit (Exit.Success v) -> value v
-  | Completion.OfExit (Exit.Failure cause) -> List.iter reason cause
-  | Completion.OfRefGet cell -> nat cell
+(* The refusal as a report spells it. *)
+let outside_text = function
+  | Unsupported { Located.site; reason } ->
+    let path = "[" ^ String.concat "," (List.map string_of_int site) ^ "]" in
+    (match reason with
+     | ProfileReason.AboveBound n ->
+       Printf.sprintf "the natural %d at %s is above the profile's bound" n path
+     | ProfileReason.BelowBound n ->
+       Printf.sprintf "the integer -(%d+1) at %s is below the profile's bound" n path)
+  | Not_a_value ->
+    "the answer is no Lean value (a natural below zero, or a string not UTF-8)"
+  | Crossing why -> E4_clock.refusal_text why
 ;;
 
 (* ------------------------------------------------------------------------- the loop *)
@@ -92,36 +47,18 @@ module Make (I : INSTANCE) = struct
   let fire id : decision = I.RunDecision_fire id
   let yield_verdict id b : decision = I.RunDecision_yieldVerdict (id, b)
 
-  let answer_async_success fiber token n : decision =
-    E4_clock.check_nat E4_clock.Reply n;
-    I.RunDecision_answerAsync
-      ( fiber
-      , token
-      , Eff_types.Completion.OfExit (Eff_types.Exit.Success (Eff_types.Val.Nat n)) )
-  ;;
-
   let answer_async fiber token (answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t)
     : decision
     =
-    check_answer answer;
     I.RunDecision_answerAsync (fiber, token, answer)
+  ;;
+
+  let answer_async_success fiber token n : decision =
+    answer_async fiber token (Completion.OfExit (Exit.Success (Val.Nat n)))
   ;;
 
   let answer_async_value fiber token (v : Val.t) : decision =
-    let answer = Eff_types.Completion.OfExit (Eff_types.Exit.Success v) in
-    check_answer answer;
-    I.RunDecision_answerAsync (fiber, token, answer)
-  ;;
-
-  let answer_async_float fiber token value : decision =
-    let bits = Int64.bits_of_float value in
-    if Int64.compare bits 0L < 0 || Int64.compare bits (Int64.of_int max_int) > 0
-    then E4_clock.refuse E4_clock.Reply "float bits that the value carrier does not hold";
-    I.RunDecision_answerAsync
-      ( fiber
-      , token
-      , Eff_types.Completion.OfExit
-          (Eff_types.Exit.Success (Eff_types.Val.Float (Int64.to_int bits))) )
+    answer_async fiber token (Completion.OfExit (Exit.Success v))
   ;;
 
   let interrupt_from who target : decision = I.RunDecision_interruptFrom (who, [], target)
@@ -129,23 +66,33 @@ module Make (I : INSTANCE) = struct
   let advance_exact millis : decision = I.RunDecision_advance millis
   let advance millis : decision = advance_exact (E4_clock.of_nat millis)
 
+  (* -- ingress -------------------------------------------------------------------- *)
+
+  (* The selected profile, as data: rc.112's (D3; EN8, EN9). *)
+  let profile = I.program_rc112
+
+  (* EN8: Lean's profile support of the program's literals, lowered. *)
+  let literal_refusal (p : Eff_wire.program) : profile_refusal option =
+    I.program_profile_data_literal_refusal profile p
+  ;;
+
+  (* EN9: the answer's value tree, Lean's (`answerTree`), is a Lean value, and Lean's profile
+     support admits it. *)
+  let ingress (answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t) : outside option
+    =
+    let tree = I.program_answer_tree answer in
+    if not (Eff_val.valid tree)
+    then Some Not_a_value
+    else
+      Option.map
+        (fun why -> Unsupported why)
+        (I.program_profile_data_value_refusal profile tree)
+  ;;
+
   (* -- loading -------------------------------------------------------------------- *)
 
-  (* EN8: a natural literal of the program passes the selected profile before it runs. The
-     program type is the instance's own (`Eff_types`, the LCNF route's), so nothing converts. *)
-  let compile (p : Eff_wire.program) : program =
-    Eff_ctors.lits_eff
-      (function
-        | Lit.Nat n -> E4_clock.check_nat E4_clock.Literal n
-        | _ -> ())
-      p;
-    p
-  ;;
-
-  let of_bytes (b : string) : program option =
-    Option.map compile (Eff_wire.decode_program_exact b)
-  ;;
-
+  (* The program type is the instance's own (`Eff_types`, the LCNF route's), so nothing
+     converts. *)
   let load_program ?(table = []) (p : program) ~(fuel : int) : t =
     { prepared = I.prepare table p
     ; fuel_ = fuel
@@ -155,17 +102,9 @@ module Make (I : INSTANCE) = struct
     }
   ;;
 
-  let load ?table (p : Eff_wire.program) ~(fuel : int) : t =
-    load_program ?table (compile p) ~fuel
-  ;;
-
+  let of_bytes (b : string) : program option = Eff_wire.decode_program_exact b
+  let load ?table (p : Eff_wire.program) ~(fuel : int) : t = load_program ?table p ~fuel
   let admits (t : t) (d : decision) : bool = I.admit t.prepared t.m d
-
-  let load_bytes ?table (b : string) ~(fuel : int) : t option =
-    match of_bytes b with
-    | None -> None
-    | Some p -> Some (load_program ?table p ~fuel)
-  ;;
 
   (* -- driving -------------------------------------------------------------------- *)
 
@@ -248,9 +187,7 @@ module Make (I : INSTANCE) = struct
     drive (load_program ?table p ~fuel)
   ;;
 
-  let run ?table (p : Eff_wire.program) ~(fuel : int) : t =
-    run_program ?table (compile p) ~fuel
-  ;;
+  let run ?table (p : Eff_wire.program) ~(fuel : int) : t = run_program ?table p ~fuel
 
   (* -- the renderers -------------------------------------------------------------- *)
 

@@ -34,7 +34,7 @@ let run
   =
   match H.serve ~table:rows ~rounds reactor program ~fuel st with
   | Error (H.Load_outside_profile why) ->
-    { stop = Stopped ("a program outside the host profile: " ^ E4_clock.refusal_text why)
+    { stop = Stopped ("a program outside the host profile: " ^ E4_engine.outside_text why)
     ; calls = []
     ; state = st
     }
@@ -73,7 +73,7 @@ let run
       | H.Host H.Out_of_rounds -> Out_of_rounds
       | H.Host (H.Raised e) -> Stopped ("the host raised " ^ Printexc.to_string e)
       | H.Host (H.Outside_profile why) ->
-        Stopped ("outside the host profile: " ^ E4_clock.refusal_text why)
+        Stopped ("outside the host profile: " ^ E4_engine.outside_text why)
       | H.Host H.Unknown_row -> Stopped "a call's row is not in the table"
     in
     { stop; calls; state = served.state }

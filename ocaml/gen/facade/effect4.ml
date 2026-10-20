@@ -35,6 +35,8 @@ module LiveRecord = struct
     Api_gen.live_record_save
 end
 
+module Located = Eff_types.Located
+
 module Machine = struct
   module Completion = Eff_types.Completion
   module Defect = Eff_types.Defect
@@ -174,6 +176,7 @@ module Program = struct
     let step =
       Api_gen.program_prepared_step
   end
+  module ProfileReason = Eff_types.ProfileReason
   module Registration = Eff_types.Registration
   module Row = Eff_types.Row
   module RowArg = Eff_types.RowArg

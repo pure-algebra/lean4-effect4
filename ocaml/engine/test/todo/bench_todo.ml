@@ -77,7 +77,8 @@ let () =
     match H.serve ~table:built.app.rows provider built.program ~fuel:1000 state with
     | Ok served -> served
     | Error (H.Load_outside_profile why) ->
-      failwith ("a request's program did not load: " ^ E4_clock.refusal_text why)
+      failwith
+        ("a request's program did not load: " ^ Effect4_engine.E4_engine.outside_text why)
   in
   let result (type st) (s : st H.served) lane =
     hex_of
@@ -191,8 +192,10 @@ let () =
   mean
     "answer: the frames built by hand (Native_todo.Untyped)"
     (answer Native_todo.Untyped.provider);
+  mean "the ingress check (E4_engine.ingress: Lean's profile support, lowered)" (fun x ->
+    F.ingress (answer typed x));
   mean
-    "the ingress check and the decision (E4_engine.answer_async)"
+    "the decision (E4_engine.answer_async)"
     (fun ((_, _, _, fiber, token, _, _) as x) ->
        F.answer_async fiber token (answer typed x));
   let decided =

@@ -15,9 +15,10 @@
    N3  Hostile lines refuse and change nothing: text that is not JSON, an unknown tag, an
        unselected version, and a method that disagrees with its request; the next line is
        served as if they had not come.                                          tested
-   N4  Both drivers carry the same naturals (`CodecProfile.carries`, up to 2^53 - 1): on
-       tool-numbers.jsonl (2^53 - 1 answers; 2^53 and a line that parses but does not read refuse
-       as `codec unreadable`, at a site) every reply equals Lean's (tool-numbers-replies.jsonl,
+   N4  Both drivers carry the same naturals (profile support at rc.112, up to 2^53 - 1,
+       `ProfileData.valueRefusal`): on tool-numbers.jsonl (2^53 - 1 answers; 2^53 and a line
+       that parses but does not read refuse as `codec unreadable`, at a site) every reply
+       equals Lean's (tool-numbers-replies.jsonl,
        printed by tools/Drivers/Workspace.lean). Both drivers read the text by one grammar
        (NatJson.parse), so 2^53 + 1 and a number past the int range are in both trees, as a
        natural or as a numeral, and the reader refuses each at its site as outside the profile.

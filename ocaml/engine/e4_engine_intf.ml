@@ -15,8 +15,8 @@
        includes `E4_engine`, so `ocamlopt` checks the implementation against the interface
        through the same declarations.                               by construction
    EI2 Callers keep their paths: `E4_engine.ENGINE`, `E4_engine.INSTANCE`, `E4_engine.answer`
-       with its constructors, `E4_engine.frontier` with its fields, `E4_engine.check_answer`,
-       `E4_engine.Make` and `E4_engine.Fast`.                      by construction *)
+       with its constructors, `E4_engine.frontier` with its fields, `E4_engine.outside` with its
+       constructors, `E4_engine.Make` and `E4_engine.Fast`.        by construction *)
 
 open Eff_types
 
@@ -38,6 +38,25 @@ module Alphabet = struct
     | Outside_profile of E4_clock.refusal
     (** a value refused at a named crossing (D9); the input machine is retained *)
     | Delay of frontier (** the fuel ran out; the command residue is non-empty *)
+
+  (** Lean's profile-support refusal ([Effect4.Program.ProfileRefusal],
+      src/Effect4/Program/ProfileSupport.lean): a number outside the profile's bound, at its path
+      in a value tree, or at the address of the program node whose literal it is. *)
+  type profile_refusal = (int list, ProfileReason.t) Located.t
+
+  (** Why a value is outside the profile (DI-56; decisions row 408 (2)). *)
+  type outside =
+    | Unsupported of profile_refusal
+    (** Lean's profile support refused it at ingress, at the selected profile ([rc112]):
+            a host's answer ([ProfileData.valueRefusal] over its value tree) or a program's
+            literal ([ProfileData.literalRefusal]), lowered *)
+    | Not_a_value
+    (** a host's answer is no Lean value: a natural below zero, a byte outside 0..255 or a
+            string that is not UTF-8 ([Eff_val.valid] over its value tree). Lean's judgments
+            cannot ask, since a Lean value has no such shape *)
+    | Crossing of E4_clock.refusal
+    (** a step's numeric crossing refused a value the step computed ([E4_clock]); the
+            arithmetic crossing stays in the builtin rows until M4 *)
 end
 
 include Alphabet
@@ -247,6 +266,25 @@ module type INSTANCE = sig
   (* An exit as a value (`Effect4.Machine.exitImage`), as Lean's `reifyExitVal` writes it. *)
   val reify_exit_val : (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t -> Val.t
 
+  (** Profile support (src/Effect4/Program/ProfileSupport.lean), lowered: the profile as data
+      ([Effect4.Program.ProfileData]), rc.112's ([rc112]), a host's answer as one value tree
+      ([answerTree]), and the judgment over a value and over a program's literals
+      ([ProfileData.valueRefusal], [ProfileData.literalRefusal]). *)
+  type profile_data
+
+  val program_rc112 : profile_data
+  val program_answer_tree : (Val.t, Err.t, Defect.t, fiber_id, unit) Completion.t -> Val.t
+
+  val program_profile_data_value_refusal
+    :  profile_data
+    -> Val.t
+    -> (int list, ProfileReason.t) Located.t option
+
+  val program_profile_data_literal_refusal
+    :  profile_data
+    -> program
+    -> (int list, ProfileReason.t) Located.t option
+
   (** The free rows. *)
 
   val fibers : machine -> (fiber_id * fiber) list
@@ -296,7 +334,10 @@ module type ENGINE = sig
 
   type t
   type decision
-  type program
+
+  (** The one program type of the wire and every instance (`Eff_types`, the LCNF route's): a
+      program crosses with no conversion. *)
+  type program = NativeOp.t Eff.t
 
   (** {2 The tape} *)
 
@@ -306,8 +347,8 @@ module type ENGINE = sig
   val yield_verdict : int -> bool -> decision
 
   (** [answer_async_success fiber token n] answers the parked token with
-      `Completion.ofExit (Exit.success (Val.nat n))`.
-      @raise E4_clock.Profile_refusal at [Reply] for a negative or out-of-profile natural. *)
+      `Completion.ofExit (Exit.success (Val.nat n))`. A constructor: the answer's ingress is
+      {!ingress}'s question. *)
   val answer_async_success : int -> int -> int -> decision
 
   val answer_async
@@ -316,18 +357,12 @@ module type ENGINE = sig
     -> (Val.t, Err.t, Defect.t, int, unit) Completion.t
     -> decision
   (* [answer_async fiber token c] answers the parked token with the completion [c], a success or a
-     failure, after the host-ingress check (EN9). *)
+     failure. A constructor: a host driver asks {!ingress} first (EN9). *)
 
   val answer_async_value : int -> int -> Val.t -> decision
   (* [answer_async_value fiber token v] answers the parked token with `Completion.ofExit
-     (Exit.success v)`, any value, after the host-ingress check every natural passes (EN9,
-     {!check_answer}). Whether it fits the call's row is `admits`'s question.
-     @raise E4_clock.Profile_refusal at [Reply] for an out-of-profile natural or a string that
-     is not valid UTF-8 inside [v]. *)
-
-  (** Answers with the exact IEEE-754 bit pattern when it fits [Val.Float]'s carrier.
-      @raise E4_clock.Profile_refusal at [Reply] before conversion when those bits do not fit. *)
-  val answer_async_float : int -> int -> float -> decision
+     (Exit.success v)`, any value. Whether it crosses is {!ingress}'s question, and whether it
+     fits the call's row is `admits`'s. *)
 
   val interrupt_from : int option -> int -> decision
   val install_middleware : decision
@@ -337,21 +372,30 @@ module type ENGINE = sig
       [advance_exact] also accepts values above the host integer range. *)
   val advance_exact : E4_clock.t -> decision
 
+  (** {2 Ingress} *)
+
+  (** Profile support of a program at the selected profile ([rc112]): Lean's
+      [ProfileData.literalRefusal], lowered. [None] when the profile supports every natural
+      literal the program states; otherwise the first literal above the bound, at the address
+      of its node (EN8). A host driver asks it before {!load}. *)
+  val literal_refusal : Eff_wire.program -> profile_refusal option
+
+  (** A host's answer at ingress (decisions row 394 (1), EN9): [None] when it crosses. It is
+      [Not_a_value] when its value tree ([answerTree], lowered) is no Lean value
+      ([Eff_val.valid]), and [Unsupported] when Lean's profile support refuses that tree at
+      the selected profile ([ProfileData.valueRefusal] at [rc112], lowered). Never [Crossing].
+      A host driver asks it before {!admits}. *)
+  val ingress : (Val.t, Err.t, Defect.t, int, unit) Completion.t -> outside option
+
   (** {2 Loading} *)
 
-  (** The program, its natural literals checked against the selected profile. The program type
-      is `Eff_types`', which the LCNF route declares once for every instance.
-      @raise E4_clock.Profile_refusal at [Literal] for a negative or out-of-profile natural
-      literal. *)
-  val compile : Eff_wire.program -> program
-
+  (** A program from its canonical bytes, exactly ([Eff_wire.decode_program_exact]). *)
   val of_bytes : string -> program option
 
   (* [?table] is the program's row table (`Api.Built.table`); [[]] when omitted, for a program
      with no host row. Every step reads it. *)
   val load_program : ?table:Row.t list -> program -> fuel:int -> t
   val load : ?table:Row.t list -> Eff_wire.program -> fuel:int -> t
-  val load_bytes : ?table:Row.t list -> string -> fuel:int -> t option
 
   (** {2 Driving} *)
 
@@ -430,16 +474,11 @@ module type E4_engine = sig
     include Alphabet
   end
 
-  (** {1 A host's answer at ingress} *)
+  (** {1 Outside the profile} *)
 
-  (** EN9: every natural of a host's answer ([Api.HostSession.Answer], src/Effect4/Api/HostSession.lean)
-      through [E4_clock.check_nat Reply]: [Val.nat], a [Val.ctor] index, a [Val.handle] key, a
-      [Val.negInt] magnitude, [Err.tag], [Defect.user], an interrupting fiber and a [RefKey].
-      Every string of the answer must be valid UTF-8, since a Lean [String] is: [Val.str], both
-      strings of [Err.tagged], [Err.text] and each annotation's key. Raises
-      [E4_clock.Profile_refusal] at [Reply] at the first natural outside the profile or the first
-      string that is not valid UTF-8. The byte and bit-pattern fields are not read here. *)
-  val check_answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t -> unit
+  (** The refusal as a report spells it: the number and its path, the value that is no Lean
+      value, or the crossing's text ([E4_clock.refusal_text]). *)
+  val outside_text : outside -> string
 
   module type INSTANCE = INSTANCE
   module type ENGINE = ENGINE

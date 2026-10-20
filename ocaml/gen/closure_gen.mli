@@ -81,14 +81,16 @@ and check_input =
   | CheckInput_part of sig_data * Eff_types.Ty.t list *
       Eff_types.NativeOp.t Eff_types.Eff.t
 and verdict = {
-  result : (Eff_types.EffTy.t, (int list, type_reason) located) result;
+  result :
+    (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result;
   table : entry list;
 }
 and admit_refusal =
-    AdmitRefusal_illTyped of (int list, type_reason) located
+    AdmitRefusal_illTyped of (int list, type_reason) Eff_types.Located.t
   | AdmitRefusal_signature of sig_refusal
   | AdmitRefusal_emptyColumn of string list
-  | AdmitRefusal_formation of (string list, formation_reason) located
+  | AdmitRefusal_formation of
+      (string list, formation_reason) Eff_types.Located.t
 and reply_fault =
     ReplyFault_answerType of Eff_types.Ty.t
   | ReplyFault_errorType of Eff_types.Ty.t
@@ -122,22 +124,38 @@ and reason =
   | Reason_duplicateDef of string
   | Reason_unboundParam of string
   | Reason_duplicateParam of string
-and ('site, 'reason) located = { site : 'site; reason : 'reason; }
 and 'op loop_spec = {
   while_ :
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-    env -> int list -> (Eff_types.Term.t, (int list, reason) located) result;
-  body :
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
     env ->
-    int list -> ('op Eff_types.Eff.t, (int list, reason) located) result;
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result;
+  body :
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    env ->
+    int list ->
+    ('op Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result;
   step :
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-    env -> int list -> (Eff_types.Term.t, (int list, reason) located) result;
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result;
   result :
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-    env -> int list -> (Eff_types.Term.t, (int list, reason) located) result;
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result;
   cursor_ty : Eff_types.Ty.t option;
 }
 and env = {
@@ -154,12 +172,14 @@ and 'op module_ = {
     (string *
      (env ->
       int list ->
-      ('op Eff_types.LayerTerm.t, (int list, reason) located) result))
+      ('op Eff_types.LayerTerm.t, (int list, reason) Eff_types.Located.t)
+      result))
     list;
   defs : 'op def_src list;
   main :
     env ->
-    int list -> ('op Eff_types.Eff.t, (int list, reason) located) result;
+    int list ->
+    ('op Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result;
   types : (string * Eff_types.Ty.t) list;
 }
 and sketch = {
@@ -221,7 +241,7 @@ and workspace = { state : state; memo : memo; }
 and effect4_tool_codec_profile_refusal =
     Effect4_tool_codec_profile_refusal_unsupportedProfile
   | Effect4_tool_codec_profile_refusal_unreadable of
-      (json_site, json_reason) located
+      (json_site, json_reason) Eff_types.Located.t
   | Effect4_tool_codec_profile_refusal_unprintable
 and effect4_tool_wire_refusal =
     Effect4_tool_wire_refusal_codec of effect4_tool_codec_profile_refusal
@@ -583,6 +603,16 @@ and 'k deferred_store = {
   cells : 'k deferred_cell list;
   due : 'k owed list;
 }
+and call_class = CallClass_row of Eff_types.RowKind.t | CallClass_external
+and invocation_forms = { perform : bool; callback : bool; }
+and profile_data = {
+  name : string;
+  nat_bound : int;
+  admitted_forms : (call_class * invocation_forms) list;
+  adapters : (string * string) list;
+  imports : string list;
+  error_projection : string;
+}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket = {
   priority : int;
   tasks : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task list;
@@ -818,21 +848,26 @@ and type_reason =
   | TypeReason_breakOutsideLoop
   | TypeReason_literalOutsideAlphabet of Eff_types.Lit.t
   | TypeReason_instantiatedFormation of string *
-      (string list, formation_reason) located
-  | TypeReason_recordTerm of (int list, record_typing_reason) located
+      (string list, formation_reason) Eff_types.Located.t
+  | TypeReason_recordTerm of
+      (int list, record_typing_reason) Eff_types.Located.t
   | TypeReason_recordCause of
-      (int list, (int list, record_typing_reason) located) located
-  | TypeReason_tupleTerm of (int list, tuple_typing_reason) located
+      (int list, (int list, record_typing_reason) Eff_types.Located.t)
+      Eff_types.Located.t
+  | TypeReason_tupleTerm of
+      (int list, tuple_typing_reason) Eff_types.Located.t
   | TypeReason_tupleCause of
-      (int list, (int list, tuple_typing_reason) located) located
+      (int list, (int list, tuple_typing_reason) Eff_types.Located.t)
+      Eff_types.Located.t
   | TypeReason_errorPayloadField of Eff_types.Ty.t * string list *
       Eff_types.Ty.t
   | TypeReason_errorSpelling of Eff_types.Ty.t * Eff_types.Ty.t
   | TypeReason_binderTerm of string * Eff_types.Ty.t
   | TypeReason_resultNotSubtype of string * Eff_types.Ty.t * Eff_types.Ty.t
-  | TypeReason_foldTerm of (int list, fold_typing_reason) located
+  | TypeReason_foldTerm of (int list, fold_typing_reason) Eff_types.Located.t
   | TypeReason_foldCause of
-      (int list, (int list, fold_typing_reason) located) located
+      (int list, (int list, fold_typing_reason) Eff_types.Located.t)
+      Eff_types.Located.t
   | TypeReason_maskRestoreExpected of Eff_types.Ty.t
   | TypeReason_definitionBlock
   | TypeReason_definitionsMismatch of int * int
@@ -935,7 +970,7 @@ and event =
   | Event_apply of sel
   | Event_wire of command
 and explanation = {
-  refusal : (int list, type_reason) located;
+  refusal : (int list, type_reason) Eff_types.Located.t;
   site : site;
   part : check_input option;
 }
@@ -1131,6 +1166,22 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope = {
   strategy : Eff_types.FinalizerStrategy.t;
   state : ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state;
 }
+and 'r_val_ val_algebra = {
+  val_unit : 'r_val_;
+  val_bool : bool -> 'r_val_;
+  val_nat : int -> 'r_val_;
+  val_str : string -> 'r_val_;
+  val_bytes : int list -> 'r_val_;
+  val_list : 'r_val_ list -> 'r_val_;
+  val_pair : 'r_val_ -> 'r_val_ -> 'r_val_;
+  val_none : 'r_val_;
+  val_some : 'r_val_ -> 'r_val_;
+  val_ctor : int -> 'r_val_ list -> 'r_val_;
+  val_ref : int -> int list -> 'r_val_;
+  val_handle : int -> int -> 'r_val_;
+  val_neg_int : int -> 'r_val_;
+  val_float : int -> 'r_val_;
+}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop = {
   answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
   popped : ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim list;
@@ -1168,7 +1219,9 @@ and node_env =
 and entry = {
   path : int list;
   env : node_env option;
-  result : (Eff_types.EffTy.t, (int list, type_reason) located) result option;
+  result :
+    (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result
+    option;
 }
 and term_typing_reason =
     TermTypingReason_record of record_typing_reason
@@ -1179,7 +1232,8 @@ and term_typing_reason =
   | TermTypingReason_refusedArguments of string * Eff_types.Ty.t list
 and row_typing_refusal =
     RowTypingRefusal_requestNotSubtype
-  | RowTypingRefusal_formation of (string list, formation_reason) located
+  | RowTypingRefusal_formation of
+      (string list, formation_reason) Eff_types.Located.t
   | RowTypingRefusal_term of Eff_types.Ty.t
   | RowTypingRefusal_resultNotSubtype of Eff_types.Ty.t * Eff_types.Ty.t
 and protocol = {
@@ -1275,6 +1329,32 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
   | ScopeState_openInline of 'k * 'f
   | ScopeState_openMap of ('k * 'f) list
   | ScopeState_closed of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+and ('op, 'a) arg_reader = {
+  child : int -> eff_fam -> 'a;
+  term : int -> Eff_types.Term.t -> 'a;
+  cause : int -> Eff_types.CauseTerm.t -> 'a;
+  op : int -> 'op -> 'a;
+  nat : int -> int -> 'a;
+  mode : int -> Eff_types.ObserverMode.t -> 'a;
+  bool : int -> bool -> 'a;
+  key : int -> Eff_types.ServiceKey.t -> 'a;
+  decision : int -> Eff_types.Decision.t -> 'a;
+  opt_ty : int -> Eff_types.Ty.t option -> 'a;
+  decls : int -> Eff_types.DefDecl.t list -> 'a;
+  fork_options : int -> Eff_types.ForkOptions.t -> 'a;
+  opt_term : int -> Eff_types.Term.t option -> 'a;
+  keys : int -> Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'a;
+  lit : int -> Eff_types.Lit.t -> 'a;
+  path : int -> int list -> 'a;
+}
+and eff_fam =
+    EffFam_eff
+  | EffFam_stmt
+  | EffFam_stmts
+  | EffFam_effs
+  | EffFam_action
+  | EffFam_layer
+  | EffFam_layers
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step =
     FrameStep_running of ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber
   | FrameStep_finished of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
@@ -1339,21 +1419,28 @@ and 'op def_src = {
   error : Eff_types.Ty.t;
   requires : Eff_types.ServiceKey.t list;
   body :
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result)
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result)
     list ->
     env ->
-    int list -> ('op Eff_types.Eff.t, (int list, reason) located) result;
+    int list ->
+    ('op Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result;
   role : Eff_types.DefRole.t;
   program_params : Eff_types.ParamDecl.t list;
 }
 and stmt_ty =
     StmtTy_step of gen_ty * Eff_types.Ty.t list
-  | StmtTy_ret of (Eff_types.Ty.t, (int list, type_reason) located) result
+  | StmtTy_ret of
+      (Eff_types.Ty.t, (int list, type_reason) Eff_types.Located.t) result
   | StmtTy_pass
 and cause_typing_reason =
-    CauseTypingReason_record of (int list, record_typing_reason) located
-  | CauseTypingReason_tuple of (int list, tuple_typing_reason) located
-  | CauseTypingReason_fold of (int list, fold_typing_reason) located
+    CauseTypingReason_record of
+      (int list, record_typing_reason) Eff_types.Located.t
+  | CauseTypingReason_tuple of
+      (int list, tuple_typing_reason) Eff_types.Located.t
+  | CauseTypingReason_fold of
+      (int list, fold_typing_reason) Eff_types.Located.t
 and binder_term = {
   term : Eff_types.Term.t;
   param : Eff_types.Ty.t;
@@ -1512,7 +1599,7 @@ and record_typing_reason =
   | RecordTypingReason_missingReadField of string * Eff_types.Ty.t
   | RecordTypingReason_optionalReadField of string * Eff_types.Ty.t
   | RecordTypingReason_declarationFormation of
-      (string list, formation_reason) located
+      (string list, formation_reason) Eff_types.Located.t
 and tuple_typing_reason =
     TupleTypingReason_nonTuple of int * Eff_types.Ty.t
   | TupleTypingReason_outOfBounds of int * int
@@ -1635,7 +1722,7 @@ and answer =
 and doc_view = {
   snap : snap;
   type_ : Eff_types.EffTy.t option;
-  refusals : (int list, type_reason) located list;
+  refusals : (int list, type_reason) Eff_types.Located.t list;
   holes : hole_view list;
   declared : hole_decl list;
   inspection : effect4_tool_inspection option;
@@ -1667,12 +1754,18 @@ and method_hints = {
   open_world : bool;
 }
 and plan = { shared : string list; tools : string list; }
-and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
+and 'r_cause cause_term_algebra = {
+  cause_fail : Eff_types.Term.t -> 'r_cause;
+  cause_die : Eff_types.Term.t -> 'r_cause;
+  cause_interrupt : Eff_types.Term.t option -> 'r_cause;
+  cause_both : 'r_cause -> 'r_cause -> 'r_cause;
+}
 and fn_shape =
     FnShape_update
   | FnShape_updateSome
   | FnShape_modify
   | FnShape_modifySome
+and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
 and spec = { scheme : scheme; cite : string; }
 and atom_row = {
   name : string;
@@ -1710,12 +1803,6 @@ and 'r_ty ty_algebra = {
   ty_number : 'r_ty;
   ty_bytes : 'r_ty;
   ty_context_of : Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'r_ty;
-}
-and 'r_cause cause_term_algebra = {
-  cause_fail : Eff_types.Term.t -> 'r_cause;
-  cause_die : Eff_types.Term.t -> 'r_cause;
-  cause_interrupt : Eff_types.Term.t option -> 'r_cause;
-  cause_both : 'r_cause -> 'r_cause -> 'r_cause;
 }
 and 'op part = {
   sig_ : 'op signature;
@@ -1805,7 +1892,7 @@ and view = {
 }
 and effect4_program_edit_session_view = {
   table : entry list;
-  refusals : (int list, type_reason) located list;
+  refusals : (int list, type_reason) Eff_types.Located.t list;
   type_ : Eff_types.EffTy.t option;
 }
 and effect4_tool_inspection = {
@@ -1814,7 +1901,7 @@ and effect4_tool_inspection = {
   context : sig_data;
   focus : Eff_types.NativeOp.t focus option;
   entry : entry option;
-  refusal : (int list, type_reason) located option;
+  refusal : (int list, type_reason) Eff_types.Located.t option;
 }
 and place_refusal =
     PlaceRefusal_outOfRange of int
@@ -1825,13 +1912,14 @@ and feed_refusal =
     FeedRefusal_noProgram of int list
   | FeedRefusal_noFocus of int list
   | FeedRefusal_notKept of (Eff_types.Ty.t list * Eff_types.EffTy.t) *
-      (Eff_types.EffTy.t, (int list, type_reason) located) result
-  | FeedRefusal_refused of (int list, type_reason) located list
+      (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result
+  | FeedRefusal_refused of (int list, type_reason) Eff_types.Located.t list
   | FeedRefusal_typeChanged of Eff_types.EffTy.t * Eff_types.EffTy.t
   | FeedRefusal_localChanged of
       (Eff_types.Ty.t list * Eff_types.EffTy.t) option *
       (Eff_types.Ty.t list * Eff_types.EffTy.t) option
-  | FeedRefusal_rootRefused of (int list, type_reason) located list
+  | FeedRefusal_rootRefused of
+      (int list, type_reason) Eff_types.Located.t list
 and preview_answer =
     PreviewAnswer_settled of (int * preview_run) option
   | PreviewAnswer_frames of preview_run list
@@ -1966,32 +2054,6 @@ and hole_view = {
   path : int list;
   focus : (Eff_types.Ty.t list * Eff_types.EffTy.t) option;
 }
-and ('op, 'a) arg_reader = {
-  child : int -> eff_fam -> 'a;
-  term : int -> Eff_types.Term.t -> 'a;
-  cause : int -> Eff_types.CauseTerm.t -> 'a;
-  op : int -> 'op -> 'a;
-  nat : int -> int -> 'a;
-  mode : int -> Eff_types.ObserverMode.t -> 'a;
-  bool : int -> bool -> 'a;
-  key : int -> Eff_types.ServiceKey.t -> 'a;
-  decision : int -> Eff_types.Decision.t -> 'a;
-  opt_ty : int -> Eff_types.Ty.t option -> 'a;
-  decls : int -> Eff_types.DefDecl.t list -> 'a;
-  fork_options : int -> Eff_types.ForkOptions.t -> 'a;
-  opt_term : int -> Eff_types.Term.t option -> 'a;
-  keys : int -> Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'a;
-  lit : int -> Eff_types.Lit.t -> 'a;
-  path : int -> int list -> 'a;
-}
-and eff_fam =
-    EffFam_eff
-  | EffFam_stmt
-  | EffFam_stmts
-  | EffFam_effs
-  | EffFam_action
-  | EffFam_layer
-  | EffFam_layers
 and effect4_api_host_session_refusal =
     Effect4_api_host_session_refusal_version
   | Effect4_api_host_session_refusal_session
@@ -2039,7 +2101,7 @@ and fiber_status =
 and evidence =
     Evidence_exactFit of Eff_types.EffTy.t
   | Evidence_typeMismatch of Eff_types.EffTy.t * Eff_types.EffTy.t
-  | Evidence_refused of (int list, type_reason) located
+  | Evidence_refused of (int list, type_reason) Eff_types.Located.t
   | Evidence_feedRefused of feed_refusal
   | Evidence_differentEnv of Eff_types.Ty.t list * Eff_types.Ty.t list
 and wait_site = WaitSite_deferred of deferred_key | WaitSite_other
@@ -2270,7 +2332,7 @@ val char_of_nat : int -> int
 val run_kit_check :
   sig_app ->
   Eff_types.NativeOp.t Eff_types.Eff.t ->
-  (Eff_types.EffTy.t, (int list, type_reason) located) result
+  (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result
 val run_kit_admit :
   sig_app -> Eff_types.NativeOp.t Eff_types.Eff.t -> admit_refusal option
 val run_kit_admit_shape : shape_doc
@@ -2307,7 +2369,7 @@ val run_kit_eff_ty_shape : shape_doc
 val run_kit_eff_ty_to_val : Eff_types.EffTy.t -> Eff_types.Val.t
 val run_kit_refusal_shape : shape_doc
 val run_kit_refusal_to_val :
-  (int list, type_reason) located -> Eff_types.Val.t
+  (int list, type_reason) Eff_types.Located.t -> Eff_types.Val.t
 val run_kit_exit_shape : shape_doc
 val run_kit_exit_to_val :
   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
@@ -2320,122 +2382,246 @@ val run_kit_val_shape : shape_doc
 val run_kit_ty_text : Eff_types.Ty.t -> string
 val program_authoring_var :
   string ->
-  env -> int list -> (Eff_types.Term.t, (int list, reason) located) result
+  env ->
+  int list ->
+  (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_nat :
-  int -> (Eff_types.Term.t, (int list, reason) located) result
+  int -> (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_str :
-  string -> (Eff_types.Term.t, (int list, reason) located) result
+  string -> (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_bool :
-  bool -> (Eff_types.Term.t, (int list, reason) located) result
+  bool -> (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_unit :
-  env -> int list -> (Eff_types.Term.t, (int list, reason) located) result
+  env ->
+  int list ->
+  (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_app :
   string ->
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result)
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result)
   list ->
-  env -> int list -> (Eff_types.Term.t, (int list, reason) located) result
+  env ->
+  int list ->
+  (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_succeed :
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-  env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_fail :
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-  env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_sync :
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-  env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_suspend :
-  (env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result
+  (env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_bind_with :
-  (env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  ((env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-   env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result
-val program_authoring_and_then :
-  (env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  (env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result
-val program_authoring_if_else :
-  'a ->
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-  (env -> int list -> ('b Eff_types.Eff.t, (int list, reason) located) result) ->
-  (env -> int list -> ('b Eff_types.Eff.t, (int list, reason) located) result) ->
-  env -> int list -> ('b Eff_types.Eff.t, (int list, reason) located) result
-val program_authoring_select_option_with :
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-  (env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  ((env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-   env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result
-val program_authoring_loop_with :
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-  ((env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-   env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-  ((env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+  (env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  ((env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
    env ->
    int list ->
-   (Eff_types.NativeOp.t Eff_types.Eff.t, (int list, reason) located) result) ->
-  ((env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-   (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-   env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-  ((env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-   env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
   env ->
   int list ->
-  (Eff_types.NativeOp.t Eff_types.Eff.t, (int list, reason) located) result
+  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+val program_authoring_and_then :
+  (env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  (env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+val program_authoring_if_else :
+  'a ->
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+  (env ->
+   int list ->
+   ('b Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  (env ->
+   int list ->
+   ('b Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  ('b Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+val program_authoring_select_option_with :
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+  (env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  ((env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+val program_authoring_loop_with :
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+  ((env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+  ((env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   env ->
+   int list ->
+   (Eff_types.NativeOp.t Eff_types.Eff.t,
+    (int list, reason) Eff_types.Located.t)
+   result) ->
+  ((env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   (env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+  ((env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  (Eff_types.NativeOp.t Eff_types.Eff.t,
+   (int list, reason) Eff_types.Located.t)
+  result
 val program_authoring_catch_with :
-  (env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  ((env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-   env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result
+  (env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  ((env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_on_exit_with :
-  (env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  ((env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-   env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result
+  (env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  ((env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_exit_ :
-  (env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result) ->
-  env -> int list -> ('a Eff_types.Eff.t, (int list, reason) located) result
+  (env ->
+   int list ->
+   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+  env ->
+  int list ->
+  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
 val program_authoring_ref_make :
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
   env ->
   int list ->
-  (Eff_types.NativeOp.t Eff_types.Eff.t, (int list, reason) located) result
+  (Eff_types.NativeOp.t Eff_types.Eff.t,
+   (int list, reason) Eff_types.Located.t)
+  result
 val program_authoring_ref_get :
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
   env ->
   int list ->
-  (Eff_types.NativeOp.t Eff_types.Eff.t, (int list, reason) located) result
+  (Eff_types.NativeOp.t Eff_types.Eff.t,
+   (int list, reason) Eff_types.Located.t)
+  result
 val program_authoring_ref_set :
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
   env ->
   int list ->
-  (Eff_types.NativeOp.t Eff_types.Eff.t, (int list, reason) located) result
+  (Eff_types.NativeOp.t Eff_types.Eff.t,
+   (int list, reason) Eff_types.Located.t)
+  result
 val program_authoring_row_host :
   string ->
   Eff_types.Ty.t ->
   Eff_types.Ty.t -> Eff_types.Ty.t -> string -> Eff_types.Row.t
 val program_authoring_row_call_named :
   string ->
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
   env ->
   int list ->
-  (Eff_types.NativeOp.t Eff_types.Eff.t, (int list, reason) located) result
+  (Eff_types.NativeOp.t Eff_types.Eff.t,
+   (int list, reason) Eff_types.Located.t)
+  result
 val program_authoring_def_invoke :
   string ->
-  (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result)
+  (env ->
+   int list ->
+   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result)
   list ->
   env ->
   int list ->
-  (Eff_types.NativeOp.t Eff_types.Eff.t, (int list, reason) located) result
+  (Eff_types.NativeOp.t Eff_types.Eff.t,
+   (int list, reason) Eff_types.Located.t)
+  result
 val program_authoring_elaborate_at :
   Eff_types.Row.t list ->
   Eff_types.NativeOp.t def_src list ->
   (env ->
    int list ->
-   (Eff_types.NativeOp.t Eff_types.Eff.t, (int list, reason) located) result) ->
-  (Eff_types.NativeOp.t Eff_types.Eff.t, (int list, reason) located) result
+   (Eff_types.NativeOp.t Eff_types.Eff.t,
+    (int list, reason) Eff_types.Located.t)
+   result) ->
+  (Eff_types.NativeOp.t Eff_types.Eff.t,
+   (int list, reason) Eff_types.Located.t)
+  result
 val program_inst_decidable_eq_row :
   Eff_types.Row.t -> Eff_types.Row.t -> bool
 val run_open_ : built -> string -> budget -> string -> run
@@ -2501,6 +2687,11 @@ val program_prepared_admit :
    int, unit)
   run_decision -> refusal option
 val tool_native_start : workspace
+val program_rc112 : profile_data
+val program_profile_data_value_refusal :
+  profile_data ->
+  Eff_types.Val.t ->
+  (int list, Eff_types.ProfileReason.t) Eff_types.Located.t option
 val run_inspect : run -> inspection
 val api_inspection_exit_ :
   inspection ->
@@ -2522,7 +2713,8 @@ val tool_native_methods : effect4_tool_methods_entry list
 val tool_native_describe : describe
 val store_shape_doc_read_located :
   shape_doc ->
-  nat_json -> (Eff_types.Val.t, (json_site, json_reason) located) result
+  nat_json ->
+  (Eff_types.Val.t, (json_site, json_reason) Eff_types.Located.t) result
 val store_shape_doc_print_tree : shape_doc -> Eff_types.Val.t -> nat_json
 val tool_native_serve_tree :
   workspace ->
@@ -2532,8 +2724,15 @@ val tool_native_relative_refusal :
   json_step list -> effect4_tool_wire_refusal -> effect4_tool_wire_refusal
 val nat_json_render : nat_json -> int list
 val nat_json_parse :
-  int list -> (nat_json, (int, text_reason) located) result
-val nat_json_refusal_text : (int, text_reason) located -> string
+  int list -> (nat_json, (int, text_reason) Eff_types.Located.t) result
+val nat_json_refusal_text : (int, text_reason) Eff_types.Located.t -> string
+val program_profile_data_literal_refusal :
+  profile_data ->
+  Eff_types.NativeOp.t Eff_types.Eff.t ->
+  (int list, Eff_types.ProfileReason.t) Eff_types.Located.t option
+val program_answer_tree :
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  Eff_types.Completion.t -> Eff_types.Val.t
 val program_check_run : check_input -> verdict
 val program_check_oracle_uncached : oracle
 val program_check_checked_pure' : 'a0 -> 'a0 checked

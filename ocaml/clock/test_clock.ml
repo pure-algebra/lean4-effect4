@@ -1,8 +1,9 @@
 (* Independent boundary controls for the exact clock. Depends on effect4_clock only.
    Tests decimal identity, arithmetic/order beyond both JavaScript's exact integer range
    and OCaml max_int, refusal that leaves an already stored clock unchanged, and the crossing
-   each refusal names (D9 of the estate review: a literal, a reply, an addition and a clock
-   reading each name their own crossing, not the clock's). *)
+   each refusal names (D9 of the estate review: an addition, a clock reading and an index each
+   name their own crossing, not the clock's). A program's literals and a host's reply are no
+   crossing of the clock's: Lean's profile support judges them at ingress (M2). *)
 let get text =
   match E4_clock.of_decimal text with
   | Some value -> value
@@ -111,32 +112,28 @@ let () =
     (refused_at E4_clock.Clock (fun () -> E4_clock.of_nat (-1)))
     "a negative clock is not refused at the clock";
   check
-    (refused_at E4_clock.Literal (fun () -> E4_clock.literal "01"))
-    "a noncanonical literal is not refused at the literal";
+    (match E4_clock.literal "01" with
+     | _ -> false
+     | exception Invalid_argument _ -> true)
+    "a noncanonical generated literal is not a programming error";
   check
-    (refused_at E4_clock.Literal (fun () ->
-       E4_clock.check_nat E4_clock.Literal (edge + 1)))
-    "a literal past the profile is not refused at the literal";
-  check
-    (refused_at E4_clock.Reply (fun () -> E4_clock.check_nat E4_clock.Reply (-1)))
-    "a negative reply is not refused at the reply";
-  check (E4_clock.check_nat E4_clock.Reply edge = ()) "the largest profile reply refused";
+    (E4_clock.to_decimal (E4_clock.literal "4611686018427387905") = "4611686018427387905")
+    "a canonical generated literal is not read exactly";
   check
     (refusal (fun () -> E4_clock.profile_add edge 1)
      = Some "arithmetic: a sum outside the program's profile (DI-56)")
     "the arithmetic refusal's text";
-  (* Red control: before D9 the four refusals below answered one text, the clock's. *)
+  (* Red control: before D9 the refusals below answered one text, the clock's. *)
   let texts =
     List.filter_map
       refusal
-      [ (fun () -> E4_clock.check_nat E4_clock.Literal (edge + 1))
-      ; (fun () -> E4_clock.check_nat E4_clock.Reply (edge + 1))
-      ; (fun () -> ignore (E4_clock.profile_add edge 1))
+      [ (fun () -> ignore (E4_clock.profile_add edge 1))
       ; (fun () -> ignore (E4_clock.to_profile_nat (get "9007199254740992")))
+      ; (fun () -> E4_clock.refuse E4_clock.Index "a length past the target's capacity")
       ]
   in
   check
-    (List.length texts = 4 && List.length (List.sort_uniq compare texts) = 4)
+    (List.length texts = 3 && List.length (List.sort_uniq compare texts) = 3)
     "two crossings answer one refusal text";
   print_endline
     "PASS refusals: each names its crossing, and the profile rows answer at their edge"

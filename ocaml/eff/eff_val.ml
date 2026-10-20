@@ -20,7 +20,13 @@
    V4  A byte string or a digest is written in time linear in its length.  by construction
    V5  `equal` is structural equality, the relation of Lean's derived `DecidableEq Store.Val`,
        and compares each field by its own type's equality (ocaml/STANDARDS.md rule 7).
-                                                                       by construction *)
+                                                                       by construction
+   V6  `valid` is the image of Lean's `Store.Val` in this carrier, the domain `emit` writes
+       (Eff_frame F4): every natural, negative integer's digits, constructor index, handle key
+       and double's bits is nonnegative, every byte and kind is in 0..255, and every string is
+       valid UTF-8. A Lean value has no other shape, so Lean's judgments cannot ask; a host's
+       answer crosses into the lowered machine only inside it (E4_engine's `ingress`).
+                                                       by construction; tested (test_engine) *)
 
 (* The bytes whose codes are listed, in one pass; a code outside 0..255 raises Invalid_argument,
    as `Char.chr` does (V4). *)
@@ -153,4 +159,22 @@ let rec equal (a : Eff_types.Val.t) (b : Eff_types.Val.t) : bool =
       | V.NegInt _
       | V.Float _ )
     , _ ) -> false
+;;
+
+(* The image of Lean's values in this carrier (V6). Every constructor is named, so a new one is
+   a non-exhaustive match until it has its own case. *)
+let rec valid (v : Eff_types.Val.t) : bool =
+  let module V = Eff_types.Val in
+  let byte b = b >= 0 && b <= 255 in
+  match v with
+  | V.Unit | V.Bool _ | V.None -> true
+  | V.Nat n | V.NegInt n | V.Float n -> n >= 0
+  | V.Str s -> String.is_valid_utf_8 s
+  | V.Bytes bs -> List.for_all byte bs
+  | V.List xs -> List.for_all valid xs
+  | V.Pair (a, b) -> valid a && valid b
+  | V.Some a -> valid a
+  | V.Ctor (i, args) -> i >= 0 && List.for_all valid args
+  | V.Ref (kind, digest) -> byte kind && List.for_all byte digest
+  | V.Handle (kind, key) -> byte kind && key >= 0
 ;;

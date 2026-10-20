@@ -16,3 +16,8 @@ val decode_exact : string -> Eff_types.Val.t option
 
 (** Structural equality, constructor by constructor (V5). *)
 val equal : Eff_types.Val.t -> Eff_types.Val.t -> bool
+
+(** Whether the value is the image of a Lean value (V6): every natural, negative integer's
+    digits, constructor index, handle key and double's bits is nonnegative, every byte and kind
+    is in 0..255, and every string is valid UTF-8. *)
+val valid : Eff_types.Val.t -> bool

@@ -34,10 +34,10 @@ module Types : sig
     (** the provider raised: no answer, as [Declined] (H5); never a typed failure.
             [Out_of_memory] and [Sys.Break] are raised again. *)
     | Refused (** the engine did not admit the provider's reply *)
-    | Outside_profile of E4_clock.refusal
-    (** a reply failed the host-ingress check (EN9, H6), or a step left the host numeric
-            profile and was not taken (H2, H9): the engine is the one before it. The refusal
-            names its crossing (D9). *)
+    | Outside_profile of E4_engine.outside
+    (** a reply failed the host-ingress check (EN9, H6: no Lean value, or Lean's profile
+            support refused it at its path), or a step's numeric crossing refused a value and
+            was not taken (H2, H9): the engine is the one before it. *)
     | Unknown_row (** a call's row position is not in the table *)
     | Out_of_rounds (** the last round was played with the machine still live *)
 
@@ -49,9 +49,9 @@ module Types : sig
   (** The stop, spelled for a report. *)
   val stop_name : stop -> string
 
-  (** Why the program was not loaded (H8): [E.load] refused it at the host numeric profile
-      (EN8), for a natural literal outside it or a value its loading computes outside it. *)
-  type load_refusal = Load_outside_profile of E4_clock.refusal
+  (** Why the program was not loaded (H8): Lean's profile support refused one of its literals
+      ([Unsupported], EN8), or its loading computed a value a crossing refused ([Crossing]). *)
+  type load_refusal = Load_outside_profile of E4_engine.outside
 
   (** One answered call: the row's external position, the request and the answer. *)
   type call =

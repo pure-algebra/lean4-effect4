@@ -7,7 +7,7 @@ import Effect4.Program.TyFoldExtras
 # OCaml5.Eff.Emit
 
 **What it is.** The `eff/` library as OCaml syntax (`OCaml5.Ml.Syntax`), one module per generated
-file: `ctorsModule` (`eff_ctors.ml`: the constructor tables and the literal visitor),
+file: `ctorsModule` (`eff_ctors.ml`: the constructor tables),
 `wireModule` (`eff_wire.ml`: the canonical byte encoding and its exact, length-directed decoder
 over the hand-written `Eff_frame`), `subtermModule` (`eff_subterm.ml`), `nativeModule` (`eff_native.ml`: the native atom names, const-generic metadata
 and operation rows as data) and `layoutModule` (`eff_layout.ml`), with `manifest`
@@ -123,7 +123,7 @@ def typesInterface (bs : List (List Family)) : MetaM Ml.Interface := do
   return { name := "Eff_types",
            modules := g.entries.toList.filterMap fun (n, d, _) => (tn.modules[n]?).map fun m => (m, [d]) }
 
-/-! ## eff_ctors.ml: the constructor tables and the literal visitor -/
+/-! ## eff_ctors.ml: the constructor tables -/
 
 def tablesOf (f : Family) : List Ml.Decl :=
   let o := f.spec.oname
@@ -144,37 +144,11 @@ def tablesOf (f : Family) : List Ml.Decl :=
      letOne (bind s!"ctor_name_{o}" [] (.arrow t .string) (.fnMatch (arms fun _ c => .str c.short))),
      letOne (bind s!"ctor_names_{o}" [] (.list .string) (.listLit (f.ctors.map fun c => .str c.short)))]
 
-/-- Visit every `lit` inside a value of a carrier, in argument order. -/
-partial def litsOf : OTy → Ml.Expr → Ml.Expr
-  | .int, _ | .bool, _ | .string, _ | .unit, _ | .requirements, _ => .unit
-  | .option a, x => call "Option.iter" [.fn ["y"] (litsOf a (.var "y")), x]
-  | .list a, x => call "List.iter" [.fn ["y"] (litsOf a (.var "y")), x]
-  | .prod a c, x =>
-    .letPat (.tuple [.var "y0", .var "y1"]) x (.seq (litsOf a (.var "y0")) (litsOf c (.var "y1")))
-  | .named "lit", x => call "k" [x]
-  | .named n, x => call s!"lits_{n}" [.var "k", x]
-
-def litsBind (f : Family) : Ml.Bind :=
-  let o := f.spec.oname
-  let visit (c : Ctor) (vals : List Ml.Expr) : Ml.Expr :=
-    seqOf ((c.args.zip vals).map fun ((_, t), a) => litsOf t a)
-  let k : String × Ml.Ty := ("k", .arrow (.named (labelType "lit")) .unit)
-  if f.trivial then
-    bind s!"lits_{o}" [k, ("r", f.ty)] .unit (visit f.ctors.head! [.var "r"])
-  else if f.isStruct then
-    let c := f.ctors.head!
-    bind s!"lits_{o}" [k, ("r", f.ty)] .unit
-      (visit c (c.args.map fun (nm, _) => .field (.var "r") (ofield f.spec.leanName nm)))
-  else
-    bind s!"lits_{o}" [k, ("v", f.ty)] .unit (.matchE (.var "v") (f.ctors.map fun c =>
-      (ctorPatNamed f.spec.leanName c, visit c ((argNames c).map .var))))
-
 def ctorsModule (bs : List (List Family)) : Ml.Module :=
   { name := "eff_ctors",
-    items := headerItems ("Eff_ctors: the constructor tables of every carrier of Eff_types (the program types the LCNF route declares, ocaml/eff/eff_types.ml), and the literal visitor. ctor_index_<t> is the Lean declaration order; wire_tag_<t> is the number the constructor carries in the canonical bytes (tools/Effect4Gen/wire-tags.json); the two agree only while no constructor of the family has been retired or reordered. lits_<t> k v calls k on every lit inside v, in argument order: the engine's numeric profile reads it at load.")
+    items := headerItems ("Eff_ctors: the constructor tables of every carrier of Eff_types (the program types the LCNF route declares, ocaml/eff/eff_types.ml). ctor_index_<t> is the Lean declaration order; wire_tag_<t> is the number the constructor carries in the canonical bytes (tools/Effect4Gen/wire-tags.json); the two agree only while no constructor of the family has been retired or reordered. A program's natural literals are Lean's to judge at ingress (Effect4.Program.ProfileData.literalRefusal, lowered).")
       ++ [.floatingAttrD "warning \"-26-27-32-39\"", .openD "Eff_types"]
-      ++ bs.flatMap (·.flatMap tablesOf)
-      ++ bs.map fun b => .letD true (b.map litsBind) }
+      ++ bs.flatMap (·.flatMap tablesOf) }
 
 /-! ## eff_wire.ml -/
 

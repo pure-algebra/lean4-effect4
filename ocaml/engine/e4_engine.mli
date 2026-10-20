@@ -30,21 +30,24 @@
    e4_engine_intf.ml's, which this file includes.  A differential calls both engines through
    {!ENGINE} with one signature -- which is what `test/test_diff.ml` does over every corpus.
 
-   Depends on: E4_engine_intf, Api_engine_inst, effect4_eff (Eff_types, Eff_ctors, Eff_wire),
+   Depends on: E4_engine_intf, Api_engine_inst, effect4_eff (Eff_types, Eff_val, Eff_wire),
    stdlib.
 
    Behaviours:
-   EN8 Public numeric reply constructors check representability before constructing a decision.
-       Natural replies and source literals use the selected natural-number profile.
-       Float replies retain exact bits only when the existing value carrier holds them.
-       The engine requires a 63-bit integer host. Raw INSTANCE constructors are a trusted input.
-                                                          tested (numeric_ingress_check)
-   EN9 A host's answer is host ingress (decisions row 394 (1)): {!check_answer} walks every
-       natural of an answer through the profile check a natural reply passes (EN8), and
-       refuses with E4_clock.Profile_refusal, never a defect. The clock boundary of the LCNF
-       route (OCaml5.Lcnf.ClockFlow) reads a reactor supplied at a root as checked ingress,
-       so a driver that supplies one applies this check to every answer before the machine
-       reads it.                                          tested (answer_ingress_check)
+   EN8 A program's literals are profile support's, Lean's: `literal_refusal` is
+       `ProfileData.literalRefusal` at the selected profile (`rc112`, the profile as data;
+       src/Effect4/Program/ProfileSupport.lean), lowered, and names the first literal above the
+       bound at its node's address. A host driver asks it before `load` (E4_host H8). The
+       engine requires a 63-bit integer host. The decision constructors check nothing: a raw
+       decision is a trusted input.                       tested (numeric_ingress_check)
+   EN9 A host's answer is host ingress (decisions row 394 (1)): `ingress` reads its value tree
+       (Lean's `answerTree`, lowered), refuses it as `Not_a_value` when it is no Lean value
+       (`Eff_val.valid`), and as `Unsupported` where Lean's profile support refuses it
+       (`ProfileData.valueRefusal` at the selected profile, lowered). The refusal is a value
+       at the answer's path, never an exception and never a defect. A driver asks it before
+       the machine reads the answer (E4_host H6), as the kit does before either runner. The
+       clock boundary of the LCNF route (OCaml5.Lcnf.ClockFlow) reads a reactor supplied at a
+       root as checked ingress.                           tested (answer_ingress_check)
    EN1 `run p ~fuel` is `Api.run p fuel []`: same outcome, same fiber table, same trace
        rows, same exits.  The check is against the instance's OWN `api_run` (the generated
        `Effect4.Api.run`, untouched) on every program of the corpus.

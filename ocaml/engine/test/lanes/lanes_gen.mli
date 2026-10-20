@@ -95,15 +95,17 @@ and check_input =
       Eff_types.NativeOp.t Eff_types.Eff.t
 and verdict =
   Closure_gen.verdict = {
-  result : (Eff_types.EffTy.t, (int list, type_reason) located) result;
+  result :
+    (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result;
   table : entry list;
 }
 and admit_refusal =
   Closure_gen.admit_refusal =
-    AdmitRefusal_illTyped of (int list, type_reason) located
+    AdmitRefusal_illTyped of (int list, type_reason) Eff_types.Located.t
   | AdmitRefusal_signature of sig_refusal
   | AdmitRefusal_emptyColumn of string list
-  | AdmitRefusal_formation of (string list, formation_reason) located
+  | AdmitRefusal_formation of
+      (string list, formation_reason) Eff_types.Located.t
 and reply_fault =
   Closure_gen.reply_fault =
     ReplyFault_answerType of Eff_types.Ty.t
@@ -144,27 +146,39 @@ and reason =
   | Reason_duplicateDef of string
   | Reason_unboundParam of string
   | Reason_duplicateParam of string
-and ('site, 'reason) located =
-  ('site, 'reason) Closure_gen.located = {
-  site : 'site;
-  reason : 'reason;
-}
 and 'op loop_spec =
   'op Closure_gen.loop_spec = {
   while_ :
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-    env -> int list -> (Eff_types.Term.t, (int list, reason) located) result;
-  body :
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
     env ->
-    int list -> ('op Eff_types.Eff.t, (int list, reason) located) result;
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result;
+  body :
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    env ->
+    int list ->
+    ('op Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result;
   step :
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-    env -> int list -> (Eff_types.Term.t, (int list, reason) located) result;
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result;
   result :
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result) ->
-    env -> int list -> (Eff_types.Term.t, (int list, reason) located) result;
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    env ->
+    int list ->
+    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result;
   cursor_ty : Eff_types.Ty.t option;
 }
 and env =
@@ -183,12 +197,14 @@ and 'op module_ =
     (string *
      (env ->
       int list ->
-      ('op Eff_types.LayerTerm.t, (int list, reason) located) result))
+      ('op Eff_types.LayerTerm.t, (int list, reason) Eff_types.Located.t)
+      result))
     list;
   defs : 'op def_src list;
   main :
     env ->
-    int list -> ('op Eff_types.Eff.t, (int list, reason) located) result;
+    int list ->
+    ('op Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result;
   types : (string * Eff_types.Ty.t) list;
 }
 and sketch =
@@ -261,7 +277,7 @@ and effect4_tool_codec_profile_refusal =
   Closure_gen.effect4_tool_codec_profile_refusal =
     Effect4_tool_codec_profile_refusal_unsupportedProfile
   | Effect4_tool_codec_profile_refusal_unreadable of
-      (json_site, json_reason) located
+      (json_site, json_reason) Eff_types.Located.t
   | Effect4_tool_codec_profile_refusal_unprintable
 and effect4_tool_wire_refusal =
   Closure_gen.effect4_tool_wire_refusal =
@@ -646,6 +662,24 @@ and 'k deferred_store =
   cells : 'k deferred_cell list;
   due : 'k owed list;
 }
+and call_class =
+  Closure_gen.call_class =
+    CallClass_row of Eff_types.RowKind.t
+  | CallClass_external
+and invocation_forms =
+  Closure_gen.invocation_forms = {
+  perform : bool;
+  callback : bool;
+}
+and profile_data =
+  Closure_gen.profile_data = {
+  name : string;
+  nat_bound : int;
+  admitted_forms : (call_class * invocation_forms) list;
+  adapters : (string * string) list;
+  imports : string list;
+  error_projection : string;
+}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket =
   ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) Closure_gen.bucket = {
   priority : int;
@@ -911,21 +945,26 @@ and type_reason =
   | TypeReason_breakOutsideLoop
   | TypeReason_literalOutsideAlphabet of Eff_types.Lit.t
   | TypeReason_instantiatedFormation of string *
-      (string list, formation_reason) located
-  | TypeReason_recordTerm of (int list, record_typing_reason) located
+      (string list, formation_reason) Eff_types.Located.t
+  | TypeReason_recordTerm of
+      (int list, record_typing_reason) Eff_types.Located.t
   | TypeReason_recordCause of
-      (int list, (int list, record_typing_reason) located) located
-  | TypeReason_tupleTerm of (int list, tuple_typing_reason) located
+      (int list, (int list, record_typing_reason) Eff_types.Located.t)
+      Eff_types.Located.t
+  | TypeReason_tupleTerm of
+      (int list, tuple_typing_reason) Eff_types.Located.t
   | TypeReason_tupleCause of
-      (int list, (int list, tuple_typing_reason) located) located
+      (int list, (int list, tuple_typing_reason) Eff_types.Located.t)
+      Eff_types.Located.t
   | TypeReason_errorPayloadField of Eff_types.Ty.t * string list *
       Eff_types.Ty.t
   | TypeReason_errorSpelling of Eff_types.Ty.t * Eff_types.Ty.t
   | TypeReason_binderTerm of string * Eff_types.Ty.t
   | TypeReason_resultNotSubtype of string * Eff_types.Ty.t * Eff_types.Ty.t
-  | TypeReason_foldTerm of (int list, fold_typing_reason) located
+  | TypeReason_foldTerm of (int list, fold_typing_reason) Eff_types.Located.t
   | TypeReason_foldCause of
-      (int list, (int list, fold_typing_reason) located) located
+      (int list, (int list, fold_typing_reason) Eff_types.Located.t)
+      Eff_types.Located.t
   | TypeReason_maskRestoreExpected of Eff_types.Ty.t
   | TypeReason_definitionBlock
   | TypeReason_definitionsMismatch of int * int
@@ -1047,7 +1086,7 @@ and event =
   | Event_wire of command
 and explanation =
   Closure_gen.explanation = {
-  refusal : (int list, type_reason) located;
+  refusal : (int list, type_reason) Eff_types.Located.t;
   site : site;
   part : check_input option;
 }
@@ -1282,6 +1321,23 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope =
   strategy : Eff_types.FinalizerStrategy.t;
   state : ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state;
 }
+and 'r_val_ val_algebra =
+  'r_val_ Closure_gen.val_algebra = {
+  val_unit : 'r_val_;
+  val_bool : bool -> 'r_val_;
+  val_nat : int -> 'r_val_;
+  val_str : string -> 'r_val_;
+  val_bytes : int list -> 'r_val_;
+  val_list : 'r_val_ list -> 'r_val_;
+  val_pair : 'r_val_ -> 'r_val_ -> 'r_val_;
+  val_none : 'r_val_;
+  val_some : 'r_val_ -> 'r_val_;
+  val_ctor : int -> 'r_val_ list -> 'r_val_;
+  val_ref : int -> int list -> 'r_val_;
+  val_handle : int -> int -> 'r_val_;
+  val_neg_int : int -> 'r_val_;
+  val_float : int -> 'r_val_;
+}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop =
   ('nu, 's, 'b, 'e, 'd, 'i, 'a) Closure_gen.frame_pop = {
   answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
@@ -1325,7 +1381,9 @@ and entry =
   Closure_gen.entry = {
   path : int list;
   env : node_env option;
-  result : (Eff_types.EffTy.t, (int list, type_reason) located) result option;
+  result :
+    (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result
+    option;
 }
 and term_typing_reason =
   Closure_gen.term_typing_reason =
@@ -1338,7 +1396,8 @@ and term_typing_reason =
 and row_typing_refusal =
   Closure_gen.row_typing_refusal =
     RowTypingRefusal_requestNotSubtype
-  | RowTypingRefusal_formation of (string list, formation_reason) located
+  | RowTypingRefusal_formation of
+      (string list, formation_reason) Eff_types.Located.t
   | RowTypingRefusal_term of Eff_types.Ty.t
   | RowTypingRefusal_resultNotSubtype of Eff_types.Ty.t * Eff_types.Ty.t
 and protocol =
@@ -1458,6 +1517,34 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
   | ScopeState_openInline of 'k * 'f
   | ScopeState_openMap of ('k * 'f) list
   | ScopeState_closed of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+and ('op, 'a) arg_reader =
+  ('op, 'a) Closure_gen.arg_reader = {
+  child : int -> eff_fam -> 'a;
+  term : int -> Eff_types.Term.t -> 'a;
+  cause : int -> Eff_types.CauseTerm.t -> 'a;
+  op : int -> 'op -> 'a;
+  nat : int -> int -> 'a;
+  mode : int -> Eff_types.ObserverMode.t -> 'a;
+  bool : int -> bool -> 'a;
+  key : int -> Eff_types.ServiceKey.t -> 'a;
+  decision : int -> Eff_types.Decision.t -> 'a;
+  opt_ty : int -> Eff_types.Ty.t option -> 'a;
+  decls : int -> Eff_types.DefDecl.t list -> 'a;
+  fork_options : int -> Eff_types.ForkOptions.t -> 'a;
+  opt_term : int -> Eff_types.Term.t option -> 'a;
+  keys : int -> Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'a;
+  lit : int -> Eff_types.Lit.t -> 'a;
+  path : int -> int list -> 'a;
+}
+and eff_fam =
+  Closure_gen.eff_fam =
+    EffFam_eff
+  | EffFam_stmt
+  | EffFam_stmts
+  | EffFam_effs
+  | EffFam_action
+  | EffFam_layer
+  | EffFam_layers
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step =
   ('nu, 's, 'b, 'e, 'd, 'i, 'a) Closure_gen.frame_step =
     FrameStep_running of ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber
@@ -1533,23 +1620,30 @@ and 'op def_src =
   error : Eff_types.Ty.t;
   requires : Eff_types.ServiceKey.t list;
   body :
-    (env -> int list -> (Eff_types.Term.t, (int list, reason) located) result)
+    (env ->
+     int list ->
+     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result)
     list ->
     env ->
-    int list -> ('op Eff_types.Eff.t, (int list, reason) located) result;
+    int list ->
+    ('op Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result;
   role : Eff_types.DefRole.t;
   program_params : Eff_types.ParamDecl.t list;
 }
 and stmt_ty =
   Closure_gen.stmt_ty =
     StmtTy_step of gen_ty * Eff_types.Ty.t list
-  | StmtTy_ret of (Eff_types.Ty.t, (int list, type_reason) located) result
+  | StmtTy_ret of
+      (Eff_types.Ty.t, (int list, type_reason) Eff_types.Located.t) result
   | StmtTy_pass
 and cause_typing_reason =
   Closure_gen.cause_typing_reason =
-    CauseTypingReason_record of (int list, record_typing_reason) located
-  | CauseTypingReason_tuple of (int list, tuple_typing_reason) located
-  | CauseTypingReason_fold of (int list, fold_typing_reason) located
+    CauseTypingReason_record of
+      (int list, record_typing_reason) Eff_types.Located.t
+  | CauseTypingReason_tuple of
+      (int list, tuple_typing_reason) Eff_types.Located.t
+  | CauseTypingReason_fold of
+      (int list, fold_typing_reason) Eff_types.Located.t
 and binder_term =
   Closure_gen.binder_term = {
   term : Eff_types.Term.t;
@@ -1731,7 +1825,7 @@ and record_typing_reason =
   | RecordTypingReason_missingReadField of string * Eff_types.Ty.t
   | RecordTypingReason_optionalReadField of string * Eff_types.Ty.t
   | RecordTypingReason_declarationFormation of
-      (string list, formation_reason) located
+      (string list, formation_reason) Eff_types.Located.t
 and tuple_typing_reason =
   Closure_gen.tuple_typing_reason =
     TupleTypingReason_nonTuple of int * Eff_types.Ty.t
@@ -1890,7 +1984,7 @@ and doc_view =
   Closure_gen.doc_view = {
   snap : snap;
   type_ : Eff_types.EffTy.t option;
-  refusals : (int list, type_reason) located list;
+  refusals : (int list, type_reason) Eff_types.Located.t list;
   holes : hole_view list;
   declared : hole_decl list;
   inspection : effect4_tool_inspection option;
@@ -1933,10 +2027,12 @@ and method_hints =
   open_world : bool;
 }
 and plan = Closure_gen.plan = { shared : string list; tools : string list; }
-and 'u reference =
-  'u Closure_gen.reference = {
-  key : Eff_types.ServiceKey.t;
-  default : 'u;
+and 'r_cause cause_term_algebra =
+  'r_cause Closure_gen.cause_term_algebra = {
+  cause_fail : Eff_types.Term.t -> 'r_cause;
+  cause_die : Eff_types.Term.t -> 'r_cause;
+  cause_interrupt : Eff_types.Term.t option -> 'r_cause;
+  cause_both : 'r_cause -> 'r_cause -> 'r_cause;
 }
 and fn_shape =
   Closure_gen.fn_shape =
@@ -1944,6 +2040,11 @@ and fn_shape =
   | FnShape_updateSome
   | FnShape_modify
   | FnShape_modifySome
+and 'u reference =
+  'u Closure_gen.reference = {
+  key : Eff_types.ServiceKey.t;
+  default : 'u;
+}
 and spec = Closure_gen.spec = { scheme : scheme; cite : string; }
 and atom_row =
   Closure_gen.atom_row = {
@@ -1983,13 +2084,6 @@ and 'r_ty ty_algebra =
   ty_number : 'r_ty;
   ty_bytes : 'r_ty;
   ty_context_of : Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'r_ty;
-}
-and 'r_cause cause_term_algebra =
-  'r_cause Closure_gen.cause_term_algebra = {
-  cause_fail : Eff_types.Term.t -> 'r_cause;
-  cause_die : Eff_types.Term.t -> 'r_cause;
-  cause_interrupt : Eff_types.Term.t option -> 'r_cause;
-  cause_both : 'r_cause -> 'r_cause -> 'r_cause;
 }
 and 'op part =
   'op Closure_gen.part = {
@@ -2092,7 +2186,7 @@ and view =
 and effect4_program_edit_session_view =
   Closure_gen.effect4_program_edit_session_view = {
   table : entry list;
-  refusals : (int list, type_reason) located list;
+  refusals : (int list, type_reason) Eff_types.Located.t list;
   type_ : Eff_types.EffTy.t option;
 }
 and effect4_tool_inspection =
@@ -2102,7 +2196,7 @@ and effect4_tool_inspection =
   context : sig_data;
   focus : Eff_types.NativeOp.t focus option;
   entry : entry option;
-  refusal : (int list, type_reason) located option;
+  refusal : (int list, type_reason) Eff_types.Located.t option;
 }
 and place_refusal =
   Closure_gen.place_refusal =
@@ -2115,13 +2209,14 @@ and feed_refusal =
     FeedRefusal_noProgram of int list
   | FeedRefusal_noFocus of int list
   | FeedRefusal_notKept of (Eff_types.Ty.t list * Eff_types.EffTy.t) *
-      (Eff_types.EffTy.t, (int list, type_reason) located) result
-  | FeedRefusal_refused of (int list, type_reason) located list
+      (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result
+  | FeedRefusal_refused of (int list, type_reason) Eff_types.Located.t list
   | FeedRefusal_typeChanged of Eff_types.EffTy.t * Eff_types.EffTy.t
   | FeedRefusal_localChanged of
       (Eff_types.Ty.t list * Eff_types.EffTy.t) option *
       (Eff_types.Ty.t list * Eff_types.EffTy.t) option
-  | FeedRefusal_rootRefused of (int list, type_reason) located list
+  | FeedRefusal_rootRefused of
+      (int list, type_reason) Eff_types.Located.t list
 and preview_answer =
   Closure_gen.preview_answer =
     PreviewAnswer_settled of (int * preview_run) option
@@ -2294,34 +2389,6 @@ and hole_view =
   path : int list;
   focus : (Eff_types.Ty.t list * Eff_types.EffTy.t) option;
 }
-and ('op, 'a) arg_reader =
-  ('op, 'a) Closure_gen.arg_reader = {
-  child : int -> eff_fam -> 'a;
-  term : int -> Eff_types.Term.t -> 'a;
-  cause : int -> Eff_types.CauseTerm.t -> 'a;
-  op : int -> 'op -> 'a;
-  nat : int -> int -> 'a;
-  mode : int -> Eff_types.ObserverMode.t -> 'a;
-  bool : int -> bool -> 'a;
-  key : int -> Eff_types.ServiceKey.t -> 'a;
-  decision : int -> Eff_types.Decision.t -> 'a;
-  opt_ty : int -> Eff_types.Ty.t option -> 'a;
-  decls : int -> Eff_types.DefDecl.t list -> 'a;
-  fork_options : int -> Eff_types.ForkOptions.t -> 'a;
-  opt_term : int -> Eff_types.Term.t option -> 'a;
-  keys : int -> Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'a;
-  lit : int -> Eff_types.Lit.t -> 'a;
-  path : int -> int list -> 'a;
-}
-and eff_fam =
-  Closure_gen.eff_fam =
-    EffFam_eff
-  | EffFam_stmt
-  | EffFam_stmts
-  | EffFam_effs
-  | EffFam_action
-  | EffFam_layer
-  | EffFam_layers
 and effect4_api_host_session_refusal =
   Closure_gen.effect4_api_host_session_refusal =
     Effect4_api_host_session_refusal_version
@@ -2376,7 +2443,7 @@ and evidence =
   Closure_gen.evidence =
     Evidence_exactFit of Eff_types.EffTy.t
   | Evidence_typeMismatch of Eff_types.EffTy.t * Eff_types.EffTy.t
-  | Evidence_refused of (int list, type_reason) located
+  | Evidence_refused of (int list, type_reason) Eff_types.Located.t
   | Evidence_feedRefused of feed_refusal
   | Evidence_differentEnv of Eff_types.Ty.t list * Eff_types.Ty.t list
 and wait_site =

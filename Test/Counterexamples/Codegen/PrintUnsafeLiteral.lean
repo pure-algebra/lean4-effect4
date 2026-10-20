@@ -14,8 +14,10 @@ DI-56 rules that a face refuses outside its profile, and the profile's bound is 
 (`readLiteral_print`): Lean reads the decimal exactly. The defect is the target's reading.
 
 The repair (2026-10-11): the module emission refuses a natural literal above the profile's bound
-before it prints, with `EmissionRefusal.outsideProfile` naming the literal, and its certificate
-records the bound (`ModuleEmission.inProfile`, `src/Effect4/Codegen/Checked.lean`). The term
+before it prints, with `EmissionRefusal.outsideProfile` naming the literal at the address of its
+node (profile support, `ProfileData.literalRefusal`, `src/Effect4/Program/ProfileSupport.lean`),
+and its certificate records the judgment (`ModuleEmission.inProfile`,
+`src/Effect4/Codegen/Checked.lean`). The term
 printer stays total, so its round trip is unchanged. The reading boundary refuses the same
 literal (`SurfaceRefusal.outsideProfile`, `ModuleReading.inProfile`, `src/Effect4/Codegen/Admit.lean`).
 -/
@@ -47,9 +49,14 @@ def answersUnsafe : Eff NativeOp := .succeed (.lit (.nat beyond))
   | .int value => value == 9007199254740991
   | _ => false
 
--- The repair: the emission refuses the program, naming the literal.
+-- The repair: the emission refuses the program, naming the literal at its node's address.
 #guard match Codegen.emitModule "answersUnsafe" answersUnsafe with
-  | .error (.outsideProfile value) => value == beyond
+  | .error (.outsideProfile why) => why == ⟨[], .aboveBound beyond⟩
+  | _ => false
+
+-- The address is the node's: the literal of a bind's continuation is refused at `[1]`.
+#guard match Codegen.emitModule "nested" (.bind (.succeed (.lit (.nat 1))) answersUnsafe) with
+  | .error (.outsideProfile why) => why == ⟨[1], .aboveBound beyond⟩
   | _ => false
 
 -- Control: the bound itself emits.
@@ -66,7 +73,7 @@ def answersUnsafe : Eff NativeOp := .succeed (.lit (.nat beyond))
     | .ok decls =>
       match Codegen.admitModule "main" { header := [], imports := [], decls := decls.map .const }
           [] Codegen.effectOrigins [.named ["Effect"] "effect"] with
-      | .error (.outsideProfile value) => value == beyond
+      | .error (.outsideProfile why) => why == ⟨[], .aboveBound beyond⟩
       | _ => false
 
 -- Control: the bound's text is admitted.

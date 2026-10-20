@@ -15,7 +15,8 @@
        on stdout.                                                     by construction
    E2  `run` is Kit.run: it never reports a divergence, and a request never names a runner
        (Kit_serve S2, S3).                                            by construction
-   E3  The exit code is 0 for an answer, 2 for an "error" (an unreadable input).  by construction
+   E3  The exit code is 0 for an answer, 2 for an "error" (an unreadable input, or a numeric
+       option that is no natural number: Kit_serve's `natural`).      by construction
    E4  `eff mcp` is a Model Context Protocol server over stdio (JSON-RPC 2.0, one message a
        line) for the authoring tool: one tool per method and `describe`, one session for the
        server's life (Kit_mcp M1-M5).                                 tested (test_mcp)
@@ -76,22 +77,9 @@ let () =
   | [ _; "tool" ] -> tool ()
   | [ _; "mcp" ] -> mcp ()
   | _ :: op :: path :: flags ->
-    let rec parse r = function
-      | "--rows" :: f :: rest ->
-        parse { r with rows = rows_of_json (json_of (read_file f) f) } rest
-      | "--tape" :: f :: rest ->
-        parse { r with tape = Some (tape_of_json (json_of (read_file f) f)) } rest
-      | "--limit" :: n :: rest -> parse { r with limit = int_of_string n } rest
-      | "--budget" :: n :: rest -> parse { r with budget = int_of_string n } rest
-      | "--frames" :: rest -> parse { r with frames = true } rest
-      | "--fast" :: rest -> parse { r with fast = true } rest
-      | "--width" :: n :: rest -> parse { r with width = int_of_string n } rest
-      | [] -> r
-      | flag :: _ -> input "unknown flag %S" flag
-    in
     (match
        answer
-         (parse
+         (with_flags
             { op
             ; program = Some (program_of_path path)
             ; rows = []

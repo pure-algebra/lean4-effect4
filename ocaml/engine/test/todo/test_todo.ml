@@ -53,9 +53,10 @@
    T16 The same host under `Native_todo.catching`, naming `Sys_error` as the rows' failure, is
        Lean's result for `Typed.broken`, byte for byte: an OCaml exception crossing as the typed
        failure. Under a `catching` that names nothing, it still stops with `Raised`.  tested
-   T17 A native host whose insert answers an id outside the profile (-1, 2^53) is not applied
-       (E4_host's H6): the drive stops with the host stop `Outside_profile`, as after a provider
-       that declines, and never reaches the machine.                       tested
+   T17 A native host whose insert answers an id outside the profile (-1, no Lean value; 2^53,
+       which Lean's profile support refuses) is not applied (E4_host's H6): the drive stops
+       with the host stop `Outside_profile`, as after a provider that declines, and never
+       reaches the machine.                                                 tested
 
    What it does not establish: a request outside the script; the session's own clauses; the
    records of apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
@@ -95,7 +96,8 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
     match H.serve ~table:built.app.rows provider built.program ~fuel:1000 state with
     | Ok served -> served
     | Error (H.Load_outside_profile why) ->
-      failwith ("a request's program did not load: " ^ E4_clock.refusal_text why)
+      failwith
+        ("a request's program did not load: " ^ Effect4_engine.E4_engine.outside_text why)
   ;;
 
   (* The served run packaged by the lowered `resultVal`, at the host's state read as the lane's. *)

@@ -30,11 +30,13 @@
        the real instance finishes.                                          tested
    S6  A machine sleeping with no clock advance stops with `Waiting`, a live frontier: no host
        call, no root exit. Premise: the engine answers `Suspended`.         tested
-   S7  Loading has its own result: a natural literal outside the profile, and a closed sum
-       whose loading computes outside it, are `Error (Load_outside_profile _)`, and nothing
-       raises. Premise: `E.load` raises on each, and for the sum `compile` passes, so the
-       refusal is the load's own. Red control: the largest literal inside the profile loads and
-       finishes.                                                            tested
+   S7  Loading has its own result: a natural literal outside the profile is
+       `Error (Load_outside_profile (Unsupported _))`, Lean's profile support at ingress, and a
+       closed sum whose loading computes outside it is `Error (Load_outside_profile
+       (Crossing _))`; nothing raises. Premise: `literal_refusal` refuses the literal at its
+       node, and admits the sum, on which `E.load` raises at the arithmetic crossing, so that
+       refusal is the load's own. Red control: the largest literal inside the profile loads
+       and finishes.                                                        tested
    S8  The assessment's program, whose `evaluate 0` leaves the profile: the stop is
        `Outside_profile`, the provider is never called, and the engine is the machine as loaded.
        Red control: the same shape inside the profile finishes with 42.     tested
@@ -277,26 +279,31 @@ module Checks (E : E4_engine.ENGINE) = struct
       | exception E4_clock.Profile_refusal _ -> true
       | _ -> false
     in
-    let refused_load p =
+    let load_refusal p =
       match H.serve (fun _ _ st -> Some (success Val.Unit, st)) p ~fuel:1000 () with
-      | Error (H.Load_outside_profile _) -> true
-      | Ok _ -> false
-      | exception _ -> false
+      | Error (H.Load_outside_profile why) -> Some why
+      | Ok _ -> None
+      | exception _ -> None
     in
     let big = Eff.Succeed (nat (1 lsl 53)) in
-    check (name "S7 premise: E.load raises on a literal outside the profile") (raises big);
+    check
+      (name
+         "S7 premise: profile support refuses a literal outside the profile, at its node")
+      (E.literal_refusal big
+       = Some { Located.site = []; reason = ProfileReason.AboveBound (1 lsl 53) });
     check
       (name "S7 a literal outside the profile is the loading refusal, nothing raised")
-      (refused_load big);
+      (match load_refusal big with
+       | Some (E4_engine.Unsupported _) -> true
+       | _ -> false);
     check
-      (name "S7 premise: the closed sum compiles, and E.load raises on it")
-      ((match E.compile closed_sum with
-        | exception _ -> false
-        | _ -> true)
-       && raises closed_sum);
+      (name "S7 premise: profile support admits the closed sum, and E.load raises on it")
+      (Option.is_none (E.literal_refusal closed_sum) && raises closed_sum);
     check
       (name "S7 a closed sum whose loading leaves the profile is the loading refusal")
-      (refused_load closed_sum);
+      (match load_refusal closed_sum with
+       | Some (E4_engine.Crossing _) -> true
+       | _ -> false);
     check
       (name "S7 red control: the largest literal inside the profile loads and finishes")
       (finished

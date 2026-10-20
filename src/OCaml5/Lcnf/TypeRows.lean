@@ -80,12 +80,10 @@ def problems (fidelity : Fidelity) (domain : String) : List String :=
 end Fidelity
 
 /-- Where a lowered row refuses: the crossing whose name its refusal carries (decision D-2's
-"exact or refuse"; `docs/research/2026-10-17-ocaml-estate-review/README.md`, D9). -/
+"exact or refuse"; `docs/research/2026-10-17-ocaml-estate-review/README.md`, D9). A program's
+literals and a host's answer are no row's crossing: Lean's profile support judges them at ingress
+(`Effect4.Program.ProfileData.literalRefusal` and `valueRefusal`, lowered; M2). -/
 inductive Crossing where
-  /-- A natural literal of the program, against the program's numeric profile (DI-56). -/
-  | literal
-  /-- A host's answer at ingress (`E4_engine` EN9). -/
-  | reply
   /-- An arithmetic result outside the program's numeric profile (DI-56) or the target's
   capacity. -/
   | arithmetic
@@ -99,8 +97,6 @@ inductive Crossing where
 
 namespace Crossing
 protected def toString : Crossing → String
-  | .literal => "literal"
-  | .reply => "reply"
   | .arithmetic => "arithmetic"
   | .clock => "clock"
   | .index => "index"
@@ -383,7 +379,7 @@ private def typeRefusingAt (c : Crossing) : List Name :=
   (typeRows.filter (·.receipt.crossing == some c)).map (·.lean)
 #guard typeRefusingAt .index == [``USize]
 #guard typeRefusingAt .arithmetic == [] && typeRefusingAt .clock == []
-#guard typeRefusingAt .panic == [] && typeRefusingAt .literal == [] && typeRefusingAt .reply == []
+#guard typeRefusingAt .panic == []
 #guard (typeRows.filter (·.receipt.fidelity == .exact)).length == 21
 -- Until 2.2b the classes describe the `int` spelling, so the two words keep theirs.
 #guard (typeRows.filter (·.fidelity == .unsound)).map (·.lean) == [``UInt64, ``USize]
@@ -406,8 +402,8 @@ private def withTypeReceipt (lean : Name) (receipt : Receipt) : List TypeRow :=
 #guard refuses (typeReceiptProblems (withTypeReceipt ``USize (.refuses .index "")))
   "type row USize: receipt: a row exact under a domain states none"
 #guard refuses
-  (typeReceiptProblems (withTypeReceipt ``Nat { Receipt.exact with crossing := some .literal }))
-  "type row Nat: an exact receipt names the crossing literal"
+  (typeReceiptProblems (withTypeReceipt ``Nat { Receipt.exact with crossing := some .clock }))
+  "type row Nat: an exact receipt names the crossing clock"
 
 /-! ### Controls: the spellings the route had -/
 

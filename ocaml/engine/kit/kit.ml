@@ -2,6 +2,7 @@
 
 open Eff_types
 module G = Effect4_gen.Api_gen
+module E4_engine = Effect4_engine.E4_engine
 
 type program = NativeOp.t Eff.t
 type exit = (Val.t, Err.t, Defect.t, int, unit) Exit.t
@@ -48,10 +49,16 @@ type reply_fault = G.reply_fault =
   | ReplyFault_errorType of Ty.t
   | ReplyFault_reservedDefect
 
+type reply_refusal =
+  | Fault of reply_fault
+  | Ingress of E4_engine.outside
+  | Engine
+
 type stop =
   | Finished of exit
   | Waiting of int * Val.t
-  | Refused of int * Val.t * exit * reply_fault option
+  | Refused of int * Val.t * exit * reply_refusal
+  | Unsupported of E4_engine.profile_refusal
   | Unsettled
   | Stopped of string
 
@@ -95,25 +102,31 @@ let position (a : app) (row : Row.t) =
   go 0 a.G.rows
 ;;
 
-(* Reply admission (B5): a reply that does not fit its row is no answer, so the call waits. *)
+(* Ingress, then reply admission (B5): a reply that does not cross, or does not fit its row, is
+   no answer, so the call waits. Ingress is the engine's: Lean's profile support, lowered. *)
 let admitted (a : app) (r : 's reactor) : 's reactor =
   fun row v st ->
-  match r row v st, position a row with
-  | Some (Completion.OfExit ex, _), Some i when Option.is_some (reply_fault a i ex) ->
-    None
-  | answer, _ -> answer
+  match r row v st with
+  | Some (c, _) when Option.is_some (E4_engine.Fast.ingress c) -> None
+  | Some (Completion.OfExit ex, _) as answer ->
+    (match position a row with
+     | Some i when Option.is_some (reply_fault a i ex) -> None
+     | _ -> answer)
+  | answer -> answer
 ;;
 
-(* Why a call waits: the reactor asked again; a reply that does not fit is named with its
-   fault. A refused reply leaves the state as it was, so asking again gives the same reply. *)
+(* Why a call waits: the reactor asked again; a reply that does not cross or does not fit is
+   named with its refusal. A refused reply leaves the state as it was, so asking again gives the
+   same reply. *)
 let waiting (a : app) (r : 's reactor) st i v =
   match List.nth_opt a.G.rows i with
   | Some row ->
     (match r row v st with
-     | Some (Completion.OfExit ex, _) ->
-       (match reply_fault a i ex with
-        | Some f -> Refused (i, v, ex, Some f)
-        | None -> Waiting (i, v))
+     | Some ((Completion.OfExit ex as c), _) ->
+       (match E4_engine.Fast.ingress c, reply_fault a i ex with
+        | Some why, _ -> Refused (i, v, ex, Ingress why)
+        | None, Some f -> Refused (i, v, ex, Fault f)
+        | None, None -> Waiting (i, v))
      | _ -> Waiting (i, v))
   | None -> Waiting (i, v)
 ;;
@@ -138,7 +151,7 @@ let machine_trace a r (m : 's Kit_machine.run) =
          (match List.nth_opt a.G.rows i with
           | Some row ->
             (match r row v m.state with
-             | Some (Completion.OfExit ex, _) -> Refused (i, v, ex, None)
+             | Some (Completion.OfExit ex, _) -> Refused (i, v, ex, Engine)
              | _ -> Waiting (i, v))
           | None -> Waiting (i, v))
        | Kit_machine.Out_of_fuel | Kit_machine.Out_of_rounds -> Unsettled
@@ -177,47 +190,60 @@ let run
   =
   let rows = a.G.rows in
   let guarded = admitted a r in
-  if Option.is_none (G.run_tree_outside_at p)
-  then (
-    let host = G.run_tree_host_of_reactor rows guarded in
-    let traces k =
-      List.map
-        (fun (o : 's G.effect4_run_tree_outcome) -> tree_trace a r o.state o.steps o.stop)
-        (G.run_tree_frames rows k host st p)
-    in
-    match G.run_tree_settle rows limit host st p with
-    | Some (k, o) ->
-      let trace = tree_trace a r o.state o.steps o.stop in
-      let agrees =
-        if check
-        then Some (agree trace (machine_trace a r (Kit_machine.run rows guarded st p)))
-        else None
-      in
-      { by_tree = true
-      ; budget = Some k
-      ; trace
-      ; state = o.state
-      ; frames = (if frames then traces k else [])
-      ; agrees
-      }
-    | None ->
-      let o = G.run_tree_probe rows limit host st p in
-      { by_tree = true
-      ; budget = None
-      ; trace = tree_trace a r o.state o.steps o.stop
-      ; state = o.state
-      ; frames = (if frames then traces limit else [])
-      ; agrees = None
-      })
-  else (
-    let m = Kit_machine.run ~rounds:limit rows guarded st p in
-    { by_tree = false
+  let by_tree = Option.is_none (G.run_tree_outside_at p) in
+  match E4_engine.Fast.literal_refusal p with
+  | Some why ->
+    (* Ingress (B7): a literal outside the profile, and neither runner starts. *)
+    { by_tree
     ; budget = None
-    ; trace = machine_trace a r m
-    ; state = m.state
+    ; trace = { steps = []; stop = Unsupported why }
+    ; state = st
     ; frames = []
     ; agrees = None
-    })
+    }
+  | None ->
+    if by_tree
+    then (
+      let host = G.run_tree_host_of_reactor rows guarded in
+      let traces k =
+        List.map
+          (fun (o : 's G.effect4_run_tree_outcome) ->
+             tree_trace a r o.state o.steps o.stop)
+          (G.run_tree_frames rows k host st p)
+      in
+      match G.run_tree_settle rows limit host st p with
+      | Some (k, o) ->
+        let trace = tree_trace a r o.state o.steps o.stop in
+        let agrees =
+          if check
+          then Some (agree trace (machine_trace a r (Kit_machine.run rows guarded st p)))
+          else None
+        in
+        { by_tree = true
+        ; budget = Some k
+        ; trace
+        ; state = o.state
+        ; frames = (if frames then traces k else [])
+        ; agrees
+        }
+      | None ->
+        let o = G.run_tree_probe rows limit host st p in
+        { by_tree = true
+        ; budget = None
+        ; trace = tree_trace a r o.state o.steps o.stop
+        ; state = o.state
+        ; frames = (if frames then traces limit else [])
+        ; agrees = None
+        })
+    else (
+      let m = Kit_machine.run ~rounds:limit rows guarded st p in
+      { by_tree = false
+      ; budget = None
+      ; trace = machine_trace a r m
+      ; state = m.state
+      ; frames = []
+      ; agrees = None
+      })
 ;;
 
 let samples (a : app) t = G.run_kit_samples a.G.types 4 t
@@ -263,7 +289,7 @@ module Json = struct
     | NatJson_arr of t list
     | NatJson_obj of (string * t) list
 
-  type refusal = (G.json_site, G.json_reason) G.located
+  type refusal = (G.json_site, G.json_reason) Located.t
 
   exception Not_json of string
 
@@ -390,13 +416,29 @@ module Json = struct
     NatJson_obj (row_fields a i @ [ "request", value_json v; "answer", exit_json ex ])
   ;;
 
+  (* Profile support's refusal: its path, and the number outside the bound. *)
+  let profile_json ({ Located.site; reason } : E4_engine.profile_refusal) =
+    ("at", NatJson_arr (List.map (fun i -> NatJson_nat i) site))
+    ::
+    (match reason with
+     | ProfileReason.AboveBound n -> [ "aboveBound", NatJson_nat n ]
+     | ProfileReason.BelowBound n -> [ "belowBound", NatJson_nat n ])
+  ;;
+
   let fault_json = function
-    | Some (ReplyFault_answerType t) ->
+    | Fault (ReplyFault_answerType t) ->
       [ "fault", NatJson_str "answerType"; "expected", NatJson_str (ty_text t) ]
-    | Some (ReplyFault_errorType t) ->
+    | Fault (ReplyFault_errorType t) ->
       [ "fault", NatJson_str "errorType"; "expected", NatJson_str (ty_text t) ]
-    | Some ReplyFault_reservedDefect -> [ "fault", NatJson_str "reservedDefect" ]
-    | None -> [ "fault", NatJson_str "refusedByTheEngine" ]
+    | Fault ReplyFault_reservedDefect -> [ "fault", NatJson_str "reservedDefect" ]
+    | Ingress (E4_engine.Unsupported why) ->
+      ("fault", NatJson_str "outsideProfile") :: profile_json why
+    | Ingress E4_engine.Not_a_value -> [ "fault", NatJson_str "notAValue" ]
+    | Ingress (E4_engine.Crossing _ as why) ->
+      [ "fault", NatJson_str "outsideProfile"
+      ; "note", NatJson_str (E4_engine.outside_text why)
+      ]
+    | Engine -> [ "fault", NatJson_str "refusedByTheEngine" ]
   ;;
 
   let stop_json a = function
@@ -413,6 +455,8 @@ module Json = struct
              @ [ "request", value_json v; "reply", exit_json ex ]
              @ fault_json f) )
       ]
+    | Unsupported why ->
+      [ "status", NatJson_str "refused"; "profile", NatJson_obj (profile_json why) ]
     | Unsettled ->
       [ "status", NatJson_str "unsettled"
       ; "note", NatJson_str "the budget ended first: a finite probe, not a divergence"

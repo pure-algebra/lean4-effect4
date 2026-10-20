@@ -16,6 +16,9 @@ value	Effect4.Live.open_	Effect4.Live.open	-	Api_gen.live_open_
 abstract	Effect4.Live.t	Effect4.Live	0	Api_gen.live
 value	Effect4.LiveRecord.restore	Effect4.LiveRecord.restore	-	Api_gen.live_record_restore
 value	Effect4.LiveRecord.save	Effect4.LiveRecord.save	-	Api_gen.live_record_save
+field	Effect4.Located.reason	Effect4.Located.reason	-	Eff_types.Located.reason
+field	Effect4.Located.site	Effect4.Located.site	-	Eff_types.Located.site
+type	Effect4.Located.t	Effect4.Located	2	Eff_types.Located
 constructor	Effect4.Machine.Completion.OfExit	Effect4.Machine.Completion.ofExit	-	Eff_types.Completion.OfExit
 constructor	Effect4.Machine.Completion.OfRefGet	Effect4.Machine.Completion.ofRefGet	-	Eff_types.Completion.OfRefGet
 type	Effect4.Machine.Completion.t	Effect4.Machine.Completion	5	Eff_types.Completion
@@ -213,6 +216,9 @@ value	Effect4.Program.Prepared.admit	Effect4.Program.Prepared.admit	-	Api_gen.pr
 value	Effect4.Program.Prepared.make	Effect4.Program.Prepared.make	-	Api_gen.program_prepared_make
 value	Effect4.Program.Prepared.step	Effect4.Program.Prepared.step	-	Api_gen.program_prepared_step
 abstract	Effect4.Program.Prepared.t	Effect4.Program.Prepared	0	Api_gen.prepared
+constructor	Effect4.Program.ProfileReason.AboveBound	Effect4.Program.ProfileReason.aboveBound	-	Eff_types.ProfileReason.AboveBound
+constructor	Effect4.Program.ProfileReason.BelowBound	Effect4.Program.ProfileReason.belowBound	-	Eff_types.ProfileReason.BelowBound
+type	Effect4.Program.ProfileReason.t	Effect4.Program.ProfileReason	0	Eff_types.ProfileReason
 constructor	Effect4.Program.Registration.Deferred	Effect4.Program.Registration.deferred	-	Eff_types.Registration.Deferred
 constructor	Effect4.Program.Registration.External	Effect4.Program.Registration.external	-	Eff_types.Registration.External
 type	Effect4.Program.Registration.t	Effect4.Program.Registration	0	Eff_types.Registration

@@ -152,6 +152,8 @@ import Effect4.Program.Compile
 -- this root, imported by nothing in the API, so the library-root gate sees it here.
 import Effect4.Program.Profile
 import Effect4.Program.HostBoundary
+-- Profile support, one judgment over the value tree and the program's literals (M2).
+import Effect4.Program.ProfileSupport
 -- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the
 -- layer signature `LayerTy` and its laws, the layer term `LayerTerm` over `Eff` bodies,
 -- `App` (`Effect.provide`), the build specification (its totality theorem was cut at

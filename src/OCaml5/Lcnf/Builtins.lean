@@ -1110,8 +1110,8 @@ def receiptProblems (rows : List Builtin) : List String :=
 #guard (receiptProblems builtins).isEmpty
 
 -- The census: the rows that refuse under the exact spelling, by crossing. Every other row is
--- exact. No row refuses at a literal or at a reply: those crossings are the translator's and the
--- host's, not a row's.
+-- exact. A program's literals and a host's answer are no row's crossing: Lean's profile support
+-- judges them at ingress (`Effect4.Program.ProfileData`, lowered; M2).
 private def refusingAt (c : Crossing) : List Name :=
   (builtins.filter (·.receipt.crossing == some c)).map (·.lean)
 #guard refusingAt .arithmetic ==
@@ -1120,7 +1120,6 @@ private def refusingAt (c : Crossing) : List Name :=
   [`USize.ofBitVec, `USize.ofNat, `USize.ofNatLT, `USize.sub, `USize.add, `Array.replicate]
 #guard refusingAt .clock == [`Effect4.ClockMillis.toNat]
 #guard refusingAt .panic == [`panic, `panicCore]
-#guard refusingAt .literal == [] && refusingAt .reply == []
 #guard (builtins.filter (·.receipt.fidelity == .exact)).length == 115
 
 -- Red controls: each altered receipt is refused, for its own reason.

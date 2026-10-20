@@ -37,6 +37,7 @@ module LiveRecord :
       (Api_gen.live, Api_gen.effect4_live_record_refusal) result
     val save : Api_gen.live -> Api_gen.live_record
   end
+module Located = Eff_types.Located
 module Machine :
   sig
     module Completion = Eff_types.Completion
@@ -49,8 +50,10 @@ module NatJson :
   sig
     val parse :
       int list ->
-      (Api_gen.nat_json, (int, Api_gen.text_reason) Api_gen.located) result
-    val refusal_text : (int, Api_gen.text_reason) Api_gen.located -> string
+      (Api_gen.nat_json, (int, Api_gen.text_reason) Eff_types.Located.t)
+      result
+    val refusal_text :
+      (int, Api_gen.text_reason) Eff_types.Located.t -> string
     val render : Api_gen.nat_json -> int list
   end
 module Program :
@@ -64,13 +67,14 @@ module Program :
               string ->
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+               (Eff_types.Term.t,
+                (int list, Api_gen.reason) Eff_types.Located.t)
                result)
               list ->
               Api_gen.env ->
               int list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               (int list, Api_gen.reason) Api_gen.located)
+               (int list, Api_gen.reason) Eff_types.Located.t)
               result
           end
         module Ref :
@@ -78,36 +82,40 @@ module Program :
             val get :
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+               (Eff_types.Term.t,
+                (int list, Api_gen.reason) Eff_types.Located.t)
                result) ->
               Api_gen.env ->
               int list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               (int list, Api_gen.reason) Api_gen.located)
+               (int list, Api_gen.reason) Eff_types.Located.t)
               result
             val make :
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+               (Eff_types.Term.t,
+                (int list, Api_gen.reason) Eff_types.Located.t)
                result) ->
               Api_gen.env ->
               int list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               (int list, Api_gen.reason) Api_gen.located)
+               (int list, Api_gen.reason) Eff_types.Located.t)
               result
             val set :
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+               (Eff_types.Term.t,
+                (int list, Api_gen.reason) Eff_types.Located.t)
                result) ->
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+               (Eff_types.Term.t,
+                (int list, Api_gen.reason) Eff_types.Located.t)
                result) ->
               Api_gen.env ->
               int list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               (int list, Api_gen.reason) Api_gen.located)
+               (int list, Api_gen.reason) Eff_types.Located.t)
               result
           end
         module Row :
@@ -116,12 +124,13 @@ module Program :
               string ->
               (Api_gen.env ->
                int list ->
-               (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+               (Eff_types.Term.t,
+                (int list, Api_gen.reason) Eff_types.Located.t)
                result) ->
               Api_gen.env ->
               int list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               (int list, Api_gen.reason) Api_gen.located)
+               (int list, Api_gen.reason) Eff_types.Located.t)
               result
             val host :
               string ->
@@ -131,64 +140,75 @@ module Program :
         val and_then :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('a Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val app :
           string ->
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
            result)
           list ->
           Api_gen.env ->
           int list ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val bind_with :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+            (Eff_types.Term.t,
+             (int list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('a Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val bool :
           bool ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val catch_with :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+            (Eff_types.Term.t,
+             (int list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('a Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val elaborate_at :
           Eff_types.Row.t list ->
@@ -196,177 +216,200 @@ module Program :
           (Api_gen.env ->
            int list ->
            (Eff_types.NativeOp.t Eff_types.Eff.t,
-            (int list, Api_gen.reason) Api_gen.located)
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           (Eff_types.NativeOp.t Eff_types.Eff.t,
-           (int list, Api_gen.reason) Api_gen.located)
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val exit_ :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('a Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val fail :
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('a Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val if_else :
           'a ->
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           (Api_gen.env ->
            int list ->
-           ('b Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('b Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           (Api_gen.env ->
            int list ->
-           ('b Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('b Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('b Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('b Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val loop_with :
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+            (Eff_types.Term.t,
+             (int list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+            (Eff_types.Term.t,
+             (int list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
            int list ->
            (Eff_types.NativeOp.t Eff_types.Eff.t,
-            (int list, Api_gen.reason) Api_gen.located)
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+            (Eff_types.Term.t,
+             (int list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            (Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+            (Eff_types.Term.t,
+             (int list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+            (Eff_types.Term.t,
+             (int list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
           (Eff_types.NativeOp.t Eff_types.Eff.t,
-           (int list, Api_gen.reason) Api_gen.located)
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val nat :
           int ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val on_exit_with :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+            (Eff_types.Term.t,
+             (int list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('a Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val select_option_with :
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
             int list ->
-            (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+            (Eff_types.Term.t,
+             (int list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('a Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val str :
           string ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val succeed :
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('a Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val suspend :
           (Api_gen.env ->
            int list ->
-           ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+           ('a Eff_types.Eff.t,
+            (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('a Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val sync :
           (Api_gen.env ->
            int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
           int list ->
-          ('a Eff_types.Eff.t, (int list, Api_gen.reason) Api_gen.located)
+          ('a Eff_types.Eff.t,
+           (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val unit :
           Api_gen.env ->
           int list ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
           result
         val var :
           string ->
           Api_gen.env ->
           int list ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Api_gen.located)
+          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
           result
       end
     module CauseTerm = Eff_types.CauseTerm
@@ -476,6 +519,7 @@ module Program :
            Api_gen.frame_event)
           Api_gen.run_machine * bool
       end
+    module ProfileReason = Eff_types.ProfileReason
     module Registration = Eff_types.Registration
     module Row = Eff_types.Row
     module RowArg = Eff_types.RowArg
@@ -521,7 +565,7 @@ module Run :
           Api_gen.sig_app ->
           Eff_types.NativeOp.t Eff_types.Eff.t ->
           (Eff_types.EffTy.t,
-           (int list, Api_gen.type_reason) Api_gen.located)
+           (int list, Api_gen.type_reason) Eff_types.Located.t)
           result
         val eff_ty_shape : Api_gen.shape_doc
         val eff_ty_to_val : Eff_types.EffTy.t -> Eff_types.Val.t
@@ -544,7 +588,8 @@ module Run :
           Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t
         val refusal_shape : Api_gen.shape_doc
         val refusal_to_val :
-          (int list, Api_gen.type_reason) Api_gen.located -> Eff_types.Val.t
+          (int list, Api_gen.type_reason) Eff_types.Located.t ->
+          Eff_types.Val.t
         val replies :
           Api_gen.sig_app ->
           int ->
@@ -674,7 +719,7 @@ module Store :
           Api_gen.shape_doc ->
           Api_gen.nat_json ->
           (Eff_types.Val.t,
-           (Api_gen.json_site, Api_gen.json_reason) Api_gen.located)
+           (Api_gen.json_site, Api_gen.json_reason) Eff_types.Located.t)
           result
       end
     module Val = Eff_types.Val

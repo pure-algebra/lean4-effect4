@@ -14,7 +14,10 @@
        probe (Kit B2, B3).                                             by construction
    S3  `run` is `Kit.run`: a request never names a runner. The answer says which one answered
        ("via"), and for a settled tree run whether the machine agrees ("machine": "agrees");
-       "fast" skips the machine's run.                                 tested (T10) *)
+       "fast" skips the machine's run.                                 tested (T10)
+   S4  A numeric option of the command line (`--limit`, `--budget`, `--width`) is a natural
+       number in decimal digits, or the request is an input error: a negative, malformed or
+       overflowing number never reaches the generated code (the review's A5.2).  tested (T13) *)
 
 module J = Kit.Json
 
@@ -187,6 +190,31 @@ let request_of_json (j : J.t) : request =
   ; width = int "width" 64
   ; fast = flag "fast"
   }
+;;
+
+(* A numeric option: a natural number in decimal digits, refused as an input error otherwise
+   (STANDARDS rule 6; the review's A5.2). A negative number, a malformed one and one past the
+   host's integers never reach the generated code's preconditions. *)
+let natural flag text =
+  let digits = text <> "" && String.for_all (fun c -> c >= '0' && c <= '9') text in
+  match if digits then int_of_string_opt text else None with
+  | Some n -> n
+  | None -> input "%s takes a natural number, not %S" flag text
+;;
+
+(* The command line's flags over a request (`eff check|run|explore PROGRAM [flags]`). *)
+let rec with_flags (r : request) = function
+  | "--rows" :: f :: rest ->
+    with_flags { r with rows = rows_of_json (json_of (read_file f) f) } rest
+  | "--tape" :: f :: rest ->
+    with_flags { r with tape = Some (tape_of_json (json_of (read_file f) f)) } rest
+  | "--limit" :: n :: rest -> with_flags { r with limit = natural "--limit" n } rest
+  | "--budget" :: n :: rest -> with_flags { r with budget = natural "--budget" n } rest
+  | "--frames" :: rest -> with_flags { r with frames = true } rest
+  | "--fast" :: rest -> with_flags { r with fast = true } rest
+  | "--width" :: n :: rest -> with_flags { r with width = natural "--width" n } rest
+  | [] -> r
+  | flag :: _ -> input "unknown flag %S" flag
 ;;
 
 (* `eff serve`'s line: one request in, its answer out. *)

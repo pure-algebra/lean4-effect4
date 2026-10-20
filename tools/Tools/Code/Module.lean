@@ -60,7 +60,11 @@ def surfaceText : SurfaceRefusal → String
   | .layerDeclaration n => "the layer declaration " ++ n ++ " is not plain"
   | .formation _ => "what it reads back to is not formed"
   | .classDeclarations => "its classes are not the printer's"
-  | .outsideProfile n => "the literal " ++ toString n ++ " is above the target's safe integers"
+  | .outsideProfile why =>
+    let n := match why.reason with
+      | .aboveBound n => toString n
+      | .belowBound n => "-" ++ toString (n + 1)
+    "the literal " ++ n ++ " at " ++ toString why.site ++ " is outside the target's safe integers"
   | .imports => "an import is not admitted"
   | .lexical => "a form the binding analysis does not read"
 

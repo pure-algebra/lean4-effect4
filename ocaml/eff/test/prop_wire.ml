@@ -312,7 +312,7 @@ let fail what i =
 let reads_back (doc : G.shape_doc) (v : Val.t) : bool =
   match G.store_shape_doc_read_located doc (G.store_shape_doc_print_tree doc v) with
   | Ok v' -> Eff_val.equal v v'
-  | Error { G.reason = G.JsonReason_naturalOutsideProfile _; _ } -> true
+  | Error { Eff_types.Located.reason = G.JsonReason_naturalOutsideProfile _; _ } -> true
   | Error _ -> false
 ;;
 

@@ -1182,7 +1182,7 @@ let machine_image () =
      FUEL, not by a longer tape: `replay_steps` stops consuming the tape as soon as the
      command residue is non-empty (E4_engine EN4), so a machine that ran out of fuel repeats
      and a longer tape of `evaluate` decisions gives one machine over and over. *)
-  let prog = En.compile (chain_prog 40) in
+  let prog = chain_prog 40 in
   let steps = List.init 6 (fun i -> En.run_program prog ~fuel:(10 + (i * 20))) in
   let images = List.map Ck.image_of_machine steps in
   check
@@ -1210,7 +1210,7 @@ let sharing () =
      one compiled program is the same run at 64 increasing positions, which is what A2 §4.4's
      "consecutive checkpoints" means and what makes the image GROW between them. *)
   let step = 50 in
-  let prog = En.compile (chain_prog n) in
+  let prog = chain_prog n in
   let t_load = Unix.gettimeofday () in
   let machines = List.init k (fun i -> En.run_program prog ~fuel:((i + 1) * step)) in
   let images = List.map Ck.image_of_machine machines in
