@@ -319,6 +319,61 @@ after M2. That slice deletes `EmitTodo.lean` and the to-do's `Print.lean`.
   its program's address, which changes the 93 truth modules by one line. And
   `ModuleEmission.admitFile`, the certificate form of `ModuleEmission.readFile`, once a consumer
   needs it.
+- **Slice 3 landed** 2026-10-20 (`483d77442`, to-do `c9ecde1`): `run` is a command of the
+  compiler, the Lean machine over a Lean host. `Compiler.Run` holds what an application supplies,
+  `Hosted`: its state's type, the initial state, the reactor and `view`. A request is
+  `Compiler.Request`, an entry's name and its literal arguments. `Compiler.main app args`, given
+  `hosted` and `script`, reads `run [--json | --typed | --text] [--script FILE] [--budget N]`.
+  Each request's module is built, run from the state so far with the reactor (`Run.runWith`), and
+  printed as one line. The to-do's `litVal`, `exitVal`, `resultVal`, `typedJson` and `litText`
+  moved unchanged, and its `jsonText` is `valueText` over `Compiler.jsonText`. `--json` and
+  `--typed` print the bytes that the to-do's own modes printed, tested. A refused build prints its
+  located refusal as `check` does, keeps the state, and the run exits with `1`. A source with no
+  host refuses `run` with exit code `2`, and so does `lake exe effect4 run --group todo`.
+  `--script FILE` reads a JSON array of requests through `Compiler.readJson`. An argument is a
+  string, a natural, a Boolean, or `null` for the unit, as a result's value tree prints each
+  literal. At `--budget 0` no line has an exit, and the run exits with `0`: a frontier is no
+  refusal. The architecture document and the role register name `run`. In the to-do, `Main.lean`
+  went from 21 lines to 7, and `Todo/Host.lean` from 237 to 117. The library gained 455 lines and
+  lost 19. `Compiler.Run` is 239 lines, 126 of them code, and the battery gained 132. So the
+  landing adds more than it deletes: the moved mechanics, the command's options and script reader,
+  and their battery. Host keeps `storeVal`, which is `hosted`'s `view`, and the native run's roots
+  `programOf` and `resultVal`, one line each over the library. The brief's list left those two
+  out, but the README's command lowers them by name to OCaml by the LCNF route. The to-do's `ts/`
+  has its own `package.json` and `bun.lock`, and the link into the library's checkout is gone.
+  Each rough edge below has its fix landed, except the last. The readable line wrote the exit as
+  the Lean syntax of its image. It now writes the exit at its own type, and `exitText` is not
+  moved. Its state is the value tree's JSON, so its 11 store parts equal those of Bun's line.
+  `Application.Entry.applied` drops an extra argument. So `Request.moduleOf?` takes one argument a
+  parameter, and `run` names a request that gives another count, with exit code `2`. The brief's
+  two pins do not suffice. Without Bun's types, tsgo 7 refuses `ts/` (TS2688). Without
+  `@effect/sql-sqlite-bun`, tsgo refuses it too (TS2307), and Bun cannot load the copied prelude.
+  Each refusal is reproduced, and both packages are pinned at the library's versions. The
+  committed lowering predated M1: at the base, the README's own command replaced 138 lines of
+  `ocaml/todo_gen.ml`. The native run still matched. The regenerated file is committed, and a
+  second lowering writes the same bytes. Bun resolves 26 packages, and 22 match the library's
+  lock. `fast-check`, `msgpackr`, `@types/node` and `undici-types` resolve newer, and the
+  committed `ts/bun.lock` pins them. Not fixed: the manifest's `inputs` name `effect` and tsgo,
+  but not the SQL package that the copied prelude imports. Changing it changes every emitted
+  manifest. `make batteries-touched BASE=0f51de2c9`: one battery, `Test.Codegen.CompilerEmit`,
+  built. It gains 11 guards over the dogfood to-do's run on the host lane's script, controls
+  included. `#axiom_audit`: the battery's 55 declarations are within `[propext, Quot.sound]`,
+  none modulo a planned goal. The compiler's modules, its writer and stamp aside, reach
+  `Classical.choice` in 56 of 566 declarations. They reach it only through the toolchain's string
+  and path functions. In `Compiler.Run` that is 12 of 145 declarations: `valueText` and
+  `typedJson` through `String.fromUTF8!`, `RunOptions.read` through `String.toNat?`, and their
+  callers. `#closure_audit`: `Test/Audit/ClosureAudit.lean` passes, and none of the compiler's
+  1,195 declarations binds a table before a returned closure. Gates: `make check-ts` passes on
+  all six lanes. The target lane resolves 104 of 104, and the corpus keeps 408, 385 readable, 0
+  refused. `make check-docs`, `check-language`, `check-census`, `check-schema-pins`, `check-tools`
+  and `check-gen` pass, and no committed file changed. `check-roots` was not run: it is
+  `lake build Test`. `make check-ocaml` is not owed, since nothing under `ocaml/` or `src/OCaml5`
+  changed. In the to-do, `run --json` through `ts/lean-lines.ts` equals `bun ts/run.ts`, and
+  `run --typed` equals Bun on all eleven exits. `check` passes, tsgo 7 checks `ts/`, and the
+  native run equals `run --json`. `emit --target ts --out ts` changes only the manifest's library
+  commit, and a second emit writes the same bytes. Proposed: a decisions row for the slice.
+  Proposed too: the manifest's `inputs` name every package that the emitted folder imports. And
+  the prelude's SQL import moves to a file that only a program with a SQL row reaches.
 
 ## 9. The prior art, each against our semantics
 
