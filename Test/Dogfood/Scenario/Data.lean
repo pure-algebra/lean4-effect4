@@ -21,7 +21,7 @@ gives each name that the scenario tree uses an alias in this namespace. -/
 export Effect4.Run (Seen Sel Event live rows bound seenOf held)
 
 /-- A step of a script: the library's event. The scenarios and the host lane
-(`harness/truth/session/Keyed.lean`) name it `Move`. -/
+(`git:38b94bdec:harness/truth/session/Keyed.lean`) name it `Move`. -/
 abbrev Move := Event
 
 /-! ## 2. The driver -/
@@ -100,7 +100,7 @@ export Effect4.Run (MachineView machineViewOf machineView Position openedOf atRe
 
 /-- One named run of a scenario: one script on one program. A scenario's record lists each one
 once, and every consumer of a script takes it from that list: the host lane
-(`harness/truth/session/Keyed.lean`) and the engine's lane (`Test/Dogfood/Scenario/TapeData.lean`).
+(`git:38b94bdec:harness/truth/session/Keyed.lean`) and the engine's lane (`Test/Dogfood/Scenario/TapeData.lean`).
 A lane quotes a run as the scenario's name, a slash and the run's name (`Scenario.quote`). -/
 structure NamedRun where
   /-- The run's name in its scenario. -/

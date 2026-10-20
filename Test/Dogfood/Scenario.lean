@@ -37,7 +37,7 @@ and the lowered runs. This module holds what the scenarios share.
   its named runs and its controls. Decisions row 410 retired the scenarios' claims and their gate.
 * **The named runs.** A scenario's record lists each of its scripts once, as a `NamedRun`: a
   name, the built program opened for a run, and the script. A control holds no script; it names
-  the runs that its comparison reads. The host lane (`harness/truth/session/Keyed.lean`) and the
+  the runs that its comparison reads. The host lane (`git:38b94bdec:harness/truth/session/Keyed.lean`) and the
   engine's lane (`Test/Dogfood/Scenario/TapeData.lean`) take their scripts from the same list, so
   no script is written twice.
 

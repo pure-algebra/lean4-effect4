@@ -59,7 +59,7 @@
        reaches the machine.                                                 tested
 
    What it does not establish: a request outside the script; the session's own clauses; the
-   records of apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
+   records of git:38b94bdec:apps/todo/Check.lean, which this lane does not write. T5 shows no observation that
    the table changes (the scenarios lane's S4 does). `step` applies a decision whether or not it
    is admitted, as `Api.replay` does; T6 and T7 check the admission a host driver asks first, refused
    and admitted, on the requests' first calls only.

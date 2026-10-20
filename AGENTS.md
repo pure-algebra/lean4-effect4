@@ -280,11 +280,10 @@ its arrows. Anything else is a leak.
   - `dune build`, only through `opam exec --switch=effect4`, after the OCaml estate.
 - On Windows the shell is PowerShell, and the bash gate scripts run through WSL.
 - TypeScript is checked by one compiler, tsgo 7 (owner, 2026-09-18, restated 2026-10-01):
-  - the pinned `@typescript/native-preview` 7.0.0-dev.20260629.1 in `ts/eff` and `harness/truth`;
-  - `typescript@7.0.2`, patched by `effect-tsgo`, in `harness/schema-host`.
+  - the pinned `@typescript/native-preview` 7.0.0-dev.20260629.1 in `ts/eff` and `harness/truth`.
 - tsgo 7 is the oracle of `check-ts`. `tsc` and
   `typescript@5.x` are never run, in a gate, a probe or a review.
-- A TypeScript result names its compiler and version. `scripts/check-host-protocol.py` runs tsgo
+- A TypeScript result names its compiler and version. `git:fab4a627bbf400ef8cf2e5558c2b58addcc41b57:scripts/check-host-protocol.py` runs tsgo
   (seat J, 2026-10-01).
 - The ingest parses with `oxc-parser` (one entry, `ts/eff/ingest/oxc.ts`). `check-styles.ts` asks
   tsgo's own API (`unstable/sync`, under node) for the oracle's grammar (decisions row 168, seat J2).

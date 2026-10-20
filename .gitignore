@@ -41,7 +41,6 @@ skills-lock.json
 # the one bun install is not.
 /harness/*
 !/harness/truth/
-!/harness/schema-host/
 !/harness/tsdiag/
 /harness/truth/node_modules
 
@@ -53,12 +52,7 @@ skills-lock.json
 /ocaml/**/_build/
 /ocaml/**/node_modules
 
-/harness/schema-host/node_modules
 
 /harness/truth/session/.work/
 /harness/truth/schema-codec/.work/
 
-# The to-do application (`apps/todo/`) is tracked; its link to the one install and its work folder
-# (the written service, the databases, the sessions) are not.
-/apps/*/node_modules
-/apps/todo/.work/

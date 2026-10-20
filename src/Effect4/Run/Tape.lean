@@ -192,7 +192,7 @@ def funded (s : Run) : Bool := (tapeFrom (openedOf s) s.journal).2.isEmpty
 
 /-- **A machine at rest**: it names no runnable fiber and no armed owner. A host lets every
 dispatcher run after each of its acts but the root's start, so a host reads a machine at rest
-(`performable`, `harness/truth/session/Keyed.lean`).
+(`performable`, `git:38b94bdec:harness/truth/session/Keyed.lean`).
 
 Rest does not show that a run is funded. A budget may cut a step and leave its fiber runnable
 with no task: that run is not at rest. A budget may also cut a step and leave no fiber runnable,

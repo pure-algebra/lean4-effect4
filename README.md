@@ -341,7 +341,6 @@ type-checks the `--run` drivers under `tools/Tools/`; one runs as
 The gates beyond the build (bash; on Windows run them through WSL):
 
 ```text
-npm ci --prefix harness/schema-host # pinned Schema host and compiler integrations
 make check          # the core and law graph; connect orphan modules before building
 make check-ts       # every comparison with Effect and tsgo 7
 make check-ocaml    # native layouts, the compiler and the OCaml estate

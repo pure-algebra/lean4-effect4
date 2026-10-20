@@ -22,7 +22,7 @@ number and verdict in the index is computed here by the core's functions.
 
 open Tools.Code
 
-/-- The prelude's files, as `harness/ts_packet.py` names them. -/
+/-- The prelude's helper files beside `prelude.ts`. -/
 def preludeFiles : List String := ["prelude-atoms.gen.ts", "records.ts", "tuples.ts", "control.ts"]
 
 /-- One row of the index. -/

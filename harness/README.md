@@ -24,22 +24,8 @@ of every printed module. The rc.112 differential that ran these modules was dele
 2026-10-20, with its tapes, its results and the lane of the 400 generated programs
 (`git:fa7bdc304:harness/truth`).
 
-`schema-generation/` is `make check-ts`, in the full tier and the nightly CI lane, on
-the Schema sources and the harness directory as inputs. (`schema-annotations/` and
-`schema-effectful-field/`, the `check-schema-host` gate, were deleted on 2026-10-01 under
-decisions row 39; their last revision is `git:d554cd71:harness/`.)
-
-`schema-generation/` contains the first complete bridge fixture. Run
-`scripts/check-schema-typescript-generation.sh`; it regenerates the fixture
-from Lean, byte-compares it, runs the unpatched TypeScript compiler, executes
-Effect's document reviver, and requests strict diagnostics from the Effect
-language service. `EFFECT4_EFFECT_NODE_MODULES` may point at another exact
-installation of the pinned packages.
-
-The same command also generates a second document containing one
-field-admissible representative for each of the 22 representation tags and
-both check constructors. Its bytes are compared against Lean generation, and the runtime receipt
-checks that Effect revives the exact canonical tag order.
+`schema-generation/` and `schema-host/`, the schema-ts lane retired on 2026-10-18, were deleted on
+2026-10-20 with the seven hand packets and `ts_packet.py` (`git:38b94bdec:harness/`).
 
 `trace/` and `effect-v4-family/` were archived to branch `archive/flow-route`
 on 2026-09-04 with the Flow route they served, together with their gates
@@ -49,13 +35,3 @@ on 2026-09-04 with the Flow route they served, together with their gates
 The former fiber-supervision harness was retired with the old supervision calculus.
 Its observations remain historical evidence in git; it is not a runnable lane here.
 
-A pass means the ten cases in `runtime-check.ts` produce their recorded
-results, the direct compiler analyzes the actual harness file, an
-intentionally wrong assignment is rejected and its restoration accepted, the
-Effect diagnostic provider reports one file examined, and only the restored
-unchanged bytes are executed. These are finite observations of one pinned host.
-They do not establish all schedules, eventual completion, an interpretation of
-arbitrary callbacks, or a Lean-to-host simulation; the Lean side is the
-reference machine's clauses and witnesses (`src/Effect4/Laws/Machine/Clauses.lean`,
-`src/Effect4/Laws/Machine/Witnesses.lean`), joined in
-`Test/Audit/RuntimeCoverage.lean`.

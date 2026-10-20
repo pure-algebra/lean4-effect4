@@ -410,11 +410,6 @@ ts/eff/node_modules: | $(GEN)/ts-install
 harness/truth/node_modules: | ts/eff/node_modules
 	ln -s ../../ts/eff/node_modules $@
 
-# The to-do application (`apps/todo/`, decisions row 378 (15)) resolves Effect through its own link
-# to that install, as the truth harness does.
-apps/todo/node_modules: | ts/eff/node_modules
-	ln -s ../../ts/eff/node_modules $@
-
 .PHONY: doctor
 doctor: ## the tools and installs every tier needs, with their versions
 	@printf 'lean       %s\n' "$$(lean --version 2>&1 | head -1)"
@@ -426,7 +421,6 @@ doctor: ## the tools and installs every tier needs, with their versions
 	@printf 'dune       %s\n' "$$($(OCAML) dune --version 2>&1 || echo 'missing (the OCaml lane needs the effect4 switch)')"
 	@printf 'ts/eff     %s\n' "$$(test -d ts/eff/node_modules/effect && echo 'installed (effect, @effect/sql-sqlite-bun, oxc-parser)' || echo 'missing: bun install --frozen-lockfile --cwd ts/eff')"
 	@printf 'truth link %s\n' "$$(test -e harness/truth/node_modules && echo 'present' || echo 'missing: make harness/truth/node_modules')"
-	@printf 'schema-host %s\n' "$$(test -d harness/schema-host/node_modules/effect && echo 'installed (typescript 7.0.2, tsgo)' || echo 'missing: npm ci --prefix harness/schema-host (check-schema-ts)')"
 
 # ---------------------------------------------------------------------------- checks
 
@@ -511,7 +505,6 @@ TS_PINS := ts/eff/package.json ts/eff/bun.lock \
   $(if $(TSGO_HOME),$(TSGO_HOME)/package.json) \
   $(if $(EFFECT4_EFFECT_NODE_MODULES),$(wildcard $(addprefix $(EFFECT4_EFFECT_NODE_MODULES)/,effect/package.json @effect/sql-sqlite-bun/package.json @typescript/native-preview/package.json)))
 TS_INSTALL = ts/eff/node_modules/effect/package.json ts/eff/node_modules/@typescript/native-preview/package.json $(TS_INSTALLED_MANIFESTS)
-SCHEMA_INSTALL := $(addprefix $(or $(EFFECT4_EFFECT_NODE_MODULES),harness/schema-host/node_modules)/,effect/package.json typescript/package.json @effect/tsgo/package.json)
 
 # Arguments: step, runtime, file inputs, Lean entries. Prerequisites that produce inputs
 # are attached to the key below. Only a successful command publishes a shared pass.
@@ -720,8 +713,7 @@ _run-census:
 	bash scripts/check-effect-runtime-census.sh
 
 # The rest of the Schema slice, on its inputs (ledger decision 3): the rc.112 tag pins
-# are a textual extraction from the vendored SchemaRepresentation.ts. The retained
-# generation gate uses the pinned host (EFFECT4_EFFECT_NODE_MODULES, harness/schema-host).
+# are a textual extraction from the vendored SchemaRepresentation.ts.
 SCHEMA_PIN := vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts
 $(eval $(call cached_check,schema-pins,none,$(SCHEMA_PIN) src/Effect4/Schema/Representation.lean scripts/check-schema-census.sh,))
 _run-schema-pins:

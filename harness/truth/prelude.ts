@@ -434,6 +434,3 @@ export const Kv = {
     Effect.map(Effect.provide(Effect.service(KeyValueStore.KeyValueStore), KeyValueStore.layerMemory), (store) => new KvHandle(store))),
 }
 
-/** T-09: executable host protocol data and its checked target transition lookup are
- * projected from Effect4.Api.HostProtocol, independently of these handwritten atom bindings. */
-export { hostProtocol, transition as hostTransition } from "./session/keyed-protocol.ts"

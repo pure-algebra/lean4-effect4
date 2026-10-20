@@ -157,7 +157,7 @@ The spelling of rc.112's persisted JSON is the data plane's (`Representation.toJ
 `Effect4/Schema/DocumentJson.lean`); the emitter only lays that JSON out. A document's skeleton
 (its nodes, checks, tuple elements, property signatures, and the objects between them) breaks
 across lines by node kind; its data (a check's or declaration's `payload`, an annotation bag) is
-printed as data (`json`). The bytes of `harness/schema-generation/*.generated.ts` pin the layout. -/
+printed as data (`json`). The layout was pinned by the fixtures of `git:38b94bdec:harness/schema-generation`. -/
 
 /-- Which skeleton objects break across lines: every node but a reference and a bare keyword (its
 `_tag` and an empty `checks`), every check, every tuple element and property signature, and a

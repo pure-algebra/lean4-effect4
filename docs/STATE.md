@@ -29,8 +29,8 @@ and a document are each a state reached by its journal. The dictionary
 - **TypeScript.** The printer writes a program and its services as Effect TypeScript, checked
   against rc.112 by tsgo 7 (`make check-ts`). The readers read the printed fragment back, with any
   binder names (`ts/eff/read.ts`, `src/Effect4/Codegen/Read.lean`). `ts/eff` writes the tagged
-  print with arrays, the JSON the tool reads. `apps/todo` runs the to-do on Bun over a SQLite
-  layer.
+  print with arrays, the JSON the tool reads. The to-do is a user's project outside the tree
+  (`docs/research/2026-10-19-todo-as-a-user/receipt.md`).
 - **The tool.** `Effect4.Tool.serve` is one transition over a workspace. Two drivers serve it:
   `tools/Drivers/Workspace.lean` in Lean, and `eff tool` or `eff mcp` in the OCaml kit, over the
   lowered `serveTree`. It is for introspection and analysis: it reads, checks, views and explores
@@ -62,11 +62,12 @@ and a document are each a state reached by its journal. The dictionary
 The consolidation order of `coherence.md` §9.1 (row 420): a language that is rational, coherent,
 and compiled as its semantics says. Each move deletes what it replaces.
 
-Now: the to-do as a user's project, outside the library, lowered to OCaml
-(`research/2026-10-19-todo-as-a-user/plan.md`). Its findings may reorder the list below.
+Done on 2026-10-20: the to-do as a user's project (`research/2026-10-19-todo-as-a-user/receipt.md`),
+M1 (`be13aee02`) and M2 (`44083456f`). Now: the compiler's entry point, first slice
+(`research/2026-10-20-compiler-entry/README.md` §7).
 
-1. M1, one located refusal.
-2. M2, one profile judgment at ingress.
+1. M1, one located refusal: landed.
+2. M2, one profile judgment at ingress: landed.
 3. M3, one program codec, lowered.
 4. M4, one type spelling, then E6: `Nat` and `Int` exact in OCaml.
 5. M8, one observation, one check, the kit's commands as queries (row 414 (3)).

@@ -322,7 +322,7 @@ One round is either an answer — the first fresh call bound, received and appli
 flush. The drive stops when a flush reveals no call to answer, when the reactor declines a
 request, when the only calls outstanding are ones the session already recorded, or when the
 rounds run out. This is the driver loop every host lane writes by hand
-(`harness/truth/session/Keyed.lean`, `planRun`). -/
+(`git:38b94bdec:harness/truth/session/Keyed.lean`, `planRun`). -/
 def driveFrom {σ : Type} (r : Reactor σ) : Nat → Run → σ → Run × List Command × σ
   | 0, s, st => (s, [], st)
   | rounds + 1, s, st =>

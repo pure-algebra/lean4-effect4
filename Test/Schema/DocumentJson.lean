@@ -10,7 +10,7 @@ Slice A1 (decisions row 396 (2)). Readers of `Representation.ofJson`, `Document.
 
 - rc.112's own documents for the RPC envelope and the to-do group
   (`Test/fixtures/schema-documents/effect-rpc-rc112.json`, written by
-  `harness/schema-generation/export-rpc.ts`);
+  `git:38b94bdec:harness/schema-generation/export-rpc.ts`);
 - rc.112's observed wire vectors (`Test/fixtures/schema-representation/observed/06-vectors.observed.json`);
 - the document that reaches every tag (`Test.Codegen.SchemaGenerationCoverage.document`).
 

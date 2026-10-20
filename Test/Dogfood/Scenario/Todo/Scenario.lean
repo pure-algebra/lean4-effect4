@@ -9,7 +9,7 @@ import Effect4.Laws.Program.Validated
 
 The application of `Test/Dogfood/Scenario/Todo.lean` as a scenario: its observation, its named
 runs and its controls. The host lane performs its runs on rc.112
-(`harness/truth/session/Keyed.lean`). Decisions row 410 retired its claims and their proofs.
+(`git:38b94bdec:harness/truth/session/Keyed.lean`). Decisions row 410 retired its claims and their proofs.
 -/
 
 set_option autoImplicit false
@@ -137,7 +137,7 @@ def runsAndControls : List NamedRun × List Control :=
 /-! ## 2. The record -/
 
 /-- The to-do application's scenario: the application, its observation, its named runs and its
-controls, which the host lane performs (`harness/truth/session/Keyed.lean`). -/
+controls, which the host lane performs (`git:38b94bdec:harness/truth/session/Keyed.lean`). -/
 def scenario : Scenario :=
   { name := runSet.name
     program := ``application

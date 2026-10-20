@@ -154,7 +154,7 @@ script was deleted on 2026-10-20 (`git:8e93a284f:scripts/check-host-protocol.py`
 runs it now. This section keeps what a host run compares.
 
 - **A host run** is one named run of a scenario's record: a script, on the program that the
-  record opens for it. The lane takes each run from the record (`Wire.runs`, `Keyed.lean`), and
+  record opens for it. The lane takes each run from the record (`Wire.runs`, `git:38b94bdec:harness/truth/session/Keyed.lean`), and
   it holds no script. Lean writes the run's fixture: the printed module, the row table, the
   journal rows that the script leaves and the battery's observation (the mode `scenarios`).
 - **The host** acts out each row through the lane's recorder, and it writes a recording.
@@ -162,7 +162,7 @@ runs it now. This section keeps what a host run compares.
   observation. That observation must be the script's.
 
 Each field of an observation has one source of evidence on the host
-(`harness/truth/session/keyed-observation.ts`). The check writes each entry's source as one table,
+(`git:38b94bdec:harness/truth/session/keyed-observation.ts`). The check writes each entry's source as one table,
 `scenario-evidence.md`, among the results in its work folder. The table's last column gives a
 reader's limit on an entry, with the scripts where the limit holds.
 
@@ -179,7 +179,7 @@ The lane performs each script with no reader, with its readers, and with each re
 Each recording must be the bytes of the run with no reader.
 
 A script has no host run where a host has no act for one of its rows. The driver gives the
-reason (`performable`, `harness/truth/session/Keyed.lean`). A run that is not funded has no
+reason (`performable`, `git:38b94bdec:harness/truth/session/Keyed.lean`). A run that is not funded has no
 host run either: a host has no budget (`emitRun`, in the same file).
 
 The lane compares a module's private cell up to its handles. The queue-workers scenario reads
@@ -187,9 +187,9 @@ the Queue's cell, whose waiting requests hold `Deferred` handles. A host has no 
 `Deferred`. So both faces write one image for it, `{"handle": "deferred"}`, each in a writer
 named `cellJson`.
 
-- On the host only the cells reader calls it (`keyed-recorder.ts`). A `Deferred` in a call's
+- On the host only the cells reader calls it (`git:38b94bdec:harness/truth/session/keyed-recorder.ts`). A `Deferred` in a call's
   request or in an exit stays outside the transport profile.
-- On the Lean face a scenario's wire chooses it for an entry (`Keyed.lean`). The queue-workers
+- On the Lean face a scenario's wire chooses it for an entry (`git:38b94bdec:harness/truth/session/Keyed.lean`). The queue-workers
   wire chooses it for the entry `queue` alone, and every other entry keeps `valJson`.
 
 So a `Deferred` in any other compared value is red.

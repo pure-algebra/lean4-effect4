@@ -12,14 +12,14 @@ Two lanes hand Lean a run that a host recorded. Lean decides on it the premises 
 claims (the lowering note's §6.1, `docs/research/2026-10-13-lowering-vertical-slice/README.md`).
 
 * The keyed lane replays each scripted run of the to-do's emitted service from its records
-  (`harness/truth/session/Keyed.lean`, the subcommand `service-checks`; decisions row 378 (20)).
-* The to-do application records each request that it serves (`apps/todo/`, decisions row 378
-  (16), slice V4). `apps/todo/Check.lean` rebuilds each request's program and decides its checks.
+  (`git:38b94bdec:harness/truth/session/Keyed.lean`, the subcommand `service-checks`; decisions row 378 (20)).
+* The to-do application records each request that it serves (`git:38b94bdec:apps/todo/`, decisions row 378
+  (16), slice V4). `git:38b94bdec:apps/todo/Check.lean` rebuilds each request's program and decides its checks.
 
 This module holds what both read. It is tooling over the law graph: it states no theorem.
 
 * **The wire.** Values, host answers and exits as JSON, in the images of the keyed recorder
-  (`harness/truth/session/keyed-recorder.ts`: `valueJson`, `exitJson`). These definitions came
+  (`git:38b94bdec:harness/truth/session/keyed-recorder.ts`: `valueJson`, `exitJson`). These definitions came
   here from `Keyed.lean` with their bodies unchanged.
 * **The decisions on one run** (`decided`): funded, at rest, driven by a host, and conforming to
   the declared protocols.
