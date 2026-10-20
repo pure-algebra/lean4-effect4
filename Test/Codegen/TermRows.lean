@@ -25,9 +25,9 @@ battery is the slice's acceptance for printing (decisions row 251):
    and reads back, and each program's module is pinned at what the faces answer today;
 3. a class construction that only an operation's term holds: the module declares its class
    with the construction's own fields, through `ScopedOp.term?`;
-4. the texts that the truth lane's compiler control copies
-   (`harness/truth/term-rows.typecheck.ts`), each pinned in full, and the Lean half of two
-   programs that the truth lane runs or holds out.
+4. the texts that the truth lane's compiler control copied
+   (`git:fa7bdc304:harness/truth/term-rows.typecheck.ts`, deleted with the truth differential on
+   2026-10-20), each pinned in full, and the Lean half of two programs of the truth corpus.
 
 Part B of the slice adds the operation's type arguments (the coordinator's addenda 6 and 7):
 
@@ -665,14 +665,14 @@ def shortOp : NativeOp :=
 
 /-! ## 4. The texts the compiler control copies
 
-`harness/truth/term-rows.typecheck.ts` type-checks printed steps under tsgo 7, at the cell's
-printed type. It copies the five texts below, so each is pinned here in full: a change of the
-printer moves this file and that one together. Each type-checks there. Until the literal rule
-of decisions row 256 the last three were that file's red lines: on the target, `pair` and
+`git:fa7bdc304:harness/truth/term-rows.typecheck.ts` type-checked printed steps under tsgo 7, at
+the cell's printed type, until the truth check was retired. It copied the five texts below, so
+each is pinned here in full. Each type-checked there. Until the literal rule of decisions row
+256 the last three were that file's red lines: on the target, `pair` and
 `tuple` kept a Boolean or a number literal as a literal type, where Lean types `bool` and
 `nat`, so two arms that Lean types alike were two target types. The two helpers now widen a
 number or a Boolean in an immediate slot, as `litArgTy` types them, and keep a string literal's
-type (`harness/truth/literals.typecheck.ts` holds the rule's controls). -/
+type (`git:fa7bdc304:harness/truth/literals.typecheck.ts` held the rule's controls). -/
 
 -- the probe's offer step is pinned in section 2; the model's `withdrawTake`:
 #guard ((nodeAt ["q", "id"] (Ref.modify "s" (Steps.withdrawTake (var "id") (var "s")) (var "q"))).bind

@@ -19,8 +19,8 @@ string reaches `Classical.choice`.
 
 It establishes no agreement with a target. tsgo 7 checks the printed modules in the truth
 lane (`harness/truth/Truth.lean`, `pMaskWait` and `pMaskedRestore`). The same lane checks the
-alias in its annotated positions: `harness/truth/mask.typecheck.ts` copies three modules that
-this battery pins.
+alias in its annotated positions: `git:fa7bdc304:harness/truth/mask.typecheck.ts` copied three
+modules that this battery pins. The lane was retired on 2026-10-18 and deleted on 2026-10-20.
 -/
 
 set_option autoImplicit false
@@ -70,8 +70,8 @@ def maskAroundWait : Src NativeOp := eff do
 
 A saved state is a value of its own type, so a promise and a cell hold it. Each program below
 is built, runs to the image of an interruptible caller's flag, and prints the alias in its
-annotated positions. `harness/truth/mask.typecheck.ts` copies the two modules of this section
-and the module of `s1` above, and tsgo 7 type-checks them in the truth lane. -/
+annotated positions. `git:fa7bdc304:harness/truth/mask.typecheck.ts` copied the two modules of
+this section and the module of `s1` above, and tsgo 7 type-checked them in the truth lane. -/
 
 /-- A saved state kept in a promise and awaited. -/
 def keptInPromise : Src NativeOp := eff do

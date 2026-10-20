@@ -8,21 +8,21 @@ what a pass does and does not establish.
 
 The entry point for all of them together is the Makefile (`make help`): `make check`
 is the tier that runs after every change, `make check-full` adds the outside oracles
-(the truth harness, the TypeScript typing oracle, the schema codec, the OCaml tests,
-the ingest smoke), and `make check-full` is everything, the long censuses included.
+(the TypeScript typing oracle, the schema codec, the OCaml tests, the ingest smoke), and
+`make check-full` is everything, the long censuses included.
 Each check is a rule keyed on the files it reads -- its fixtures, the goldens it
 compares with, the Lake trace of the compiled core, the pinned host manifests -- and is
 skipped while none of that has changed; `make -B <target>` or `make clean-check`
 forces it. One Lean process runs at a time. (Until 2026-09-13 this was
 `git:c67ff096:scripts/sweep.sh` with a per-script result cache; the script survives as a wrapper.)
 
-`truth/` is two lanes on one runner: `make check-ts`, the hand-written programs with
-their recorded tapes (the behaviour register: layer sharing counters, host rows, the tag
-residual, chosen values), and `make check-ts`, the 400 generated programs of
-`Test/Program/Gen.lean` run on rc.112 and type-checked, with one committed row per program
-(`truth/corpus-results.tsv`) and the disagreements it records listed with their reasons
-(`truth/corpus-known-differences.md`). The generated corpus adds breadth over constructs the
-hand corpus never runs; it does not replace the hand programs.
+`truth/` holds the truth corpus and the host its printed modules import. `Truth.lean` writes
+the hand corpus's manifest (`harness/truth/corpus.json`) and one printed module per program
+(`harness/truth/generated/`); `make gen-truth-corpus` runs it. The target and reader lanes of
+`make check-ts` read both. The prelude (`harness/truth/prelude.ts` and its siblings) is the host
+of every printed module. The rc.112 differential that ran these modules was deleted on
+2026-10-20, with its tapes, its results and the lane of the 400 generated programs
+(`git:fa7bdc304:harness/truth`).
 
 `schema-generation/` is `make check-ts`, in the full tier and the nightly CI lane, on
 the Schema sources and the harness directory as inputs. (`schema-annotations/` and

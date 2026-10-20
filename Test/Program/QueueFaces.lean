@@ -37,15 +37,16 @@ mints the name of each of its binders, and a caller's name is not captured
 Placement. Finite controls of `read_print` and `read_exact` (R8's top nodes,
 `src/Effect4/Laws/Codegen/ReadPrint.lean` and `src/Effect4/Laws/Codegen/Read.lean`) on the
 Queue's operations and step terms. Every guard is one program. None states target typing or a host run. **Each
-printed step is type-checked under tsgo 7 by the truth lane, not here**: the compiler control
-`harness/truth/queue-steps.typecheck.ts` copies the six texts that the section "The texts that
-the compiler control copies" pins, each at the cell's printed type. The compiler accepts each of
-the six, and it accepted each before the literal rule of decisions row 256 too: that rule's
-difference was in the readiness probe's take step and in the rate limiter's request, not in
-this module's steps (seat T5's measure). Five whole modules over the operations are
-type-checked under tsgo 7 and run on rc.112 by the truth lane: `pQueueWake`, `pQueueFull`,
-`pQueueInterrupted`, `pQueueMasked` and `pQueueOrder` (`harness/truth/Truth.lean`). The
-rendered bytes stay inside each guard.
+printed step was type-checked under tsgo 7 by the truth lane, not here**: the compiler control
+`git:fa7bdc304:harness/truth/queue-steps.typecheck.ts`, retired with the lane, copied the six
+texts that the section "The texts that the compiler control copies" pins, each at the cell's
+printed type. The compiler accepted each of the six, and it accepted each before the literal
+rule of decisions row 256 too: that rule's difference was in the readiness probe's take step
+and in the rate limiter's request, not in this module's steps (seat T5's measure). Five whole
+modules over the operations were type-checked under tsgo 7 and run on rc.112 by the truth
+lane: `pQueueWake`, `pQueueFull`, `pQueueInterrupted`, `pQueueMasked` and `pQueueOrder`
+(`harness/truth/Truth.lean`, whose corpus they stay in). The rendered bytes stay inside each
+guard.
 -/
 
 set_option autoImplicit false
@@ -295,9 +296,9 @@ reaches `Classical.choice` (AGENTS.md, Trust). -/
 
 /-! ## The texts that the compiler control copies
 
-`harness/truth/queue-steps.typecheck.ts` type-checks the six printed steps under tsgo 7, each at
-the cell's printed type. It copies the texts below and the size step's text above, so each is
-pinned here in full: a change of the printer or of a step moves this file and that one together.
+`git:fa7bdc304:harness/truth/queue-steps.typecheck.ts` type-checked the six printed steps under
+tsgo 7, each at the cell's printed type, until the truth check was retired. It copied the texts
+below and the size step's text above, so each is pinned here in full.
 The three printed types are the control's `Cell`, `Taker` and `Offer`. -/
 
 -- The take step in full.

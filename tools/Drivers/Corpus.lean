@@ -66,9 +66,9 @@ def moduleHeader : List String :=
 /-- **The module the diagnostics lane checks**: the unchecked module of every lane's writer
 (`uncheckedFile`), its prelude beside the modules' folder, with no declared type. The lane asks
 whether the host's compiler refuses what this checker refuses, on its own; whether it accepts
-Lean's declared type of a typed program is the corpus lane's question, on the module that ships
-(`make check-corpus`). The program is the reference-free twin (`expandRefs`), the tree the
-checker types, so its module names no undeclared `L_<path>`. -/
+Lean's declared type of a typed program was the retired corpus lane's question, on the module
+that ships (`git:fa7bdc304:scripts/check-corpus.py`). The program is the reference-free twin
+(`expandRefs`), the tree the checker types, so its module names no undeclared `L_<path>`. -/
 def diagnosticsModule (p : Eff NativeOp) : Except PrintRefusal String :=
   (Effect4.Codegen.uncheckedFile "../prelude.ts" "main" p.expandRefs).map fun m =>
     Tools.Code.moduleText Tools.Code.Ts.width { m with header := moduleHeader }

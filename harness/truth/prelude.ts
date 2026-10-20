@@ -41,8 +41,8 @@ import { SqliteClient } from "@effect/sql-sqlite-bun"
 // ---- the atoms (generated) --------------------------------------------------------
 //
 // One export per atom of `Effect4.Program.NativeAtom`, generated from `NativeAtom.row` (the
-// body) and `NativeAtom.spec` (the doc). Re-exported here so that every printed module, the
-// runner's import header and `select-controls.ts` keep importing them from `./prelude.ts`.
+// body) and `NativeAtom.spec` (the doc). Re-exported here so that every printed module keeps
+// importing them from `./prelude.ts`.
 
 export * from "./prelude-atoms.gen.ts"
 export { recordValue, recordRequired, recordOptional, recordSet, caseTagR } from "./records.ts"
@@ -337,7 +337,8 @@ export const canonicalJson = (value: unknown): unknown => {
  * instance writes `{ ...plainArgs, ...this }` (`Data.Error`'s `toJSON`,
  * `vendor/effect-4.0.0-rc.112/src/internal/core.ts:602-604`), so its `message` and a `cause`
  * appear although the instance holds them unenumerable (`ErrorOptions`, tested in
- * `records.test.ts`). `null` when the value has no JSON object image. */
+ * `git:fa7bdc304:harness/truth/records.test.ts`). `null` when the value has no JSON object
+ * image. */
 export const taggedData = (e: object): Record<string, unknown> | null => {
   try {
     const image: unknown = JSON.parse(JSON.stringify(e))
@@ -415,7 +416,8 @@ export const Sql = {
  * results (`{}`, `true`). Each of the four carries the pair as its error column, so each
  * projects (`toPair`); the memory store itself never fails. A `KeyValueStoreError` holds
  * `method` and `key` beyond its `message`, so since decisions row 120 (part E2) it has no
- * pair and the adapter makes it a defect (`pairOf`, case 4; tested in `records.test.ts`). */
+ * pair and the adapter makes it a defect (`pairOf`, case 4; tested in
+ * `git:fa7bdc304:harness/truth/records.test.ts`). */
 export class KvHandle {
   readonly ["~effect4/ExternalHandle"] = "KeyValueStore.KeyValueStore"
   constructor(readonly store: KeyValueStore.KeyValueStore) {}

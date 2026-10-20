@@ -87,9 +87,9 @@ def bound (σ : Option Ty.Subst) (i : Nat) : Option Ty :=
 
 The match reads a union argument member by member, and the atom answers at the join of the
 members' element types. The prelude takes such an argument at its whole type, so tsgo computes
-the same join (`harness/truth/folds.typecheck.ts`, which `make check-truth` runs). At a
-declaration with the parameter under the list or the map, tsgo refuses each of these calls
-(`TS2345`). -/
+the same join (`git:fa7bdc304:harness/truth/folds.typecheck.ts`, which the retired truth check
+ran). At a declaration with the parameter under the list or the map, tsgo refuses each of these
+calls (`TS2345`). -/
 
 /-- Two list types with no order. -/
 def twoLists : Ty := .union (.list .nat) (.list .string)

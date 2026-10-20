@@ -28,7 +28,7 @@ Runtime controls count condition evaluation, branch construction and branch exec
 They also observe repeated runs, an unselected throwing constructor, and selected failure state.
 Each wrong helper must compile before its intended runtime control rejects it.
 Restoring the helper must restore acceptance.
-The ordinary truth gate also runs `harness/truth/if-case.test.ts` against its pinned Effect installation.
+The ordinary truth gate also runs `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/if-case.test.ts` against its pinned Effect installation.
 
 ## Evidence boundary
 

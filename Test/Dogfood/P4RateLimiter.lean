@@ -39,8 +39,9 @@ step. The three-cell program stays as the race control (section 3). The stage lo
 **Changes in the state plan's T5, part A.** A row's term prints as a function of the current
 value and reads back, so the stage has `printed` and `readBack` again (section 4). The printed
 request type-checks under tsgo 7 since the literal rule of decisions row 256: until then `pair`
-kept a Boolean literal's type on the target (the compiler control
-`harness/truth/term-rows.typecheck.ts`, `request`; `Test/Codegen/TermRows.lean`, `fourRequests`).
+kept a Boolean literal's type on the target (the retired compiler control
+`git:fa7bdc304:harness/truth/term-rows.typecheck.ts`, `request`; `Test/Codegen/TermRows.lean`,
+`fourRequests`).
 
 **Waits on:** R10 (DI-89's `all`). It waited on R4's faces part until the literal rule: the
 printed request now type-checks on the target, and the truth program `pRateRequest` agrees with

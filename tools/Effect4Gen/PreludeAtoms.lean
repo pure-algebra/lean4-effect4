@@ -45,8 +45,8 @@ ruling): the one shared type that the two bodies name (`NativeAtom.row`, the `pr
 with the rule's consequence stated where the helper is generated. A number or a Boolean type in
 an immediate slot widens, as `litArgTy` types a number or a Boolean literal
 (`src/Effect4/Program/Typing/Rules.lean`). A string literal keeps its literal type (DI-55). The
-type is written here once, so the rule has one owner. Its compiler controls are
-`harness/truth/literals.typecheck.ts`. -/
+type is written here once, so the rule has one owner. Its compiler controls were
+`git:fa7bdc304:harness/truth/literals.typecheck.ts`, retired with the truth check. -/
 def wide : List String :=
   [ "/** The literal rule of `pair` and `tuple` on the target (decisions row 256, inside DI-55's"
   , " * ruling). A number or a Boolean type in an immediate slot widens to `number` or `boolean`,"
@@ -57,7 +57,7 @@ def wide : List String :=
   , " *"
   , " * The consequence. A number or Boolean singleton type, or a brand, in a direct slot is lost"
   , " * on the target. A Boolean tuple tag no longer discriminates. These helpers preserve no"
-  , " * arbitrary TypeScript refinement. The compiler controls are `literals.typecheck.ts`. */"
+  , " * arbitrary TypeScript refinement. */"
   , "type Wide<T> = T extends number ? number : T extends boolean ? boolean : T"
   , ""
   , "/** The checked two-slot overload distributes union factors. Ordinary overloads retain"

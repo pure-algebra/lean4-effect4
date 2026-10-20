@@ -3,13 +3,15 @@
  * The type oracle over a corpus manifest: every well-typed program's answer, error and
  * requirement types, as Lean rendered them, against the types `tsc` infers for the printed
  * module, both assignment directions (`oracle.ts`). The same comparison `cli.ts` runs on the
- * hand-picked selection, on every program of a manifest written by
- * `harness/truth/Truth.lean --corpus`; `scripts/check-corpus.py` calls it.
+ * hand-picked selection, on every program of a generated corpus's manifest. No lane runs it:
+ * its caller and the manifest's writer were deleted with the truth differential on 2026-10-20
+ * (`git:fa7bdc304:scripts/check-corpus.py`, the `--corpus` mode of
+ * `git:fa7bdc304:harness/truth/Truth.lean`).
  *
  *     bun tools/target/corpus.ts --repo . --manifest <corpus.json> --inferred <dir> --out <report.json>
  *
- * The module read is the program's *unannotated* module (`inferred/<name>.ts`, written by
- * `run-truth.ts --emit` from the manifest's `moduleInferred`): `typeof Program.main` is then
+ * The module read is the program's *unannotated* module (`inferred/<name>.ts`, which
+ * `run-truth.ts --emit` wrote from the manifest's `moduleInferred`): `typeof Program.main` is then
  * what the host's compiler infers for the printed initializer on its own. Reading the shipped
  * annotated block would hand Lean's rendered type back to the comparison (the annotation *is*
  * that type), which the audit of 2026-09-13 showed reports agreement on a widened annotation.

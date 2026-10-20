@@ -108,8 +108,9 @@ open Effect4.Program
 -- `ite(b, n, s)` at `number | string`. `getOrElse` joins the payload's type and the default's
 -- type, and the prelude takes the option at its whole type: tsgo types `getOrElse(o, s)` at
 -- `o: Option<number>` as `number | string`, and `getOrElse(o, n)` at `o: Option<never>` as
--- `number`. The compiler's controls stand in `harness/truth/term-rows.typecheck.ts`, and
--- `make check-truth` runs them. With one plain parameter tsgo refused each of these calls
+-- `number`. The compiler's controls stood in
+-- `git:fa7bdc304:harness/truth/term-rows.typecheck.ts`, which the retired truth check ran. With
+-- one plain parameter tsgo refused each of these calls
 -- (TS2345): `docs/research/2026-10-07-chunk-2-review-evidence/atoms_joined.ts.txt`.
 #guard nativeAtomTy "ite" [.bool, .nat, .nat] = some .nat
 #guard nativeAtomTy "ite" [.bool, .never, .nat] = some .nat
@@ -138,8 +139,8 @@ open Effect4.Program
 -- parameter no answer mentions is the top). Under the match by bounds `cons` and `append` join
 -- their element types (decisions row 303), and the prelude takes each list at its whole type, so
 -- tsgo computes the join: `cons(n, ss)` and `append(ns, ss)` type at
--- `ReadonlyArray<number | string>` (`harness/truth/folds.typecheck.ts`). `get` answers `some unit`
--- on a list of units, which the prelude must not read as a missing element.
+-- `ReadonlyArray<number | string>` (`git:fa7bdc304:harness/truth/folds.typecheck.ts`). `get`
+-- answers `some unit` on a list of units, which the prelude must not read as a missing element.
 #guard NativeAtom.mono .listLength = some ([.list .unknown], .nat)
 #guard !NativeAtom.constGeneric .listCons
 #guard nativeAtomTy "nil" [] = some (.list .never)

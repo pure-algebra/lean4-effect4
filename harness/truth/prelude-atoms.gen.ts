@@ -22,7 +22,7 @@ const queryCause = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Cause.Cause<
  *
  * The consequence. A number or Boolean singleton type, or a brand, in a direct slot is lost
  * on the target. A Boolean tuple tag no longer discriminates. These helpers preserve no
- * arbitrary TypeScript refinement. The compiler controls are `literals.typecheck.ts`. */
+ * arbitrary TypeScript refinement. */
 type Wide<T> = T extends number ? number : T extends boolean ? boolean : T
 
 /** The checked two-slot overload distributes union factors. Ordinary overloads retain

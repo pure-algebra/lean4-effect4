@@ -124,7 +124,7 @@ def kvExits : List ExitV :=
 -- itself is the constant `"Failed to execute statement"` for a missing table, a syntax error,
 -- a constraint violation and a closed database alike, so the literal `(_tag, message)` pair
 -- distinguished nothing; a constraint violation reads `("ConstraintError", "UNIQUE constraint
--- failed: u.a")` (observed 2026-09-09, `harness/truth/tapes/pSqlFail.jsonl`)
+-- failed: u.a")` (observed 2026-09-09, `git:fa7bdc304:harness/truth/tapes/pSqlFail.jsonl`)
 def sqlFailed : Err := .tagged "UnknownError" "no such table: missing"
 def failedExit : ExitV := .failure (Cause.fail sqlFailed)
 def failed : Completion Val Err Defect FiberId Ann := .ofExit failedExit

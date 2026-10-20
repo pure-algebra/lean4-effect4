@@ -148,10 +148,10 @@ parameters are those of the request, the answer and the error: `Ref.modify`'s `B
 answer and in its binder term's result, never in its request (the state plan's T3b). A
 read-modify-write row is not callable here: its call takes its function after the request (the
 state plan's T5), so its request column stays empty, as when the row carried a trailing name.
-The target's signatures of the eight rows are checked by the truth lane's compiler control
-(`harness/truth/term-rows.typecheck.ts`). A row whose operation carries type arguments is not
-callable here either: its call takes them on its head (the state plan's T5, part B), and its
-line stays as it was when the row spelled them. -/
+The target's signatures of the eight rows were checked by the truth lane's compiler control
+(`git:fa7bdc304:harness/truth/term-rows.typecheck.ts`), retired with the lane. A row whose
+operation carries type arguments is not callable here either: its call takes them on its head
+(the state plan's T5, part B), and its line stays as it was when the row spelled them. -/
 def nativeLine (op : NativeOp) : Except String String := do
   let row := NativeOp.row op
   let σ := probes [row.request, row.answer, row.error]

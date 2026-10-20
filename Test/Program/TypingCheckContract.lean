@@ -24,7 +24,8 @@ Each test compares the type of one term with a fixed type: `.bool`, `.nat` or a 
 asks that the term's normal type is below the fixed type (`Ty.sub`). Below each of these fixed
 types stand `never` and the type itself. So each test has two green controls, a term at `never`
 and a term at a raw union with `never`, and one red control at a type that is not below. The
-compiler's verdict on each printed form is a line of `harness/truth/term-rows.typecheck.ts`. -/
+compiler's verdict on each printed form was a line of
+`git:fa7bdc304:harness/truth/term-rows.typecheck.ts`, which the retired truth check ran. -/
 
 open Effect4.Program.Checker
 

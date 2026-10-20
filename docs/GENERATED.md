@@ -35,10 +35,9 @@ The three tiers are:
 `make gen` runs every stale group of the Makefile's `GEN_GROUPS` (this file does not restate it).
 Each group's marker depends on the markers of the groups whose outputs its producer reads. So a
 regenerated group re-cuts the groups that read it, and no other (the codegen refactor's CR-2).
-Every Lean producer reads the derived group's modules, and the truth group reads the ts and
-host-protocol groups' TypeScript too. The semantics report is no group: `make gen-semantics`
-runs it on demand, and neither `make gen`, `make check-gen` nor any gate waits on it (owner,
-2026-10-18). Its committed projection is `generated/semantics.md` alone. The
+Every Lean producer reads the derived group's modules. The semantics report is no group:
+`make gen-semantics` runs it on demand, and neither `make gen`, `make check-gen` nor any gate
+waits on it (owner, 2026-10-18). Its committed projection is `generated/semantics.md` alone. The
 report's JSON and its document's JSON stay under `.lake/gen/semantics-report`. One typed report
 gives the report's JSON and one document (`tools/Tools/Document.lean`). The document gives the
 Markdown and its own JSON, which the site splits into pages. Its refusal
@@ -128,7 +127,7 @@ set still requires the typing-world instantiation; frame premises are not that p
 | lcnf | `src/OCaml5/Tools/LcnfGen.lean`; the recipe is `ocaml/gen/roots.json`, and each output's header carries its exact command | `Effect4.Api`, the to-do host run `Test.Dogfood.Scenario.Todo.HostRun` (law-free), the native kit's entry points `Effect4.Run.Kit` and Lean's authoring surface (`Effect4.Program.Authoring`, with `Program/Authoring/Named.lean`), both in the api closure, the comparison lane's premises `Effect4.Laws.Run.Tree` (`InRocq`, `Plain`), the constructor lane's functions `Test.Codegen.ConstructorLane`, the Modeled lane's codec `Test.Codegen.ModeledLane` (the four lanes' roots, the consumers of the api artifact), the recipe, `ocaml/engine/externs.txt`, `ocaml/engine/tools/api_engine_prelude.ml`, the route's sources (`OCaml5.Lcnf`, `OCaml5.Ml`, the Conform modules it reads) | `ocaml/eff/eff_types.ml`, `ocaml/gen/closure_gen.ml` (the one compiled closure of the api artifact: the roots `Api.run` and `Api.replay`, with the machine's functions as coverage roots, and the native kit's roots of `Effect4.Run.Kit` and `Effect4.Program.Authoring`, which `ocaml/engine/kit` reads; the package-private library `effect4_closure`), `ocaml/gen/api_gen.ml` (the facade over it, `include Closure_gen`, whose interface keeps the public and linkage roots and seals the packages), `ocaml/engine/api_engine.ml`, `ocaml/engine/test/lanes/lanes_gen.ml` (the lanes' unit: the nodes only the to-do, constructor, Modeled and Rocq lanes' roots reach, one walk after the api roots, over the closure, which it includes, so each declaration is compiled once; the test library `effect4_lanes`, never installed), the four lanes' facades `ocaml/engine/test/todo/todo_gen.ml` (the to-do lane's host run, LC-6), `ocaml/engine/test/ctors/ctors_gen.ml`, `ocaml/engine/test/modeled/modeled_gen.ml` and `ocaml/engine/test/rocq/rocq_gen.ml` (each `include Lanes_gen`, its inferred `.mli` keeping that lane's roots and the types they name), the artifacts' inferred `.mli` interfaces, and their closure manifests `ocaml/gen/closure-{api_gen,api_engine}.tsv` (each opens with its walk's identity, `OCaml5.Lcnf.Identity`, and names each declaration's consumers and the unit that compiles it); the public face that the `api_gen` run writes: the manifest of every public name `ocaml/gen/public-names.tsv` (append-only at one version, `OCaml5.Lcnf.Public`) and the facade `ocaml/gen/facade/effect4.ml` with its inferred `.mli` (the library `effect4_gen.effect4`) | `make check-ocaml` depends on this group, so the OCaml lane re-cuts these outputs from the current machine before it builds them (`api_check`, the engine seam in `gen-check.sh`). The lane also runs `scripts/check-export-classes.py`, and its install lane (`ocaml/engine/test/install/`) builds a project outside `ocaml/` against the installed facade; its red controls show that the lanes' unit, a lane's facade, a lane's root and the closure's module are each unbound outside. `make check-gen` holds them against a hand edit; the lcnf group is not in `HERMETIC_GROUPS`. The `check-ocaml` CI job runs `make gen-lcnf` and refuses a difference from the committed files | reproduced; tested |
 | rocq-lane | Rocq's extraction of `docs/research/2026-10-16-itrees/rocq/LaneExtract.v`, step 13 of `docs/research/2026-10-16-itrees/reproduce.sh` (the opam switch `rocq`; a research producer, outside `scripts/generate.py`) | the Rocq development of `docs/research/2026-10-16-itrees/rocq/` and the program types it reads from `ocaml/eff/eff_types.ml` | `ocaml/engine/test/rocq/rocq_run.ml` and `.mli` (Rocq's budgeted runner, with Lean's evaluator realized by the lane's `lane_eval.ml`) | `make check-ocaml` (`dune test engine/test/rocq`, the comparison lane); the producer's step 13 refuses a difference from the committed files | reproduced; tested |
 | rocq | `make gen-rocq` (the opam switch `rocq`; outside `GEN_GROUPS`, since it needs a host runtime): `src/OCaml5/Tools/GallinaGen.lean` over `OCaml5.Lcnf.Gallina`, then rocq-of-ocaml over `rocq/tools/split_types.ml`'s components | `Effect4.Run.Tree`'s base-phase LCNF (the spec `OCaml5.Lcnf.Gallina.treeSpec`), `ocaml/eff/eff_types.ml` | `rocq/Skeleton.v` (the call tree's control skeleton, a functor over the evaluator `Eval`), `rocq/Eff_types.v` (the program types) | the proofs of `rocq/` (`rocq/README.md`'s compile, by hand, recorded in a landing's receipt); `reproduce.sh` step 12 holds `rocq/Eff_types.v` to its own pipeline's. The printer refuses a constant with no printing rule, and a natural printed as `int` that meets a Nat operation, by name | reproduced; checked by Rocq |
-| truth | `harness/truth/Truth.lean` writes the corpus from the committed tapes, each program's module text from the one writer (`Tools.Code.programModule`); `harness/truth/run-truth.ts` writes the modules as they are, runs rc.112, re-records the tapes, writes the result | the Eff corpus, `prelude.ts`, the tapes, the pinned `effect` and `@effect/sql-sqlite-bun` | `harness/truth/corpus.json`, `generated/*.ts`, `result.{json,md}`, `tapes/*.jsonl` | `make check-ts` (a fresh run must equal the committed artefacts; the printed modules type-check first, DI-49) | reproduced (corpus, tapes); tested (the host run) Retired 2026-10-18: no target runs it. |
+| truth | `harness/truth/Truth.lean --corpus` (`make gen-truth-corpus`, on demand; no gate runs it). It writes each program's module from the one writer (`Tools.Code.programModule`) and the manifest. No host runs | the hand corpus (`Wire.Corpus.all` and the fixtures of `Truth.lean`), each fixture's row table and built-in host answers | `harness/truth/generated/*.ts`, one module per program; `harness/truth/corpus.json`, each program's name, Lean type and Lean run, the scope's key and the host rows. The target lane reads the types, the host rows and the modules (`tools/target/profile.ts`, `tools/Tools/RowTypes.lean`). The reader lane reads the modules (`ts/eff/check.ts`). The OCaml engine's cross face reads the runs (`ocaml/engine/test/reference/corpora.ml`) | none holds the drift; `make check-ts` and `make check-ocaml` read the outputs | reproduced (one run at the slice of 2026-10-20 against the committed bytes) |
 | host-protocol | `tools/Tools/HostProtocol.lean` (the `gen-host-protocol` recipe) | `Effect4.Api.HostProtocol` | `harness/truth/session/protocol.gen.ts`, `tape.schema.json` | `make check-ts` | reproduced; tested |
 | schema-ts | `harness/schema-generation/Emit{Fixture,CoverageFixture,MultiFixture}.lean`, stdout redirected; `harness/schema-generation/export-rpc.ts` under node at the pinned install, where rc.112 writes its own RPC documents | `Effect4.Codegen.Schema`, the fixture declarations; the pinned `effect` | the three `.generated.ts` beside them; `Test/fixtures/schema-documents/effect-rpc-rc112.json`, which `Test/Schema/DocumentJson.lean` reads | `make check-ts`: a fresh run must equal each committed file, and the battery must read every rc.112 document | reproduced; tested Retired 2026-10-18: no target runs it. |
 | census | `scripts/generate-effect-runtime-census.sh` (stdout) | the twelve vendored rc.112 sources it names | `generated/effect-runtime-census.tsv`, joined by `Test/Audit/RuntimeCoverage.lean` | `make check-sweep` | reproduced; proved where a row's witness theorem is joined |
@@ -195,17 +194,12 @@ per program with Lean's `wellTyped` and `readable` verdicts, so a typing or prin
 shows as a diff that names the programs it moved (DI-60), where the generator once pinned
 counts.
 
-**The corpus on rc.112 and under tsgo 7. Retired 2026-10-18:** no target runs it (owner: "just
-retire them... we'll design better checks"). `scripts/check-corpus.py` writes
-the same 400 programs' manifest with `harness/truth/Truth.lean --corpus`, emits every
-printable program's module with the truth runner (the shipped block and the same block with
-no annotations), type-checks every shipped module, runs each admitted program on the pinned
-runtime in its own process, and compares Lean's answer, error and requirement types with the
-types the compiler infers for the unannotated module (`tools/target/corpus.ts`), all under
-`harness/truth/corpus-check/` (ignored). What is committed is one row per program,
-`harness/truth/corpus-results.tsv`: whether the program is in the straight-line fragment the
-machine agreement theorem covers, which module exists and whether it compiles, the run, sync
-and type outcomes, both exits and both compared schedules in full.
+**The corpus on rc.112 and under tsgo 7. Retired 2026-10-18, deleted 2026-10-20** (owner:
+"just retire them... we'll design better checks"; "retire the old truth modules"). The lane ran
+the same 400 programs on the pinned runtime and compared Lean's types with the compiler's
+(`git:fa7bdc304:scripts/check-corpus.py`). Its committed table went with it
+(`git:fa7bdc304:harness/truth/corpus-results.tsv`). Its type oracle, `tools/target/corpus.ts`,
+stays in the target lane's folder, and no lane runs it.
 
 **Schema codec comparisons. Retired 2026-10-18,** with the schema-ts lane and its group: no
 target runs them. The lane wrote a fresh TypeScript module into
@@ -224,10 +218,14 @@ golden is committed. Finite host evidence, separate from the universal checked-b
 `.lake/conform/`; `scripts/check-conform.py` produces them freshly. The compiler profile's
 OCaml is an inspected execution artifact, not a replacement for `ocaml/gen`.
 
-**The truth and host-protocol lanes retired 2026-10-18:** no target runs the rc.112 truth
-differential, its release lane or the keyed host lane, and `make gen` no longer cuts the truth
-group. Their committed outputs stay as the last run wrote them. The paragraphs below describe
-the retired harnesses.
+**The truth and host-protocol lanes retired 2026-10-18.** No target runs the keyed host lane.
+Its harness stays in the tree, and the paragraphs below describe it. The rc.112 truth
+differential is gone (owner, 2026-10-20: "retire the old truth modules"). Its recorded results,
+tapes, build ledger, release lane and scripts were deleted (`git:fa7bdc304:harness/truth`,
+`git:fa7bdc304:scripts/check-truth.py`). Its runner stays for one mode: the ingest's fidelity
+tool runs `harness/truth/run-truth.ts --observe` (`ts/eff/ingest/fidelity/roundtrip.ts`).
+`make gen` does not cut the truth corpus; `make gen-truth-corpus` writes it on demand (the
+group `truth` above).
 
 **The keyed session's working receipt** lives under the ignored `.work/` folder beneath
 `harness/truth/session/`; it is not a committed projection or an oracle. The v1 serial

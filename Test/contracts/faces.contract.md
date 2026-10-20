@@ -27,7 +27,7 @@ holds it, and where the battery is.
 | 5 | the foreign recognizer `oxc` | `ts/eff/ingest/oxc.ts` over oxc 0.147.0, sharing **no** recognition code with face 4 | tested (the same) | `ts/eff/ingest/oxc.ts`; the same batteries |
 | 6 | the canonical wire | the byte encoding of a program, in three implementations: `Effect4.Program.Wire`, `ts/eff/wire.gen.ts`, `ocaml/eff/eff_wire.ml` | proved (`decode_encode`, `decode_exact`, `encode_injective`), reproduced (goldens), tested | `src/Effect4/Store/Domain/ProgramWire.lean` (namespace `Effect4.Program.Wire`; moved at `05417cc6` from `git:f7d22703:src/Effect4/Program/Wire.lean`); `ocaml/goldens/eff`; `ts/eff/test/wire.test.ts`, `ocaml/eff/test/test_lean_wire.ml`, `prop_wire.ml` |
 | 7 | the JSON projection | the same program as JSON: the tagged print, each list an array (D2, decided 2026-10-19). `ShapeDoc.printTree` rendered by `NatJson.render`, `Canonical.print` on the binary64 tree, and `toJson` of `ts/eff/json.gen.ts` write the same bytes. The positional `V` spelling keeps one internal implementation, `OCaml5.Eff.effV.json`, which cuts `ocaml/eff/goldens/<name>.json`, until F1; no test reads those files | tested (`ts/eff/check.ts` in `make check-ts` compares `toJson` with the Lean-cut tagged oracles; its red control is `ts/eff/test/check.test.ts`), reproduced (`ts/eff/json.gen.ts` by `make check-gen`) | `src/Effect4/Store/Domain/ShapeJson.lean`; `tools/Drivers/Corpus.lean`; `ts/eff/json.gen.ts`, `ts/eff/check.ts` |
-| 8 | the executed image on rc.112 | the truth harness: the printed module *run* under the pinned host, its exit and observable schedule compared with the Lean machine's | tested (a bounded differential over a frozen corpus), reproduced (the gate regenerates the modules, the result and the tapes and compares bytes), stamped | `harness/truth/`; `scripts/check-truth.py`; the `#guard`s of `harness/truth/Truth.lean` |
+| 8 | the executed image on rc.112 | the truth harness: the printed module *run* under the pinned host, its exit and observable schedule compared with the Lean machine's | tested (a bounded differential over a frozen corpus), reproduced (the gate regenerates the modules, the result and the tapes and compares bytes), stamped | `harness/truth/`; `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:scripts/check-truth.py`; the `#guard`s of `harness/truth/Truth.lean` |
 | 9 | the OCaml conformance face | `ocaml/eff`: generated families, wire and JSON implementations; core typing verdicts retained as goldens, with no independent OCaml type checker | reproduced (goldens), tested (`dune-tests`) | `ocaml/eff/`; `make check-ocaml` (which took over `git:c67ff096:scripts/check-ocaml.sh`'s `dune-tests` at `b2f6aef1`); `src/OCaml5/Tools/EffGen.lean` |
 
 **Not a face of this layer.** The runtime coverage census is the traceability matrix for
@@ -273,7 +273,7 @@ The claim held by face 8 is bounded on five axes, and every one of them is part 
    order, and is not a function of the tape. A tape decides what a row answered, never when a
    fiber ran.
 3. **A pinned host.** `effect@4.0.0-rc.112` and `@effect/sql-sqlite-bun@4.0.0-rc.112` on bun;
-   `scripts/check-truth.py` refuses to run without them. The claim is about those bytes.
+   `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:scripts/check-truth.py` refuses to run without them. The claim is about those bytes.
 4. **A hand corpus and a generated one.** The hand corpus is listed in
    `harness/truth/Truth.lean`, which cuts `harness/truth/corpus.json`; the program count is
    that file's `programs` length, and no gate compares this sentence to it, so read the file
@@ -283,8 +283,8 @@ The claim held by face 8 is bounded on five axes, and every one of them is part 
    `Test/Program/Gen.lean` are a second differential (`make check-ts`): every printable
    program's module compiled, the admitted ones run, the sync exit, the schedule and the
    independently inferred type compared, one row per program in
-   `harness/truth/corpus-results.tsv`, each disagreement registered by program, dimension and
-   outcome in `harness/truth/corpus-known-differences.md` with the design issue that explains
+   `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/corpus-results.tsv`, each disagreement registered by program, dimension and
+   outcome in `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/corpus-known-differences.md` with the design issue that explains
    it. That register is the list of the language's known differences from rc.112.
 5. **It is a differential, not a bisimulation.** Exits are compared exactly for a success
    value, a `fail` payload and a represented defect, and by kind otherwise. Each entry's exit
@@ -349,7 +349,7 @@ proved — no theorem relates an OCaml function to a Lean one.
 - The refusal taxonomy's classification is a function of rule order rather than of the input
   (DI-48).
 - The hand truth corpus and every emitted generated-corpus module are type-checked
-  (DI-49, `scripts/check-truth.py`, `scripts/check-corpus.py`). Deliberately ill-typed
+  (DI-49, `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:scripts/check-truth.py`, `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:scripts/check-corpus.py`). Deliberately ill-typed
   inputs retain compiler diagnostics. Independent inferred-type comparison is a finite
   target check, not a universal theorem about emitted code. It keeps A/R exact and
   accepts host E only within the declared core bound, with primitive-row comparisons
@@ -523,11 +523,11 @@ The owner ruled a fast cutover. What this changes in the packet above, and nothi
   literal as a literal type, where Lean types `bool` and `nat`. Two arms that Lean types alike
   can then be two target types. The rate limiter's request and the Queue probe's first take
   attempt do not type-check under tsgo 7 for that reason. The compiler control pins three such
-  lines as refused (`harness/truth/term-rows.typecheck.ts`).
+  lines as refused (`git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/term-rows.typecheck.ts`).
 - **Evidence.** *Proved*: `read_print`, `read_exact`, `readPerform_printPerform`,
   `readPerform_exact`. *Tested*: the batteries `Test/Codegen/TermRows.lean`,
   `Test/Codegen/ReadContract.lean` and `Test/Codegen/PrintContract.lean`. *Tested*: tsgo
-  7.0.0-dev.20260629.1 on `harness/truth/term-rows.typecheck.ts`, with a red control at each of
+  7.0.0-dev.20260629.1 on `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/term-rows.typecheck.ts`, with a red control at each of
   the eight rows. *Tested*: the TypeScript reader lane, and two truth programs against rc.112.
 
 ## Amendment, 2026-10-05: an operation's type arguments, a stated cursor type, and the literal rule (the state plan's T5, part B; decisions rows 212, 251 and 256)
@@ -606,8 +606,8 @@ What this changes in the packet above, and nothing else:
   (`harness/truth/Truth.lean`). The runner's import header names every atom of the generated
   profile (`harness/truth/run-truth.ts`). It also names the twelve printed helpers that are no
   atom. So a new atom needs no edit of the header. The lane's compiler controls gain two files.
-  `harness/truth/literals.typecheck.ts` holds the literal rule's assertions and refusals.
-  `harness/truth/queue-steps.typecheck.ts` holds the Queue module's six printed steps, each at
+  `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/literals.typecheck.ts` holds the literal rule's assertions and refusals.
+  `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/queue-steps.typecheck.ts` holds the Queue module's six printed steps, each at
   the cell's printed type.
 - **Superseded in the amendment above** ("an operation's binder term"). Its paragraph "Not
   established" said that a row's type arguments stay spelled at one instance. It also said
@@ -643,7 +643,7 @@ What this changes in the packet above, and nothing else:
   `read_exact` keep their statements.
 - **The saved state's type on the target.** The prelude's alias `MaskRestore` is the printed
   form of `Ty.maskRestore` (`harness/truth/prelude.ts`). The compiler control
-  `harness/truth/mask.typecheck.ts` checks the alias in annotated positions, with its
+  `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/mask.typecheck.ts` checks the alias in annotated positions, with its
   refusals.
 - **The truth claim (§4).** The truth corpus gains `pInterruptedWait`, `pMaskWait` and
   `pMaskedRestore` (`harness/truth/Truth.lean`). The row `resumed k` has one meaning on both
@@ -687,7 +687,7 @@ What this changes in the packet above, and nothing else:
   the lane the numbering is the allocation order, and a guard measures that. The two
   exceptions are pinned (`lateSights`, `harness/truth/Truth.lean`).
 - **The generated corpus takes the same reduction.** Three of its 400 programs take other
-  fiber numbers: `g102`, `g204` and `g246`. Two cells of `harness/truth/corpus-results.tsv`
+  fiber numbers: `g102`, `g204` and `g246`. Two cells of `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/corpus-results.tsv`
   move, the Lean schedule of `g102` and the Lean exit of `g246`. No outcome moves.
 - **Limits, stated and not solved.**
   - A literal interruptor is a number on both faces, and the two faces test different ids
