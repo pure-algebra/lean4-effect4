@@ -14,7 +14,7 @@ let opts = { E4_cas.seg_max = 512; index_slots = 16 }
    sealed entry under it: the harness's (E4_check). *)
 let temp () = E4_check.temp_dir "e4-st2-"
 let remove = E4_check.remove_tree
-let framed = E4_be.framed
+let framed = Eff_frame.framed
 let vstr value = framed Eff_frame.tag_string value
 
 let vref kind address =

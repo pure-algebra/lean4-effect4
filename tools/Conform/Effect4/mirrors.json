@@ -62,14 +62,6 @@
     },
     {
       "family": "Effect4.Program.Ty",
-      "file": "ocaml/eff/eff_wire.ml",
-      "reader": "ocaml-match-arms",
-      "key": "let rec emit_ty (b : Eff_frame.writer) (v : Ty.t) : unit =",
-      "stripPrefix": "Ty.",
-      "note": "census row 9: the generated wire writer"
-    },
-    {
-      "family": "Effect4.Program.Ty",
       "file": "ocaml/eff/test/prop_wire.ml",
       "reader": "unresolved",
       "key": "rand_ty",

@@ -4,11 +4,15 @@ import Effect4.Store.Domain.Canonical
 /-!
 # OCaml5.Eff.Goldens
 
-**What it is.** The goldens: `V`, a generic value tree serialised by the wire rule (`V.bytes`) and
-by the JSON rule (`V.json`); one total conversion per family (`effV`, `termV`, …); and `Corpus`,
-the program corpus every constructor of the closed world is reached by.
+**What it is.** The goldens: `V`, a generic value tree printed by the JSON rule (`V.json`), face 7's
+fixture spelling until the TypeScript slice (decisions rows 416 (6) and 417 (4)); one total
+conversion per family (`effV`, `termV`, …); and `Corpus`, the program corpus every constructor of
+the closed world is reached by. A golden's bytes are `Canonical.encode` of its program, Lean's own
+encoder: `V` writes no bytes.
 
-**Depends on.** `OCaml5.Eff.Emit` (`jsonStr`, and through it `World`), `Effect4.Store.Canonical` (`Bytes`).
+**Depends on.** `OCaml5.Eff.Emit` (`jsonStr`, and through it `World`). It imports
+`Effect4.Store.Domain.Canonical` for its driver, which cuts each golden's bytes with
+`Canonical.encode`.
 
 **Properties.**
 * **Total by pattern matching**: every conversion covers every constructor — *by construction*.
@@ -24,11 +28,10 @@ open Effect4.Machine (FnName)
 
 namespace OCaml5.Eff
 
-/-! ## Goldens: a generic value tree, serialised by the wire rule and by the JSON rule -/
+/-! ## Goldens: a generic value tree, printed by the JSON rule -/
 
-/-- A Lean value as the wire sees it. `ctor` carries the constructor's full name; its wire tag
-is looked up in the one assignment (`tools/Effect4Gen/wire-tags.json`) when the bytes are
-written, so this tree never restates a number. -/
+/-- A Lean value in face 7's positional spelling. `ctor` carries the constructor's full name,
+which the driver checks against the closed world (`V.names`). -/
 inductive V
   | unit
   | bool (b : Bool)
@@ -42,26 +45,6 @@ inductive V
   | struct (name : Name) (fields : List (String × V))
 
 instance : Inhabited V := ⟨.unit⟩
-
-/-- The constructor tag: `Tag.ctor` in the PC's pending edit of `Canonical.lean`; the value
-is the wire's, restated here so the tool builds at HEAD. -/
-def ctorTag : UInt8 := 10
-
-/-- The byte rule of `src/Effect4/Store/Domain/Canonical.lean` (`framed`, `natBytes`, `Tag.*` are the
-library's own), with `ctorTag` for a constructor application. -/
-partial def V.bytes (idx : Name → Nat) : V → Effect4.Store.Bytes
-  | .unit => Effect4.Store.framed Effect4.Store.Tag.unit []
-  | .bool b => Effect4.Store.framed Effect4.Store.Tag.bool [if b then 1 else 0]
-  | .nat n => Effect4.Store.framed Effect4.Store.Tag.nat (Effect4.Store.natBytes n)
-  | .str s => Effect4.Store.framed Effect4.Store.Tag.string s.toUTF8.data.toList
-  | .list xs => Effect4.Store.framed Effect4.Store.Tag.list (xs.map (bytes idx)).flatten
-  | .none => Effect4.Store.framed Effect4.Store.Tag.none []
-  | .some x => Effect4.Store.framed Effect4.Store.Tag.some (bytes idx x)
-  | .pair a b => Effect4.Store.framed Effect4.Store.Tag.pair (bytes idx a ++ bytes idx b)
-  | .ctor n args =>
-    Effect4.Store.framed ctorTag (bytes idx (.nat (idx n)) ++ (args.map (bytes idx)).flatten)
-  | .struct _ fields =>
-    Effect4.Store.framed ctorTag (bytes idx (.nat 0) ++ (fields.map fun (_, v) => bytes idx v).flatten)
 
 partial def V.json : V → String
   | .unit => "[]"

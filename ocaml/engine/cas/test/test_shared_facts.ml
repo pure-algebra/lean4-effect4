@@ -11,7 +11,7 @@ let read bytes =
   | Error why -> E4_admission.of_decode why
 ;;
 
-let frame = E4_be.framed
+let frame = Eff_frame.framed
 
 let () =
   require (List.length E4_kind.all = 23) "kind census";

@@ -170,11 +170,11 @@ module type SIDE = sig
 
   type t
 
-  val load : Eff_wire.program -> fuel:int -> t
+  val load : Eff_codec.program -> fuel:int -> t
   val step : t -> decision -> t
   val project : t -> projection
-  val positions : Eff_wire.program -> fuel:int -> decision list -> projection list
-  val gen_tape : Eff_wire.program -> fuel:int -> seed:int -> max_len:int -> decision list
+  val positions : Eff_codec.program -> fuel:int -> decision list -> projection list
+  val gen_tape : Eff_codec.program -> fuel:int -> seed:int -> max_len:int -> decision list
 end
 
 (* the armed field of `E4_engine.ENGINE.store_row`, which prints it LAST as `armed=[…]`,
@@ -211,7 +211,7 @@ module Of (E : E4_engine.ENGINE) : SIDE with type t = E.t = struct
     | Install_middleware -> E.install_middleware
   ;;
 
-  let load (p : Eff_wire.program) ~(fuel : int) : t = E.load p ~fuel
+  let load (p : Eff_codec.program) ~(fuel : int) : t = E.load p ~fuel
   let step (t : t) (d : decision) : t = E.step t (decision_of d)
 
   let show_frontier (f : E4_engine.frontier) =
@@ -263,7 +263,7 @@ module Of (E : E4_engine.ENGINE) : SIDE with type t = E.t = struct
     }
   ;;
 
-  let positions (p : Eff_wire.program) ~(fuel : int) (tape : decision list)
+  let positions (p : Eff_codec.program) ~(fuel : int) (tape : decision list)
     : projection list
     =
     let t0 = E.load p ~fuel in
@@ -273,7 +273,7 @@ module Of (E : E4_engine.ENGINE) : SIDE with type t = E.t = struct
   (* -------------------------------------------------------------- admissible tapes *)
 
   (* the same 48-bit LCG as Corpora's, so a tape and a program come from one family *)
-  let gen_tape (p : Eff_wire.program) ~(fuel : int) ~(seed : int) ~(max_len : int)
+  let gen_tape (p : Eff_codec.program) ~(fuel : int) ~(seed : int) ~(max_len : int)
     : decision list
     =
     let st = ref (seed lxor 25214903917 land 0xFFFFFFFFFFFF) in

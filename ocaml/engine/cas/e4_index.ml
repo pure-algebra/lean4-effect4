@@ -367,10 +367,10 @@ let version = "00000001"
 
 (* magic 6 ++ version 8 ++ covers_seg 8 ++ covers_off 8 ++ slots 8 ++ count 8 ++ crc 4 *)
 let head_length = 6 + 8 + 8 + 8 + 8 + 8 + 4
-let be64 = E4_be.be64
+let be64 = Eff_frame.be64
 
 let read_be64_exn s pos =
-  match E4_be.read_be64 s pos with
+  match Eff_frame.read_be64 s pos with
   | Some n -> n
   | None -> raise Exit
 ;;

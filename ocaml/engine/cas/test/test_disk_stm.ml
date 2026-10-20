@@ -150,7 +150,7 @@ module Spec = struct
         (if command = 12 then "\001" else "\000")
         ^ String.make 1 (Char.chr (E4_kind.byte E4_kind.Export))
         ^ E4_node.zero_digest
-        ^ E4_be.framed 253 ""
+        ^ Eff_frame.framed 253 ""
       in
       transaction_observation
         (E4_disk.commit sut.disk { txn_nodes = [ raw ]; txn_moves = [] })

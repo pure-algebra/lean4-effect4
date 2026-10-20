@@ -1,5 +1,5 @@
 (** The framing kernel of the canonical wire: the byte rule of src/Effect4/Store/Domain/Canonical.lean.
-    [framed tag payload = tag :: be64 (length payload) ++ payload]. The properties F1 to F9 are
+    [framed tag payload = tag :: be64 (length payload) ++ payload]. The properties F1 to F10 are
     eff_frame.ml's header. *)
 
 (** {1 The tags} *)
@@ -93,8 +93,8 @@ val to_string : (writer -> 'a -> unit) -> 'a -> string
 
 type 'a decoder = string -> int -> int -> ('a * int) option
 
-(** Eight bytes at [pos], unchecked: the caller has checked the window. [None] when the top byte
-    is at least 0x40, so the length is outside 0 .. 2^62 - 1. *)
+(** Eight bytes at [pos], or [None]: a window shorter than eight bytes, a negative position, or a
+    top byte of at least 0x40, so the length is outside 0 .. 2^62 - 1 (F10). *)
 val read_be64 : string -> int -> int option
 
 (** [(tag, payload_start, payload_end, next)], or [None] for a window that holds no frame. *)
@@ -129,3 +129,20 @@ val read_ctor : string -> int -> int -> (int * int * int * int) option
 
 (** The whole string is one frame: trailing bytes are a refusal. *)
 val exact : 'a decoder -> string -> 'a option
+
+(** {1 The whole-string face (F10)} *)
+
+(** 9: the tag byte and the eight length bytes. *)
+val header_length : int
+
+(** The bytes a frame over a payload of this length occupies: 9 + n. *)
+val frame_length : int -> int
+
+(** Eight big-endian bytes. @raise Invalid_argument on a negative int. *)
+val be64 : int -> string
+
+(** [tag :: be64 (length payload) ++ payload]. @raise Invalid_argument unless 0 <= tag <= 255. *)
+val framed : int -> string -> string
+
+(** The whole string is one frame: its tag and payload. Trailing bytes are a refusal. *)
+val exact_frame : string -> (int * string) option

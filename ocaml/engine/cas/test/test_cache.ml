@@ -94,10 +94,14 @@ let rand n =
 
 (* ============================================================ frames and nodes *)
 
-let v_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
-let v_bytes b = E4_be.framed Eff_frame.tag_bytes b
-let v_ctor i args = E4_be.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))
-let v_ref k d = E4_be.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
+
+let v_ctor i args =
+  Eff_frame.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))
+;;
+
+let v_ref k d = Eff_frame.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
 let node kind spec payload = { E4_node.version = 0; kind; spec; payload }
 let addr_of_string s = E4_addr.Addr.of_digest (E4_sha256.digest s)
 
@@ -512,7 +516,7 @@ let eb = Eff.Succeed (t_n 2)
    j + 1, so two children of one witness differ and a wrong ValPath cannot pass by two children
    happening to be equal.  Each is embedded in a program here, with the ProgPath at which the
    index must find it. *)
-let embedded : (E4_subterm.Tree.node * Eff_wire.program * int list) list =
+let embedded : (E4_subterm.Tree.node * Eff_codec.program * int list) list =
   List.map
     (fun (w : E4_subterm.Tree.node) ->
        match w with
@@ -695,7 +699,7 @@ let test_every_constructor () =
   List.iter
     (fun (w, prog, path) ->
        incr n;
-       let bytes = Eff_wire.encode_program prog in
+       let bytes = Eff_codec.encode_program prog in
        match E4_subterm.of_program_opt bytes with
        | None ->
          incr bad;
@@ -897,7 +901,7 @@ let test_subterm_misc () =
   print_endline "-- E4_subterm: Cids, refusals, and the index as a function of the bytes";
   (* two occurrences of one subterm *)
   let prog = Eff.Bind (Eff.Scoped ea, Eff.Scoped ea) in
-  let bytes = Eff_wire.encode_program prog in
+  let bytes = Eff_codec.encode_program prog in
   let ix = E4_subterm.of_program bytes in
   let l = E4_subterm.at_prog_path ix [ 0 ]
   and r = E4_subterm.at_prog_path ix [ 1 ] in
@@ -1155,7 +1159,7 @@ let test_deps_truncated () =
 let test_mutations (b : built) =
   print_endline "-- mutation checks (cas-design §11 commit 9)";
   (* X1: the slice law must go red when the offset is wrong. *)
-  let bytes = Eff_wire.encode_program (Eff.Bind (ea, eb)) in
+  let bytes = Eff_codec.encode_program (Eff.Bind (ea, eb)) in
   let ix = E4_subterm.of_program bytes in
   let e =
     match E4_subterm.at_prog_path ix [ 1 ] with
@@ -1193,15 +1197,19 @@ let test_mutations (b : built) =
      a term first and two programs after it.) *)
   check
     "X3 the ValPath of `catchIf` is falsifiable: argument 0 is a term, not an eff"
-    (let p = Eff_wire.encode_program (Eff.CatchIf (t_unit, ea, eb)) in
+    (let p = Eff_codec.encode_program (Eff.CatchIf (t_unit, ea, eb)) in
      let i = E4_subterm.of_program p in
      match E4_subterm.at_prog_path i [ 0 ] with
      | None -> false
      | Some ent ->
-       String.equal (E4_subterm.slice p ent) (Eff_wire.encode_eff ea)
+       String.equal (E4_subterm.slice p ent) (Eff_codec.encode_program ea)
        &&
-       (* the naive "child i = argument i" would have taken the term *)
-       not (String.equal (E4_subterm.slice p ent) (Eff_wire.encode_term t_unit)));
+       (* the naive "child i = argument i" would have taken the term: value argument 0 of
+          `catchIf`'s tree in Lean's image *)
+       (match Eff_image.run_kit_program_to_val (Eff.CatchIf (t_unit, ea, eb)) with
+         | Val.Ctor (_, term :: _) ->
+           not (String.equal (E4_subterm.slice p ent) (Eff_val.to_bytes term))
+         | _ -> false));
   (* X4: the poison test is falsifiable — a store whose pack really is damaged fails the
      checked image. *)
   let d = fresh_dir () in

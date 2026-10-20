@@ -17,7 +17,7 @@
          and the mutation check — flip one byte and the comparison must go red.  When the
          directory is absent every G* line is a SKIP and the run still ends green.
 
-   The value frames below are built from E4_be.framed alone — the byte rule of
+   The value frames below are built from Eff_frame.framed alone — the byte rule of
    Val.encode (src/Effect4/Store/Carrier/Val.lean) — so nothing under test builds its own input.
 
    Exit code 0 iff every check passed. *)
@@ -47,22 +47,24 @@ let rand_bytes n = String.init n (fun _ -> Char.chr (rand 256))
 
 (* ============================================================ the value frames
 
-   Val.encode (src/Effect4/Store/Carrier/Val.lean), transcribed with E4_be.framed and nothing else. *)
+   Val.encode (src/Effect4/Store/Carrier/Val.lean), transcribed with Eff_frame.framed and nothing else. *)
 
-let v_unit = E4_be.framed Eff_frame.tag_unit ""
-let v_bool b = E4_be.framed Eff_frame.tag_bool (if b then "\001" else "\000")
-let v_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
-let v_str s = E4_be.framed Eff_frame.tag_string s
-let v_bytes b = E4_be.framed Eff_frame.tag_bytes b
-let v_list xs = E4_be.framed Eff_frame.tag_list (String.concat "" xs)
-let v_pair a b = E4_be.framed Eff_frame.tag_pair (a ^ b)
-let v_none = E4_be.framed Eff_frame.tag_none ""
-let v_some a = E4_be.framed Eff_frame.tag_some a
-let v_ctor i args = E4_be.framed Eff_frame.tag_ctor (v_nat i ^ String.concat "" args)
-let v_ref k d = E4_be.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
+let v_unit = Eff_frame.framed Eff_frame.tag_unit ""
+let v_bool b = Eff_frame.framed Eff_frame.tag_bool (if b then "\001" else "\000")
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_str s = Eff_frame.framed Eff_frame.tag_string s
+let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
+let v_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
+let v_pair a b = Eff_frame.framed Eff_frame.tag_pair (a ^ b)
+let v_none = Eff_frame.framed Eff_frame.tag_none ""
+let v_some a = Eff_frame.framed Eff_frame.tag_some a
+let v_ctor i args = Eff_frame.framed Eff_frame.tag_ctor (v_nat i ^ String.concat "" args)
+let v_ref k d = Eff_frame.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
 
 let v_handle k n =
-  E4_be.framed Eff_frame.tag_handle (String.make 1 (Char.chr k) ^ E4_be.nat_digits n)
+  Eff_frame.framed
+    Eff_frame.tag_handle
+    (String.make 1 (Char.chr k) ^ Eff_frame.nat_digits n)
 ;;
 
 (* sampleEntry (src/Effect4/Store/Carrier/Val.lean) -- sampleEntry, the input of Digest.lean's third #guard. *)
@@ -625,7 +627,7 @@ let test_node_scan () =
   check
     "ND6 a handle key of 0 is the kind byte and no digits (Val.encode \
      (src/Effect4/Store/Carrier/Val.lean))"
-    (v_handle 1 0 = E4_be.framed 12 "\001");
+    (v_handle 1 0 = Eff_frame.framed 12 "\001");
   check
     "ND6 handle_in_content is true at a content kind, false at a run-relative one"
     (E4_node.handle_in_content
@@ -658,64 +660,67 @@ let test_node_refusals () =
     "a declared length past the end"
     (String.sub (v_bytes "abcdef") 0 12)
     E4_node.Bad_frame;
-  refuses "a bool of two bytes" (E4_be.framed 1 "\000\000") E4_node.Bad_frame;
-  refuses "a bool byte other than 0/1" (E4_be.framed 1 "\002") E4_node.Bad_frame;
-  refuses "a nat with a leading zero digit" (E4_be.framed 2 "\000\001") E4_node.Bad_frame;
-  refuses "a string that is not valid UTF-8" (E4_be.framed 3 "\255") E4_node.Bad_frame;
-  refuses "a unit with a payload" (E4_be.framed 9 "x") E4_node.Bad_frame;
-  refuses "a none with a payload" (E4_be.framed 6 "x") E4_node.Bad_frame;
-  refuses "a pair of one frame" (E4_be.framed 5 v_unit) E4_node.Bad_frame;
+  refuses "a bool of two bytes" (Eff_frame.framed 1 "\000\000") E4_node.Bad_frame;
+  refuses "a bool byte other than 0/1" (Eff_frame.framed 1 "\002") E4_node.Bad_frame;
+  refuses
+    "a nat with a leading zero digit"
+    (Eff_frame.framed 2 "\000\001")
+    E4_node.Bad_frame;
+  refuses "a string that is not valid UTF-8" (Eff_frame.framed 3 "\255") E4_node.Bad_frame;
+  refuses "a unit with a payload" (Eff_frame.framed 9 "x") E4_node.Bad_frame;
+  refuses "a none with a payload" (Eff_frame.framed 6 "x") E4_node.Bad_frame;
+  refuses "a pair of one frame" (Eff_frame.framed 5 v_unit) E4_node.Bad_frame;
   refuses
     "a pair of three frames"
-    (E4_be.framed 5 (v_unit ^ v_unit ^ v_unit))
+    (Eff_frame.framed 5 (v_unit ^ v_unit ^ v_unit))
     E4_node.Trailing;
-  refuses "a some of no frame" (E4_be.framed 7 "") E4_node.Bad_frame;
-  refuses "a some of two frames" (E4_be.framed 7 (v_unit ^ v_unit)) E4_node.Trailing;
+  refuses "a some of no frame" (Eff_frame.framed 7 "") E4_node.Bad_frame;
+  refuses "a some of two frames" (Eff_frame.framed 7 (v_unit ^ v_unit)) E4_node.Trailing;
   check
     "ND-frame a list of two frames back to back is accepted (the control)"
-    (E4_node.payload_ok (E4_be.framed 4 (v_unit ^ v_unit)) = Ok ());
+    (E4_node.payload_ok (Eff_frame.framed 4 (v_unit ^ v_unit)) = Ok ());
   refuses
     "a list with a byte left over"
-    (E4_be.framed 4 (v_unit ^ "\000"))
+    (Eff_frame.framed 4 (v_unit ^ "\000"))
     E4_node.Bad_frame;
-  refuses "a ctor with no index frame" (E4_be.framed 10 "") E4_node.Bad_frame;
+  refuses "a ctor with no index frame" (Eff_frame.framed 10 "") E4_node.Bad_frame;
   refuses
     "a ctor whose index frame is not a nat"
-    (E4_be.framed 10 (v_str "x"))
+    (Eff_frame.framed 10 (v_str "x"))
     E4_node.Bad_frame;
   refuses
     "a ctor index with a leading zero digit"
-    (E4_be.framed 10 (E4_be.framed 2 "\000\001"))
+    (Eff_frame.framed 10 (Eff_frame.framed 2 "\000\001"))
     E4_node.Bad_frame;
-  refuses "a ref with an empty payload" (E4_be.framed 11 "") E4_node.Bad_frame;
-  refuses "a handle with an empty payload" (E4_be.framed 12 "") E4_node.Bad_frame;
+  refuses "a ref with an empty payload" (Eff_frame.framed 11 "") E4_node.Bad_frame;
+  refuses "a handle with an empty payload" (Eff_frame.framed 12 "") E4_node.Bad_frame;
   refuses
     "a handle whose digits have a leading zero"
-    (E4_be.framed 12 "\001\000\001")
+    (Eff_frame.framed 12 "\001\000\001")
     E4_node.Bad_frame;
-  refuses "tag 0" (E4_be.framed 0 "") (E4_node.Unknown_tag 0);
+  refuses "tag 0" (Eff_frame.framed 0 "") (E4_node.Unknown_tag 0);
   refuses
     "tag 15, the first tag past Lean's"
-    (E4_be.framed 15 "")
+    (Eff_frame.framed 15 "")
     (E4_node.Unknown_tag 15);
-  refuses "tag 255" (E4_be.framed 255 "") (E4_node.Unknown_tag 255);
+  refuses "tag 255" (Eff_frame.framed 255 "") (E4_node.Unknown_tag 255);
   refuses
     "tag 15 nested in a list"
-    (E4_be.framed 4 (E4_be.framed 15 ""))
+    (Eff_frame.framed 4 (Eff_frame.framed 15 ""))
     (E4_node.Unknown_tag 15);
   (* Tags 13 and 14 as `Val.decodeBody` reads them (src/Effect4/Store/Carrier/Val.lean). *)
   let float_bits x =
     let b = Bytes.create 8 in
     Bytes.set_int64_be b 0 (Int64.bits_of_float x);
-    E4_be.framed 14 (Bytes.to_string b)
+    Eff_frame.framed 14 (Bytes.to_string b)
   in
   check
     "ND-frame tag 13 (negInt) is read as Lean reads it: no digits is -1, 256 is -257"
-    (E4_node.payload_ok (E4_be.framed 13 "") = Ok ()
-     && E4_node.payload_ok (E4_be.framed 13 "\001\000") = Ok ());
+    (E4_node.payload_ok (Eff_frame.framed 13 "") = Ok ()
+     && E4_node.payload_ok (Eff_frame.framed 13 "\001\000") = Ok ());
   refuses
     "a negInt with a leading zero digit"
-    (E4_be.framed 13 "\000\001")
+    (Eff_frame.framed 13 "\000\001")
     E4_node.Bad_frame;
   check
     "ND-frame tag 14 (float) holds the doubles with no integer image: 0.5, 2.5, -0, inf, \
@@ -733,11 +738,11 @@ let test_node_refusals () =
     ];
   refuses
     "a float frame of seven bytes"
-    (E4_be.framed 14 "\063\224\000\000\000\000\000")
+    (Eff_frame.framed 14 "\063\224\000\000\000\000\000")
     E4_node.Bad_frame;
   refuses
     "a float frame of nine bytes"
-    (E4_be.framed 14 "\063\224\000\000\000\000\000\000\000")
+    (Eff_frame.framed 14 "\063\224\000\000\000\000\000\000\000")
     E4_node.Bad_frame;
   refuses "two frames where one is owed" (v_unit ^ v_unit) E4_node.Trailing;
   refuses "one frame and a trailing byte" (v_unit ^ "\000") E4_node.Trailing;
@@ -751,7 +756,7 @@ let test_node_refusals () =
   check
     "ND-frame a nat above the host bound is NOT refused (deviation D1: Lean's Nat is \
      unbounded)"
-    (E4_node.payload_ok (E4_be.framed 2 (String.make 20 '\001')) = Ok ());
+    (E4_node.payload_ok (Eff_frame.framed 2 (String.make 20 '\001')) = Ok ());
   (* ND8 / amendment M9: a frame length at or above 2^62. *)
   let two62 = "\064\000\000\000\000\000\000\000" in
   let oversize_frame = "\002" ^ two62 in
@@ -760,13 +765,13 @@ let test_node_refusals () =
     (E4_node.payload_ok oversize_frame = Error E4_node.Host_limit);
   check
     "ND8 the same frame nested in a list is Host_limit"
-    (E4_node.payload_ok (E4_be.framed 4 oversize_frame) = Error E4_node.Host_limit);
+    (E4_node.payload_ok (Eff_frame.framed 4 oversize_frame) = Error E4_node.Host_limit);
   check
     "ND8 a ctor whose index frame declares 2^62 is Host_limit"
-    (E4_node.payload_ok (E4_be.framed 10 oversize_frame) = Error E4_node.Host_limit);
+    (E4_node.payload_ok (Eff_frame.framed 10 oversize_frame) = Error E4_node.Host_limit);
   check
     "ND8 a handle key of nine digits is Host_limit"
-    (E4_node.payload_ok (E4_be.framed 12 ("\001" ^ String.make 9 '\001'))
+    (E4_node.payload_ok (Eff_frame.framed 12 ("\001" ^ String.make 9 '\001'))
      = Error E4_node.Host_limit);
   (* D3: the total forms answer emptily on a payload that does not parse. *)
   check

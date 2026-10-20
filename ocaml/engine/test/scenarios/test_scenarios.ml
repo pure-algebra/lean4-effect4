@@ -18,9 +18,10 @@
    fuel, the tape, the row table and the compile fuel.
 
    Properties:
-   S1  The row table is read from its wire bytes (`Eff_wire.decode_row_exact`). The row type
-       is `Eff_types`', which the generated engine opens, so no conversion stands between the
-       bytes and the engine. A row with trailing arguments is refused.   by construction
+   S1  The row table is read from its rows' canonical bytes (`Eff_codec.decode_rows`, Lean's
+       reading, lowered). The row type is `Eff_types`', which the generated engine opens, so no
+       conversion stands between the bytes and the engine. A row with trailing arguments is
+       refused.                                                          by construction
    S2  At every position of every run, on the engine's instance (Fast), the view of
        `api_replay` on the tape's prefix is the view Lean wrote for its session machine.
                                                                  tested (finite runs)
@@ -185,16 +186,12 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
      row with trailing arguments: the engine reads none. The row is `Eff_types`', the one
      program type the engine opens, so nothing converts. *)
   let table_of (rows : string list) : (Row.t list, string) result =
-    let rec go acc = function
-      | [] -> Ok (List.rev acc)
-      | bytes :: rest ->
-        (match Eff_wire.decode_row_exact bytes with
-         | None -> Error "a row's bytes are not exactly one row"
-         | Some r when r.Row.trailing <> [] ->
-           Error (r.Row.spelling ^ ": trailing arguments")
-         | Some r -> go (r :: acc) rest)
-    in
-    go [] rows
+    match Eff_codec.decode_rows rows with
+    | None -> Error "a row's bytes are not exactly one row"
+    | Some table ->
+      (match List.find_opt (fun (r : Row.t) -> r.Row.trailing <> []) table with
+       | Some r -> Error (r.Row.spelling ^ ": trailing arguments")
+       | None -> Ok table)
   ;;
 
   (* ------------------------------------------------------------ S3: values as bytes *)
@@ -350,7 +347,7 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
 
   let run_one (r : run) : unit =
     let label what = Printf.sprintf "%s %s: %s" A.name r.name what in
-    match Eff_wire.decode_program_exact r.program with
+    match Eff_codec.decode_program r.program with
     | None -> check (label "the program's bytes are exactly one program") false
     | Some program ->
       (match table_of r.rows with

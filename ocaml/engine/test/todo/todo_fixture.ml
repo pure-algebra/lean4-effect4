@@ -4,11 +4,11 @@
    (Test/Dogfood/Scenario/Todo/HostLane.lean, written by write.lean beside this file): the built
    program, its rows, its type, its row names and the repository state before it, as canonical
    bytes, then Lean's results. The test and the bench read the fixture through it.
-   Depends on: Todo_gen (GENERATED), Eff_wire, Eff_val, E4_hex.
+   Depends on: Todo_gen (GENERATED), Eff_codec, Eff_val, E4_hex.
 
    Properties:
-   F1  Each input crosses as its canonical bytes and is read exactly: Eff_wire's program, row
-       and type readers, and Eff_val for values. A block that does not read, and a line this
+   F1  Each input crosses as its canonical bytes and is read exactly: Lean's readings of a
+       program, a row table and a type, lowered (Eff_codec), and Eff_val for values. A block that does not read, and a line this
        reader does not know, raise Failure, never a skip.                  by construction *)
 
 open Eff_types
@@ -123,12 +123,15 @@ let names_of (v : Val.t) : (string * int) list =
 
 let built_of (r : request) : Todo_gen.built =
   { Todo_gen.app =
-      { Todo_gen.rows = List.map (exactly "a row" Eff_wire.decode_row_exact) r.rows
+      { Todo_gen.rows =
+          (match Eff_codec.decode_rows (List.map (bytes_of_hex "a row") r.rows) with
+           | Some rows -> rows
+           | None -> failwith "fixture: the rows do not read exactly")
       ; services = []
       ; types = []
       }
-  ; program = exactly "the program" Eff_wire.decode_program_exact r.program
-  ; admitted = exactly "the type" Eff_wire.decode_eff_ty_exact r.typed
+  ; program = exactly "the program" Eff_codec.decode_program r.program
+  ; admitted = exactly "the type" Eff_codec.decode_eff_ty r.typed
   ; row_names = names_of (exactly "the row names" Eff_val.decode_exact r.names)
   }
 ;;

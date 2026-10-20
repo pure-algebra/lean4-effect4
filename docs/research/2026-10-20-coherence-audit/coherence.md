@@ -251,6 +251,35 @@ First, before item 1: the to-do as a user's project, outside the library
   No claim's statement moved; one claim is new. Proposed: a decisions row for M2. The frozen faces
   contract still names `natLiteralsInProfile`, which the owner amends. `NatJson.limit`, the tool
   schema's maximum and `Within` still spell the bound; M4 gives them its owner.
+- **M3 landed** 2026-10-20 (`8aebd25e1`). The OCaml estate reads and writes a program's bytes by
+  Lean's own exact embedding, lowered. `Effect4.Run.Kit.programToVal` and `programOfVal` are
+  lowered into a new artifact, `ocaml/eff/eff_image.ml`, through `ocaml/gen/roots.json`. The one
+  framing kernel frames them: `Eff_codec`, over `Eff_val` and `Eff_frame`. Six node images and
+  `effTyOfVal` join `Run.Kit`, for the subterm index and the to-do fixture. Collapsed into them:
+  `OCaml5.Eff.wireModule` and its output, the 1,267 generated lines of `ocaml/eff/eff_wire.ml`.
+  Deleted with them: `V.bytes`, `test_metadata`, and the `.bin` comparisons of `test_eff` and
+  `test_lean_wire`. `E4_be` is deleted, and its whole-string face is `Eff_frame`'s. The engine,
+  the host, the kit, `E4_subterm` and their tests call `Eff_codec`. Hand lines fell by 508, and
+  generated lines grew by 3,134. The 89 `.bin` goldens stay, now cut by `Canonical.encode` and
+  byte for byte unchanged. Nine readers take them as programs: the differential, the query and
+  slice lanes, the byte sweep, two benches and the TypeScript printer test. Measured on this Mac,
+  best of five: the lowered read costs 2.1 to 3.2 times the emitted one, and the write 1.3 to 2.6
+  times. The 89 goldens (35 KB) read in 139 µs against 66 µs. A 1.4 MB program reads in 7.6 ms
+  against 2.7 ms. An engine load is that read, since the load itself is lazy. A store put also
+  hashes the bytes, and SHA-256 of the goldens costs 280 µs. No library path reads program bytes
+  in a loop: the kit reads one `.eff` per command. So no fused encoder is emitted. Red controls:
+  a reader that keeps trailing bytes fails `test_lean_wire` and `prop_wire`. A lowered encoder
+  with a wrong tag for `bind` fails both and `test_eff`. `make batteries-touched`: 2 batteries,
+  built. `#axiom_audit`: 75 declarations of `Effect4.Run.Kit` and 31 of the 2 batteries, all
+  within `[propext, Quot.sound]` and none modulo a planned goal. The three touched `OCaml5` tool
+  modules are outside the gate: 39 of their 364 declarations reach `Classical.choice` through
+  string operations. `#closure_audit` passes. Gates: `check-ocaml` passes. `check-ts` did not
+  run: the wire and ts groups regenerated with no difference, and no TypeScript input changed. No
+  claim's statement moved. Proposed: a decisions row for M3. The owner rules whether the 89
+  goldens go, with a corpus for their nine readers that reaches every constructor. The frozen
+  faces contract names `eff_wire.ml` for face 6, which the owner amends. The docstring of
+  `serviceKeyImage` (`src/Effect4/Machine/ContextMap.lean`) still cites `eff_wire.ml`; it waits
+  for the next core rebuild.
 
 - **The order from here** (the owner, 2026-10-20): the entry point's first slice, then M3, then C1's
   moves under E4, then M4 with E6, then `run`, then M8. Seats alternate between the chain and the

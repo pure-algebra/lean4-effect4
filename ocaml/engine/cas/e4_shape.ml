@@ -40,7 +40,7 @@ let cid_length = 32
 (* The positions of a frame's children, in order.  Only tags 4, 5, 7 and 10 have children
    (SH6); a ctor's leading nat frame is the constructor index and is not a child. *)
 let child_positions (s : string) (pos : int) (limit : int) : int list =
-  match E4_be.read_frame s pos limit with
+  match Eff_frame.read_frame s pos limit with
   | None -> []
   | Some (tag, p, e, _) ->
     if tag = Eff_frame.tag_list
@@ -49,7 +49,7 @@ let child_positions (s : string) (pos : int) (limit : int) : int list =
       let cur = ref p in
       let bad = ref false in
       while (not !bad) && !cur < e do
-        match E4_be.read_frame s !cur e with
+        match Eff_frame.read_frame s !cur e with
         | None -> bad := true
         | Some (_, _, _, next) ->
           acc := !cur :: !acc;
@@ -58,21 +58,21 @@ let child_positions (s : string) (pos : int) (limit : int) : int list =
       if !bad || !cur <> e then [] else List.rev !acc)
     else if tag = Eff_frame.tag_pair
     then (
-      match E4_be.read_frame s p e with
+      match Eff_frame.read_frame s p e with
       | None -> []
       | Some (_, _, _, next) ->
-        (match E4_be.read_frame s next e with
+        (match Eff_frame.read_frame s next e with
          | Some (_, _, _, n2) when n2 = e -> [ p; next ]
          | _ -> []))
     else if tag = Eff_frame.tag_some
     then (
-      match E4_be.read_frame s p e with
+      match Eff_frame.read_frame s p e with
       | Some (_, _, _, next) when next = e -> [ p ]
       | _ -> [])
     else if tag = Eff_frame.tag_ctor
     then (
       (* the leading nat frame is the index; the children are the arguments after it *)
-      match E4_be.read_frame s p e with
+      match Eff_frame.read_frame s p e with
       | None -> []
       | Some (t0, _, _, after_index) ->
         if t0 <> Eff_frame.tag_nat
@@ -82,7 +82,7 @@ let child_positions (s : string) (pos : int) (limit : int) : int list =
           let cur = ref after_index in
           let bad = ref false in
           while (not !bad) && !cur < e do
-            match E4_be.read_frame s !cur e with
+            match Eff_frame.read_frame s !cur e with
             | None -> bad := true
             | Some (_, _, _, next) ->
               acc := !cur :: !acc;
@@ -95,7 +95,7 @@ let child_positions (s : string) (pos : int) (limit : int) : int list =
 (* Every frame a path reaches, as positions, in tree order. *)
 let resolve_positions ~(payload : string) (p : path) : int list =
   let limit = String.length payload in
-  match E4_be.read_frame payload 0 limit with
+  match Eff_frame.read_frame payload 0 limit with
   | None -> []
   | Some (_, _, _, frame_end) when frame_end <> limit -> []
   | Some _ ->
@@ -122,7 +122,7 @@ let resolve ~payload p =
   let limit = String.length payload in
   List.filter_map
     (fun pos ->
-       match E4_be.read_frame payload pos limit with
+       match Eff_frame.read_frame payload pos limit with
        | Some (tag, ps, pe, _) -> Some (tag, ps, pe)
        | None -> None)
     (resolve_positions ~payload p)

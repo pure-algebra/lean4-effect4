@@ -8,7 +8,7 @@
    the host: a function of the call's row, its request and the host's state, answering a
    completion and the host's next state, as Lean's `Run.Reactor` does. Native interfaces are
    hosts (decisions row 393).
-   Depends on: E4_engine, E4_clock, Eff_types, Eff_wire.
+   Depends on: E4_engine, E4_clock, Eff_types, Eff_codec.
 
    Properties:
    H1  The decisions are Lean's: `evaluate 0`, then per round one `answerAsync` for the first
@@ -135,7 +135,7 @@ module Make (E : E4_engine.ENGINE) = struct
         ?(table = [])
         ?(rounds = 64)
         (provider : 'st provider)
-        (program : Eff_wire.program)
+        (program : Eff_codec.program)
         ~(fuel : int)
         (state : 'st)
     : ('st served, load_refusal) result

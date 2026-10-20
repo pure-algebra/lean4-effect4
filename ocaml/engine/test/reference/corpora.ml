@@ -102,7 +102,7 @@ let load_dir
        match decode raw with
        | None -> refused := f :: !refused
        | Some wire ->
-         (match Eff_wire.decode_program_exact wire with
+         (match Eff_codec.decode_program wire with
           | None -> refused := f :: !refused
           | Some e ->
             progs
@@ -203,7 +203,7 @@ let truth () : program list * load_report * string list =
                     ; bytes = Some wire
                     ; typed = None
                     })
-                 (Eff_wire.decode_program_exact wire))))
+                 (Eff_codec.decode_program wire))))
         truth_names
   in
   let got = have @ List.map (fun p -> p.name) extra in
@@ -280,7 +280,7 @@ let truth_expectations () : (truth_expect list, string) result =
    `<name>.eff` is `Wire.encodeProgram` of the program Lean's own reader kept after the
    printer.  `E4_LEAN_CORPUS` names the directory; otherwise the ancestor walk finds
    `.lake/corpus` above the cwd.  A row whose bytes are missing or refused by
-   `Eff_wire.decode_program_exact` is reported (X3); the verdict column is carried as
+   `Eff_codec.decode_program` is reported (X3); the verdict column is carried as
    {!program.typed} and never re-derived (X1). *)
 let lean_corpus () : program list * load_report =
   let from_env =
@@ -318,7 +318,7 @@ let lean_corpus () : program list * load_report =
            then refused := (name ^ ".eff") :: !refused
            else (
              let wire = read_file file in
-             match Eff_wire.decode_program_exact wire with
+             match Eff_codec.decode_program wire with
              | None -> refused := (name ^ ".eff") :: !refused
              | Some e ->
                progs

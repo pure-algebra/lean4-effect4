@@ -79,7 +79,7 @@ let control_path ~dir = Filename.concat dir filename
 let tmp_path ~path = path ^ ".tmp"
 
 (* The host limit, amendment M9: a be64 at or above 2^62 is refused, never misread.  On the
-   READ side that is `E4_be.read_be64`, which refuses a top byte >= 0x40.  On the WRITE side
+   READ side that is `Eff_frame.read_be64`, which refuses a top byte >= 0x40.  On the WRITE side
    it is free: an OCaml int on this host holds -2^62 .. 2^62-1 (`max_int`), so 2^62 is
    not representable and every non-negative int is already below the bound.  What the writer
    must still refuse is a negative one. *)
@@ -133,7 +133,7 @@ let add_be64 (b : Buffer.t) (what : string) (n : int) : unit =
   then
     invalid_arg
       (Printf.sprintf "E4_control.encode: %s is not a be64 below 2^62 (M9)" what);
-  Buffer.add_string b (E4_be.be64 n)
+  Buffer.add_string b (Eff_frame.be64 n)
 ;;
 
 let add_be32 (b : Buffer.t) (what : string) (n : int) : unit =
@@ -266,7 +266,7 @@ let decode (s : string) : (payload, open_error) result =
           try
             let pos = ref header_length in
             let u64 what =
-              match E4_be.read_be64 s !pos with
+              match Eff_frame.read_be64 s !pos with
               | None ->
                 raise
                   (Bad (Printf.sprintf "%s: not a be64 below 2^62 at offset %d" what !pos))

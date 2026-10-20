@@ -13,9 +13,9 @@
    S2  Lean agreement: the three digests src/Effect4/Store/Carrier/Digest.lean #guards
        (`sha256 [] = e3b0c442…`, `sha256 [0xb4,0x19,0x0e] = dff2e730…`,
        `sha256 (Val.encode sampleEntry) = 8fab1618…`) are reproduced byte for byte.
-       The third input is built in the test out of E4_be frames from
+       The third input is built in the test out of Eff_frame frames from
        `sampleEntry = .ctor 0 [.str "Effect", .str "gen", .ctor 0 [], .nat 1947]`
-       (sampleEntry (src/Effect4/Store/Carrier/Val.lean)), so the vector also pins E4_be.      tested
+       (sampleEntry (src/Effect4/Store/Carrier/Val.lean)), so the vector also pins Eff_frame.  tested
    S3  Streaming equals one-shot: for every split of a byte string, feeding the parts
        through `update` and `finish` equals `digest` of the whole.        tested (property)
    S4  Length: `digest` is always 32 bytes; `hex` is always 64 lowercase characters.

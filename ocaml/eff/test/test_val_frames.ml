@@ -19,7 +19,8 @@
        a handle key with a leading zero digit, a handle key out of the int range, and a wrong
        tag are refusals — never repairs (Val.lean:1169, 1176-1177);
    V3  no digits is the key 0, not a refusal — the encoder's rule, not a repair;
-   V4  neither frame is a program frame: Eff_wire refuses both at the top level.
+   V4  neither frame is a program frame: the program codec (Eff_codec) refuses both at the top
+       level.
 
    The goldens are HAND-DERIVED (see `derivations` below for the byte arithmetic) because
    the Lean build was not available on 2026-09-07 when they were cut. *)
@@ -194,9 +195,7 @@ let golden (name : string) (tree : v) (expected_len : int) : unit =
   check
     (name ^ ": a truncated golden is refused")
     (Eff_frame.exact dec (String.sub want 0 (String.length want - 1)) = None);
-  check
-    (name ^ ": the program wire refuses it")
-    (Eff_wire.decode_program_exact want = None);
+  check (name ^ ": the program wire refuses it") (Eff_codec.decode_program want = None);
   Printf.printf
     "  %-14s %4d bytes  emit=golden  decode=tree\n%!"
     name
@@ -275,9 +274,8 @@ let () =
   (* V4: neither frame is a program frame *)
   check
     "the program wire refuses a bare handle and a bare ref"
-    (Eff_wire.decode_program_exact (to_string emit_handle (1, 3)) = None
-     && Eff_wire.decode_program_exact (to_string emit_ref (2, String.make 32 '\000'))
-        = None)
+    (Eff_codec.decode_program (to_string emit_handle (1, 3)) = None
+     && Eff_codec.decode_program (to_string emit_ref (2, String.make 32 '\000')) = None)
 ;;
 
 (* V5: a negative integer `-(n+1)` is tag 13 over n's digits (Val.lean's `Tag.int`), and

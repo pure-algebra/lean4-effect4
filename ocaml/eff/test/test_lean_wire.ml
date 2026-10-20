@@ -1,11 +1,12 @@
-(* test_lean_wire — the differential against Lean's own wire (hand-written).
+(* test_lean_wire — the lowering's finite check on Lean's own bytes (hand-written).
 
    What it is: `ocaml/goldens/eff/` holds the canonical bytes of a corpus of Eff programs as
    hex, written by `src/OCaml5/Tools/EffWire.lean` through `Effect4.Program.Wire` — Lean's
-   own encoder, an implementation of the byte rule independent of the one `EffGen.lean`
-   generates this library from. This test reads those bytes with THIS library's decoder and
-   re-encodes them, so a disagreement between the two implementations of the rule shows up
-   as a decode refusal or a byte difference.
+   own encoder, run by Lean. This library reads and writes a program by the same definition,
+   lowered (Eff_codec: `Canonical.toVal` and `Canonical.ofVal` in Eff_image, over the framing
+   kernel). This test reads Lean's bytes with the lowered reader and re-encodes them with the
+   lowered writer, so a lowering or a kernel that departs from Lean shows up as a decode
+   refusal or a byte difference (decisions row 391 (1): the finite checks stay).
 
    Checks:
    L1  the Lean manifest's constructor order is this library's, family by family, and its
@@ -13,15 +14,12 @@
    L1b wire-tags.txt, the wire tag Lean's own codec states for every constructor of every
        inductive family, is this library's table (Eff_layout.wire_tags, cut from
        tools/Effect4Gen/wire-tags.json), and no family gives one tag to two constructors;
-   L2  every <name>.hex decodes exactly (no trailing bytes, no repairs);
+   L2  every <name>.hex decodes exactly (no trailing bytes, no repairs), and a trailing byte, a
+       truncation, a wrong tag and a length past the end are refused;
    L3  re-encoding the decoded program reproduces Lean's bytes exactly;
    L4  its JSON print as the tools print it (Lean's `ShapeDoc.printTree`, lowered) reads back to
        it under Lean's located reader (`ShapeDoc.readLocated`, lowered), or is refused for a
-       natural above the profile's limit;
-   L5  for the programs the two corpora define identically (the producer compares actual
-       Eff values and emits same-programs.txt, independently checked against decoded values), Lean's bytes are byte for byte this library's goldens/<name>.bin. Where a
-       name is shared but the Lean definition differs (pGen, pCatch), the comparison is
-       reported, not asserted.
+       natural above the profile's limit.
 
    The Lean goldens live in a directory the dune project builds no rule in (ocaml/goldens/eff,
    a sibling of ocaml/eff), so they cannot be a tracked dune dependency: the path is reached
@@ -84,38 +82,8 @@ let unhex (s : string) : string =
   Buffer.contents out
 ;;
 
-(* The first index where two byte strings differ, or where the shorter one ends. *)
-let first_diff (a : string) (b : string) : int option =
-  let n = min (String.length a) (String.length b) in
-  let rec go i =
-    if i >= n
-    then if String.length a = String.length b then None else Some i
-    else if a.[i] <> b.[i]
-    then Some i
-    else go (i + 1)
-  in
-  go 0
-;;
-
-let byte_at (s : string) (i : int) : string =
-  if i < String.length s then Printf.sprintf "%02x" (Char.code s.[i]) else "<end>"
-;;
-
-(* Produced by comparing actual Eff values in both Lean corpora. *)
-let same_program =
-  read_file (Filename.concat dir "same-programs.txt")
-  |> String.split_on_char '\n'
-  |> List.filter (fun name -> name <> "")
-;;
-
 let words (s : string) : string list =
   String.split_on_char ' ' s |> List.filter (fun w -> w <> "")
-;;
-
-(* This library's own golden of the same name, if the corpus has one. *)
-let ours_bin (name : string) : string option =
-  let p = "../goldens/" ^ name ^ ".bin" in
-  if Sys.file_exists p then Some (read_file p) else None
 ;;
 
 let () =
@@ -232,11 +200,11 @@ let () =
       "bytes"
       "decode"
       "re-encode"
-      "vs goldens/<name>.bin";
+      "JSON";
     List.iter
       (fun name ->
          let bytes = unhex (read_file (Filename.concat dir (name ^ ".hex"))) in
-         match Eff_wire.decode_program_exact bytes with
+         match Eff_codec.decode_program bytes with
          | None ->
            check (name ^ ": Lean's bytes decode exactly") false;
            Printf.printf
@@ -248,58 +216,47 @@ let () =
              "-"
          | Some p ->
            check (name ^ ": Lean's bytes decode exactly") true;
-           let re = Eff_wire.encode_program p in
+           let re = Eff_codec.encode_program p in
            check (name ^ ": re-encoding reproduces Lean's bytes") (re = bytes);
-           check
-             (name ^ ": Lean's JSON print reads back")
-             (match
-                G.store_shape_doc_read_located
-                  G.run_kit_program_shape
-                  (G.store_shape_doc_print_tree
-                     G.run_kit_program_shape
-                     (G.run_kit_program_to_val p))
-              with
-              | Ok v -> G.run_kit_program_of_val v = Some p
-              | Error
-                  { Eff_types.Located.reason = G.JsonReason_naturalOutsideProfile _; _ }
-                -> true
-              | Error _ -> false);
+           let json =
+             match
+               G.store_shape_doc_read_located
+                 G.run_kit_program_shape
+                 (G.store_shape_doc_print_tree
+                    G.run_kit_program_shape
+                    (G.run_kit_program_to_val p))
+             with
+             | Ok v -> G.run_kit_program_of_val v = Some p
+             | Error
+                 { Eff_types.Located.reason = G.JsonReason_naturalOutsideProfile _; _ } ->
+               true
+             | Error _ -> false
+           in
+           check (name ^ ": Lean's JSON print reads back") json;
            check
              (name ^ ": a trailing byte is refused")
-             (Eff_wire.decode_program_exact (bytes ^ "\000") = None);
-           let ours = ours_bin name in
-           let verdict =
-             match ours with
-             | None -> "(no golden of that name)"
-             | Some b ->
-               let same = List.mem name same_program in
-               check
-                 (name ^ ": common-program data matches actual decoded identity")
-                 (same = (Eff_wire.decode_program_exact b = Some p));
-               if same
-               then check (name ^ ": Lean's bytes are this library's golden") (b = bytes);
-               (match first_diff b bytes with
-                | None -> "identical"
-                | Some i ->
-                  (* A byte difference is only ever allowed to be a program difference: the
-                    two decoded programs must then differ too, which rules out the wire. *)
-                  check
-                    (name ^ ": a byte difference is a program difference, not a wire one")
-                    (Eff_wire.decode_program_exact b <> Some p);
-                  Printf.sprintf
-                    "differs at %d (%s vs %s)%s"
-                    i
-                    (byte_at b i)
-                    (byte_at bytes i)
-                    (if same then "" else " — different programs, same name"))
-           in
+             (Eff_codec.decode_program (bytes ^ "\000") = None);
+           check
+             (name ^ ": truncation is refused")
+             (Eff_codec.decode_program (String.sub bytes 0 (String.length bytes - 1))
+              = None);
+           let flipped = Bytes.of_string bytes in
+           Bytes.set flipped 0 '\004';
+           check
+             (name ^ ": a wrong tag is refused")
+             (Eff_codec.decode_program (Bytes.to_string flipped) = None);
+           let longer = Bytes.of_string bytes in
+           Bytes.set longer 8 (Char.chr (Char.code (Bytes.get longer 8) + 1));
+           check
+             (name ^ ": a length past the end is refused")
+             (Eff_codec.decode_program (Bytes.to_string longer) = None);
            Printf.printf
              "  %-12s %6d  %-9s %-10s %s\n"
              name
              (String.length bytes)
              "ok"
              (if re = bytes then "identical" else "DIFFERS")
-             verdict)
+             (if json then "reads" else "DIFFERS"))
       names;
     Printf.printf "test_lean_wire: %d checks, %d failures\n%!" !checks !failures;
     if !failures > 0 then exit 1)

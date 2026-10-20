@@ -207,9 +207,12 @@ let section_a () =
 
 (* ============================================================ B: B7 through the store *)
 
-let f_nat i = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits i)
-let f_bytes b = E4_be.framed Eff_frame.tag_bytes b
-let f_ctor i args = E4_be.framed Eff_frame.tag_ctor (String.concat "" (f_nat i :: args))
+let f_nat i = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits i)
+let f_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
+
+let f_ctor i args =
+  Eff_frame.framed Eff_frame.tag_ctor (String.concat "" (f_nat i :: args))
+;;
 
 let section_b dir s =
   Printf.printf

@@ -346,8 +346,9 @@ on both sides.
 `frontier`, but five `extern` holes remain after the `USize`/`Array.uget` rows above:
 `String.toUTF8`, `ByteArray.data`, `ByteArray.emptyWithCapacity`, `ByteArray.push`,
 `Char.ofNatAux`, and `ByteArray` has no OCaml carrier (it is emitted as a placeholder).
-Strings are deferred, so the byte roots stay out of the generated file and program bytes go
-through `ocaml/eff/eff_wire.ml` until a string kernel exists.
+Strings are deferred, so the byte roots stay out of the generated file. Program bytes go
+through Lean's exact embedding, lowered (`ocaml/eff/eff_image.ml`, `programToVal` and
+`programOfVal`), over the hand framing kernel (`ocaml/eff/eff_codec.ml`), since 2026-10-20 (M3).
 
 Oleans of the four library modules live in the session scratch dir
 (`…/scratchpad/ocaml5-olean/OCaml5/Lcnf/`), like the rest of `OCaml5.*` this session.

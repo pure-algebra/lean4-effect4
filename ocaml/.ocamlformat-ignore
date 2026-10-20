@@ -1,13 +1,14 @@
 # GENERATED files: each is rewritten by its producer (docs/GENERATED.md), so the formatter leaves it as
 # printed. A new generated output joins this list.
 eff/eff_ctors.ml
+eff/eff_image.ml
+eff/eff_image.mli
 eff/eff_json.ml
 eff/eff_layout.ml
 eff/eff_native.ml
 eff/eff_subterm.ml
 eff/eff_types.ml
 eff/eff_types.mli
-eff/eff_wire.ml
 engine/api_engine.ml
 engine/api_engine.mli
 engine/cas/e4_admission.ml

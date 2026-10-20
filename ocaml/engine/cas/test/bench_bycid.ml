@@ -57,9 +57,13 @@ let rec rm_rf p =
 ;;
 
 (* the frame builders bench_cache uses, so the store shape is the same one P7-D measured *)
-let v_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
-let v_ctor i args = E4_be.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))
-let v_ref k d = E4_be.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+
+let v_ctor i args =
+  Eff_frame.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))
+;;
+
+let v_ref k d = Eff_frame.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
 let node kind spec payload = { E4_node.version = 0; kind; spec; payload }
 
 let build ~dir ~n =

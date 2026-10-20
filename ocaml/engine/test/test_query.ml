@@ -17,7 +17,7 @@
      query-cost-exact  `cost ~from ~upto` is the number of times the source's `replay` is
                        ACTUALLY called -- counted, at k in {1, 8, 1024, infinity}.
      DF-3              QUERY AGREEMENT.  For the 37 byte goldens of ocaml/eff/goldens
-                       (`Eff_wire`, the loader copied from lane D's
+                       (`Eff_codec`, the loader copied from lane D's
                        test_engine.ml) driven at fuel 1000: for every
                        i <= |tape|, `E4_query.at s i` equals what replaying the first i
                        decisions produces, on all thirteen `E4_diff` projections.  Two
@@ -503,7 +503,7 @@ let df3 () =
     let progs =
       List.filter_map
         (fun f ->
-           match Eff_wire.decode_program_exact (read_file (Filename.concat dir f)) with
+           match Eff_codec.decode_program (read_file (Filename.concat dir f)) with
            | None -> None
            | Some p -> Some (Filename.remove_extension f, p))
         names
@@ -673,7 +673,7 @@ let () =
   (match find_path [ "eff"; "goldens"; "pFork.bin" ] "E4_EFF_GOLDENS" with
    | None -> fail_note "the query laws" "ocaml/eff/goldens/pFork.bin not found"
    | Some path ->
-     (match Eff_wire.decode_program_exact (read_file path) with
+     (match Eff_codec.decode_program (read_file path) with
       | None -> fail_note "the query laws" "pFork.bin did not decode"
       | Some p ->
         let tape = S.gen_tape p ~fuel:1000 ~seed:20260908 ~max_len:40 in

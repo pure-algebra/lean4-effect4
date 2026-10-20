@@ -15,8 +15,8 @@
    A ref's digest is opaque bytes of any length, including none; a handle's key is the same
    shortest-form digit string a Nat frame carries, so the key 0 is one kind byte and no
    digits (Val.lean:1136: `encode (.handle 1 0) = [12,0,0,0,0,0,0,0,1, 1]`). Neither frame
-   is a program frame: the Eff wire dispatches on tags 1..10 only, so a ref or a handle
-   reaching Eff_wire is refused by the tag comparison it fails.
+   is a program frame: no program's image holds one, so a program's reading (Eff_codec)
+   refuses both.
 
    Behaviours it holds itself to:
    F1  Every frame is self-delimiting: a decoder never reads past payload_end, and every
@@ -56,6 +56,12 @@
                                                        by construction; tested (test_frame O)
    F9  A payload callback runs once. If it raises, the writer is rolled back to before the
        frame and the exception escapes, so no partial frame stays.      tested (test_frame P)
+   F10 The whole-string face that the engine and the store read frames by (`be64`, `framed`,
+       `exact_frame`, `frame_length`, `header_length`; E4_be forwarded to it until 2026-10-20):
+       `be64` refuses a negative int and `framed` a tag outside a byte, each with
+       Invalid_argument before any byte. `read_be64` answers None for a window shorter than
+       eight bytes or a negative position, so no reader raises on any string, position and
+       limit.                                                    by construction; tested (test_math B)
    Bound: Lean's Nat is unbounded; this kernel carries 0 .. 2^62 - 1 (OCaml int on 64-bit
    hosts). A Nat frame of nine or more digits, or of eight digits with a top byte >= 0x40,
    is refused as out of range. *)
@@ -294,7 +300,9 @@ let to_string (f : writer -> 'a -> unit) (v : 'a) : string =
 type 'a decoder = string -> int -> int -> ('a * int) option
 
 let read_be64 (s : string) (pos : int) : int option =
-  if Char.code (String.unsafe_get s pos) >= 0x40
+  if pos < 0 || pos > String.length s - 8
+  then None
+  else if Char.code (String.unsafe_get s pos) >= 0x40
   then None
   else (
     let n = ref 0 in
@@ -495,5 +503,29 @@ let read_ctor (s : string) (pos : int) (limit : int) : (int * int * int * int) o
 let exact (d : 'a decoder) (s : string) : 'a option =
   match d s 0 (String.length s) with
   | Some (v, n) when n = String.length s -> Some v
+  | _ -> None
+;;
+
+(* ---- the whole-string face (F10): what the engine and the store frame and read by ---- *)
+
+let header_length = 9
+let frame_length (n : int) : int = header_length + n
+
+(* The writer's `emit_be64` writes any int's pattern; the refusal of a negative one is here. *)
+let be64 (n : int) : string =
+  if n < 0 then invalid_arg "Eff_frame.be64: negative";
+  to_string emit_be64 n
+;;
+
+(* `emit_frame` takes the tag through Char.chr; the refusal names the tag here, before any byte. *)
+let framed (tag : int) (payload : string) : string =
+  if tag < 0 || tag > 255 then invalid_arg "Eff_frame.framed: tag is not a byte";
+  to_string (fun w p -> emit_frame w tag p) payload
+;;
+
+let exact_frame (s : string) : (int * string) option =
+  match read_frame s 0 (String.length s) with
+  | Some (tag, p, e, next) when next = String.length s ->
+    Some (tag, String.sub s p (e - p))
   | _ -> None
 ;;

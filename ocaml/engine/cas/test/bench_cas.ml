@@ -45,11 +45,15 @@ let chain_len =
   | _ -> 2_000
 ;;
 
-let v_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
-let v_str s = E4_be.framed Eff_frame.tag_string s
-let v_bytes b = E4_be.framed Eff_frame.tag_bytes b
-let v_ctor i args = E4_be.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))
-let v_ref k d = E4_be.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_str s = Eff_frame.framed Eff_frame.tag_string s
+let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
+
+let v_ctor i args =
+  Eff_frame.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))
+;;
+
+let v_ref k d = Eff_frame.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
 let zero = E4_node.zero_digest
 let node kind spec payload = { E4_node.version = 0; kind; spec; payload }
 let genesis = node E4_kind.Schema zero (v_str "schema")

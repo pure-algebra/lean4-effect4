@@ -284,7 +284,7 @@ let test_refusals () =
     "E5 Corrupt: a payload shorter than the fixed fields"
     (is_corrupt (E4_control.read ~path));
   (* Structurally wrong, but with a correct checksum: the parse itself must refuse. *)
-  let be64 = E4_be.be64 in
+  let be64 = Eff_frame.be64 in
   let be32 = E4_crc.be32 in
   let fixed ~roots ~status =
     be64 0
@@ -879,12 +879,12 @@ let case_bytes dir name =
   if not (Sys.file_exists path) then None else E4_hex.to_bytes (strip (read_file path))
 ;;
 
-(* The Val frames of Val.encode (src/Effect4/Store/Carrier/Val.lean), built from E4_be.framed alone. *)
-let v_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
-let v_str s = E4_be.framed Eff_frame.tag_string s
-let v_bytes b = E4_be.framed Eff_frame.tag_bytes b
-let v_list xs = E4_be.framed Eff_frame.tag_list (String.concat "" xs)
-let v_ctor i args = E4_be.framed Eff_frame.tag_ctor (v_nat i ^ String.concat "" args)
+(* The Val frames of Val.encode (src/Effect4/Store/Carrier/Val.lean), built from Eff_frame.framed alone. *)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_str s = Eff_frame.framed Eff_frame.tag_string s
+let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
+let v_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
+let v_ctor i args = Eff_frame.framed Eff_frame.tag_ctor (v_nat i ^ String.concat "" args)
 
 (* rootVal r = ctor 0 [str name, nat policyIndex, nat kind.byte, bytes digest, nat generation]
    (2026-09-08-engine-lane-gld-delivery.md §2). *)

@@ -68,7 +68,7 @@ let encode (n : t) : string =
 (* ------------------------------------------------------------------ the payload walk
 
    One frame is `tag :: be64 len :: payload` (Val.encode (src/Effect4/Store/Carrier/Val.lean), the
-   `framed` rule; E4_be.read_frame is the reader).  A region is a byte range that must hold a
+   `framed` rule; Eff_frame.read_frame is the reader).  A region is a byte range that must hold a
    given number of frames back to back: rem = -1 for "as many as fit exactly" (a list's
    elements and a ctor's arguments), 2 for a pair, and 1 for `some`.
    `Val.decodeBody` and `Val.decodeSeq` (src/Effect4/Store/Carrier/Val.lean) own those cases.
@@ -131,14 +131,14 @@ let walk
         stack := rest;
         go ())
       else (
-        if p + E4_be.header_length > l then raise (Refuse Bad_frame);
-        (* E4_be.read_be64 refuses a length >= 2^62: amendment M9, ND8. *)
+        if p + Eff_frame.header_length > l then raise (Refuse Bad_frame);
+        (* Eff_frame.read_be64 refuses a length >= 2^62: amendment M9, ND8. *)
         let flen =
-          match E4_be.read_be64 s (p + 1) with
+          match Eff_frame.read_be64 s (p + 1) with
           | None -> raise (Refuse Host_limit)
           | Some n -> n
         in
-        let st = p + E4_be.header_length in
+        let st = p + Eff_frame.header_length in
         if flen > l - st then raise (Refuse Bad_frame);
         let e = st + flen in
         let tag = Char.code (String.unsafe_get s p) in
@@ -183,15 +183,15 @@ let walk
           then (
             (* Val.decode (src/Effect4/Store/Carrier/Val.lean): the index is one `nat` frame in shortest form, then the
                arguments back to back. *)
-            if st + E4_be.header_length > e then raise (Refuse Bad_frame);
+            if st + Eff_frame.header_length > e then raise (Refuse Bad_frame);
             if Char.code (String.unsafe_get s st) <> Eff_frame.tag_nat
             then raise (Refuse Bad_frame);
             let ilen =
-              match E4_be.read_be64 s (st + 1) with
+              match Eff_frame.read_be64 s (st + 1) with
               | None -> raise (Refuse Host_limit)
               | Some n -> n
             in
-            let ist = st + E4_be.header_length in
+            let ist = st + Eff_frame.header_length in
             if ilen > e - ist then raise (Refuse Bad_frame);
             if ilen > 0 && String.unsafe_get s ist = '\000' then raise (Refuse Bad_frame);
             [ ist + ilen, e, -1 ])
@@ -210,7 +210,7 @@ let walk
             if dlen > 0 && String.unsafe_get s (st + 1) = '\000'
             then raise (Refuse Bad_frame);
             let key =
-              match E4_be.nat_of_digits (String.sub s (st + 1) dlen) with
+              match Eff_frame.nat_of_digits s (st + 1) (st + 1 + dlen) with
               | None ->
                 raise (Refuse Host_limit) (* an index this host cannot have minted *)
               | Some k -> k

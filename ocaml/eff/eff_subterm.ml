@@ -185,16 +185,6 @@ let ctor_index =
     | N_layer v -> Eff_ctors.ctor_index_layer_term v
     | N_layers v -> Eff_ctors.ctor_index_layer_terms v
 
-let encode =
-  function
-    | N_eff v -> Eff_wire.encode_eff v
-    | N_stmts v -> Eff_wire.encode_stmts v
-    | N_stmt v -> Eff_wire.encode_stmt v
-    | N_action v -> Eff_wire.encode_action_term v
-    | N_effs v -> Eff_wire.encode_effs v
-    | N_layer v -> Eff_wire.encode_layer_term v
-    | N_layers v -> Eff_wire.encode_layer_terms v
-
 let child (n : node) (i : int) : node option =
   match n, i with
     | N_eff (Eff_types.Eff.Suspend a0), 0 -> Some (N_eff a0)

@@ -1,14 +1,19 @@
-(* prop_wire — the property test of the wire on random untyped values (hand-written).
+(* prop_wire — the property test of the program codec on random untyped values (hand-written).
    Generator: size-bounded random walks through program syntax and types.
    Focused controls retain record metadata, list lengths, read modes, tuple indices,
    and record-tag strings,
    with nats spread over 0 .. 2^62 - 1 and strings drawn from a list of valid UTF-8 (ASCII,
    two-, three- and four-byte scalars, quotes, backslashes, control characters).
+   The codec is Lean's exact embedding, lowered (Eff_codec over Eff_image and the framing kernel).
+   A term, a decision, a type and fork options cross inside a program that holds them; a row and a
+   program type cross by their own images.
    Properties, N = 400 programs, 400 types, 200 rows, 200 eff_tys, seed 42:
-     P1  decode_exact (encode v) = Some v                      (stability)
-     P2  decode (encode v ^ junk) = Some (v, |encode v|)       (self-delimiting; junk not read)
-     P3  decode_exact (encode v ^ junk) = None                 (exactness)
-     P4  encode is injective on the sample (a hash table of the encodings)
+     P1  decode_program (encode_program p) = Some p             (stability); for a row and a
+         program type, their lowered reading of their tree's bytes gives them back
+     P2  the frames are self-delimiting: the kernel reads the program's tree from
+         encode_program p ^ junk and stops at the end of its bytes, not reading the junk
+     P3  decode_program (encode_program p ^ junk) = None        (exactness)
+     P4  encode_program is injective on the sample (a hash table of the encodings)
      P5  Lean's JSON, lowered: the sample's print as the tools print it (`ShapeDoc.printTree`)
          reads back to the sample under Lean's located reader (`ShapeDoc.readLocated`), or is
          refused for a natural above the profile's limit (2^53 - 1); a term, a decision and fork
@@ -269,7 +274,7 @@ let rand_key () = { ServiceKey.name = rand_nat (); service = rand_nat () }
 let rand_list f = List.init (ri 4) (fun _ -> f ())
 
 (* Requirement rows are canonical sets in the Lean source image. Invalid ordering and
-   duplicates are tested separately by test_metadata; round-trip samples stay in-domain. *)
+   duplicates are test_eff's control (C3); round-trip samples stay in-domain. *)
 let rand_requirements () =
   let key (k : ServiceKey.t) = k.ServiceKey.name, k.ServiceKey.service in
   List.sort_uniq (fun a b -> compare (key a) (key b)) (rand_list rand_key)
@@ -322,33 +327,61 @@ let program_reads_back (p : NativeOp.t Eff.t) : bool =
 
 let unit_program : NativeOp.t Eff.t = Eff.Succeed (Term.Lit Lit.Unit)
 
+(* A program that carries a type: `Deferred.make` at its type arguments. *)
+let carrying_ty (t : Ty.t) : NativeOp.t Eff.t =
+  Eff.Perform (NativeOp.DeferredMakeOf (t, Ty.Nat), Term.Lit Lit.Unit)
+;;
+
+(* P1-P4 on the program a sample makes, through the program codec (Eff_codec), and P5 on the
+   sample. *)
 let property
       (what : string)
       (n : int)
       (gen : unit -> 'a)
-      (encode : 'a -> string)
-      (decode_exact : string -> 'a option)
-      (decode : string -> ('a * int) option)
+      (program : 'a -> NativeOp.t Eff.t)
       (json : 'a -> bool)
   : unit
   =
   let seen = Hashtbl.create 1024 in
   for i = 1 to n do
     let v = gen () in
-    let b = encode v in
+    let p = program v in
+    let b = Eff_codec.encode_program p in
     let junk = "\000\001\002" in
     incr checks;
-    if decode_exact b <> Some v
-    then fail (what ^ ": P1 decode_exact (encode v) = Some v") i;
+    if Eff_codec.decode_program b <> Some p
+    then fail (what ^ ": P1 decode_program (encode_program p) = Some p") i;
     incr checks;
-    if decode (b ^ junk) <> Some (v, String.length b)
-    then fail (what ^ ": P2 self-delimiting") i;
+    (match Eff_val.decode (b ^ junk) 0 (String.length b + String.length junk) with
+     | Some (tree, next)
+       when next = String.length b
+            && Eff_val.equal tree (Eff_image.run_kit_program_to_val p) -> ()
+     | _ -> fail (what ^ ": P2 self-delimiting") i);
     incr checks;
-    if decode_exact (b ^ junk) <> None then fail (what ^ ": P3 trailing bytes refused") i;
+    if Eff_codec.decode_program (b ^ junk) <> None
+    then fail (what ^ ": P3 trailing bytes refused") i;
     incr checks;
     (match Hashtbl.find_opt seen b with
-     | Some v' when v' <> v -> fail (what ^ ": P4 two values with one encoding") i
-     | _ -> Hashtbl.replace seen b v);
+     | Some p' when p' <> p -> fail (what ^ ": P4 two programs with one encoding") i
+     | _ -> Hashtbl.replace seen b p);
+    incr checks;
+    if not (json v) then fail (what ^ ": P5 Lean's JSON reads back") i
+  done
+;;
+
+(* P1 through a carrier's own image, for the carriers no program holds, and P5. *)
+let image_property
+      (what : string)
+      (n : int)
+      (gen : unit -> 'a)
+      (round_trip : 'a -> bool)
+      (json : 'a -> bool)
+  : unit
+  =
+  for i = 1 to n do
+    let v = gen () in
+    incr checks;
+    if not (round_trip v) then fail (what ^ ": P1 the lowered reading of its bytes") i;
     incr checks;
     if not (json v) then fail (what ^ ": P5 Lean's JSON reads back") i
   done
@@ -402,17 +435,17 @@ let decision_controls =
 ;;
 
 let () =
-  let at d s p l = d s p l in
+  let succeed t = Eff.Succeed t in
+  let selecting d = Eff.Select (Term.Var 0, d, unit_program, unit_program) in
+  let forking o = Eff.WithFiber (ActionTerm.Fork (unit_program, o)) in
   List.iteri
     (fun i term ->
        property
          ("record-term-" ^ string_of_int i)
          1
          (fun () -> term)
-         Eff_wire.encode_term
-         Eff_wire.decode_term_exact
-         (fun s -> at Eff_wire.decode_term s 0 (String.length s))
-         (fun t -> program_reads_back (Eff.Succeed t)))
+         succeed
+         (fun t -> program_reads_back (succeed t)))
     record_controls;
   List.iteri
     (fun i term ->
@@ -420,10 +453,8 @@ let () =
          ("tuple-term-" ^ string_of_int i)
          1
          (fun () -> term)
-         Eff_wire.encode_term
-         Eff_wire.decode_term_exact
-         (fun s -> at Eff_wire.decode_term s 0 (String.length s))
-         (fun t -> program_reads_back (Eff.Succeed t)))
+         succeed
+         (fun t -> program_reads_back (succeed t)))
     tuple_controls;
   List.iteri
     (fun i term ->
@@ -431,10 +462,8 @@ let () =
          ("fold-term-" ^ string_of_int i)
          1
          (fun () -> term)
-         Eff_wire.encode_term
-         Eff_wire.decode_term_exact
-         (fun s -> at Eff_wire.decode_term s 0 (String.length s))
-         (fun t -> program_reads_back (Eff.Succeed t)))
+         succeed
+         (fun t -> program_reads_back (succeed t)))
     fold_controls;
   List.iteri
     (fun i decision ->
@@ -442,52 +471,34 @@ let () =
          ("decision-" ^ string_of_int i)
          1
          (fun () -> decision)
-         Eff_wire.encode_decision
-         Eff_wire.decode_decision_exact
-         (fun s -> at Eff_wire.decode_decision s 0 (String.length s))
-         (fun d ->
-            program_reads_back (Eff.Select (Term.Var 0, d, unit_program, unit_program))))
+         selecting
+         (fun d -> program_reads_back (selecting d)))
     decision_controls;
-  property
-    "eff"
-    400
-    (fun () -> rand_eff (ri 7))
-    Eff_wire.encode_eff
-    Eff_wire.decode_eff_exact
-    (fun s -> at Eff_wire.decode_eff s 0 (String.length s))
-    program_reads_back;
+  property "eff" 400 (fun () -> rand_eff (ri 7)) Fun.id program_reads_back;
   property
     "ty"
     400
     (fun () -> rand_ty (ri 6))
-    Eff_wire.encode_ty
-    Eff_wire.decode_ty_exact
-    (fun s -> at Eff_wire.decode_ty s 0 (String.length s))
+    carrying_ty
     (fun t -> reads_back G.run_kit_ty_shape (G.run_kit_ty_to_val t));
-  property
+  image_property
     "row"
     200
     rand_row
-    Eff_wire.encode_row
-    Eff_wire.decode_row_exact
-    (fun s -> at Eff_wire.decode_row s 0 (String.length s))
+    (fun r ->
+       match G.run_kit_rows_to_val [ r ] with
+       | Val.List [ tree ] -> Eff_codec.decode_rows [ Eff_val.to_bytes tree ] = Some [ r ]
+       | _ -> false)
     (fun r -> reads_back G.run_kit_rows_shape (G.run_kit_rows_to_val [ r ]));
-  property
+  image_property
     "eff_ty"
     200
     rand_eff_ty
-    Eff_wire.encode_eff_ty
-    Eff_wire.decode_eff_ty_exact
-    (fun s -> at Eff_wire.decode_eff_ty s 0 (String.length s))
+    (fun t ->
+       Eff_codec.decode_eff_ty (Eff_val.to_bytes (G.run_kit_eff_ty_to_val t)) = Some t)
     (fun t -> reads_back G.run_kit_eff_ty_shape (G.run_kit_eff_ty_to_val t));
-  property
-    "fork_options"
-    50
-    rand_options
-    Eff_wire.encode_fork_options
-    Eff_wire.decode_fork_options_exact
-    (fun s -> at Eff_wire.decode_fork_options s 0 (String.length s))
-    (fun o -> program_reads_back (Eff.WithFiber (ActionTerm.Fork (unit_program, o))));
+  property "fork_options" 50 rand_options forking (fun o ->
+    program_reads_back (forking o));
   Printf.printf "prop_wire: %d checks, %d failures (seed 42)\n%!" !checks !failures;
   if !failures > 0 then exit 1
 ;;

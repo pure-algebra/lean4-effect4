@@ -501,5 +501,5 @@ module Json = struct
   ;;
 end
 
-let program_of_bytes = Eff_wire.decode_eff_exact
-let program_bytes = Eff_wire.encode_eff
+let program_of_bytes = Eff_codec.decode_program
+let program_bytes = Eff_codec.encode_program

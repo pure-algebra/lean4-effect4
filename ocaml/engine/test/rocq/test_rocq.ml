@@ -9,7 +9,7 @@
    Rocq's theorems about [denoteBD]; this lane checks, on these programs, that [denoteBD] is the
    tree Lean runs. It is a finite check, the floor under the citations, not a proof.
    Depends on: Rocq_run (extracted), Effect4_gen.Api_gen (generated), Effect4_kit (Kit_author),
-   the to-do lane (Todo_fixture, Native_todo), Eff_types, Eff_wire.
+   the to-do lane (Todo_fixture, Native_todo), Eff_types, Eff_codec.
 
    Properties:
    R1  A reply crosses as Rocq's exit: a success as its value, a failure as Lean's exit image
@@ -299,7 +299,7 @@ let corpus () =
   |> List.filter_map (fun l ->
     match String.split_on_char '\t' l with
     | name :: hex :: _ :: _ ->
-      Option.map (fun p -> name, p) (Eff_wire.decode_eff_exact (bytes_of_hex hex))
+      Option.map (fun p -> name, p) (Eff_codec.decode_program (bytes_of_hex hex))
     | _ -> None)
 ;;
 

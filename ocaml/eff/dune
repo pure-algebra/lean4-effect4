@@ -1,7 +1,10 @@
-; effect4_eff — see README.md. Generated modules (eff_types, eff_layout, eff_wire, eff_subterm,
-; eff_native) come from `make gen-eff` (src/OCaml5/Tools/EffGen.lean) and carry a GENERATED
-; header; eff_frame and eff_val are the hand-written kernel. Standard library only. A carrier's
-; JSON is Lean's, lowered into effect4_gen (Store.ShapeJson); this library holds none.
+; effect4_eff — see README.md. Generated modules carry a GENERATED header: eff_types and eff_image
+; come from the LCNF route (`make gen-lcnf`, ocaml/gen/roots.json), eff_ctors, eff_layout,
+; eff_subterm and eff_native from `make gen-eff` (src/OCaml5/Tools/EffGen.lean). eff_frame and
+; eff_val are the hand-written framing kernel, and eff_codec composes it with eff_image: a
+; program's canonical bytes by Lean's exact embedding. Standard library only. A carrier's JSON is
+; Lean's, lowered into effect4_gen (Store.ShapeJson); this library holds none. The route's join
+; points are `let[@local always]`, so warning 55 is an error here as in gen/ (gen/dune).
 
 (library
  (name effect4_eff)
@@ -13,11 +16,12 @@
   eff_types
   eff_ctors
   eff_layout
-  eff_wire
+  eff_image
+  eff_codec
   eff_subterm
   eff_native)
  (flags
-  (:standard -w -4-9-39-40-41-42-44-45-70)))
+  (:standard -w -4-9-39-40-41-42-44-45-70 -w @55)))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
 

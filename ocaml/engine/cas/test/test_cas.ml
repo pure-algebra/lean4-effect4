@@ -67,16 +67,22 @@ let read_file path =
 
 (* ============================================================ frames and nodes *)
 
-let v_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
-let v_str s = E4_be.framed Eff_frame.tag_string s
-let v_list xs = E4_be.framed Eff_frame.tag_list (String.concat "" xs)
-let v_pair a b = E4_be.framed Eff_frame.tag_pair (a ^ b)
-let v_bytes b = E4_be.framed Eff_frame.tag_bytes b
-let v_ctor i args = E4_be.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))
-let v_ref k d = E4_be.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_str s = Eff_frame.framed Eff_frame.tag_string s
+let v_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
+let v_pair a b = Eff_frame.framed Eff_frame.tag_pair (a ^ b)
+let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
+
+let v_ctor i args =
+  Eff_frame.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))
+;;
+
+let v_ref k d = Eff_frame.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
 
 let v_handle k n =
-  E4_be.framed Eff_frame.tag_handle (String.make 1 (Char.chr k) ^ E4_be.nat_digits n)
+  Eff_frame.framed
+    Eff_frame.tag_handle
+    (String.make 1 (Char.chr k) ^ Eff_frame.nat_digits n)
 ;;
 
 let zero = E4_node.zero_digest
@@ -143,7 +149,7 @@ type v =
   | VHandle of int * int
 
 let rec parse_v s pos limit =
-  match E4_be.read_frame s pos limit with
+  match Eff_frame.read_frame s pos limit with
   | None -> None
   | Some (tag, ppos, pend, fend) ->
     let payload () = String.sub s ppos (pend - ppos) in
@@ -160,7 +166,7 @@ let rec parse_v s pos limit =
     then if pend - ppos = 1 then wrap (VBool (s.[ppos] <> '\000')) else None
     else if tag = Eff_frame.tag_nat
     then (
-      match E4_be.nat_of_digits (payload ()) with
+      match Eff_frame.nat_of_digits s ppos pend with
       | Some n -> wrap (VNat n)
       | None -> None)
     else if tag = Eff_frame.tag_string
@@ -200,7 +206,7 @@ let rec parse_v s pos limit =
     then
       if pend - ppos >= 1
       then (
-        match E4_be.nat_of_digits (String.sub s (ppos + 1) (pend - ppos - 1)) with
+        match Eff_frame.nat_of_digits s (ppos + 1) pend with
         | Some n -> wrap (VHandle (Char.code s.[ppos], n))
         | None -> None)
       else None
@@ -1060,7 +1066,7 @@ let test_g3 () =
          [ v_ref (E4_kind.byte E4_kind.Entry) (E4_addr.Addr.bytes parent)
          ; v_nat 0
          ; v_str "act"
-         ; E4_be.framed Eff_frame.tag_none ""
+         ; Eff_frame.framed Eff_frame.tag_none ""
          ])
   in
   let child = action origin_addr in

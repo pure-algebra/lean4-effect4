@@ -17,12 +17,19 @@ a function of `Effect4.Api`, `Effect4.Run.Tree` or the carrier's `Canonical` ins
 
 **The carriers' images.** For each carrier the kit reads or writes, the kit takes its shape
 document (`Canonical.shape`), its value tree (`Canonical.toVal`) and its exact reading
-(`Canonical.ofVal`). The kit's one JSON printer and one JSON reader interpret a shape document
-over a value tree (`Kit_json`, the OCaml twin of `ShapeDoc.print` and `Canonical.ofJsonAnyOrder`).
-So a program, a row table, a type, an exit and a refusal print as the session tool prints them,
-and read back exactly where the value tree reads. A JSON number crosses as a natural: the tree's
-own JSON keeps numbers as binary64 bit patterns, which the lowered `UInt64` holds only below 2^62
-(`src/OCaml5/Lcnf/Builtins.lean`).
+(`Canonical.ofVal`). Its one JSON printer and one JSON reader are Lean's, lowered:
+`ShapeDoc.printTree` and `ShapeDoc.readLocated` interpret a shape document over a value tree
+(decisions row 416 (4)). So a program, a row table, a type, an exit and a refusal print as the
+session tool prints them, and read back exactly where the value tree reads. A JSON number crosses
+as a natural (`Effect4.NatJson`).
+
+**The canonical bytes.** A carrier's bytes are `Val.encode` of its value tree
+(`Canonical.encode`). The OCaml estate frames the tree with its one framing kernel (`Eff_val`)
+and lowers the images below a second time, into `ocaml/eff/eff_image.ml`, so the program library
+and the engine, which link no api closure, read and write a program's bytes by Lean's own
+definition (`ocaml/eff/eff_codec.ml`). The node images (`stmtsToVal` to `layersToVal`) give each
+node sort of `Program.Node` its bytes, which the subterm index compares with the byte ranges it
+reads.
 -/
 
 set_option autoImplicit false
@@ -159,6 +166,19 @@ def programToVal (p : NativeEff) : Store.Val := Canonical.toVal p
 /-- A program from its value tree, exactly. -/
 def programOfVal (v : Store.Val) : Option NativeEff := Canonical.ofVal v
 
+/-- A statement list's value tree (the node sort `Program.Node.stmts`). -/
+def stmtsToVal (s : Stmts NativeOp) : Store.Val := Canonical.toVal s
+/-- A statement's value tree (the node sort `Program.Node.stmt`). -/
+def stmtToVal (s : Stmt NativeOp) : Store.Val := Canonical.toVal s
+/-- A fiber action's value tree (the node sort `Program.Node.action`). -/
+def actionToVal (a : ActionTerm NativeOp) : Store.Val := Canonical.toVal a
+/-- A program list's value tree (the node sort `Program.Node.effs`). -/
+def effsToVal (es : Effs NativeOp) : Store.Val := Canonical.toVal es
+/-- A layer's value tree (the node sort `Program.Node.layer`). -/
+def layerToVal (l : LayerTerm NativeOp) : Store.Val := Canonical.toVal l
+/-- A layer list's value tree (the node sort `Program.Node.layers`). -/
+def layersToVal (ls : LayerTerms NativeOp) : Store.Val := Canonical.toVal ls
+
 /-- A row table's shape document. -/
 def rowsShape : ShapeDoc := Canonical.shape RowTable
 /-- A row table's value tree. -/
@@ -180,6 +200,8 @@ def tyToVal (t : Ty) : Store.Val := Canonical.toVal t
 def effTyShape : ShapeDoc := Canonical.shape EffTy
 /-- A program type's value tree. -/
 def effTyToVal (t : EffTy) : Store.Val := Canonical.toVal t
+/-- A program type from its value tree, exactly. -/
+def effTyOfVal (v : Store.Val) : Option EffTy := Canonical.ofVal v
 
 /-- A refusal's shape document. -/
 def refusalShape : ShapeDoc := Canonical.shape TypeRefusal

@@ -46,7 +46,7 @@ let job_lo job =
 ;;
 
 let encode_head ~job ~first =
-  let p = magic ^ version ^ job_lo job ^ E4_be.be64 first in
+  let p = magic ^ version ^ job_lo job ^ Eff_frame.be64 first in
   p ^ E4_crc.be32 (E4_crc.string p)
 ;;
 
@@ -66,7 +66,7 @@ let decode_head s =
       else if String.sub p 6 8 <> version
       then None
       else (
-        match E4_be.read_be64 p 22 with
+        match Eff_frame.read_be64 p 22 with
         | None -> None
         | Some first -> Some (String.sub p 14 8, first)))
 ;;
@@ -78,14 +78,14 @@ let body_of_row ~index row =
     | Event s -> tag_event, s
     | Checkpoint_mark { position; addr } ->
       ( tag_checkpoint
-      , E4_be.be64 position
+      , Eff_frame.be64 position
         ^
           (match addr with
           | None -> "\000"
           | Some a -> "\001" ^ E4_addr.Addr.bytes a) )
-    | Seal { next_first_seq } -> tag_seal, E4_be.be64 next_first_seq
+    | Seal { next_first_seq } -> tag_seal, Eff_frame.be64 next_first_seq
   in
-  String.concat "" [ String.make 1 (Char.chr tag); E4_be.be64 index; payload ]
+  String.concat "" [ String.make 1 (Char.chr tag); Eff_frame.be64 index; payload ]
 ;;
 
 let frame_row body =
@@ -97,7 +97,7 @@ let decode_body body =
   if n < body_header_length
   then None
   else (
-    match E4_be.read_be64 body 1 with
+    match Eff_frame.read_be64 body 1 with
     | None -> None
     | Some index ->
       let payload = String.sub body body_header_length (n - body_header_length) in
@@ -109,7 +109,7 @@ let decode_body body =
          if pn < 9
          then None
          else (
-           match E4_be.read_be64 payload 0 with
+           match Eff_frame.read_be64 payload 0 with
            | None -> None
            | Some position ->
              (match payload.[8] with
@@ -123,7 +123,7 @@ let decode_body body =
          if pn <> 8
          then None
          else (
-           match E4_be.read_be64 payload 0 with
+           match Eff_frame.read_be64 payload 0 with
            | None -> None
            | Some next -> Some (index, Seal { next_first_seq = next }))
        | _ -> None))

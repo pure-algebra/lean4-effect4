@@ -1,15 +1,12 @@
-; The battery: the goldens (bytes) against the Lean side and the wire kernel, and each program's
-; JSON through Lean's lowered printer and reader (effect4_gen); the property test of the wire on
-; random programs. (The hand-written checker, the GADT surface
-; and their four tests were retired on 2026-09-13: the typing has one face, effTy, and the
-; Lean-cut `.ty` goldens are its expected output.)
+; The battery: the program codec's refusals and the wire kernel; the property test of the
+; program codec and of Lean's lowered JSON printer and reader (effect4_gen) on random programs.
+; (The hand-written checker, the GADT surface and their four tests were retired on 2026-09-13:
+; the typing has one face, effTy, and the Lean-cut `.ty` goldens are its expected output.)
 
 (test
  (name test_eff)
  (modules test_eff)
- (libraries effect4_eff effect4_gen)
- (deps
-  (glob_files ../goldens/*)))
+ (libraries effect4_eff))
 
 (test
  (name prop_wire)
@@ -33,25 +30,16 @@
  (deps
   (glob_files ../goldens/*)))
 
-; The differential against Lean's own encoder (Effect4.Program.Wire, printed as hex by
-; src/OCaml5/Tools/EffWire.lean into ocaml/goldens/eff). The ocaml/ project builds no rule in that
-; directory (../../dune lists the dirs it builds), so it cannot be a tracked dep: the test reaches
-; it relatively and says so when it is absent. Our own goldens are deps because it compares
-; against them.
+; The lowering's finite check (decisions row 391 (1)): Lean's own bytes (Effect4.Program.Wire,
+; printed as hex by src/OCaml5/Tools/EffWire.lean into ocaml/goldens/eff) read and re-encoded by
+; the lowered codec. The ocaml/ project builds no rule in that directory (../../dune lists the
+; dirs it builds), so it cannot be a tracked dep: the test reaches it relatively and says so when
+; it is absent.
 
 (test
  (name test_lean_wire)
  (modules test_lean_wire)
- (libraries effect4_eff effect4_gen)
- (deps
-  (glob_files ../goldens/*)))
-
-(test
- (name test_metadata)
- (modules test_metadata)
- (libraries effect4_eff)
- (deps
-  (glob_files ../goldens/*)))
+ (libraries effect4_eff effect4_gen))
 
 ; The program types at their owner, read by a client (slice 1.2a): the Eff-Stmt-Stmts cycle
 ; traversed with its type parameter kept, the Lean names in the generated tables, and the wire

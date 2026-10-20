@@ -179,7 +179,7 @@ let eff_goldens_dir () =
      @ List.concat (List.map per (ancestors here 9 [])))
 ;;
 
-let rec bind_tree (d : int) : Eff_wire.program =
+let rec bind_tree (d : int) : Eff_codec.program =
   if d = 0
   then Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat 1))
   else Eff_types.Eff.Bind (bind_tree (d - 1), bind_tree (d - 1))
@@ -234,7 +234,7 @@ let bench_subterm () =
      37 file reads *)
   let depth = 14 in
   let prog = bind_tree depth in
-  let bytes = Eff_wire.encode_program prog in
+  let bytes = Eff_codec.encode_program prog in
   let ix0 = E4_subterm.of_program bytes in
   let nodes = E4_subterm.count ix0 in
   let reps = 20 in
@@ -279,10 +279,14 @@ let bench_subterm () =
 
 (* ============================================================ P7-D: the dependents index *)
 
-let v_nat n = E4_be.framed Eff_frame.tag_nat (E4_be.nat_digits n)
-let v_bytes b = E4_be.framed Eff_frame.tag_bytes b
-let v_ctor i args = E4_be.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))
-let v_ref k d = E4_be.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
+
+let v_ctor i args =
+  Eff_frame.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))
+;;
+
+let v_ref k d = Eff_frame.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^ d)
 let node kind spec payload = { E4_node.version = 0; kind; spec; payload }
 
 let bench_deps () =

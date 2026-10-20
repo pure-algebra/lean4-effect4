@@ -3,15 +3,16 @@
    What it is: a client of Eff_types as slice 1.2a declares it: each Lean type its own module,
    its type `t`, its constructors and fields by their Lean names (Eff.Succeed, Ty.Never, Val.Nat).
    It builds programs over the Eff-Stmt-Stmts cycle, traverses them with their operation type
-   kept, and reads the generated tables and wire on them.
-   Depends on: Eff_types, Eff_ctors, Eff_wire.
+   kept, and reads the generated tables and the program codec on them.
+   Depends on: Eff_types, Eff_ctors, Eff_codec.
 
    Properties:
    O1  One traversal of the cycle (Eff, Stmt, Stmts) serves programs over two operation types:
        its type parameter is kept (a polymorphic recursion at 'op).        tested
    O2  The generated tables name the owner's constructors by the Lean names. tested
-   O3  The wire writes a program built here and reads back the same bytes,
-       and a record of the owner (ServiceKey) by its fields.              tested
+   O3  The program codec (Lean's exact embedding, lowered) writes a program built here and
+       reads back the same bytes, and a record of the owner (ServiceKey) by its fields
+       inside a program that holds it.                                    tested
    O4  The cycle's 'op is invariant (OCaml checks a recursive group against
        approximations): a program shared at two operation types is a value
        or a function, never an expansive expression.                       by construction
@@ -60,18 +61,17 @@ let () =
     "O2 the constructor tables name Ty.Never and Eff.Succeed by the Lean names"
     (Eff_ctors.ctor_name_ty Ty.Never = "never"
      && Eff_ctors.ctor_name_eff (Eff.Succeed (nat 0)) = "succeed");
-  let bytes = Eff_wire.encode_program native in
+  let bytes = Eff_codec.encode_program native in
   check
     "O3 a program built here reads back to the same bytes"
-    (match Eff_wire.decode_program_exact bytes with
-     | Some p -> Eff_wire.encode_program p = bytes
+    (match Eff_codec.decode_program bytes with
+     | Some p -> Eff_codec.encode_program p = bytes
      | None -> false);
   let key = { ServiceKey.name = 1; service = 2 } in
-  let key_bytes = Eff_wire.encode_service_key key in
   check
     "O3 a record of the owner by its fields reads back"
-    (match Eff_wire.decode_service_key_exact key_bytes with
-     | Some k -> k.ServiceKey.name = 1 && k.ServiceKey.service = 2
-     | None -> false);
+    (match Eff_codec.decode_program (Eff_codec.encode_program (Eff.Service key)) with
+     | Some (Eff.Service k) -> k.ServiceKey.name = 1 && k.ServiceKey.service = 2
+     | _ -> false);
   if !failures > 0 then exit 1
 ;;
