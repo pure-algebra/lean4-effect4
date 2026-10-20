@@ -225,6 +225,32 @@ First, before item 1: the to-do as a user's project, outside the library
   moved. Proposed: the checker's three term arms (`unboundVariable`, `unknownAtom`,
   `refusedArguments`) keep their address as a field. One `TermTypingRefusal` arm in their place
   changes the checker's alphabet, which the owner rules.
+- **M2 landed** 2026-10-20 (`44083456f`). Profile support is one Lean judgment
+  (`src/Effect4/Program/ProfileSupport.lean`): an algebra of `cata_val` over the value tree, and
+  the literal fold beside it. Its bound is `ProfileData.natBound` and its leaf `admitsNat`. It
+  refuses `Located` at a value's path, or at the address of a literal's node. Collapsed into it:
+  `CodecProfile.carries`, `carriesList` and `natLimit`, `natLiteralsInProfile`,
+  `E4_engine.check_answer` and the emitted `lits_*` walk. Deleted with them: `E4_clock`'s
+  `Literal` and `Reply` crossings with `check_nat`, the same two of `OCaml5.Lcnf.Crossing`,
+  `E4_engine.compile`, `load_bytes` and `answer_async_float`. H11 (a)'s claim is gone: ingress is
+  Lean's judgment, lowered, and `driveFrom` does not ask it (D3). The engine asks it as `ingress`
+  and `literal_refusal`, lowered through `roots.json`. `E4_host` and the kit call it where they
+  call reply admission. The kit now refuses A1.1's reply on the tape and native routes; the
+  unchanged probe prints `refused`, and `test_kit` T12 keeps the control. A native answer that is
+  no Lean value, such as a natural below zero, is the carrier's refusal (`Eff_val.valid`), not the
+  judgment's. A negative integer past magnitude 2^53 - 1 is now refused, the tool's JSON profile
+  included, as the int wire refuses it. `CodecProfile.supports` stays: it judges a `Shape`, and
+  M7's fold for `Shape` takes it. The new claim `profile-support-located` points at
+  `valueRefusal_eq_none_iff`, with `literalRefusal_eq_none_iff` beside it. The six codegen
+  premises are restated with the same value. R2's A5.2 landed with it: `eff`'s numeric options
+  are naturals (`Kit_serve.natural`, T13). Regenerated: lcnf, where `Located` and
+  `ProfileReason` join the program types, and eff. The derived, wire and ts families are
+  unchanged. `make batteries-touched`: 7 batteries, built. `#axiom_audit`: 916 declarations of the
+  12 touched library modules and 315 of the 7 batteries, all within `[propext, Quot.sound]` and
+  none modulo a planned goal. `#closure_audit` passes. Gates: `check-ts` and `check-ocaml` pass.
+  No claim's statement moved; one claim is new. Proposed: a decisions row for M2. The frozen faces
+  contract still names `natLiteralsInProfile`, which the owner amends. `NatJson.limit`, the tool
+  schema's maximum and `Within` still spell the bound; M4 gives them its owner.
 
 ```mermaid
 flowchart LR
