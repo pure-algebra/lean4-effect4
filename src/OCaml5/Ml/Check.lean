@@ -508,6 +508,21 @@ def checkModule (m : Module) (units : List Interface := []) : List Diag :=
     ++ dup "duplicate-module-type" "module" env.moduleTypes.reverse
     ++ (m.items.map fun d => (cata_decl alg d).2 env).flatten
 
+/-- Every well-formedness failure in an interface unit and the module it seals: its items by the
+rule of a module type (`checkSigItems`), a type it declares that the module does not, and a value
+it declares that the module does not bind at its top level, `ocamlopt`'s refusal of an
+implementation that does not match. Empty does not mean the two match in their types. -/
+def checkSignature (s : Signature) (impl : Module) (units : List Interface := []) : List Diag :=
+  let env := Env.ofModule impl units
+  checkSigItems s.name s.items
+    ++ s.items.filterMap fun
+      | .value n _ =>
+        if env.values.contains n then none
+        else some { code := "unbound-value", site := s.name, detail := "`" ++ n ++ "` is declared and not bound" }
+      | .type d =>
+        if env.types.contains d.name then none
+        else some { code := "unbound-type", site := s.name, detail := "`" ++ d.name ++ "` is declared and not defined" }
+
 /-! ## Controls: the scope of `open`, the module language and the `eff/` emitter's binders -/
 
 private def typesUnit : Interface :=
@@ -598,5 +613,16 @@ private def ownerUnit : Interface := { name := "Types", modules := [("Eff", [eff
 #guard one [.includeD "Types", .types [{ name := "t", body := .alias Ty.int }]] [typesUnit]
   == ["duplicate-type"]
 #guard one [.includeD "Other"] [typesUnit] == ["unbound-module"]
+-- An interface unit seals its module: a value or a type it declares and the module lacks is
+-- refused, and a value declared twice is.
+private def policyImpl : Module :=
+  { name := "p", items := [.types [{ name := "t", body := .variant [{ name := "Swap" }] }],
+      .letD false [{ name := "all", body := .listLit [.ctor "Swap" []] }]] }
+private def sealOf (items : List SigItem) : List String :=
+  (checkSignature { name := "p", items } policyImpl).map (·.code)
+#guard sealOf [.type { name := "t", body := .variant [{ name := "Swap" }] }, .value "all" (Ty.list (.named "t"))] == []
+#guard sealOf [.value "all" (.named "t"), .value "byte" Ty.int] == ["unbound-value"]
+#guard sealOf [.type { name := "u", body := .abstract }] == ["unbound-type"]
+#guard sealOf [.value "all" (.named "t"), .value "all" (.named "t")] == ["duplicate-binding"]
 
 end OCaml5.Ml

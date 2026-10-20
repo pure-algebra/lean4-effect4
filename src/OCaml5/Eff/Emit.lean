@@ -71,21 +71,27 @@ def headerItems (what : String) : List Ml.Decl :=
       ++ "src/OCaml5/Tools/EffGen.lean <outdir>. Do not edit."),
    .comment what]
 
-/-- The OCaml type of a carrier as syntax: a family by its owner's type (`labelType`), where
-`OTy.render` keeps the label. -/
-partial def OTy.ml : OTy → Ml.Ty
-  | .int => .int
-  | .bool => .bool
-  | .string => .string
-  | .unit => .unit
-  | .option a => .option a.ml
-  | .list a => .list a.ml
-  | .prod a b => .tuple [a.ml, b.ml]
-  | .named n => .named (labelType n)
-  | .requirements => .list (.named (otype ``Effect4.ServiceKey))
+/-- The spelling of a type row at converted arguments (`OCaml5.Lcnf.builtinTy?`). Every carrier
+below names a type with a row, so the anonymous type never stands in (the `#guard`s at the foot). -/
+private def rowTy (lean : Name) (args : List Ml.Ty) : Ml.Ty :=
+  (OCaml5.Lcnf.builtinTy? lean args).getD .anon
 
-/-- The OCaml type of a family as `eff_types.ml` declares it (`Family.tyRef`), as syntax. `pre`
-qualifies each family name (`Eff_types.`). -/
+/-- The OCaml type of a carrier as syntax: a Lean type with a row is the type rows' spelling
+(`OCaml5.Lcnf.typeRows`, the one owner of every OCaml spelling), and a family is its owner's
+type (`labelType`). -/
+partial def OTy.ml : OTy → Ml.Ty
+  | .nat => rowTy ``Nat []
+  | .bool => rowTy ``Bool []
+  | .string => rowTy ``String []
+  | .unit => rowTy ``Unit []
+  | .option a => rowTy ``Option [a.ml]
+  | .list a => rowTy ``List [a.ml]
+  | .prod a b => rowTy ``Prod [a.ml, b.ml]
+  | .named n => .named (labelType n)
+  | .requirements => rowTy ``List [.named (otype ``Effect4.ServiceKey)]
+
+/-- The OCaml type of a family as `eff_types.ml` declares it: its parameters applied
+(`NativeOp.t Eff.t`). `pre` qualifies each family name (`Eff_types.`). -/
 def Family.ty (f : Family) (pre : String := "") : Ml.Ty :=
   .con (pre ++ otype f.spec.leanName) (f.spec.params.map fun t => match t with
     | .named n => .named (pre ++ labelType n)
@@ -139,17 +145,18 @@ def ctorsModule (bs : List (List Family)) : Ml.Module :=
 /-- The mark a seeded value carries where its number goes. -/
 def seedMark : String := "§"
 
-/-- The value with every mark replaced by the number `k`. -/
+/-- The value with every mark replaced by the natural `k`, as the `Nat` row spells it
+(`OCaml5.Lcnf.natLiteral`). -/
 def seedWith (k : Nat) (e : Ml.Expr) : Ml.Expr :=
   Ml.cata_expr { Ml.ExprAlgebra.id with
-    expr_var := fun n => if n == seedMark then Ml.Expr.int k else Ml.Expr.var n } e
+    expr_var := fun n => if n == seedMark then OCaml5.Lcnf.natLiteral k else Ml.Expr.var n } e
 
 /-- Whether a value carries a mark. -/
 def seeded (e : Ml.Expr) : Bool := (Ml.renderExpr 0 e |>.splitOn seedMark).length > 1
 
 /-- A value of a carrier: numbers are `number`, a family is what `base` says. -/
 partial def valueOf (number : Ml.Expr) (base : String → Option Ml.Expr) : OTy → Option Ml.Expr
-  | .int => some number
+  | .nat => some number
   | .bool => some (.bool false)
   | .string => some (.str "")
   | .unit => some .unit
@@ -175,7 +182,7 @@ def applied (f : Family) (c : Ctor) (args : List Ml.Expr) : Ml.Expr :=
 
 /-- A constructor applied to the least value of every argument. -/
 def inhabitant (base : String → Option Ml.Expr) (f : Family) (c : Ctor) : Option Ml.Expr := do
-  some (applied f c (← c.args.mapM fun (_, t) => valueOf (.int 0) base t))
+  some (applied f c (← c.args.mapM fun (_, t) => valueOf (OCaml5.Lcnf.natLiteral 0) base t))
 
 /-- A fixpoint over the families, one round per family. -/
 def closeOver (fs : List Family) (step : List (String × Ml.Expr) → Family → Option Ml.Expr) :
@@ -278,24 +285,28 @@ def subtermModule (sorts : List (String × String)) (bs : List (List Family)) :
 
 /-! ## eff_manifest.txt -/
 
-/-- One line per family: its Lean name, its OCaml type, its constructors (or fields) with their
-carriers, in order. `scripts/lib/conservativity.py` and the mirror census read it. -/
+/-- One line per family: its Lean name, its label, its constructors (or fields) with their
+carriers' OCaml types (`OTy.ml`, the type rows' spellings), in order. -/
 def manifest (bs : List (List Family)) : String :=
+  let carrier (t : OTy) : String := Ml.renderTy t.ml
   String.join (bs.map fun b => String.join (b.map fun f =>
     let o := f.spec.oname
     if f.isStruct then
       let c := f.ctors.head!
-      s!"{f.spec.leanName} ({o}) structure: " ++ " ".intercalate (c.args.map fun (nm, t) => s!"{nm}:{t.render}") ++ "\n"
+      s!"{f.spec.leanName} ({o}) structure: " ++ " ".intercalate (c.args.map fun (nm, t) => s!"{nm}:{carrier t}") ++ "\n"
     else
       s!"{f.spec.leanName} ({o}) inductive: " ++ " ".intercalate (f.ctors.map fun c =>
         if c.args.isEmpty then c.short
-        else c.short ++ "(" ++ ",".intercalate (c.args.map fun (_, t) => t.render) ++ ")") ++ "\n"))
+        else c.short ++ "(" ++ ",".intercalate (c.args.map fun (_, t) => carrier t) ++ ")") ++ "\n"))
 
 /-! ## eff_native.ml — the alphabet as data, rendered from Lean values -/
 
+/-- A natural of the program as OCaml: the `Nat` row's literal (`OCaml5.Lcnf.natLiteral`). -/
+private def natO (n : Nat) : Ml.Expr := OCaml5.Lcnf.natLiteral n
+
 def keyO (k : ServiceKey) : Ml.Expr :=
-  .annot (.record [(ofield ``Effect4.ServiceKey "name", .int k.name.value),
-                   (ofield ``Effect4.ServiceKey "service", .int k.service.value)])
+  .annot (.record [(ofield ``Effect4.ServiceKey "name", natO k.name.value),
+                   (ofield ``Effect4.ServiceKey "service", natO k.service.value)])
     (.named (otype ``Effect4.ServiceKey))
 
 /-- A constructor of a type of the program, applied. -/
@@ -305,7 +316,7 @@ private def pc (t : Name) (c : String) (args : List Ml.Expr := []) : Ml.Expr := 
 private def tyArgO : TyArgF Ml.Expr → Ml.Expr
   | .child r => r
   | .str s => .str s
-  | .nat n => .int n
+  | .nat n => natO n
   | .list_prod_string_prod_bool_ty fs => .listLit (fs.map fun (n, o, t) => .tuple [.str n, .tuple [.bool o, t]])
   | .list_ty ts => .listLit ts
   | .serviceKey keys => .listLit (keys.elems.map keyO)
@@ -321,7 +332,7 @@ def fieldsO (fs : List (String × Bool × Ty)) : List Ml.Expr :=
 
 def litO : Lit → Ml.Expr
   | .unit => pc `Effect4.Program.Lit "unit"
-  | .nat n => pc `Effect4.Program.Lit "nat" [.int n]
+  | .nat n => pc `Effect4.Program.Lit "nat" [natO n]
   | .bool b => pc `Effect4.Program.Lit "bool" [.bool b]
   | .str s => pc `Effect4.Program.Lit "str" [.str s]
 
@@ -332,7 +343,7 @@ def readModeO : FieldReadMode → Ml.Expr
 mutual
 /-- A term as an OCaml value: the binder term a read-modify-write row carries in `all_ops`. -/
 def termO : Effect4.Program.Term → Ml.Expr
-  | .var i => pc `Effect4.Program.Term "var" [.int i]
+  | .var i => pc `Effect4.Program.Term "var" [natO i]
   | .lit l => pc `Effect4.Program.Term "lit" [litO l]
   | .app atom args => pc `Effect4.Program.Term "app" [.str atom, termsO args]
   | .record fields names values =>
@@ -341,7 +352,7 @@ def termO : Effect4.Program.Term → Ml.Expr
     pc `Effect4.Program.Term "field" [readModeO mode, termO target, .str name]
   | .recordSet target name value =>
     pc `Effect4.Program.Term "recordSet" [termO target, .str name, termO value]
-  | .tupleAt target index => pc `Effect4.Program.Term "tupleAt" [termO target, .int index]
+  | .tupleAt target index => pc `Effect4.Program.Term "tupleAt" [termO target, natO index]
   | .fold accTy list init body =>
     let acc : Ml.Expr := match accTy with
       | none => .ctor "None" []
@@ -380,9 +391,9 @@ def opO : NativeOp → Ml.Expr
   | .scopeMake s => pc `Effect4.Program.NativeOp "scopeMake" [stratO s]
   | .sleep => pc `Effect4.Program.NativeOp "sleep"
   | .clockNow => pc `Effect4.Program.NativeOp "clockNow"
-  | .external i => pc `Effect4.Program.NativeOp "external" [.int i]
-  | .call k => pc `Effect4.Program.NativeOp "call" [.int k]
-  | .param k => pc `Effect4.Program.NativeOp "param" [.int k]
+  | .external i => pc `Effect4.Program.NativeOp "external" [natO i]
+  | .call k => pc `Effect4.Program.NativeOp "call" [natO k]
+  | .param k => pc `Effect4.Program.NativeOp "param" [natO k]
 
 /-- The finite built-in alphabet, one operation per spelling key: the core's `NativeOp.spelled`
 (`src/Effect4/Program/Native.lean`), `Deferred.make` at its face, the instance `(nat, nat)`, and
@@ -423,5 +434,12 @@ def layoutModule (bs : List (List Family)) : Ml.Module :=
       .comment ("The wire tag of every constructor of every inductive family, from\n"
         ++ "   tools/Effect4Gen/wire-tags.json. A tag is not a declaration position."),
       letOne { name := "wire_tags", body := tags }] }
+
+/-! ### Controls: the carriers' OCaml spellings are the type rows' -/
+
+#guard OTy.nat.ml == Ml.Ty.int
+#guard (OTy.option .nat).ml == Ml.Ty.option Ml.Ty.int
+#guard (OTy.prod .string .bool).ml == .tuple [Ml.Ty.string, Ml.Ty.bool]
+#guard OTy.requirements.ml == Ml.Ty.list (.named (otype ``Effect4.ServiceKey))
 
 end OCaml5.Eff

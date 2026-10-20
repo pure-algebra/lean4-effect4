@@ -1,31 +1,31 @@
 Effect4.ServiceName (service_name) structure: value:int
 Effect4.ServiceTypeCode (service_type_code) structure: value:int
-Effect4.ServiceKey (service_key) structure: name:service_name service:service_type_code
-Effect4.Program.Ty (ty) inductive: never unit nat int string bool handle(string) option(ty) list(ty) prod(ty,ty) except(ty,ty) exitOf(ty,ty) causeOf(ty) fiberOf(ty,ty) union(ty,ty) lit(string) refOf(ty) deferredOf(ty,ty) var(int) unknown record((string * (bool * ty)) list) map(ty,ty) tuple(ty list) app(string,ty list) null undefined number bytes contextOf(service_key list)
+Effect4.ServiceKey (service_key) structure: name:ServiceName.t service:ServiceTypeCode.t
+Effect4.Program.Ty (ty) inductive: never unit nat int string bool handle(string) option(Ty.t) list(Ty.t) prod(Ty.t,Ty.t) except(Ty.t,Ty.t) exitOf(Ty.t,Ty.t) causeOf(Ty.t) fiberOf(Ty.t,Ty.t) union(Ty.t,Ty.t) lit(string) refOf(Ty.t) deferredOf(Ty.t,Ty.t) var(int) unknown record((string * (bool * Ty.t)) list) map(Ty.t,Ty.t) tuple(Ty.t list) app(string,Ty.t list) null undefined number bytes contextOf(ServiceKey.t list)
 Effect4.Program.Lit (lit) inductive: unit nat(int) bool(bool) str(string)
 Effect4.Program.FieldReadMode (field_read_mode) inductive: required optional
-Effect4.Program.Term (term) inductive: var(int) lit(lit) app(string,terms) record((string * (bool * ty)) list,string list,terms) field(field_read_mode,term,string) recordSet(term,string,term) tupleAt(term,int) fold(ty option,term,term,term)
-Effect4.Program.Terms (terms) inductive: nil cons(term,terms)
-Effect4.Program.CauseTerm (cause_term) inductive: fail(term) die(term) interrupt(term option) both(cause_term,cause_term)
+Effect4.Program.Term (term) inductive: var(int) lit(Lit.t) app(string,Terms.t) record((string * (bool * Ty.t)) list,string list,Terms.t) field(FieldReadMode.t,Term.t,string) recordSet(Term.t,string,Term.t) tupleAt(Term.t,int) fold(Ty.t option,Term.t,Term.t,Term.t)
+Effect4.Program.Terms (terms) inductive: nil cons(Term.t,Terms.t)
+Effect4.Program.CauseTerm (cause_term) inductive: fail(Term.t) die(Term.t) interrupt(Term.t option) both(CauseTerm.t,CauseTerm.t)
 Effect4.Supervision.MaskMode (mask_mode) inductive: interruptible uninterruptible inherit
-Effect4.Supervision.ForkOptions (fork_options) structure: startImmediately:bool daemon:bool maskMode:mask_mode
+Effect4.Supervision.ForkOptions (fork_options) structure: startImmediately:bool daemon:bool maskMode:MaskMode.t
 Effect4.Supervision.ObserverMode (observer_mode) inductive: awaitValue joinEffect
 Effect4.FinalizerStrategy (finalizer_strategy) inductive: sequential parallel
-Effect4.Program.NativeOp (native_op) inductive: refMake refGet refSet refGetAndSet refSetAndGet deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(finalizer_strategy) sleep clockNow external(int) deferredMakeOf(ty,ty) refUpdateWith(term) refGetAndUpdateWith(term) refUpdateAndGetWith(term) refUpdateSomeWith(term) refGetAndUpdateSomeWith(term) refUpdateSomeAndGetWith(term) refModifyWith(term) refModifySomeWith(term) call(int) param(int)
+Effect4.Program.NativeOp (native_op) inductive: refMake refGet refSet refGetAndSet refSetAndGet deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(FinalizerStrategy.t) sleep clockNow external(int) deferredMakeOf(Ty.t,Ty.t) refUpdateWith(Term.t) refGetAndUpdateWith(Term.t) refUpdateAndGetWith(Term.t) refUpdateSomeWith(Term.t) refGetAndUpdateSomeWith(Term.t) refUpdateSomeAndGetWith(Term.t) refModifyWith(Term.t) refModifySomeWith(Term.t) call(int) param(int)
 Effect4.Program.Decision (decision) inductive: bool option tag(string) recordTag(string)
 Effect4.Program.DefRole (def_role) inductive: plain serviceInit(string) serviceMethod(string,string,int)
-Effect4.Program.ParamDecl (param_decl) structure: name:string request:ty answer:ty error:ty
-Effect4.Program.DefDecl (def_decl) structure: name:string request:ty answer:ty error:ty requires:service_key list role:def_role params:param_decl list
-Effect4.Program.Eff (eff) inductive: succeed(term) fail(term) failCause(cause_term) sync(term) suspend(eff) perform(native_op,term) bind(eff,eff) gen(stmts) catchCause(eff,eff) matchCause(eff,eff,eff) onExit(eff,eff) exit(eff) uninterruptible(eff) interruptible(eff) yieldNow(int) awaitFiber(term,observer_mode) withFiber(action_term) scoped(eff) acquireRelease(eff,eff) provideLayer(layer_term,bool,eff) service(service_key) provideService(service_key,term,eff) catchIf(term,eff,eff) select(term,decision,eff,eff) iterate(ty option,term,term,term,term,eff) restore(term,eff) defs(def_decl list,effs,eff,layer_terms) invoke(int,term,effs) provideContext(term,eff)
-Effect4.Program.Stmt (stmt) inductive: bindYield(eff) yieldDiscard(eff) ret(term) ifElse(term,stmts,stmts) whileTrue(stmts) breakLoop
-Effect4.Program.Stmts (stmts) inductive: nil cons(stmt,stmts)
-Effect4.Program.Effs (effs) inductive: nil cons(eff,effs)
-Effect4.Program.ActionTerm (action_term) inductive: fork(eff,fork_options) forkIn(eff,fork_options,term) forkScoped(eff,fork_options) runIn(term,term) interrupt(term) interruptScoped(term) interruptAll(term,term option) awaitAll(term) awaitAllFailFast(term) snapshotChildren awaitNewChildren(term) raceAll(effs) getId closeScope(term,term) getInterruptible raceAllFirst(effs) context(service_key list)
-Effect4.Program.LayerTerm (layer_term) inductive: succeed(service_key,lit) effect(service_key,eff) effectDiscard(eff) provide(layer_term,layer_term) provideMerge(layer_term,layer_term) merge(layer_term,layer_term) fresh(layer_term) orDie(layer_term) ref(int list) mergeAll(layer_terms)
-Effect4.Program.LayerTerms (layer_terms) inductive: nil cons(layer_term,layer_terms)
+Effect4.Program.ParamDecl (param_decl) structure: name:string request:Ty.t answer:Ty.t error:Ty.t
+Effect4.Program.DefDecl (def_decl) structure: name:string request:Ty.t answer:Ty.t error:Ty.t requires:ServiceKey.t list role:DefRole.t params:ParamDecl.t list
+Effect4.Program.Eff (eff) inductive: succeed(Term.t) fail(Term.t) failCause(CauseTerm.t) sync(Term.t) suspend(Eff.t) perform(NativeOp.t,Term.t) bind(Eff.t,Eff.t) gen(Stmts.t) catchCause(Eff.t,Eff.t) matchCause(Eff.t,Eff.t,Eff.t) onExit(Eff.t,Eff.t) exit(Eff.t) uninterruptible(Eff.t) interruptible(Eff.t) yieldNow(int) awaitFiber(Term.t,ObserverMode.t) withFiber(ActionTerm.t) scoped(Eff.t) acquireRelease(Eff.t,Eff.t) provideLayer(LayerTerm.t,bool,Eff.t) service(ServiceKey.t) provideService(ServiceKey.t,Term.t,Eff.t) catchIf(Term.t,Eff.t,Eff.t) select(Term.t,Decision.t,Eff.t,Eff.t) iterate(Ty.t option,Term.t,Term.t,Term.t,Term.t,Eff.t) restore(Term.t,Eff.t) defs(DefDecl.t list,Effs.t,Eff.t,LayerTerms.t) invoke(int,Term.t,Effs.t) provideContext(Term.t,Eff.t)
+Effect4.Program.Stmt (stmt) inductive: bindYield(Eff.t) yieldDiscard(Eff.t) ret(Term.t) ifElse(Term.t,Stmts.t,Stmts.t) whileTrue(Stmts.t) breakLoop
+Effect4.Program.Stmts (stmts) inductive: nil cons(Stmt.t,Stmts.t)
+Effect4.Program.Effs (effs) inductive: nil cons(Eff.t,Effs.t)
+Effect4.Program.ActionTerm (action_term) inductive: fork(Eff.t,ForkOptions.t) forkIn(Eff.t,ForkOptions.t,Term.t) forkScoped(Eff.t,ForkOptions.t) runIn(Term.t,Term.t) interrupt(Term.t) interruptScoped(Term.t) interruptAll(Term.t,Term.t option) awaitAll(Term.t) awaitAllFailFast(Term.t) snapshotChildren awaitNewChildren(Term.t) raceAll(Effs.t) getId closeScope(Term.t,Term.t) getInterruptible raceAllFirst(Effs.t) context(ServiceKey.t list)
+Effect4.Program.LayerTerm (layer_term) inductive: succeed(ServiceKey.t,Lit.t) effect(ServiceKey.t,Eff.t) effectDiscard(Eff.t) provide(LayerTerm.t,LayerTerm.t) provideMerge(LayerTerm.t,LayerTerm.t) merge(LayerTerm.t,LayerTerm.t) fresh(LayerTerm.t) orDie(LayerTerm.t) ref(int list) mergeAll(LayerTerms.t)
+Effect4.Program.LayerTerms (layer_terms) inductive: nil cons(LayerTerm.t,LayerTerms.t)
 Effect4.Program.RowKind (row_kind) inductive: sync async program
 Effect4.Program.RowShape (row_shape) inductive: call value tupleCall method
 Effect4.Program.Registration (registration) inductive: deferred external
 Effect4.Program.RowArg (row_arg) inductive: name(string) str(string)
-Effect4.Program.Row (row) structure: name:string spelling:string shape:row_shape trailing:row_arg list kind:row_kind request:ty answer:ty error:ty requires:service_key list cite:string typeArgs:string list registration:registration
-Effect4.Program.EffTy (eff_ty) structure: answer:ty error:ty requires:service_key list
+Effect4.Program.Row (row) structure: name:string spelling:string shape:RowShape.t trailing:RowArg.t list kind:RowKind.t request:Ty.t answer:Ty.t error:Ty.t requires:ServiceKey.t list cite:string typeArgs:string list registration:Registration.t
+Effect4.Program.EffTy (eff_ty) structure: answer:Ty.t error:Ty.t requires:ServiceKey.t list

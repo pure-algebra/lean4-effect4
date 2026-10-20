@@ -242,6 +242,24 @@ def derived(out, checking, scratch):
     run(['lake', 'build', *modules])
 
 
+def lcnf_support(out, checking):
+    """The runtime library's rowed modules (`ocaml/lcnf`), rendered from the builtin table's
+    support functions (`lake exe lcnfgen --support`, `OCaml5.Lcnf.supportModule`).
+
+    They come before the LCNF artifacts, which compile against that library. A check compares
+    them with the committed files.
+    """
+    run(['lake', 'build', 'lcnfgen'])
+    temp = out / 'ocaml/lcnf'
+    temp.mkdir(parents=True, exist_ok=True)
+    run(['lake', 'exe', 'lcnfgen', '--support', str(temp)])
+    written = sorted(temp.glob('*.ml'))
+    if not written:
+        raise ValueError('lcnfgen --support wrote no module')
+    for source in written:
+        install(source, ROOT / 'ocaml/lcnf' / source.name, checking)
+
+
 def store_rocq(out, checking):
     """Regenerate store code and refuse any change to the independent tree skeleton.
 
@@ -323,6 +341,7 @@ def generate(families, output):
             # so the temporary-output route does not apply to it.
             run(['bun', 'ts/eff/ingest/render-readme.ts', *(['--check'] if checking else [])])
         if 'lcnf' in families:
+            lcnf_support(out, checking)
             lcnf_interfaces(ROOT, LCNF_ROOTS, out, checking, run, install)
 
 

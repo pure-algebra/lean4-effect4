@@ -39,6 +39,8 @@ gen/closure_gen.ml
 gen/closure_gen.mli
 gen/facade/effect4.ml
 gen/facade/effect4.mli
+lcnf/lcnf_list.ml
+lcnf/lcnf_nat.ml
 tools/typed_lint/test/generated.ml
 # Lint fixtures: their .expected files pin line and column positions, so their layout is data.
 tools/typed_lint/test/red.ml

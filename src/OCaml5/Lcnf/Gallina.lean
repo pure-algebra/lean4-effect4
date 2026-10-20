@@ -36,9 +36,10 @@ parameter takes an `int`. The file's header lists the counters it chose.
   `match`, `return` as the variable — *by construction*.
 * Every constant has one printing rule, or the printer refuses it by name: a declaration of the
   spec prints as itself, a constructor by `ctorRocq`, a constant of a variable namespace as one
-  `Eval` parameter. Each fallback prints a refusal marker, and `render` refuses a text holding
-  one, so nothing is approximated (decisions row 403's rule on the OCaml route) — *by
-  construction*.
+  `Eval` parameter. A fallback records a refusal, a value that names the declaration it was
+  printing and the constant or construct with no rule (`Refusal`), and `render` writes nothing
+  when it met one, so nothing is approximated (decisions row 403's rule on the OCaml route) —
+  *by construction*.
 * A natural printed as `int` meets no Nat operation (`natOps`), and no counter is passed where an
   `Eval` parameter takes an `int` — *checked* at each render.
 * Names are per declaration: LCNF numbers its variables per declaration, so the printer's map from
@@ -92,8 +93,34 @@ structure Spec where
   /-- Print the spec's own types before the module type, because a parameter's type names one. -/
   typesFirst : Bool := false
 
-/-- A refusal marker: the text a fallback prints, which `render` refuses by the name it carries. -/
-def refused (what : String) : String := s!"(* REFUSED {what} *)"
+/-- **A refusal of the printer**: the declaration it was printing (a declaration of the spec, a
+type of the spec or an `Eval` parameter) and the constant or construct that has no printing rule
+in it. `render` refuses a run that met one, before any text is returned. -/
+structure Refusal where
+  decl : Name
+  what : String
+deriving Inhabited
+
+/-- One refusal as the error's line: the declaration, then what has no rule. -/
+def Refusal.line (r : Refusal) : String := s!"{r.decl}: {r.what}"
+
+/-- The printer of one declaration: it reads the declaration it prints and gathers each refusal it
+meets. -/
+abbrev PrintM := ReaderT Name (StateM (Array Refusal))
+
+/-- Refuse what has no printing rule in the declaration being printed. The part prints as `_`, and
+the run writes nothing (`render`). -/
+def refuse (what : String) : PrintM String := do
+  let decl ← read
+  modify (·.push { decl, what })
+  return "_"
+
+/-- A printer of the declaration `decl`, run where the refusals are gathered. -/
+def PrintM.inDecl {m : Type → Type} [Monad m] [MonadStateOf (Array Refusal) m] {α : Type}
+    (decl : Name) (act : PrintM α) : m α := do
+  let (a, rs) := (act.run decl).run (← get)
+  set rs
+  return a
 
 /-- The Nat operations that read a natural in a way Z does not (`Nat.sub` truncates at zero):
 a natural printed as `int` that meets one is refused. -/
@@ -145,26 +172,37 @@ def localName (n : Name) : String :=
   "v_" ++ String.ofList ((toString n).toList.map fun c => if c.isAlphanum then c else '_')
 
 /-- A Lean type as a Rocq type; `counter` says a natural is a budget counter. -/
-partial def rocqTy (spec : Spec) (counter : Bool) (e : Expr) (typeLocals : List (FVarId × String) := []) : String :=
+partial def rocqTy (spec : Spec) (counter : Bool) (e : Expr) (typeLocals : List (FVarId × String) := []) :
+    PrintM String := do
   let e := e.consumeMData
   match e with
-  | .forallE _ d b _ => s!"({rocqTy spec false d typeLocals} -> {rocqTy spec counter b typeLocals})"
+  | .forallE _ d b _ =>
+    let dom ← rocqTy spec false d typeLocals
+    let cod ← rocqTy spec counter b typeLocals
+    return s!"({dom} -> {cod})"
   | _ =>
     let args := e.getAppArgs
     match e.getAppFn with
-    | .const ``Nat _ => if counter then "nat" else "int"
-    | .const ``Decidable _ => "bool"
+    | .const ``Nat _ => return if counter then "nat" else "int"
+    | .const ``Decidable _ => return "bool"
     | .const ``DecidableEq _ =>
       match args.toList with
-      | [t] => let t := rocqTy spec false t typeLocals; s!"({t} -> {t} -> bool)"
-      | _ => refused s!"type {e}"
-    | .fvar f => (typeLocals.lookup f).getD (refused s!"type {e}")
+      | [t] =>
+        let t ← rocqTy spec false t typeLocals
+        return s!"({t} -> {t} -> bool)"
+      | _ => refuse s!"type {e}"
+    | .fvar f =>
+      match typeLocals.lookup f with
+      | some name => return name
+      | none => refuse s!"type {e}"
     | .const n _ =>
       match spec.knownTypes.lookup n with
       | some r =>
-        if args.isEmpty then r else s!"({r} {" ".intercalate (args.toList.map (fun t => rocqTy spec false t typeLocals))})"
-      | none => refused s!"type {n}"
-    | _ => refused s!"type {e}"
+        if args.isEmpty then return r
+        let as ← args.toList.mapM fun t => rocqTy spec false t typeLocals
+        return s!"({r} {" ".intercalate as})"
+      | none => refuse s!"type {n}"
+    | _ => refuse s!"type {e}"
 
 /-- The printer's state for one declaration: a name for each variable, and the counters. -/
 structure Locals where
@@ -216,68 +254,80 @@ def app (fn : String) (args : List String) : String :=
   if args.isEmpty then fn else s!"({fn} {" ".intercalate args})"
 
 /-- A structure's projection by index, when the spec generates the structure. -/
-def projName (env : Environment) (typeName : Name) (idx : Nat) : String :=
+def projName (env : Environment) (typeName : Name) (idx : Nat) : PrintM String :=
   match getStructureInfo? env typeName with
   | some info =>
     match info.fieldNames[idx]? with
-    | some f => s!"{(fnRocq typeName).toLower}_{f}"
-    | none => refused s!"projection {typeName}.{idx}"
+    | some f => return s!"{(fnRocq typeName).toLower}_{f}"
+    | none => refuse s!"projection {typeName}.{idx}"
   | none =>
-    if typeName == ``Prod then (if idx == 0 then "fst" else "snd")
-    else refused s!"projection {typeName}.{idx}"
+    if typeName == ``Prod then return (if idx == 0 then "fst" else "snd")
+    else refuse s!"projection {typeName}.{idx}"
 
-def valueText (env : Environment) (spec : Spec) (l : Locals) (d : LetDecl .pure) : String :=
+def valueText (env : Environment) (spec : Spec) (l : Locals) (d : LetDecl .pure) : PrintM String :=
   match d.value with
-  | .lit (.nat n) => if l.counters.contains d.fvarId then toString n else s!"{n}%Z"
-  | .lit (.str s) => s!"\"{s}\"%string"
-  | .lit (.uint8 n) => s!"{n}%Z"
-  | .lit (.uint64 n) => s!"{n}%Z"
-  | .lit _ => refused "a literal that is no natural, no string, no UInt8 and no UInt64"
-  | .erased => "tt"
-  | .proj tn idx s => s!"({projName env tn idx} {l.name s})"
-  | .const n _ args =>
+  | .lit (.nat n) => return if l.counters.contains d.fvarId then toString n else s!"{n}%Z"
+  | .lit (.str s) => return s!"\"{s}\"%string"
+  | .lit (.uint8 n) => return s!"{n}%Z"
+  | .lit (.uint64 n) => return s!"{n}%Z"
+  | .lit _ => refuse "a literal that is no natural, no string, no UInt8 and no UInt64"
+  | .erased => return "tt"
+  | .proj tn idx s => do return s!"({← projName env tn idx} {l.name s})"
+  | .const n _ args => do
     let as := args.toList.filterMap (argName l)
     match spec.prims.lookup n with
     | some (int, nat) =>
       let counted := l.counters.contains d.fvarId ||
         args.any fun | .fvar f => l.counters.contains f | _ => false
-      app (if counted then (if nat.isEmpty then refused s!"{n} at a counter" else nat) else int) as
-    | none => app ((ctorRocq env n).getD (spec.name n)) as
-  | .fvar f args => app (l.name f) (args.toList.filterMap (argName l))
+      let fn ← if counted then (if nat.isEmpty then refuse s!"{n} at a counter" else pure nat)
+        else pure int
+      return app fn as
+    | none => return app ((ctorRocq env n).getD (spec.name n)) as
+  | .fvar f args => return app (l.name f) (args.toList.filterMap (argName l))
 
-def paramText (spec : Spec) (l : Locals) (p : Param .pure) : String :=
-  s!"({l.name p.fvarId} : {rocqTy spec (l.counters.contains p.fvarId) p.type})"
+def paramText (spec : Spec) (l : Locals) (p : Param .pure) : PrintM String := do
+  return s!"({l.name p.fvarId} : {← rocqTy spec (l.counters.contains p.fvarId) p.type})"
 
 /-- A code as a Gallina expression, indented by `ind` after each line break. -/
 partial def codeText (env : Environment) (spec : Spec) (l : Locals) (ind : String) :
-    Code .pure → String
-  | .let d k => s!"let {l.name d.fvarId} := {valueText env spec l d} in\n{ind}{codeText env spec l ind k}"
-  | .fun d k =>
-    let ps := " ".intercalate (d.params.toList.map (paramText spec l))
-    s!"let {l.name d.fvarId} := (fun {ps} =>\n{ind}    {codeText env spec l (ind ++ "    ") d.value}) in\n{ind}{codeText env spec l ind k}"
-  | .jp d k =>
-    let ps := if d.params.isEmpty then "(_ : unit)"
-      else " ".intercalate (d.params.toList.map (paramText spec l))
-    s!"let {l.name d.fvarId} := (fun {ps} =>\n{ind}    {codeText env spec l (ind ++ "    ") d.value}) in\n{ind}{codeText env spec l ind k}"
+    Code .pure → PrintM String
+  | .let d k => do
+    let v ← valueText env spec l d
+    let rest ← codeText env spec l ind k
+    return s!"let {l.name d.fvarId} := {v} in\n{ind}{rest}"
+  | .fun d k => do
+    let ps := " ".intercalate (← d.params.toList.mapM (paramText spec l))
+    let body ← codeText env spec l (ind ++ "    ") d.value
+    let rest ← codeText env spec l ind k
+    return s!"let {l.name d.fvarId} := (fun {ps} =>\n{ind}    {body}) in\n{ind}{rest}"
+  | .jp d k => do
+    let ps ← if d.params.isEmpty then pure "(_ : unit)"
+      else (" ".intercalate ·) <$> d.params.toList.mapM (paramText spec l)
+    let body ← codeText env spec l (ind ++ "    ") d.value
+    let rest ← codeText env spec l ind k
+    return s!"let {l.name d.fvarId} := (fun {ps} =>\n{ind}    {body}) in\n{ind}{rest}"
   | .jmp f args =>
     let as := args.toList.filterMap (argName l)
-    app (l.name f) (if as.isEmpty then ["tt"] else as)
-  | .return f => l.name f
-  | .unreach _ => refused "unreachable code"
-  | .cases c =>
-    let arms := c.alts.toList.map fun
-      | .alt n ps code =>
-        let pat := match ctorRocq env n with
+    return app (l.name f) (if as.isEmpty then ["tt"] else as)
+  | .return f => return l.name f
+  | .unreach _ => refuse "unreachable code"
+  | .cases c => do
+    let arms ← c.alts.toList.mapM fun
+      | .alt n ps code => do
+        let pat ← match ctorRocq env n with
           | some ctor =>
             -- a proof field is erased: it binds nothing, and its Rocq constructor has no field
             let ps := ps.filter fun (p : Param .pure) => !p.type.isErased
-            if ps.isEmpty then ctor
-            else s!"{ctor} {" ".intercalate (ps.toList.map fun (p : Param .pure) => l.name p.fvarId)}"
-          | none => refused s!"constructor {n}"
-        s!"{ind}| {pat} =>\n{ind}    {codeText env spec l (ind ++ "    ") code}"
-      | .default code => s!"{ind}| _ =>\n{ind}    {codeText env spec l (ind ++ "    ") code}"
-      | _ => ""
-    s!"match {l.name c.discr} with\n{"\n".intercalate arms}\n{ind}end"
+            if ps.isEmpty then pure ctor
+            else pure s!"{ctor} {" ".intercalate (ps.toList.map fun (p : Param .pure) => l.name p.fvarId)}"
+          | none => refuse s!"constructor {n}"
+        let body ← codeText env spec l (ind ++ "    ") code
+        return s!"{ind}| {pat} =>\n{ind}    {body}"
+      | .default code => do
+        let body ← codeText env spec l (ind ++ "    ") code
+        return s!"{ind}| _ =>\n{ind}    {body}"
+      | _ => return ""
+    return s!"match {l.name c.discr} with\n{"\n".intercalate arms}\n{ind}end"
 
 /-- The parameter a declaration recurses on: the scrutinee of its first `cases` on a parameter. -/
 partial def structArg (ps : Array (Param .pure)) : Code .pure → Option FVarId
@@ -287,8 +337,8 @@ partial def structArg (ps : Array (Param .pure)) : Code .pure → Option FVarId
 
 /-- A type the spec generates, as an `Inductive`, with a projection per field of a structure. A
 proof field (`Digest.length_eq`) is erased, as the compiler erases it: the Rocq constructor has no
-field for it, and it has no projection. -/
-def typeText (env : Environment) (spec : Spec) (n : Name) : MetaM String := do
+field for it, and it has no projection. A field type with no rule is refused at the type `n`. -/
+def typeText (env : Environment) (spec : Spec) (n : Name) : StateT (Array Refusal) MetaM String := do
   let some (.inductInfo ti) := env.find? n | throwError s!"{n} is no inductive"
   let short := (spec.knownTypes.lookup n).getD (fnRocq n)
   let parameters ← Meta.forallTelescope ti.type fun xs _ =>
@@ -311,7 +361,7 @@ def typeText (env : Environment) (spec : Spec) (n : Name) : MetaM String := do
         let t ← Meta.inferType x
         if ← Meta.isProp t then ks := ks ++ [false]
         else
-          fs := fs ++ [rocqTy spec false t typeLocals]
+          fs := fs ++ [← PrintM.inDecl n (rocqTy spec false t typeLocals)]
           ks := ks ++ [true]
       return (fs, ks)
     kept := keep
@@ -323,7 +373,7 @@ def typeText (env : Environment) (spec : Spec) (n : Name) : MetaM String := do
     for i in live do
       let vars := (parameters.map fun _ => "_") ++ live.map fun j => if j == i then "x" else "_"
       let implicitParameters := " ".intercalate (parameters.map fun name => "{" ++ name ++ " : Set}")
-      out := out ++ s!"Definition {projName env n i}{if implicitParameters.isEmpty then "" else " " ++ implicitParameters} (s : {applied}) := match s with {(ctorRocq env ctor).getD "C"} {" ".intercalate vars} => x end.\n"
+      out := out ++ s!"Definition {← PrintM.inDecl n (projName env n i)}{if implicitParameters.isEmpty then "" else " " ++ implicitParameters} (s : {applied}) := match s with {(ctorRocq env ctor).getD "C"} {" ".intercalate vars} => x end.\n"
   return out
 
 /-- **The skeleton as one Rocq file.** -/
@@ -372,7 +422,7 @@ def render (spec : Spec) (header : String) : CoreM String := do
   let isVariable (n : Name) : Bool :=
     spec.variableNamespaces.any (·.isPrefixOf n) || spec.variableNames.contains n
   let mut vars : Array Name := #[]
-  let mut refusals : Array String := #[]
+  let mut refusals : Array Refusal := #[]
   for d in decls do
     let l := localsOf d ((cps.get? d.name).getD {})
     if let .code c := d.value then
@@ -384,16 +434,18 @@ def render (spec : Spec) (header : String) : CoreM String := do
           for a in args do
             if let some f := a then
               if !l.counters.contains f then
-                refusals := refusals.push s!"{d.name}: the natural {l.name f} is printed as int (Z) and meets {n}"
-          refusals := refusals.push s!"{d.name}: {n} has no printing rule"
+                refusals := refusals.push
+                  { decl := d.name, what := s!"the natural {l.name f} is printed as int (Z) and meets {n}" }
+          refusals := refusals.push { decl := d.name, what := s!"{n} has no printing rule" }
         else if !isVariable n then
-          refusals := refusals.push s!"{d.name}: {n} has no printing rule"
+          refusals := refusals.push { decl := d.name, what := s!"{n} has no printing rule" }
         else
           -- an `Eval` parameter takes every natural as `int`: a counter passed to it is refused
           for a in args do
             if let some f := a then
               if l.counters.contains f then
-                refusals := refusals.push s!"{d.name}: the counter {l.name f} (nat) is passed to {n}, which takes int"
+                refusals := refusals.push
+                  { decl := d.name, what := s!"the counter {l.name f} (nat) is passed to {n}, which takes int" }
           if !vars.contains n then vars := vars.push n
   -- the counters chosen, by declaration, for the header
   let mut counterLines : Array String := #[]
@@ -428,32 +480,39 @@ def render (spec : Spec) (header : String) : CoreM String := do
   if spec.typesFirst then
     out := out ++ "\n\n(** The types. *)\n"
     for t in spec.types do
-      out := out ++ (← (typeText env spec t).run') ++ "\n"
+      let (text, rs) ← ((typeText env spec t).run refusals).run'
+      refusals := rs
+      out := out ++ text ++ "\n"
   out := out ++ "\n\n(** The evaluator: every constant of a variable namespace, as a parameter. *)\n"
     ++ s!"Module Type {spec.evalName}.\n\n"
   unless spec.abstractTypes.isEmpty do
     out := out ++ s!"Parameters {" ".intercalate spec.abstractTypes} : Set.\n"
   for v in vars do
     let some info := env.find? v | throwError s!"Gallina: no constant {v}"
-    out := out ++ s!"Parameter {spec.name v} : {rocqTy spec false info.type}.\n"
+    let (ty, rs) := ((rocqTy spec false info.type).run v).run refusals
+    refusals := rs
+    out := out ++ s!"Parameter {spec.name v} : {ty}.\n"
   out := out ++ s!"\nEnd {spec.evalName}.\n\n(** The skeleton, over any evaluator. *)\nModule {spec.moduleName} (E : {spec.evalName}).\n\nImport E.\n\n"
   unless spec.typesFirst do
     for t in spec.types do
-      out := out ++ (← (typeText env spec t).run') ++ "\n"
+      let (text, rs) ← ((typeText env spec t).run refusals).run'
+      refusals := rs
+      out := out ++ text ++ "\n"
   out := out ++ "\n"
   -- one declaration's head and body: `name params {struct x} : type :=` and the code
-  let headOf (g : Decl .pure) (recursive : Bool) : String := Id.run do
+  let headOf (g : Decl .pure) (recursive : Bool) : PrintM String := do
     let l := localsOf g ((cps.get? g.name).getD {})
-    let .code c := g.value | return refused s!"extern {g.name}"
+    let .code c := g.value | refuse s!"extern {g.name}"
     let sa := if recursive then (structArg g.params c).map fun f => s!" \{struct {l.name f}}" else none
     let mut t := g.type
     for _ in g.params do
       if let .forallE _ _ b _ := t then t := b
-    return s!"{spec.name g.name} {" ".intercalate (g.params.toList.map (paramText spec l))}{sa.getD ""} : {rocqTy spec false t}"
-  let bodyOf (g : Decl .pure) (ind : String) : String := Id.run do
+    let ps ← g.params.toList.mapM (paramText spec l)
+    return s!"{spec.name g.name} {" ".intercalate ps}{sa.getD ""} : {← rocqTy spec false t}"
+  let bodyOf (g : Decl .pure) (ind : String) : PrintM String := do
     let l := localsOf g ((cps.get? g.name).getD {})
-    let .code c := g.value | return refused s!"extern {g.name}"
-    return codeText env spec l ind c
+    let .code c := g.value | refuse s!"extern {g.name}"
+    codeText env spec l ind c
   -- a function on `List T` in a group with a function on `T` (`Val.encodeList` beside
   -- `Val.encode`) is a nested recursion: Rocq takes it as a local `fix` inside the function on
   -- `T`, then as its own fixpoint over the defined one
@@ -471,25 +530,32 @@ def render (spec : Spec) (header : String) : CoreM String := do
       | _ => none
     if let some (top, aux) := nested then
       printed := (printed.insert top.name).insert aux.name
+      let (auxHead, rs) := ((headOf aux true).run aux.name).run refusals
+      let (auxInline, rs) := ((bodyOf aux "      ").run aux.name).run rs
+      let (topHead, rs) := ((headOf top true).run top.name).run rs
+      let (topBody, rs) := ((bodyOf top "  ").run top.name).run rs
+      let (auxBody, rs) := ((bodyOf aux "  ").run aux.name).run rs
+      refusals := rs
       let call := s!"({spec.name aux.name} "
-      let inline := s!"((fix {headOf aux true} :=\n      {bodyOf aux "      "}) "
-      out := out ++ s!"Fixpoint {headOf top true} :=\n  {(bodyOf top "  ").replace call inline}\n.\n\n"
-      out := out ++ s!"Fixpoint {headOf aux true} :=\n  {bodyOf aux "  "}\n.\n\n"
+      let inline := s!"((fix {auxHead} :=\n      {auxInline}) "
+      out := out ++ s!"Fixpoint {topHead} :=\n  {topBody.replace call inline}\n.\n\n"
+      out := out ++ s!"Fixpoint {auxHead} :=\n  {auxBody}\n.\n\n"
       continue
     let mut first := true
     for g in group do
       printed := printed.insert g.name
       let recursive := (callees g).any fun n => group.any (·.name == n)
       let kw := if !first then "with" else if recursive then "Fixpoint" else "Definition"
-      out := out ++ s!"{kw} {headOf g recursive} :=\n  {bodyOf g "  "}\n"
+      let (head, rs) := ((headOf g recursive).run g.name).run refusals
+      let (body, rs) := ((bodyOf g "  ").run g.name).run rs
+      refusals := rs
+      out := out ++ s!"{kw} {head} :=\n  {body}\n"
       first := false
     out := out ++ ".\n\n"
   out := out ++ s!"End {spec.moduleName}.\n"
-  -- every fallback's marker, refused by the name it carries
-  for piece in (out.splitOn "(* REFUSED ").drop 1 do
-    refusals := refusals.push ((piece.splitOn " *)").headD piece)
+  -- every refusal the printer met, each naming its declaration and what has no rule
   unless refusals.isEmpty do
-    throwError s!"Gallina: {refusals.size} refused:\n{"\n".intercalate refusals.toList}"
+    throwError s!"Gallina: {refusals.size} refused:\n{"\n".intercalate (refusals.toList.map Refusal.line)}"
   return out
 
 /-- **The call tree's control skeleton** (`Effect4.Run.Tree`): the spec of the generated
@@ -596,5 +662,22 @@ def storeSpec : Spec where
   evalName := "Prim"
   moduleName := "Code"
   typesFirst := true
+
+/-! ### Controls: a construct with no rule is a refusal, a value that names its declaration -/
+
+/-- A printer run alone, at the declaration `decl`: its text and its refusals' lines. -/
+private def printedAt (decl : Name) (act : PrintM String) : String × List String :=
+  let (text, refusals) := (act.run decl).run #[]
+  (text, refusals.toList.map Refusal.line)
+
+-- a type with no Rocq name is refused at the declaration being printed, and prints as `_`
+#guard printedAt `Effect4.Store.Val.encode (rocqTy storeSpec false (mkConst ``Float))
+  == ("_", ["Effect4.Store.Val.encode: type Float"])
+-- inside a larger type, only the part with no rule is refused
+#guard printedAt `Effect4.Store.Val.encode
+    (rocqTy storeSpec false (.forallE `x (mkConst ``Bool) (mkConst ``Float) .default))
+  == ("(bool -> _)", ["Effect4.Store.Val.encode: type Float"])
+-- a type with a rule refuses nothing
+#guard printedAt `Effect4.Store.Val.encode (rocqTy storeSpec false (mkConst ``Bool)) == ("bool", [])
 
 end OCaml5.Lcnf.Gallina

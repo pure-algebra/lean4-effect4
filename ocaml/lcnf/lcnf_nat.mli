@@ -6,7 +6,8 @@
    meaning, since every list OCaml can hold is shorter than `max_int` (`ocaml/gen/NOTES.md` §5).
    The three are exact only below `max_int`, which the rows' contracts state
    (`OCaml5.Lcnf.builtins`); slice 2.2b of the refactor plan replaces them with exact arithmetic.
-   The target evaluator runs each from its reference definition in `OCaml5.Lcnf.support`.
+   The implementation, lcnf_nat.ml, is GENERATED from the reference definitions in
+   `OCaml5.Lcnf.support` (`lake exe lcnfgen --support`), which the target evaluator runs too.
 
    Depends on: the standard library only.
 

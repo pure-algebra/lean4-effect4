@@ -1,6 +1,7 @@
 import Lean
 import OCaml5.Ml.Syntax
 import OCaml5.Ml.Render
+import OCaml5.Ml.Check
 import OCaml5.Lcnf.Externs
 import OCaml5.Lcnf.TypeRows
 import OCaml5.Lcnf.Prim
@@ -317,11 +318,12 @@ private def saturating (x y product : Ml.Expr) : Ml.Expr :=
 /-- The functions of the runtime library (`ocaml/lcnf`, library `effect4_lcnf`) that a form names
 and the target evaluator runs from a definition, in dependency order. A form that binds a name, or
 that calls itself, is one of these and not inline, so that no call site carries its binders.
-Each body here is the reference definition of the library function of its name: the library
-holds the OCaml that every generated file calls, and the target evaluator binds these
-(`Conform.Effect4.LcnfMl.supportBinds`). The host checks hold the two to the same answers, once on
-the evaluator and once in compiled OCaml that carries the library's own modules
-(`Conform.Effect4.Normalization`), and the library's tests are `ocaml/lcnf/test_lcnf.ml`.
+Each body here is the one definition of the library function of its name: the library's modules
+that hold them are rendered from these bodies (`supportModule`, `ocaml/lcnf/lcnf_nat.ml` and
+`lcnf_list.ml`), and the target evaluator binds the same bodies
+(`Conform.Effect4.LcnfMl.supportBinds`). The host checks run them once on the evaluator and once
+in compiled OCaml that carries the library's own modules (`Conform.Effect4.Normalization`), and
+the library's tests are `ocaml/lcnf/test_lcnf.ml`.
 
 The 63-bit rule. `Nat` is unbounded and OCaml's `int` is 63-bit, so a faithful `a * b` or
 `a ^ b` does not exist; a wrapping one is worse than a saturating one, because
@@ -344,6 +346,32 @@ def support : List Support := [
   { name := "Lcnf_list.contains", params := ["inst", "l", "a"],
     body := Ml.Expr.call "List.exists"
       [.fn ["e"] (.app (.var "inst") [va, .var "e"]), .var "l"] }]
+
+/-! ### The runtime library's rowed modules
+
+`ocaml/lcnf/lcnf_nat.ml` and `ocaml/lcnf/lcnf_list.ml` are rendered from `support`, so the body a
+row's form calls in every generated file and the body the target evaluator runs are one
+definition. Each module holds the support functions named under it, in `support`'s order, and a
+call of a function of its own module is written unqualified, as OCaml requires inside the module.
+`lake exe lcnfgen --support <dir>` writes them (`make gen-lcnf`); their interfaces stay
+hand-written, with their property lists (`lcnf_nat.mli`, `lcnf_list.mli`). -/
+
+/-- The modules of the runtime library that `support` defines functions of, each once, in
+`support`'s order. -/
+def supportModules : List String :=
+  (support.filterMap fun s => match s.name.splitOn "." with
+    | [m, _] => some m
+    | _ => none).eraseDups
+
+/-- One module of the runtime library as OCaml syntax: its support functions, each a `let`, and
+a `let rec` when it calls itself. -/
+def supportModule (m : String) : Ml.Module :=
+  let own := support.filter fun s => s.name.startsWith (m ++ ".")
+  let short (s : Support) : String := (s.name.drop (m.length + 1)).toString
+  let unqualified : List (String × Ml.Expr) := own.map fun s => (s.name, .var (short s))
+  let bind (s : Support) : Ml.Bind :=
+    { name := short s, params := s.params.map (·, none), body := substExpr unqualified s.body }
+  { name := m.decapitalize, items := own.map fun s => .letD s.recursive [bind s] }
 
 /-- The modules of the runtime library that the table names, each once and sorted: the module part
 of every qualified name of `support` and of `targetLibrary` that starts with `Lcnf_`. A program
@@ -1031,6 +1059,16 @@ def problems : List String := problemsOf builtins support targetLibrary
 #guard runtimeModules == ["Lcnf_array", "Lcnf_list", "Lcnf_nat", "Lcnf_string"]
 -- No name of the runtime library is one a binder must avoid: each is qualified.
 #guard (support.map (·.name) ++ ["Lcnf_string.utf8_bytes"]).all (!protectedNames.contains ·)
+-- The rowed modules: one per module `support` names, each passing the module checker, each body
+-- the support function's own, with a call into its own module unqualified.
+#guard supportModules == ["Lcnf_nat", "Lcnf_list"]
+#guard supportModules.all fun m => (Ml.checkModule (supportModule m)).isEmpty
+#guard (supportModule "Lcnf_nat").items.map Ml.renderDecl ==
+  ["let mul a b =\n  if a = 0 then 0 else if b > max_int / a then max_int else a * b",
+   "let rec pow a b =\n  if b = 0 then 1 else (let h = pow a (b - 1) in\n    if a = 0 then 0 else if h > max_int / a then max_int else h * a)",
+   "let shift_left a b =\n  let s = pow 2 b in\n  if a = 0 then 0 else if s > max_int / a then max_int else a * s"]
+#guard (supportModule "Lcnf_list").items.map Ml.renderDecl ==
+  ["let contains inst l a =\n  List.exists (fun e -> inst a e) l"]
 -- The two evaluators' tables, computed: the source evaluator has the primitive of every extern
 -- row but eleven (`Int`'s five, which `Store.Image.int` and a negative literal need; three the
 -- session's closure needs; `String.ofByteArray`, the inverse of the bytes it has no primitive

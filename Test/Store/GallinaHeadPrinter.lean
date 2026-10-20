@@ -3,7 +3,9 @@ import Lean
 
 namespace Test.Store.GallinaHeadPrinter
 
-/-- A value parameter must not be silently printed as a type parameter. -/
+/-- A value parameter must not be silently printed as a type parameter. The printer gathers its
+refusals in its state (`OCaml5.Lcnf.Gallina.Refusal`, M4); this one is no refusal of a construct
+but an error, raised before any is gathered, so the run starts from no refusal. -/
 structure Indexed (count : Nat) where
   value : Nat
 
@@ -14,6 +16,6 @@ run_meta do
   let spec : OCaml5.Lcnf.Gallina.Spec :=
     {decls := [], types := [], knownTypes := [], abstractTypes := [],
      variableNamespaces := [], requires := []}
-  discard <| OCaml5.Lcnf.Gallina.typeText env spec ``Indexed
+  discard <| (OCaml5.Lcnf.Gallina.typeText env spec ``Indexed).run #[]
 
 end Test.Store.GallinaHeadPrinter

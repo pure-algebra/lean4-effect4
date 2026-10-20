@@ -333,6 +333,16 @@ def render (m : Module) : String :=
    | some h => "(* " ++ h ++ " *)\n\n")
     ++ String.join (m.items.map fun d => renderDecl d ++ "\n\n")
 
+/-- The bytes of a `.mli` file: the header comment, then the signature items, one to a line, a
+type declaration followed by a blank line. A total function of its argument, as `render` is. -/
+def renderSignature (s : Signature) : String :=
+  (match s.header with
+   | none => ""
+   | some h => "(* " ++ h ++ " *)\n\n")
+    ++ String.join (s.items.map fun i => match i with
+      | .type _ => renderSigItem i ++ "\n\n"
+      | .value _ _ => renderSigItem i ++ "\n")
+
 /-! ## Checks
 
 The rendering is checked by `#guard` here on the shapes whose bytes are pinned, by the
@@ -451,5 +461,11 @@ private def wideVariant : TypeDecl :=
   == "module Run = struct\n  module Tree = struct\n    type t = int\n  end\nend"
 -- An include, as a consumer's facade writes it.
 #guard renderDecl (.includeD "Lanes_gen") == "include Lanes_gen"
+-- An interface unit: the header, a type and its blank line, then the values one to a line.
+private def policyItems : List SigItem :=
+  [.type { name := "t", body := .variant [{ name := "Swap" }, { name := "Pin" }] },
+   .value "all" (Ty.list (.named "t")), .value "byte" (.arrow (.named "t") Ty.int)]
+#guard renderSignature ⟨"e4_root_policy", some "GENERATED", policyItems⟩
+  == "(* GENERATED *)\n\ntype t = Swap | Pin\n\nval all : t list\nval byte : t -> int\n"
 
 end OCaml5.Ml
