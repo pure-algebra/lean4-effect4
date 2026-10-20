@@ -302,7 +302,7 @@ A machine defect has a name on both faces, and rc.112 adds its message. The scop
 scope dies on rc.112 with `{"name":"Error","message":"Service not found: effect/Scope"}`, which
 is Lean's `missingService`.
 
-**Landed, move G (2026-10-20, `3197fde57`; `receipt-G.md`).** The codec writes a defect as
+**Landed, move G (2026-10-20, `3197fde57`; §11.2).** The codec writes a defect as
 rc.112's `Schema.Defect()` does. A user defect is its number inside `safeBound`, a represented
 error is its raw JSON, and a machine defect is an `Error`'s name and message. `defectWire` is gone
 from the truth harness, which now writes the host's defect by rc.112's own encoder. The four
@@ -361,7 +361,7 @@ review's programs show all three. `2^53-1 + 1` encodes in Lean and is refused by
 both wires, and one judgment at ingress and at the observation, is §9.1 item 2, M2. This note
 inherits it.
 
-**Landed, move J (2026-10-19, `04fa8d57c`; `receipt-J.md`).** The nat wire refuses past
+**Landed, move J (2026-10-19, `04fa8d57c`; §11.1).** The nat wire refuses past
 `safeBound`, as the int wire does, and the codec's laws keep their statements. The comparator
 reads `exactBound` as `refusedBoth`: 26 equal, 1 renamed, 4 differ, 8 refused on both faces, 1
 refused by Lean. The codec lane reads both faces refusing 2^53 and writing 2^53 minus 1.
@@ -423,9 +423,9 @@ value, such as programs, types and refusals.
 | R2 | Does P1, total by refusal and complete against codec admission, enter the registry as a claim with a planned goal? | yes, by a proposed row |
 | R3 | Does the surface carry the exit codec per method, with the declarations? | yes, move F, after A |
 | R4 | A program whose answer is a handle | `refused`, with the tool's carrier wire for it, marked internal |
-| R5 | The defect domain: a payload defect carrying rc.112's raw JSON, or the canonical closed alphabet with an injective encoding | **ruled 2026-10-19 (the owner): "the canonical defect alphabet with an injective encoding, raw for user defects and name-and-message for machine defects, with missingService's key stored"**; the payload defect later, if the machine's own markers must match rc.112's messages exactly. D-G1 (`receipt-G.md`), settled by the coordinator: the key names enter at each wire's encoder and decoder, as landed, so layout and support stay judgments of the type. D-G2: the coordinator regenerated `rocq/Eff_types.v` and compiled the Rocq tree |
+| R5 | The defect domain: a payload defect carrying rc.112's raw JSON, or the canonical closed alphabet with an injective encoding | **ruled 2026-10-19 (the owner): "the canonical defect alphabet with an injective encoding, raw for user defects and name-and-message for machine defects, with missingService's key stored"**; the payload defect later, if the machine's own markers must match rc.112's messages exactly. D-G1 (seat G's question), settled by the coordinator: the key names enter at each wire's encoder and decoder, as landed, so layout and support stay judgments of the type. D-G2: the coordinator regenerated `rocq/Eff_types.v` and compiled the Rocq tree |
 | R6 | Is an exit observed without its annotations, at every depth? | yes, D2 |
-| R7 | One numeric bound, `safeBound`, on both wires and at the observation; and does Lean's machine refuse arithmetic past it, as the prelude does? | **ruled 2026-10-19 (the owner): "one numeric bound, safeBound, on both wires and at the observation, under M2"**; the machine's own refusal past the bound stays M2's decision. D-J1 (`receipt-J.md`), settled by the coordinator under this ruling: a user defect's number is bounded by `safeBound` at the observation too, in move G; an interruptor's fiber id stays the run's numbering |
+| R7 | One numeric bound, `safeBound`, on both wires and at the observation; and does Lean's machine refuse arithmetic past it, as the prelude does? | **ruled 2026-10-19 (the owner): "one numeric bound, safeBound, on both wires and at the observation, under M2"**; the machine's own refusal past the bound stays M2's decision. D-J1 (seat J's question), settled by the coordinator under this ruling: a user defect's number is bounded by `safeBound` at the observation too, in move G; an interruptor's fiber id stays the run's numbering |
 | R8 | The first landing's scope: terminal output with expanded declarations, traces deferred to E | yes |
 | R9 | The public shape: `terminal`, `refused` and `live` as three cases, with the text profile of move C | yes |
 
@@ -435,7 +435,9 @@ value, such as programs, types and refusals.
 The owner, 2026-10-19: "Record both and queue moves J and G first, in the reworked order." The
 two briefs follow. Each lands as AGENTS.md's Working section asks: a narrow build, `#axiom_audit`
 over the touched modules, and the behaviour gate the change reaches. Semantics generation stays
-paused, so each receipt proposes its registry text.
+paused, so each landing proposes its registry text here. The seats' briefs and receipts were
+files beside this note until 2026-10-20. The owner asked for fewer documents. So each landing's
+evidence is its "Landed" item below, and the files are in the history (`fa7bdc304`).
 
 ### 11.1 Move J: one numeric bound on both wires
 
@@ -461,10 +463,15 @@ paused, so each receipt proposes its registry text.
 - **The reach.** The codec is not in the lowered closure (`ocaml/gen/api_gen.mli` names no
   `schema_codec` root), so no OCaml regeneration. The gate is `check-ts`.
 - **Size.** S.
-- **Landed.** 2026-10-19, by one Opus seat in the main checkout from `briefs/J.md`: `04fa8d57c`
-  (the code) and `fc9eb07c8` (`receipt-J.md`). `make check-ts` passed. The receipt proposes the
-  registry claim `nat-codec-admission` with the planned goal `isCodecValue_nat_iff`, and names
-  three texts that still say "above 2^53" and stay true. D-J1 is settled in §10.
+- **Landed.** 2026-10-19, by one Opus seat in the main checkout: `04fa8d57c` (the code).
+  Narrow builds, then the roots (858 s). `make batteries-touched`: 2 batteries.
+  `#axiom_audit Effect4.Schema.Codec Effect4.Laws.Schema.Codec`: 665 declarations within
+  `[propext, Quot.sound]`, 0 modulo planned goals. The codec lane: 50 comparisons, PASS. The
+  faces probe: `exactBound` refused on both faces. `make check-ts` passed (39.6 s). Proposed, not
+  added: the registry claim `nat-codec-admission` with the planned goal `isCodecValue_nat_iff`,
+  whose proof needs `nat? (Arch.Json.ofNat n) = some n` below 2^53, which no lemma states.
+  Three texts still say "above 2^53" and stay true: the `modeled-codec` title, its paragraph in
+  `docs/core/semantics.md`, the header of `Laws/Schema/Modeled.lean`. D-J1 is settled in §10.
 
 ### 11.2 Move G: the canonical defect alphabet, encoded as Effect writes a defect
 
@@ -506,14 +513,19 @@ paused, so each receipt proposes its registry text.
   spelling. The brief recommends the key, with the spelling from the declarations, since the
   key is what the machine has.
 - **Size.** M.
-- **Landed.** 2026-10-20, by one Opus seat in the main checkout from `briefs/G.md`: `3197fde57`
-  (the code) and `d54a9f211` (`receipt-G.md`). `make check-ocaml` and `make check-ts` passed.
-  The coordinator ran `#closure_audit` over the codec's new closures (passed) and regenerated
-  `rocq/Eff_types.v`. The receipt proposes the registry claim `defect-codec` with a planned
-  goal. Still open after it: the frozen packet `Test/contracts/schema-codec.contract.md` states
-  the codec without key names, and it is the owner's packet. The retired truth outputs keep
-  the old spellings until `gen-truth`. The to-do project's typed comparison follows
-  `briefs/todo-after-G.md`.
+- **Landed.** 2026-10-20, by one Opus seat in the main checkout: `3197fde57` (the code), 48
+  files, 8 of them regenerated (`RunnerDerived.lean`, `eff_types.ml`, the closures). The roots
+  (865 s). `make batteries-touched`: 57 batteries. `#axiom_audit` over the 30 touched modules:
+  10034 declarations within `[propext, Quot.sound]`, 0 modulo planned goals. `make gen-lcnf`
+  moved six outputs; `gen-eff`, `gen-wire`, `gen-cas` and `gen-fixtures` moved nothing.
+  `make check-ocaml` passed (23.6 s; the kit's exit-shape pin moved to format 3). The codec
+  lane: 60 comparisons, PASS. The truth harness compiled and its tests passed. `make check-ts`
+  passed (32.1 s). The coordinator ran `#closure_audit` over the new closures (passed) and
+  regenerated `rocq/Eff_types.v` (`742b728b3`, all eight Rocq files compile). Proposed, not
+  added: the registry claim `defect-codec` with a planned goal; its proof needs four lemmas
+  that no module states. Still open: the frozen packet `Test/contracts/schema-codec.contract.md`
+  states the codec without key names, and it is the owner's packet. Row 117 part two may read
+  the stored key. The to-do project followed (`6be67a1`; its receipt's §5).
 
 ### 11.3 The proposed decisions row
 
