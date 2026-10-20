@@ -211,6 +211,21 @@ First, before item 1: the to-do as a user's project, outside the library
 | 10 | **A public-name manifest for Lean** (was item 10): each name of the entry modules taught, internal or test-only | `Program.Edit` and `Program.SketchWire` from the entry; the extra run and check entries, marked internal | S |
 | 11 | **M10, carriers as rows, one machine, then the run layer over it** | `ocaml/engine/externs.txt` outside Lean; the hand machine and its drive | L |
 
+- **M1 landed** 2026-10-20 (`be13aee02`). Nine records are now `Located Site Reason`:
+  `Authoring.Refusal`, `DocumentRefusal`, `FormationRefusal`, and the six record, tuple and fold
+  refusals of `TermRefusal.lean`. The paths left `TermTypingRefusal`'s arms (`TermTypingReason`).
+  A name that stays is an `abbrev` of a `Located`. The formation type and the tuple index moved
+  into their reasons. Two more moved the same way: item 3b's `ReadFailure`, and the law graph's
+  `TypingRefusal`. `Located.under` is stated for any list site; `DocumentRefusal.under` and
+  `ReadFailure.under` are deleted. Regenerated: derived (the Refusals group with qualified names)
+  and lcnf; ts reran with no change. The kit's format is version 4, with its two shape pins.
+  `make batteries-touched`: 260 batteries, built. `#axiom_audit`: 3,605 declarations of the 13
+  touched library modules and 534 of the 9 touched batteries, all within `[propext, Quot.sound]`
+  and none modulo a planned goal. Gates: `check-ts` and `check-ocaml` pass. No claim's statement
+  moved. Proposed: the checker's three term arms (`unboundVariable`, `unknownAtom`,
+  `refusedArguments`) keep their address as a field. One `TermTypingRefusal` arm in their place
+  changes the checker's alphabet, which the owner rules.
+
 ```mermaid
 flowchart LR
   M1["1 M1 one located refusal"] --> M2["2 M2 one profile judgment"]
