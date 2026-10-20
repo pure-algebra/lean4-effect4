@@ -10,7 +10,7 @@ programs and adapter rows. It contains identities and explicit target symbol bin
 expected signatures. The tests compare exact program identities with the corpus,
 and retain exact selected row identities, rather than relying on a count. Additions/removals in the
 source inventories require a reviewed selection change; selected missing entries are refused.
-Expected program A/E strings and full requirement keys come from `harness/truth/corpus.json`.
+Expected program A/E strings and full requirement keys come from `Test/Corpus/corpus.json`.
 The hand selection reads annotated generated exports, so it is not an independent check of
 initializer inference. The corpus lane read separate unannotated modules for that check. It was
 deleted with the truth differential on 2026-10-20 (`git:8e93a284f:tools/target/corpus.ts`).
@@ -25,7 +25,7 @@ Other requirements use the printer's full-key string literal identity, independe
 `oracle.ts` is the diagnostic library's face: the types, the query sources, and a `query` that
 runs `checker.ts`. `checker.ts` is the only thing in the repository that drives a type checker;
 it runs under node because the compiler's synchronous client reads a node-internal pipe handle,
-the same reason `harness/tsdiag/run-tsdiag.mjs` is node. `profile.ts` projects existing
+the same reason `tools/tsdiag/run-tsdiag.mjs` is node. `profile.ts` projects existing
 generated metadata into its queries. `input.ts` decodes optional local query selections.
 `cli.ts` is the thin driver. The compiler is the one compiler of decisions row 57, tsgo
 (`@typescript/native-preview`, pinned in `ts/eff/package.json`; the oracle refuses an install

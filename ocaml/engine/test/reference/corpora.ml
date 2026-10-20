@@ -242,7 +242,7 @@ type truth_expect =
   }
 
 let truth_expectations () : (truth_expect list, string) result =
-  match find_path ~env:"E4_TRUTH_CORPUS" [ "harness"; "truth"; "corpus.json" ] with
+  match find_path ~env:"E4_TRUTH_CORPUS" [ "Test"; "Corpus"; "corpus.json" ] with
   | None -> Error "harness/truth/corpus.json not found from the cwd"
   | Some path ->
     (match Yojson.Safe.from_string (read_file path) with

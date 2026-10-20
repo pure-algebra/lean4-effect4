@@ -34,10 +34,10 @@ is written with an empty `request`, which the reader refuses.
 (`<"p0">`), its request and answer rendered at the same probes; it is empty on every other line.
 
 The tables are the ones the lane can select: the canonical packages
-(`Effect4.Program.Packages.all`) and the truth harness's host fixture. That fixture is
-declared twice in the tree — `harness/truth/Truth.lean`'s `acquireHandleTable` and
+(`Effect4.Program.Packages.all`) and the truth corpus's host fixture. That fixture is
+declared twice in the tree — `tools/Drivers/Truth.lean`'s `acquireHandleTable` and
 `Test/Api/AcquireHandleContract.table` — so this driver reads the second and *checks* it
-against the first, which the truth harness published into `harness/truth/corpus.json`
+against the first, which the truth corpus published into `Test/Corpus/corpus.json`
 (`hostRows`): the three rows' JSON must be exactly what this table encodes, or the run
 refuses. One printer, and the duplicated fixture cannot drift silently.
 
@@ -179,17 +179,17 @@ def atomLine (atom : NativeAtom) : Except String String := do
   pure (String.intercalate "\t"
     ["Atom", NativeAtom.name atom, schemeKind spec.scheme, "", request, answer, "", typeArgs])
 
-/-- The host fixture, checked against what the truth harness published. -/
+/-- The host fixture, checked against what the truth corpus published. -/
 def hostRowsAgree (corpus : Lean.Json) (rows : List Row) : Except String Unit := do
   let published : List Lean.Json ← match corpus.getObjVal? "hostRows" with
     | Except.ok (Lean.Json.arr xs) => pure xs.toList
-    | _ => throw "harness/truth/corpus.json has no hostRows array"
+    | _ => throw "Test/Corpus/corpus.json has no hostRows array"
   if published.length != rows.length then
-    throw s!"harness/truth/corpus.json publishes {published.length} host rows, the fixture has {rows.length}"
+    throw s!"Test/Corpus/corpus.json publishes {published.length} host rows, the fixture has {rows.length}"
   for (theirs, ours) in published.zip rows do
     let mine := Tools.ProfileJson.rowJson ours
     if theirs.compress != mine.compress then
-      throw s!"host row {ours.name} differs from harness/truth/corpus.json: {theirs.compress} vs {mine.compress}"
+      throw s!"host row {ours.name} differs from Test/Corpus/corpus.json: {theirs.compress} vs {mine.compress}"
   pure ()
 
 def render (corpus : Lean.Json) : Except String String := do
@@ -207,10 +207,10 @@ end Tools.RowTypes
 def main (args : List String) : IO UInt32 := do
   let some out := args.head? | do
     IO.eprintln "usage: RowTypes.lean <out.tsv> [--check]"; return 2
-  let corpusText ← IO.FS.readFile "harness/truth/corpus.json"
+  let corpusText ← IO.FS.readFile "Test/Corpus/corpus.json"
   let corpus ← match Lean.Json.parse corpusText with
     | Except.ok j => pure j
-    | Except.error e => do IO.eprintln s!"harness/truth/corpus.json: {e}"; return 2
+    | Except.error e => do IO.eprintln s!"Test/Corpus/corpus.json: {e}"; return 2
   match Tools.RowTypes.render corpus with
   | Except.error e => do IO.eprintln s!"FAIL row-types: {e}"; return 1
   | Except.ok text =>

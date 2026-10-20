@@ -12,7 +12,7 @@ Writes what the code generator makes of each program, for a person or an agent t
 
     OUT/README.md            the index: each program's type, files, address and checks
     OUT/prelude/             what the modules import besides `effect`: the prelude's import closure,
-                             copied from `harness/truth` (`Compiler.Prelude.closure`)
+                             copied from `ts/prelude` (`Compiler.Prelude.closure`)
     OUT/corpus/NAME.ts       the module (`Tools.Code.Module`): exact imports, a header, Effect's width
     OUT/corpus/NAME.tree.txt the program's tree as the view writes it (`Tools.View.Program.treeText`)
 

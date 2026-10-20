@@ -31,27 +31,18 @@ __pycache__/
 /scratch/
 skills-lock.json
 
-# Harness spikes: per-machine scratch under harness/ stays on disk, not in git.
-# The 23 files already tracked here are unaffected — six gates read them
-# (check-schema-annotations, check-schema-effectful-field,
-# check-schema-typescript-generation, check-internal-citations and their two
-# gate tests) — so this hides only new, untracked harness work such as
-# harness/trace/. `harness/truth/` (the truth corpus and the prelude of the printed
-# modules; its rc.112 differential was deleted on 2026-10-20) is tracked; its link to
-# the one bun install is not.
-/harness/*
-!/harness/truth/
-!/harness/tsdiag/
-/harness/truth/node_modules
-
-# The TypeScript estate (`ts/`) is tracked; its installs are not.
+# The TypeScript estate (`ts/`) is tracked; its installs are not, and neither is the prelude's
+# link to the one install (`ts/prelude/node_modules`).
 /ts/**/node_modules
+
+# The truth corpus (`Test/Corpus/`) is tracked; its link to the one install is not.
+/Test/Corpus/node_modules
 
 # The OCaml estate (`ocaml/`, one dune workspace) is tracked; dune's build directories
 # and any node install are not.
 /ocaml/**/_build/
 /ocaml/**/node_modules
 
-
-/harness/truth/schema-codec/.work/
+# The codec lane's work folder: the values its producer writes fresh for its check.
+/ts/eff/test/codec/.work/
 

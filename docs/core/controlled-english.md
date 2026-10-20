@@ -193,7 +193,7 @@ Each entry is one row of six columns:
 | **LCNF** | Lean's compiler IR in its mono phase, read from compiled modules. OCaml is made only from LCNF. | `translateClosure` (`src/OCaml5/Lcnf/Translate.lean`) | the Lean compiler, by name | — | — |
 | **legalization** | What a profile does to a construct its target lacks: promote, expand or custom. Each legalization rule owes a semantic preservation obligation. | — | the LLVM code generator's legalization, by name (`docs/core/lcnf-route.md` §7) | — | — |
 | **differential** | A finite comparison of two implementations on the same named inputs. Its evidence word is tested. | `docs/research/2026-10-20-retire-truth-differential/receipt.md` | — | — | — |
-| **oracle** | The outside implementation a differential or check compares against: the rc.112 runtime for the truth lane, tsgo 7 for `make check-ts`. | `harness/truth` | — | — | — |
+| **oracle** | The outside implementation a differential or check compares against: the rc.112 runtime for the truth lane, tsgo 7 for `make check-ts`. | `git:fa7bdc304:harness/truth` | — | — | — |
 | **corpus** | The generated set of programs that `make corpus` prints. | `Test/Program/Gen.lean` | — | — | — |
 | **ingest** | Reading foreign TypeScript source into `Eff` under the strict-foreign contract. It is a different contract from reading the printed image (DI-37). | `ts/eff/ingest/oxc.ts` | — | — | — |
 | **round trip** | Print, then read, gives the program back: the retraction law on a named domain. | `read_print` (`src/Effect4/Laws/Codegen/ReadPrint.lean`) | — | — | — |

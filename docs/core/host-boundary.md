@@ -370,7 +370,7 @@ The normalizer retains duplicate keys and sorts object entries recursively.
 A host JSON text parser may discard duplicates before supplying the Lean JSON value.
 That parser behavior remains outside the Lean theorem.
 
-The finite comparisons in `harness/truth/schema-codec/check.ts` cover the new data shapes against rc.112.
+The finite comparisons in `ts/eff/test/codec/check.ts` cover the new data shapes against rc.112.
 The strict comparison uses `onExcessProperty: "error"` for host decoding.
 The default host decoder discards extra record fields; the Lean decoder refuses them.
 The controls retain these differences and the duplicate-key text parsing difference explicitly.

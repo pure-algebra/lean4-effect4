@@ -5,7 +5,7 @@ import Effect4.Program.NativeAtom
 /-!
 # Effect4Gen.PreludeAtoms — the TypeScript prelude's atom block, from the table
 
-`harness/truth/prelude.ts` was the last hand-transcribed face of the atom alphabet, and said so
+`ts/prelude/prelude.ts` was the last hand-transcribed face of the atom alphabet, and said so
 in its own header ("Hand-written transcription (no generator exists for it yet); when either
 Lean table changes, this file changes with it, and the self-test refuses an atom it does not
 export"). The self-test made an appended atom impossible to leave *untested*; it could still be
@@ -16,10 +16,11 @@ This group closes that row. One export per atom: the body is the `prelude` colum
 `NativeAtom.spec` (`src/Effect4/Program/NativeAtom.lean`), so the face carries the citation the
 table carries. `prelude.ts` re-exports every name and keeps the hand-written self-test table.
 Its runner refused an atom of the generated profile that had no case in it. The runner was deleted
-on 2026-10-20 (`git:8e93a284f:harness/truth/run-truth.ts`), and no lane evaluates the table now.
+on 2026-10-20 (`git:8e93a284f:harness/truth/run-truth.ts`). Since then the target lane runs the
+table and that refusal (`tools/target/prelude.test.ts`, owner, 2026-10-20).
 
     lake exe effect4gen-catalogue PreludeAtoms --group PreludeAtoms
-      --imports Effect4.Program.NativeAtom --out harness/truth/prelude-atoms.gen.ts
+      --imports Effect4.Program.NativeAtom --out ts/prelude/prelude-atoms.gen.ts
 
 A file of its own, rather than a second group of `tools/Effect4Gen/Atoms.lean`, because it
 reads the typing half, and the typing half imports what `Atoms.lean` writes: one emitter for
@@ -107,7 +108,7 @@ def render (head : String) : List String :=
   , "//"
   , "// One export per atom of the alphabet (`Effect4.Program.NativeAtom`). `prelude.ts`"
   , "// re-exports every name below and keeps the hand-written table of fixed cases for them;"
-  , "// no lane evaluates that table since the truth runner's deletion on 2026-10-20."
+  , "// the target lane runs that table (tools/target/prelude.test.ts)."
   , "import { Cause, Deferred, Exit, Option, Ref } from \"effect\""
   , ""
   , "/** The two query inputs advertised by NativeAtom (`Effect4.Program.queryReasons?`): a"

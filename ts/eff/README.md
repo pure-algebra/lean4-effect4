@@ -81,7 +81,7 @@ By hand, the same thing:
 ```
 lake build Drivers.Corpus
 lake env lean -M4096 --run tools/Drivers/Corpus.lean <dir> 400 4
-cd ts/eff && bun install && bun run check.ts <dir> ../../harness/truth/generated --oracle <dir>
+cd ts/eff && bun install && bun run check.ts <dir> ../../Test/Corpus/generated --oracle <dir>
 ```
 
 ## Foreign spelling corpus

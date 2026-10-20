@@ -2,8 +2,41 @@ import { expect, test } from "bun:test"
 import { resolve } from "node:path"
 import * as Effect from "../../ts/eff/node_modules/effect/dist/Effect.js"
 import * as Option from "../../ts/eff/node_modules/effect/dist/Option.js"
-import { getOrElse, isSome, pair, tagIs } from "../../harness/truth/prelude.ts"
+import { atomNames } from "../../ts/eff/profile.gen.ts"
+import { getOrElse, isSome, pair, selfTestCases, tagIs } from "../../ts/prelude/prelude.ts"
 import { query, type Query } from "./oracle.ts"
+
+// The prelude's table of fixed cases (`selfTestCases`, `ts/prelude/prelude.ts`) runs here, in the
+// target lane (owner, 2026-10-20). It refuses as the deleted truth runner's `selfTest` refused
+// (`git:8e93a284f:harness/truth/run-truth.ts`): a case whose answer is not its expected value,
+// and an atom of the profile (`atomNames`, `ts/eff/profile.gen.ts`) that no case exercises.
+type Case = (typeof selfTestCases)[number]
+const failures = (cases: ReadonlyArray<Case>): string[] => cases.flatMap(({ name, apply, expected }) => {
+  const got = apply()
+  return got === expected ? [] : [`${name}: got ${JSON.stringify(got)}, wanted ${JSON.stringify(expected)}`]
+})
+const uncovered = (atoms: Iterable<string>, cases: ReadonlyArray<{ readonly atom: string }>): string[] => {
+  const covered = new Set(cases.map(c => c.atom))
+  return [...atoms].filter(atom => !covered.has(atom))
+}
+
+test("every case of the prelude's self-test table holds, and every atom of the profile has one", () => {
+  expect(selfTestCases.length).toBeGreaterThan(0)
+  expect(failures(selfTestCases)).toEqual([])
+  expect(uncovered(atomNames, selfTestCases)).toEqual([])
+})
+
+test("the self-test's controls: a wrong answer and an atom with no case are each refused by name", () => {
+  // `succ` answering `n + 2`: its case is refused, and no other
+  const at = selfTestCases.findIndex(c => c.name === "succ 41")
+  expect(at).toBeGreaterThanOrEqual(0)
+  const mutated = selfTestCases.map((c, i) => i === at ? { ...c, apply: () => 41 + 2 } : c)
+  expect(failures(mutated)).toEqual(["succ 41: got 43, wanted 42"])
+  // each atom without its cases is reported, alone
+  for (const atom of atomNames) expect(uncovered(atomNames, selfTestCases.filter(c => c.atom !== atom))).toEqual([atom])
+  // an unrelated case does not cover an atom the profile adds
+  expect(uncovered([...atomNames, "omittedControl"], selfTestCases)).toEqual(["omittedControl"])
+})
 
 type AssertFalse<T extends false> = T
 // A user-declared refinement must not choose catchIf's narrower overload.

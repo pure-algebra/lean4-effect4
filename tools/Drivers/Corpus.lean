@@ -38,7 +38,7 @@ Beside them, `<dir>/modules/<name>.ts` is the program's module for the diagnosti
 (`diagnosticsModule`): the writer of every lane's unchecked module (`uncheckedFile`, its imports
 from Lean data, laid out by `Tools.Code.moduleText`; decisions row 392, P1 (a)), with no declared
 type, so the host's compiler answers for the program on its own. The lane checks these modules as
-they are (`harness/tsdiag/run-tsdiag.mjs`), and its two control programs are written the same
+they are (`tools/tsdiag/run-tsdiag.mjs`), and its two control programs are written the same
 way, under `<dir>/modules/controls/`.
 
 Each oracle also has canonical `.eff` bytes from `Wire.encodeProgram`. With `--styles`,
@@ -84,7 +84,7 @@ def writeModule (file name : String) (p : Eff NativeOp) : IO Unit := do
     IO.FS.writeFile file text
   | .error why => throw (IO.userError s!"corpus: {name} has no module: {reprStr why}")
 
-/-- The diagnostics lane's two controls (`harness/tsdiag/run-tsdiag.mjs`): `succ` on a number,
+/-- The diagnostics lane's two controls (`tools/tsdiag/run-tsdiag.mjs`): `succ` on a number,
 which checks, and `succ` on a Boolean, which this checker refuses and TypeScript refuses with
 2345. Each is written as the corpus's modules are. -/
 def controls : List (String × Eff NativeOp) :=
@@ -150,8 +150,9 @@ def main (args : List String) : IO Unit := do
       kept := kept + 1
       if Api.readable p then readable := readable + 1
   IO.FS.writeFile (dir ++ "/index.tsv") index
-  -- The host configuration the diagnostics lane checks the corpus under (Codegen/Diagnostics.lean).
+  -- The host configuration the diagnostics lane checks the corpus under (Codegen/Diagnostics.lean):
+  -- the prelude, which the lane copies beside the modules with its closure, and the modules.
   IO.FS.writeFile (dir ++ "/tsconfig.json")
-    (Effect4.Codegen.HostConfig.pinned.tsconfig ["prelude.ts", "programs", "session"])
+    (Effect4.Codegen.HostConfig.pinned.tsconfig ["prelude.ts", "programs"])
   IO.FS.writeFile (dir ++ "/host-config.json") Effect4.Codegen.HostConfig.pinned.pinsJson
   IO.println s!"kept {kept} (readable {readable}) refused {refused} (dir {dir}, depth {depth}, generated {count}, wire corpus {Wire.Corpus.all.length})"

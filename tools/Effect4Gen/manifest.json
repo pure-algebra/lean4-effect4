@@ -601,7 +601,7 @@
       "Name": "PreludeAtoms",
       "Tool": "tools/Effect4Gen/PreludeAtoms.lean",
       "Imports": "Effect4.Program.NativeAtom",
-      "Out": "harness\\truth\\prelude-atoms.gen.ts",
+      "Out": "ts\\prelude\\prelude-atoms.gen.ts",
       "Guards": "",
       "Kinds": [],
       "Types": []

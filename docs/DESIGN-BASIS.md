@@ -1045,7 +1045,7 @@ operations joined into the one `Stores` verbatim.
 What path identity refuses, and what a reference adds (amended 2026-09-08, the host rows
 slice). rc.112 keys the memo map on the layer *object* (`Layer.ts:411`, `:438`); a path is
 where a layer *is*, never what it says, so two inline sites of one printed term are two keys:
-`harness/truth`'s `pProvideTwice` pins the two-site protocol (two builds) and keeps reading
+`tools/Drivers/Truth.lean`'s `pProvideTwice` pins the two-site protocol (two builds) and keeps reading
 `2`. One object at two sites — `const L = Layer.effect(…)` then `Layer.merge(L, L)` — is
 `LayerTerm.ref`, the path of the defining occurrence, and the compile redirects a reference
 to its target's path (`resolveLayer`), so both sites share one memo entry and a memo hit is
@@ -1104,7 +1104,7 @@ DB-17's; the service table's place in the world and its lawful declarations are 
   (`src/Effect4/Machine/Stores.lean`). Tested:
   `Test/Counterexamples/Machine/Runtime/LayerEnvironment.lean` and
   `Test/Counterexamples/Machine/Semantics/LayerValue.lean` (rows 104 and 105's retained falsifiers);
-  the truth harness's `pProvideTwice` and `pDiamond` (`harness/truth/Truth.lean`).
+  the truth harness's `pProvideTwice` and `pDiamond` (`tools/Drivers/Truth.lean`).
 - **Refusals.** `E4-PROV-CE-005` and `E4-PROV-CE-006` in `Test/Counterexamples/REGISTER.md`
   (repaired 2026-10-01; the archive's rows with those ids are other statements),
   `LAYER-FB-LAYER-IDENTITY`; DI-71. Decisions rows 104 and 105 (ruled, landed); status: those rows.
@@ -1300,7 +1300,7 @@ Amended 2026-09-09 (S0; the foundation settlement, register rows DI-59, DI-35, D
 sentences.
 
 *Where the pair is made* (DI-59): at the **row adapter** — `Effect.mapError(toPair)` in every
-shim of `harness/truth/prelude.ts` — so the program's own handlers and the recorder observe the
+shim of `ts/prelude/prelude.ts` — so the program's own handlers and the recorder observe the
 same value. Corrected 2026-09-09 (Wave 2): the recorder retains a **bounded, versioned diagnostic
 projection** beside the row, with its fields, ordering and losses explicit. It does not promise
 lossless serialization of arbitrary raw host objects or causes. Unsupported mixed-cause

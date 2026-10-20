@@ -88,15 +88,15 @@ export function queriesFromInputs(repo: string, selectionInput: unknown, corpusI
   try { scope = key(corpus.scopeKey) } catch (e) { inputIssues.push({ code: "scope-key-metadata", message: String(e) }) }
   const imports = [
     ...pairImports,
-    `import type * as Adapter from ${JSON.stringify(resolve(repo, "harness/truth/prelude.ts"))}`,
+    `import type * as Adapter from ${JSON.stringify(resolve(repo, "ts/prelude/prelude.ts"))}`,
   ]
   const queries: Query[] = programs.map(name => {
     if (!/^[A-Za-z_$][\w$]*$/.test(name)) throw new Error(`invalid program ID ${name}`)
-    const source = `harness/truth/generated/${name}.ts`
+    const source = `Test/Corpus/generated/${name}.ts`
     const q: Query = { id: `program/${name}`, source, imports: [...imports, `import type * as Program from ${JSON.stringify(resolve(repo, source))}`],
-      subject: "typeof Program.main", kind: "program", expected: {}, bindings: Object.fromEntries(handles), inputIssues: [...inputIssues], provenance: { metadata: "harness/truth/corpus.json", program: name } }
+      subject: "typeof Program.main", kind: "program", expected: {}, bindings: Object.fromEntries(handles), inputIssues: [...inputIssues], provenance: { metadata: "Test/Corpus/corpus.json", program: name } }
     const entry = entries.find(p => p.name === name)
-    q.provenance = { metadata: "harness/truth/corpus.json", program: name, type: entry?.type ?? null, scopeKey: scope ?? null, handles: Object.fromEntries(handles) }
+    q.provenance = { metadata: "Test/Corpus/corpus.json", program: name, type: entry?.type ?? null, scopeKey: scope ?? null, handles: Object.fromEntries(handles) }
     try {
       const types = object(entry?.type, `${name}.type`)
       for (const [axis, field] of [["A", "answer"], ["E", "error"]] as const) {
@@ -116,9 +116,9 @@ export function queriesFromInputs(repo: string, selectionInput: unknown, corpusI
   const rowReceivers = subjectReceivers(repo, selectedRows.map(r => string(r.subject, "row subject")))
   selectedRows.forEach((selected, index) => {
     const table = string(selected.table, "table"), name = string(selected.name, "row name")
-    const q: Query = { id: `row/${table}/${name}`, source: "harness/truth/prelude.ts", imports,
+    const q: Query = { id: `row/${table}/${name}`, source: "ts/prelude/prelude.ts", imports,
       subject: string(selected.subject, "row subject"), kind: "function", expected: {}, bindings: Object.fromEntries(handles), inputIssues: [...inputIssues, ...rowInventoryIssues],
-      provenance: { metadata: table === "Host" ? "harness/truth/corpus.json#hostRows" : "ts/eff/packages.gen.ts", table, row: name } }
+      provenance: { metadata: table === "Host" ? "Test/Corpus/corpus.json#hostRows" : "ts/eff/packages.gen.ts", table, row: name } }
     const receiver = rowReceivers[index]
     if (receiver !== undefined) q.receiver = receiver
     try {
@@ -128,7 +128,7 @@ export function queriesFromInputs(repo: string, selectionInput: unknown, corpusI
       const signature = signatures.get(`${table}/${name}`)
       if (!signature) throw new Error(`generated/row-types.tsv has no signature for ${table}/${name}`)
       if (!signature.request) throw new Error(`${table}/${name} is not a callable adapter row (shape ${signature.shape}, or trailing/explicit type arguments)`)
-      q.provenance = { metadata: table === "Host" ? "harness/truth/corpus.json#hostRows" : "ts/eff/packages.gen.ts", table, row: name, descriptor, rendered: signature, scopeKey: scope ?? null, handles: Object.fromEntries(handles) }
+      q.provenance = { metadata: table === "Host" ? "Test/Corpus/corpus.json#hostRows" : "ts/eff/packages.gen.ts", table, row: name, descriptor, rendered: signature, scopeKey: scope ?? null, handles: Object.fromEntries(handles) }
       q.expected = { A: signature.answer, E: signature.error,
         R: requirements(array(descriptor.requires, `${name}.requires`).map(k => { const o = object(k, "service key"); return { name: object(o.name, "key name").value, service: object(o.service, "key service").value } }), scope),
         request: signature.request, ...(signature.receiver ? { receiver: signature.receiver } : {}) }
@@ -144,7 +144,7 @@ export function repositoryQueries(repo: string): Query[] {
   if (resolve(repo) !== resolve(import.meta.dir, "../..")) throw new Error("repo must match the tool checkout and its pinned generated schemas")
   const selection = json(resolve(repo, "Test/fixtures/target/selection.json"))
   let corpus: unknown
-  try { corpus = json(resolve(repo, "harness/truth/corpus.json")) }
+  try { corpus = json(resolve(repo, "Test/Corpus/corpus.json")) }
   catch (error) {
     const queries = queriesFromInputs(repo, selection, { programs: [] })
     for (const q of queries) q.inputIssues!.push({ code: "missing-corpus-input", message: String(error).replaceAll(repo, "<repo>") })
@@ -155,7 +155,7 @@ export function repositoryQueries(repo: string): Query[] {
 
 export function repositoryReport(repo: string): Report {
   const report = query(repo, repositoryQueries(repo))
-  for (const file of ["Test/fixtures/target/selection.json", "harness/truth/corpus.json", "ts/eff/packages.gen.ts", "ts/eff/eff.gen.ts", "tools/target/oracle.ts", "tools/target/checker.ts", "tools/target/profile.ts", "tools/target/input.ts", "tools/target/cli.ts"]) {
+  for (const file of ["Test/fixtures/target/selection.json", "Test/Corpus/corpus.json", "ts/eff/packages.gen.ts", "ts/eff/eff.gen.ts", "tools/target/oracle.ts", "tools/target/checker.ts", "tools/target/profile.ts", "tools/target/input.ts", "tools/target/cli.ts"]) {
     try { report.sourceHashes[file] = createHash("sha256").update(readFileSync(resolve(repo, file))).digest("hex") }
     catch { report.sourceHashes[file] = "missing" }
   }

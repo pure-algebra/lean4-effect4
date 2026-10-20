@@ -3,7 +3,7 @@
  *
  * The compiler is tsgo, the one compiler of decisions row 57 (`@typescript/native-preview`,
  * pinned in `ts/eff/package.json`). Its synchronous client reads a node-internal pipe handle,
- * so it cannot be driven from bun — the same reason `harness/tsdiag/run-tsdiag.mjs` is node.
+ * so it cannot be driven from bun — the same reason `tools/tsdiag/run-tsdiag.mjs` is node.
  * This module is therefore the face: the types, the query sources, and a `query` that runs
  * `checker.ts` under node and returns the report it wrote. Everything that touches the
  * compiler is in `checker.ts`; everything here is text and can be read from either runtime. */
@@ -94,7 +94,7 @@ export const bindingName = (axis: Axis, direction: string) => `__${axis}_${direc
 export const pairBindingName = (direction: "leftToRight" | "rightToLeft") => `__pair_${direction}`
 /** Every name a shipped type spelling can use, for every query of the lane: the modules of the
  * effect namespace, which the handle spellings print verbatim too, and the prelude's aliases of
- * `number` (`Int`, `Num`; `Types.typeAliasNames`), declared as `harness/truth/prelude.ts`
+ * `number` (`Int`, `Num`; `Types.typeAliasNames`), declared as `ts/prelude/prelude.ts`
  * declares them. */
 export const pairImports = ['import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from "effect"',
   ...typeAliasNames.map(name => `type ${name} = number`)]

@@ -104,7 +104,7 @@ test("handle targets are bound by declaration, and structured types preserve nes
 
 test("selected IDs cannot vanish with absent metadata and unexpected inventory is refused", () => {
   const selection = JSON.parse(readFileSync(resolve(repo, "Test/fixtures/target/selection.json"), "utf8"))
-  const corpus = JSON.parse(readFileSync(resolve(repo, "harness/truth/corpus.json"), "utf8"))
+  const corpus = JSON.parse(readFileSync(resolve(repo, "Test/Corpus/corpus.json"), "utf8"))
   const programIds = corpus.programs.map((entry: { name: string }) => `program/${entry.name}`)
   const rowIds = selection.rows.map((row: { table: string; name: string }) => `row/${row.table}/${row.name}`)
   const queries = queriesFromInputs(repo, selection, { programs: [] }, [])

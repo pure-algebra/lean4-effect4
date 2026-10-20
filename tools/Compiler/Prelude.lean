@@ -23,7 +23,7 @@ folder (`closure`).
 namespace Compiler.Prelude
 
 /-- The library's prelude folder, under its checkout. -/
-def source : System.FilePath := System.FilePath.mk "harness" / "truth"
+def source : System.FilePath := System.FilePath.mk "ts" / "prelude"
 
 /-- The prelude's root file, which a printed module imports. -/
 def root : String := "prelude.ts"

@@ -54,8 +54,8 @@ export function queries(repo: string, signatures: Map<string, RowSignature>): Qu
     // A `value` row is not called: `Effect.currentTimeMillis` is an `Effect`, not a function.
     const value = signature.shape === "value"
     const q: Query = {
-      id, source: atom ? "harness/truth/prelude-atoms.gen.ts" : "vendor/effect-4.0.0-rc.112/src",
-      imports: atom ? [...imports, `import type * as Atoms from ${JSON.stringify(resolve(repo, "harness/truth/prelude-atoms.gen.ts"))}`] : imports,
+      id, source: atom ? "ts/prelude/prelude-atoms.gen.ts" : "vendor/effect-4.0.0-rc.112/src",
+      imports: atom ? [...imports, `import type * as Atoms from ${JSON.stringify(resolve(repo, "ts/prelude/prelude-atoms.gen.ts"))}`] : imports,
       subject, kind: atom ? "callable" : value ? "effect" : "function", expected: {},
       provenance: { table, row: name, scheme: signature.shape, rendered: signature },
     }

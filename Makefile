@@ -155,7 +155,7 @@ DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Js
   src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \
   src/Effect4/Program/Authoring/Atoms.lean src/Effect4/Laws/Program/Authoring/Atoms.lean \
   src/Effect4/Codegen/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean \
-  src/Effect4/Program/AtomInventory.lean harness/truth/prelude-atoms.gen.ts src/Effect4/Codegen/TsFold.lean \
+  src/Effect4/Program/AtomInventory.lean ts/prelude/prelude-atoms.gen.ts src/Effect4/Codegen/TsFold.lean \
   src/OCaml5/Ml/Fold.lean
 
 # A missing output must run its producer instead of becoming a missing prerequisite.
@@ -227,12 +227,13 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 	$(PY) scripts/generate.py --only readme
 	@mkdir -p $(GEN) && touch $@
 
-# The prelude and the files it re-exports: a gate that reads printed modules depends on all five.
-PRELUDE_SOURCES := harness/truth/prelude.ts harness/truth/control.ts harness/truth/records.ts harness/truth/tuples.ts harness/truth/prelude-atoms.gen.ts
+# The prelude and the files it re-exports (`ts/prelude/`): a gate that reads printed modules depends
+# on all five. The host protocol's projection is written beside them.
+PRELUDE_SOURCES := ts/prelude/prelude.ts ts/prelude/control.ts ts/prelude/records.ts ts/prelude/tuples.ts ts/prelude/prelude-atoms.gen.ts
 $(GEN)/host-protocol: $(GEN)/derived tools/Tools/HostProtocol.lean $(CORE_SOURCES)
 	$(LAKE) build Effect4.Api.HostSession
 	$(call build_imports,tools/Tools/HostProtocol.lean)
-	$(LAKE) env lean -M4096 --run tools/Tools/HostProtocol.lean harness/truth/session
+	$(LAKE) env lean -M4096 --run tools/Tools/HostProtocol.lean ts/prelude
 	@mkdir -p $(GEN) && touch $@
 
 # The runtime behaviour census is cut from the vendored rc.112 sources; its producer
@@ -358,7 +359,7 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.le
   $(LCNF_OUT) \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/names.gen.ts ts/eff/forms.gen.ts \
   ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/test/type-projection.gen.json ts/eff/ingest/README.md \
-  harness/truth/prelude-atoms.gen.ts harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
+  ts/prelude/prelude-atoms.gen.ts ts/prelude/protocol.gen.ts ts/prelude/tape.schema.json \
   generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv generated/row-citations.tsv \
   ocaml/engine/test/*/*.txt
 
@@ -405,9 +406,13 @@ $(GEN)/ts-install: $(CHK)/gen-ts-install.key
 ts/eff/node_modules: | $(GEN)/ts-install
 	@test -d $@
 
-# The truth harness and the schema codec resolve Effect and the compiler through
-# harness/truth/node_modules, a link to that install (never a second install).
-harness/truth/node_modules: | ts/eff/node_modules
+# The prelude and the truth corpus's printed modules resolve Effect and the compiler through a
+# link to that install each (never a second install): ts/prelude/node_modules and
+# Test/Corpus/node_modules. The target lane runs the prelude and types the modules, so it makes
+# both first. The codec lane's check (ts/eff/test/codec) resolves through ts/eff itself.
+ts/prelude/node_modules: | ts/eff/node_modules
+	ln -s ../eff/node_modules $@
+Test/Corpus/node_modules: | ts/eff/node_modules
 	ln -s ../../ts/eff/node_modules $@
 
 .PHONY: doctor
@@ -420,27 +425,30 @@ doctor: ## the tools and installs every tier needs, with their versions
 	@printf 'opam       %s\n' "$$(opam --version 2>&1 || echo missing)"
 	@printf 'dune       %s\n' "$$($(OCAML) dune --version 2>&1 || echo 'missing (the OCaml lane needs the effect4 switch)')"
 	@printf 'ts/eff     %s\n' "$$(test -d ts/eff/node_modules/effect && echo 'installed (effect, @effect/sql-sqlite-bun, oxc-parser)' || echo 'missing: bun install --frozen-lockfile --cwd ts/eff')"
-	@printf 'truth link %s\n' "$$(test -e harness/truth/node_modules && echo 'present' || echo 'missing: make harness/truth/node_modules')"
+	@printf 'ts/prelude %s\n' "$$(test -e ts/prelude/node_modules && echo 'link present' || echo 'missing: make ts/prelude/node_modules')"
+	@printf 'corpus     %s\n' "$$(test -e Test/Corpus/node_modules && echo 'link present (Test/Corpus)' || echo 'missing: make Test/Corpus/node_modules')"
 
 # ---------------------------------------------------------------------------- checks
 
 # Retired lanes (owner, 2026-10-18: "just retire them... we'll design better checks"): truth,
 # truth-release, corpus, schema-codec, schema-ts and host-protocol, with the truth and schema-ts
-# generation groups. The schema codec's and the host protocol's harnesses stay in the tree, run by
-# no gate. The truth differential is deleted (owner, 2026-10-20: "retire the old truth modules"):
-# its rc.112 comparison, recorded results, tapes, build ledger, release lane and scripts.
+# generation groups. The schema codec's lane stays in the tree, run by no gate: its producer
+# tools/Drivers/CodecValues.lean and its check ts/eff/test/codec/check.ts. The truth differential
+# is deleted (owner, 2026-10-20: "retire the old truth modules"): its rc.112 comparison,
+# recorded results, tapes, build ledger, release lane and scripts.
 #
-# The truth corpus stays, on demand: `gen-truth-corpus` runs `harness/truth/Truth.lean --corpus`,
-# with the native core loaded, and writes `harness/truth/corpus.json` (each program's name, its
+# The truth corpus stays, on demand: `gen-truth-corpus` runs `tools/Drivers/Truth.lean --corpus`,
+# with the native core loaded, and writes `Test/Corpus/corpus.json` (each program's name, its
 # Lean type and its Lean run, the scope's key and the host rows) and one printed module per
-# program, `harness/truth/generated/<name>.ts`. No host runs. The target lane reads the manifest's
-# types and host rows (tools/target/profile.ts, tools/Tools/RowTypes.lean) and the modules; the
-# reader lane reads the modules (ts/eff/check.ts); the OCaml engine's cross face reads the runs
+# program, `Test/Corpus/generated/<name>.ts`, which imports the prelude from `ts/prelude/`. No
+# host runs. The target lane reads the manifest's types and host rows (tools/target/profile.ts,
+# tools/Tools/RowTypes.lean) and the modules; the reader lane reads the modules
+# (ts/eff/check.ts); the OCaml engine's cross face reads the runs
 # (ocaml/engine/test/reference/corpora.ml). No gate runs the producer.
 .PHONY: gen-truth-corpus
-gen-truth-corpus: $(GEN)/derived ## on demand: write harness/truth/corpus.json and generated/*.ts from Truth.lean's corpus (no host run)
-	$(call build_imports,harness/truth/Truth.lean)
-	$(LAKE) env lean -M4096 $(call native_flags,harness/truth/Truth.lean) --run harness/truth/Truth.lean --corpus harness/truth
+gen-truth-corpus: $(GEN)/derived ## on demand: write Test/Corpus/corpus.json and generated/*.ts from Truth.lean's corpus (no host run)
+	$(call build_imports,tools/Drivers/Truth.lean)
+	$(LAKE) env lean -M4096 $(call native_flags,tools/Drivers/Truth.lean) --run tools/Drivers/Truth.lean --corpus Test/Corpus
 
 CHECKS := roots native compiler ts-reader target ocaml ingest-smoke \
   service-identity census schema-pins tools tsgo tsdiag docs language
@@ -532,14 +540,14 @@ _run-roots:
 	@echo 'PASS check-roots: the module-closure, library-root and axiom gates'
 
 # One TypeScript compiler, tsgo 7 (AGENTS.md; decisions rows 57 and 168): no `typescript` package below
-# 7 is installed under ts/, harness/ or tools/. The recipe is receipt J's line (step 7 (iii)); the
+# 7 is installed under ts/ or tools/. The recipe is receipt J's line (step 7 (iii)); the
 # marker reads the installed manifest inventory and the manifests and locks that fill it.
 check-tsgo:
-TSGO_INPUTS = $(shell find -L ts harness tools -path '*/node_modules/typescript/package.json' -print) \
-  $(wildcard ts/*/package.json ts/*/bun.lock harness/*/package.json harness/*/package-lock.json harness/*/bun.lock tools/*/package.json)
+TSGO_INPUTS = $(shell find -L ts tools -path '*/node_modules/typescript/package.json' -print) \
+  $(wildcard ts/*/package.json ts/*/bun.lock tools/*/package.json)
 $(eval $(call cached_check,tsgo,none,$(TSGO_INPUTS),))
 _run-tsgo:
-	@$(PY) -c 'import json,pathlib,sys; v=lambda p: json.loads(p.read_text())["version"]; bad=[p.as_posix()+": "+v(p) for r in ("ts","harness","tools") for p in sorted(pathlib.Path(r).rglob("node_modules/typescript/package.json")) if int(v(p).split(".")[0]) < 7]; print("\n".join(["FAIL check-tsgo: typescript below 7 (tsgo 7 is the one compiler):"]+bad) if bad else "PASS check-tsgo: no typescript below 7 under ts/, harness/ or tools/"); sys.exit(1 if bad else 0)'
+	@$(PY) -c 'import json,pathlib,sys; v=lambda p: json.loads(p.read_text())["version"]; bad=[p.as_posix()+": "+v(p) for r in ("ts","tools") for p in sorted(pathlib.Path(r).rglob("node_modules/typescript/package.json")) if int(v(p).split(".")[0]) < 7]; print("\n".join(["FAIL check-tsgo: typescript below 7 (tsgo 7 is the one compiler):"]+bad) if bad else "PASS check-tsgo: no typescript below 7 under ts/ or tools/"); sys.exit(1 if bad else 0)'
 
 # The authority documents (every tracked Markdown file that is not history) name paths, links,
 # `git:<rev>:<path>` citations and make targets; each must resolve (scripts/lib/doc_refs.py). Keyed
@@ -583,11 +591,11 @@ _run-compiler:
 # The TypeScript reader against Lean's reader: every `.ts` of the corpus and of the truth
 # corpus's printed modules must read back to the JSON Lean's own reader kept (`--oracle`),
 # then the package's type check and its pinned cases.
-TRUTH_GENERATED := harness/truth/corpus.json $(wildcard harness/truth/generated/*.ts)
+TRUTH_GENERATED := Test/Corpus/corpus.json $(wildcard Test/Corpus/generated/*.ts)
 $(eval $(call cached_check,ts-reader,ts,$(CORPUS) $(TS_EFF_SOURCES) $(TRUTH_GENERATED) $(PRELUDE_SOURCES) $(TS_PINS) $(TS_INSTALL),))
 $(CHK)/ts-reader.key: $(CORPUS)/index.tsv | ts/eff/node_modules
 _run-ts-reader:
-	cd ts/eff && $(BUN) run check.ts $(abspath $(CORPUS)) $(abspath harness/truth/generated) --oracle $(abspath $(CORPUS))
+	cd ts/eff && $(BUN) run check.ts $(abspath $(CORPUS)) $(abspath Test/Corpus/generated) --oracle $(abspath $(CORPUS))
 	cd ts/eff && $(BUN) run typecheck
 	cd ts/eff && $(BUN) test
 
@@ -635,7 +643,7 @@ gen-architecture: gen-semantics | build ## the architecture map, measured from t
 # the tool type-checks itself under the same compiler it drives — nothing did before, and
 # `renderTy`, the hand copy of the printer it replaced, had fallen four constructors behind.
 $(eval $(call cached_check,target,ts,$(TRUTH_GENERATED) $(PRELUDE_SOURCES) Test/fixtures/target/selection.json $(wildcard tools/target/*.ts tools/target/*.json) tools/Tools/RowTypes.lean tools/Tools/TypeSpelling.lean generated/row-types.tsv tools/Tools/TyVectors.lean ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/package.json lean-toolchain $(TS_PINS) $(TS_INSTALL),tools/Tools/RowTypes.lean tools/Tools/TyVectors.lean))
-$(CHK)/target.key:  | ts/eff/node_modules
+$(CHK)/target.key:  | ts/eff/node_modules ts/prelude/node_modules Test/Corpus/node_modules
 _run-target:
 	$(call build_imports,tools/Tools/RowTypes.lean tools/Tools/TyVectors.lean)
 	$(LAKE) env lean -M4096 --run tools/Tools/RowTypes.lean generated/row-types.tsv
@@ -686,15 +694,15 @@ _run-ocaml:
 # located refusal (Api.explain) and TypeScript's diagnostics, one row per program in
 # generated/tsdiag-agreement.tsv (a report that `make gen-tsdiag` promotes; no verdict reads
 # it). The lane fails on a program this checker types that TypeScript refuses.
-$(eval $(call cached_check,tsdiag,ts,$(CORPUS) harness/tsdiag/run-tsdiag.mjs $(wildcard harness/truth/*.ts harness/truth/session/*.ts) ts/eff/profile.gen.ts ts/eff/eff.gen.ts $(TS_PINS) $(TS_INSTALL),))
-$(CHK)/tsdiag.key: $(CORPUS)/index.tsv | ts/eff/node_modules
+$(eval $(call cached_check,tsdiag,ts,$(CORPUS) tools/tsdiag/run-tsdiag.mjs $(wildcard ts/prelude/*.ts) ts/eff/profile.gen.ts ts/eff/eff.gen.ts $(TS_PINS) $(TS_INSTALL),))
+$(CHK)/tsdiag.key: $(CORPUS)/index.tsv | ts/eff/node_modules ts/prelude/node_modules
 _run-tsdiag:
-	$(NODE) harness/tsdiag/run-tsdiag.mjs $(abspath $(CORPUS)) $(abspath .lake/tsdiag)
+	$(NODE) tools/tsdiag/run-tsdiag.mjs $(abspath $(CORPUS)) $(abspath .lake/tsdiag)
 
 .PHONY: check-tsdiag gen-tsdiag
 check-tsdiag: $(CHK)/tsdiag
-gen-tsdiag: $(CORPUS)/index.tsv | ts/eff/node_modules ## promote a fresh diagnostics run to generated/tsdiag-agreement.tsv
-	$(NODE) harness/tsdiag/run-tsdiag.mjs $(abspath $(CORPUS)) $(abspath .lake/tsdiag) --promote
+gen-tsdiag: $(CORPUS)/index.tsv | ts/eff/node_modules ts/prelude/node_modules ## promote a fresh diagnostics run to generated/tsdiag-agreement.tsv
+	$(NODE) tools/tsdiag/run-tsdiag.mjs $(abspath $(CORPUS)) $(abspath .lake/tsdiag) --promote
 
 # The ingest smoke: the printed corpus through the foreign recognizer's printed contract.
 $(eval $(call cached_check,ingest-smoke,ts,$(CORPUS) $(TS_EFF_SOURCES) $(TS_PINS) $(TS_INSTALL),))
@@ -702,7 +710,7 @@ $(CHK)/ingest-smoke.key: $(CORPUS)/index.tsv | ts/eff/node_modules
 _run-ingest-smoke:
 	$(BUN) ts/eff/ingest/check-corpus.ts printed $(abspath $(CORPUS))
 
-$(eval $(call cached_check,service-identity,ts,scripts/check-service-identity.py $(PRELUDE_SOURCES) $(wildcard harness/truth/session/*.ts) ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts $(TS_PINS) $(TS_INSTALL),tools/TestSupport/ServiceIdentity.lean))
+$(eval $(call cached_check,service-identity,ts,scripts/check-service-identity.py $(PRELUDE_SOURCES) ts/prelude/protocol.gen.ts ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts $(TS_PINS) $(TS_INSTALL),tools/TestSupport/ServiceIdentity.lean))
 $(CHK)/service-identity.key: | ts/eff/node_modules
 _run-service-identity:
 	$(call build_imports,tools/TestSupport/ServiceIdentity.lean)

@@ -3,7 +3,7 @@
  *     node tools/target/checker.ts <request.json> <response.json>
  *
  * node, not bun: the compiler's synchronous client reads a node-internal pipe handle, the same
- * reason `harness/tsdiag/run-tsdiag.mjs` is node. `oracle.ts` is the face that runs this and
+ * reason `tools/tsdiag/run-tsdiag.mjs` is node. `oracle.ts` is the face that runs this and
  * holds the types and the query sources; nothing else in the repository drives a type checker.
  *
  * The query modules are never written to disk: the compiler reads them through its virtual

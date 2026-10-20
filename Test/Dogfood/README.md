@@ -148,7 +148,7 @@ Two lanes read a record's named runs. The keyed lane performed them on rc.112 un
 
 ### The host runs
 
-The keyed lane (`harness/truth/session/`) performs a scenario's scripts on its printed
+The keyed lane (`git:38b94bdec:harness/truth/session`) performs a scenario's scripts on its printed
 TypeScript module, on effect 4.0.0-rc.112 under bun. The gates retired it on 2026-10-18, and its
 script was deleted on 2026-10-20 (`git:8e93a284f:scripts/check-host-protocol.py`). No target
 runs it now. This section keeps what a host run compares.
