@@ -78,7 +78,7 @@ To emit TypeScript, check the program with `Api.author src`, then call `t.emit n
 emission's file `e.file "./prelude.ts"` holds the module's imports, written from Lean data
 (`ModuleEmission.file`, `src/Effect4/Codegen/Checked.lean`). The prelude it imports is
 `ts/prelude/prelude.ts`. Lay the file out with `Tools.Code.moduleText`
-(`tools/Tools/Code/Module.lean`), as every lane writes it.
+(`tools/Compiler/Code/Module.lean`), as every lane writes it.
 
 ## The application face
 
