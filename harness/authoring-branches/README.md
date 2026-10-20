@@ -13,8 +13,6 @@ Each output directory must be empty.
 ```sh
 LEAN_NUM_THREADS=3 python3 harness/authoring-branches/run.py \
   --install /absolute/path/to/node_modules --out /absolute/path/to/branches
-python3 harness/authoring-branches/check-helper.py \
-  --install /absolute/path/to/node_modules --out /absolute/path/to/helper
 ```
 
 The packet runner builds only `Test.Program.BranchAuthoring` unless `--skip-build` is supplied.
@@ -22,13 +20,12 @@ It checks its case list against independent expected numeric observations.
 Every emitted module must read back before target compilation and execution.
 The shared setup in `harness/ts_packet.py` records the exact compiler inputs.
 
-The helper runner checks exact inferred result, error and service unions.
-Controls reject a missing member in each column.
-Runtime controls count condition evaluation, branch construction and branch execution.
-They also observe repeated runs, an unselected throwing constructor, and selected failure state.
-Each wrong helper must compile before its intended runtime control rejects it.
-Restoring the helper must restore acceptance.
-The ordinary truth gate also runs `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/if-case.test.ts` against its pinned Effect installation.
+A second runner checked the helper `ifCase` with three wrong helpers and runtime controls.
+It copied two truth files: the select helpers' type controls and a Bun test of `ifCase`'s laziness.
+The truth differential's deletion removed both files, so the runner was deleted on 2026-10-20
+(`git:8e93a284f:harness/authoring-branches/check-helper.py`).
+Its last inputs are `git:fa7bdc304:harness/truth/select-controls.ts` and
+`git:fa7bdc304:harness/truth/if-case.test.ts`.
 
 ## Evidence boundary
 

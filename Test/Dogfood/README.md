@@ -142,15 +142,16 @@ The driver plays a script into the run's own journal. It keeps the reply receipt
 application apart, and it selects a live call by its key. The run a script reaches is the run its
 journal reaches (`replays`, `Scenario.lean`), so a replay calls no fixture.
 
-Two lanes read a record's named runs. The keyed lane performs them on rc.112 (below). The engine's
-lane replays the machine tapes that `Scenario/TapeData.lean` writes under
+Two lanes read a record's named runs. The keyed lane performed them on rc.112 until 2026-10-18
+(below). The engine's lane replays the machine tapes that `Scenario/TapeData.lean` writes under
 `ocaml/engine/test/scenarios/`.
 
 ### The host runs
 
 The keyed lane (`harness/truth/session/`) performs a scenario's scripts on its printed
-TypeScript module, on effect 4.0.0-rc.112 under bun. `make check-ts` runs it, and its
-last lines give each scenario's counts.
+TypeScript module, on effect 4.0.0-rc.112 under bun. The gates retired it on 2026-10-18, and its
+script was deleted on 2026-10-20 (`git:8e93a284f:scripts/check-host-protocol.py`). No target
+runs it now. This section keeps what a host run compares.
 
 - **A host run** is one named run of a scenario's record: a script, on the program that the
   record opens for it. The lane takes each run from the record (`Wire.runs`, `Keyed.lean`), and

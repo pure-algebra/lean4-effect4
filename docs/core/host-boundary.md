@@ -38,8 +38,9 @@ lane lands (row 99).
 Row 373 rules two parts of that promise for the first share (2026-10-13):
 - **What the share promises** (point 2). The Lean session's laws are the promise, among them
   `session_eq_ref`, `denoteRows_eq_session` (H8) and `denoteRows_eq_session_host` (H9)
-  (`docs/core/system-map.md` §8, R6). The TypeScript keyed lane is finite evidence beside them
-  (tested). The OCaml checked session, slice DM7 of the
+  (`docs/core/system-map.md` §8, R6). The TypeScript keyed lane was finite evidence beside them
+  (tested). The gates retired it on 2026-10-18, and its runner was deleted on 2026-10-20
+  (`git:8e93a284f:scripts/check-host-protocol.py`). The OCaml checked session, slice DM7 of the
   [session note](../research/2026-10-07-session-api-design.md), comes after the share.
 - **Typed host answers** (point 3). The guarantee is claimed first on the fragment of data rows.
   On a data row no column holds a handle, and the answer's type is decided by its shape

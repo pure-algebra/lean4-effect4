@@ -6,15 +6,14 @@ against type metadata generated from Lean. It writes `.lake/target/report.json` 
 or invalid top-level tool input. It neither runs Lean nor regenerates inputs.
 
 The independent finite selection in `Test/fixtures/target/selection.json` lists the truth
-programs and adapter rows. The tests compare exact program identities with the corpus,
-and retain exact selected row identities, rather than relying on a count. `corpus.ts` runs the
-same comparison over every well-typed program of a corpus manifest, for `make check-ts`. It contains identities
-and explicit target symbol bindings, never expected signatures. Additions/removals in the
+programs and adapter rows. It contains identities and explicit target symbol bindings, never
+expected signatures. The tests compare exact program identities with the corpus,
+and retain exact selected row identities, rather than relying on a count. Additions/removals in the
 source inventories require a reviewed selection change; selected missing entries are refused.
 Expected program A/E strings and full requirement keys come from `harness/truth/corpus.json`.
-The hand selection reads annotated generated exports. The corpus lane reads separate
-unannotated modules so its actual columns come from initializer inference; the hand
-selection alone is not that independent inference check.
+The hand selection reads annotated generated exports, so it is not an independent check of
+initializer inference. The corpus lane read separate unannotated modules for that check. It was
+deleted with the truth differential on 2026-10-20 (`git:8e93a284f:tools/target/corpus.ts`).
 Expected adapter types come from `generated/row-types.tsv`, which `tools/Tools/RowTypes.lean`
 writes at the spelling a printed module ships (`ofTy`, rendered: `tools/Tools/TypeSpelling.lean`)
 and each row's own `RowShape`. The tool has no type printer of its own, and `make check-ts`

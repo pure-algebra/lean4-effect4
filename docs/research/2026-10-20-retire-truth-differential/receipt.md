@@ -307,3 +307,251 @@ None. The slice changes no theorem and states no new claim.
  scripts/lib/truth_ledger.py               |   337 -
  37 files changed, 29666 deletions(-)
 ```
+
+## Pass two
+
+**The one thing to know before merging:** `make check-docs` fails on ten stale references, and
+all ten are in files that only the coordinator edits. They are `AGENTS.md` (one),
+`docs/core/decisions.md` (six) and the frozen packet `Test/contracts/faces.contract.md` (three).
+The sweep's repair rewrote seven of them. Pass two put those three files back byte for byte, so
+`make repair-docs` redoes the seven. The other three need a hand edit (open obligations 2 and 3).
+
+### Base and head
+
+- Branch `refactor/phase1-phase3`, in the checkout `/Users/pooks/Dev/lean4-effect4`, with no
+  worktree.
+- Base: `8e93a284f`. Another session added `9c197bb67` to the branch during the pass
+  (`Research: the carrier push's paper folded into its one note`).
+- First commit: `f1c0080bb`, `Truth: retire the differential, pass two`. Its parent is
+  `9c197bb67`.
+- Head: the commit that adds this section, `Docs: the truth harness, pass two`. Its parent is
+  `f1c0080bb`.
+
+### Item 1: the first case held
+
+`ts/eff/ingest/test/fidelity.test.ts` imports `compareObserved`, `sourceModule` and the type
+`Observed`. It runs no observer and no Lean print (evidence: reading).
+`ts/eff/ingest/fidelity/roundtrip.ts` read the three truth files at load, to hash them into its
+pins. So `compareObserved` moves to `ts/eff/ingest/fidelity/compare.ts`. `roundtrip.ts` goes with
+the three files. The CLI verb `roundtrip`, `ts/eff/ingest/check-fidelity.ts` and its fixtures ran
+only that path, so they go too.
+
+### The inventory
+
+The rule is the owner's: delete what only the retired lanes used, and keep every live gate green.
+The consumer column names each reader, found by reading its source (evidence: reading).
+
+| File | Consumer | Decided |
+| --- | --- | --- |
+| `harness/truth/run-truth.ts`, 1167 lines | `roundtrip.ts` hashed it and ran its `--observe` mode. Its `selfTest` was the one reader of the prelude's atom table | deleted |
+| `harness/truth/prelude-inventory.ts`, 11 lines | `run-truth.ts` | deleted |
+| `harness/truth/IngestPrint.lean`, 44 lines | `roundtrip.ts` hashed it and ran it | deleted |
+| `ts/eff/ingest/fidelity/roundtrip.ts`, 159 lines | the CLI verb `roundtrip`; the test imports `compareObserved` alone | deleted; `compareObserved` moved to `ts/eff/ingest/fidelity/compare.ts` |
+| `ts/eff/ingest/check-fidelity.ts` and `ts/eff/ingest/fixtures/fidelity/`, 7 files, 43 lines | each other; no gate | deleted |
+| `ts/eff/ingest/fidelity/fidelity-contract.ts` | `roundtrip.ts` was the one reader of its input, print and decoder schemas | trimmed to `Observation` and `Observed` |
+| `ts/eff/ingest/cli.ts`, `ts/eff/ingest/render-readme.ts`, `ts/eff/ingest/README.md` | the verb and its paragraph | edited; the README regenerated |
+| `harness/truth/service/`, 5 files, 194 lines | `scripts/check-host-protocol.py` alone. `tools/Tools/HostProtocol.lean` (`make gen-host-protocol`) and `scripts/check-service-identity.py` read neither | deleted |
+| `scripts/check-host-protocol.py`, 306 lines | no target since 2026-10-18; the CI's nightly job named the missing target | deleted |
+| the target `check-host-protocol` | absent from the `Makefile` | nothing to delete |
+| `harness/truth/tsconfig.json`, 30 lines | `scripts/check-host-protocol.py` extended it; no script or gate reads it after that | deleted |
+| `tools/target/corpus.ts`, 75 lines | `scripts/check-corpus.py`, deleted in pass one | deleted |
+| the request kinds `truth-widenings` and `p2b-target` of `tools/target/checker.ts`, with their types in `tools/target/oracle.ts` | `scripts/check-truth.py`, deleted in pass one | deleted, with `bindingOwner`, `topLevelValues` and the imports only they used: 611 lines out, 7 in |
+| `harness/authoring-branches/check-helper.py`, 132 lines | the README alone; it copies two files that pass one deleted | deleted, not repaired; the folder's `run.py` is a live hand packet and stays |
+| `.github/workflows/lean_action_ci.yml` | five retired targets and one missing target | repaired, below |
+| `.gitignore`: `archive/`, `lean.out.log`, `lean.err.log`, `truth-check-*`, `corpus-check/` under `harness/truth/` | nothing on disk but `corpus-check/` | deleted |
+| `harness/truth/corpus-check/`, untracked, 560 files, 3.1 MB | none | moved to the macOS Trash (`~/.Trash/effect4-harness-truth-corpus-check-2026-10-20`), not hard-deleted |
+| `ts/release/` | six hand packets take it as their Effect 4.0.1 install: the five of `harness/ts_packet.py` and `harness/ref-catalogue` | kept, against the brief; its description names them |
+| `release` in the `Makefile` and `scripts/` | two comment lines record the retirement; nothing runs | kept |
+
+The CI workflow now runs only targets that exist (evidence: tested, a parse of the `Makefile`'s
+targets, with the six old names as red controls):
+
+- `lean-gates` drops `check-semantics`, which `d1c5b5660` removed; the semantics report is no gate.
+- `ts-gates` runs `make check-ts` in place of seven names. It holds the four kept ones,
+  `check-target`, `check-ts-reader`, `check-tsdiag` and `check-ingest-smoke`, with `check-tsgo` and
+  `check-service-identity`.
+- `nightly-host` becomes `nightly-census`: `make build check-census`. The TypeScript setup that
+  only the host lane needed goes.
+- `nightly-schema` runs `make build check-schema-pins`. The schema host's install and its
+  variable, which only `check-schema-ts` read, go.
+
+### Changed files
+
+The first commit holds the code: 42 files, 111 lines added and 2904 deleted.
+
+- 20 deleted files, 2161 lines: the rows marked "deleted" above.
+- `ts/eff/ingest/fidelity/compare.ts`, new: `compareObserved`, unchanged.
+- `ts/eff/ingest/fidelity/fidelity-contract.ts`, `ts/eff/ingest/cli.ts`,
+  `ts/eff/ingest/render-readme.ts`, `ts/eff/ingest/README.md` and
+  `ts/eff/ingest/test/fidelity.test.ts`: item 1.
+- `tools/target/checker.ts` (936 lines to 423) and `tools/target/oracle.ts`: item 5.
+- `.github/workflows/lean_action_ci.yml`, `.gitignore` and `ts/release/package.json`: items 3
+  and 4.
+- Comments and docstrings that named a deleted file now cite `git:8e93a284f:<path>`:
+  `harness/truth/prelude.ts`, `harness/truth/Truth.lean`, `harness/truth/session/Keyed.lean`,
+  `apps/todo/EmitTodo.lean`, `apps/todo/consumer.ts`, `Test/Codegen/SurfaceContract.lean` and
+  `Test/Program/SemaphoreScenariosData.lean`.
+- The two probes' `tsconfig.json` under `ts/eff/probe/` now name `HostConfig.pinned`
+  (`src/Effect4/Codegen/Diagnostics.lean`) as the owner of their options.
+- `tools/Effect4Gen/PreludeAtoms.lean` and its output `harness/truth/prelude-atoms.gen.ts`: the
+  generated comment no longer says that a runner refuses an atom with no case.
+
+The second commit holds the documents:
+
+- `docs/core/controlled-english.md`: the anchor of "differential" is this receipt. Eighteen
+  other authority documents use the word, so the entry stays.
+- `docs/core/host-boundary.md`: the keyed lane was finite evidence until 2026-10-18.
+- `docs/ARCHITECTURE.md`: the row of `harness/truth`.
+- `docs/GENERATED.md`: the row of `host-protocol`, the corpus lane's paragraph, the retirement
+  paragraph and the section on the host protocol.
+- `Test/Dogfood/README.md`, `ocaml/README.md`, `tools/target/README.md` and
+  `harness/authoring-branches/README.md`: each sentence that described a deleted file.
+- The sweep's repairs that pass two keeps: 12 citations on 9 lines of `docs/DESIGN-ISSUES.md`
+  and `Test/Counterexamples/REGISTER.md`.
+- This section.
+
+### Commands and results
+
+Every Lean and make command ran through the runner (`python3 /private/tmp/seams-lean-one.py`),
+one at a time, from the checkout. The scratch folder holds each log
+(`/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/2cfa2789-af6f-4183-90be-cdd7f2934e64/scratchpad/truth2`).
+
+1. `bun test ingest/test/fidelity.test.ts`, in `ts/eff`: 4 of 4 pass. Red control: a mutant of
+   `compare.ts` that ignores the exit's payload gives 3 pass and 1 fail, exit 1. The file was
+   restored and compared byte for byte.
+2. `bun run typecheck`, in `ts/eff` (tsgo 7.0.0-dev.20260629.1): exit 0.
+3. Red controls of the deletion: `bun -e 'await import("./ingest/fidelity/roundtrip.ts")'` exits
+   1, "Cannot find module". `bun ingest/cli.ts roundtrip x` exits 2, "unknown verb: roundtrip".
+4. `node ts/eff/node_modules/@typescript/native-preview/bin/tsgo --noEmit -p tools/target/tsconfig.json --noUnusedLocals`:
+   the unused set equals the base's, four type assertions of `tools/target/prelude.test.ts`.
+   Without the flag: exit 0.
+5. `bun ingest/render-readme.ts`, then `--check`: `PASS ingest README: generated tables match`.
+6. A parse of the `Makefile`'s targets (`makefile_targets`, `scripts/lib/doc_refs.py`) over the
+   workflow's `make` lines: every target exists. The six old names are absent.
+7. `make gen-derived`: `PASS generate: requested producers ran in dependency order`, exit 0,
+   49 s. One output moved, `harness/truth/prelude-atoms.gen.ts`, in its comment alone.
+8. `make gen-truth-corpus`: `wrote 93 programs to harness/truth: corpus.json and generated/`,
+   exit 0, 12.7 s. `git diff` over `harness/truth/corpus.json` and `harness/truth/generated/` is
+   empty (evidence: reproduced).
+9. `make check-ts`: exit 0, 31.5 s. All six lanes ran again; none reused a pass.
+   - `PASS check-tsgo: no typescript below 7 under ts/, harness/ or tools/`.
+   - `target conformance [effect@4.0.0-rc.112/adapter]: PASS; 104 expected, 104 attempted, 104 resolved, 0 mismatching, 0 refused`.
+     `bun test tools/target` passed 28 of 28, and `PASS assignability`.
+   - `files 501: matched 416, mismatched 0, refused with oracle 0, accepted without oracle 74, refused without oracle 11`.
+     `bun test` in `ts/eff` passed 802 of 802.
+   - `PASS check-tsdiag`, with 12 controls over 408 programs.
+   - `PASS printed: 408 exact JSON/wire comparisons on each parser with shared form lowering`.
+   - `PASS service identity: checked API emissions, inferred requirements, two TS2375 controls, four runtime outcomes`.
+10. `make check-ocaml`: exit 0, 1 min 39 s. `PASS native`, `PASS compiler` and `PASS ocaml`, each
+    recorded, with `gen-check: PASS`. Dune kept its cached result of `test_diff`, whose rule
+    names neither `harness/truth/corpus.json` nor the corpus, so the lane did not run the cross
+    face.
+11. `E4_LEAN_CORPUS=<checkout>/.lake/corpus opam exec --switch=effect4 -- dune exec ./engine/test/test_diff.exe`,
+    in `ocaml/`: the cross face read 93 programs, `agree=9 differ=2 not in corpus.json=0`
+    (`pAcquire`, `pProvide`), and `ALL PASS: 0 failure(s) in 31 checks`. Control: the same run
+    against the manifest of `fa7bdc304` (`E4_TRUTH_CORPUS`, 3508680 bytes) gives the same report.
+    Red control: an empty manifest gives `0 programs` and `not in corpus.json=11`.
+12. `lake build Test.Codegen.SurfaceContract Test.Program.SemaphoreScenariosData` and the imports
+    of the two edited scripts: 1310 jobs, exit 0.
+13. `lake env lean -DwarningAsError=true apps/todo/EmitTodo.lean`: exit 0.
+    `lake env lean -DwarningAsError=true harness/truth/session/Keyed.lean`: exit 1, four errors,
+    in `walk`, `replay`, `planRun` and `plan`. Control: the base's file gives the same four
+    errors, so they predate the pass.
+14. `python3 scripts/check-docs.py`, read-only, before the sweep: 22 stale references in 5 of
+    105 documents.
+15. `make -k check-sweep`: exit 2, 1 min 25 s.
+    - `PASS check-roots: the module-closure, library-root and axiom gates`, recorded, 50.6 s.
+    - `check-docs` repaired 16 lines of 5 documents, then
+      `FAIL check-docs: 3 stale reference(s) in 1 of 105 documents`: rows 10, 319 and 322 of
+      `docs/core/decisions.md`.
+    - `PASS check-language self-test: 48 of 48 controls`, then
+      `FAIL check-language: 1 finding(s) in 2 strict document(s)`: the 27-word sentence of
+      `AGENTS.md`, as in pass one.
+    - `PASS census`, `PASS schema-pins` and `PASS tools`, each a shared result.
+    - `PASS check-gen: every Lean-only generated file is what its generator emits`.
+16. The sweep's repairs of `AGENTS.md` (1 line), `docs/core/decisions.md` (3 lines) and
+    `Test/contracts/faces.contract.md` (3 lines) were reversed with `patch -R`. Each file's bytes
+    equal its bytes before the pass (`shasum -a 256`). `python3 scripts/check-docs.py` then
+    reports 10 stale references in those 3 files.
+17. `python3 -I scripts/check-language.py --show` over the seven edited documents: the same
+    findings as at the base, line numbers aside. Over this receipt: no finding.
+
+### Axiom output
+
+No module under `src/` changed. The Lean edits are two batteries' docstrings, one generator's
+comment and three scripts' docstrings. The sweep's roots check builds `Test` and elaborates
+`Test/All.lean`: `PASS check-roots: the module-closure, library-root and axiom gates`.
+
+### Evidence
+
+- Reading: each consumer in the inventory, and the case of item 1.
+- Reproduced: the truth corpus, against the committed bytes, in one run.
+- Tested: the six lanes of `make check-ts` and the three of `make check-ocaml`, on tsgo
+  7.0.0-dev.20260629.1, effect 4.0.0-rc.112 and the `effect4` switch. These are finite host runs:
+  host-only evidence.
+- Tested: the cross face against the trimmed manifest, by a direct run with two controls. It
+  reports and does not gate.
+- Tested: the roots, census, schema-pins, tools and drift checks of the sweep. Its documents and
+  language checks fail, for the reasons above.
+
+### Landed theorems and their placement
+
+None. The pass changes no theorem and states no claim.
+
+### Kept, and why
+
+1. `selfTestCases` and `refusedAt` in `harness/truth/prelude.ts`, about 100 lines. The runner's
+   `selfTest` was their one reader. DI-40's ruling ("reject ... a missing prelude case") and row
+   322's TypeScript bound cases rest on that test. No lane ran it since 2026-10-18. Its fate is
+   the owner's (proposal 1).
+2. The prelude's recording seam (`tape`, `TapeCall`, `recorded`). Only the runner installed a
+   sink, so `recorded` posts to nothing now. Its removal changes every package adapter.
+3. `harness/truth/session/`, as the brief says. The prelude, `apps/todo/server.ts`, the
+   diagnostics lane and the service-identity lane read it. The deleted script was the one runner
+   of `Keyed.lean`, `run-keyed.ts`, `check-keyed.ts`, `prepare-keyed-controls.ts` and the four
+   `*.test.ts` files. `Keyed.lean` does not elaborate at the base (command 13).
+4. `ts/release/`, for the six hand packets (proposal 2).
+5. `ts/eff/ingest/fidelity/compare.ts`, `source.ts` and the trimmed contract. The fidelity test is
+   now their one reader.
+6. Three docstrings under `src/` name a deleted file: `src/Effect4/Program/Profile.lean` (the
+   runner), `src/Effect4/Codegen/Diagnostics.lean` (the truth `tsconfig.json`) and
+   `src/Effect4/Codegen/Surface.lean` (the retired target). An edit there rebuilds the core.
+7. `apps/todo/consumer.ts`: no project type-checks it now. The service folder's `tsconfig.json`
+   did.
+8. The `doctor` line of the `Makefile` still names `check-schema-ts`, a retired target, as the
+   schema host's user.
+
+Pass one's kept list closes in part. Items 1, 3, 5, 7 and 8 are done. Item 4 is done but for
+`harness/truth/session/`. Items 2, 6 and 9 stay. Its open obligations 4, 5, 7 and 9 are done.
+
+### Open obligations
+
+1. Seven stale citations stand in files that only the coordinator edits. They are in
+   `AGENTS.md`, in rows 279, 343 and 397 of `docs/core/decisions.md`, and in
+   `Test/contracts/faces.contract.md`. `make repair-docs` writes their Git citations. The packet
+   is frozen, so whether it takes the repair is the coordinator's; pass one's sweep repaired three
+   lines of it.
+2. Row 10 of `docs/core/decisions.md` cites a copy inside the deleted lane's output folder,
+   `harness/truth/corpus-check/session/Keyed.lean`. It resolved only while that folder stood. The
+   live file is `harness/truth/session/Keyed.lean`.
+3. Rows 319 and 322 name `make gen-truth`, as pass one recorded.
+4. `AGENTS.md` names `scripts/check-host-protocol.py` as the script that runs tsgo.
+   `scripts/check-service-identity.py` runs tsgo today.
+5. The dictionary entries "oracle", "lane" and "equal-observation theorem" name the truth lane as
+   live, and so does the vocabulary of `AGENTS.md`. `docs/core/semantics.md`, in two places, and
+   the registry's open part of the TypeScript face say that the truth lane or the keyed lane runs.
+6. The owner's `README.md` says that the sweep includes the release comparison.
+
+### Proposed decisions rows (proposals only)
+
+1. **The prelude's atom table.** (a) Move its evaluation and the case inventory into the target
+   lane's tests (`tools/target/`), about 20 lines. Then `make check-ts` holds DI-40's refusal and
+   row 322's cases again. (b) Delete the table, and record DI-40's refusal of a missing case as
+   retired. Recommended: (a).
+2. **The Effect 4.0.1 hand packets and their install.** (a) Keep `ts/release/` as their host,
+   renamed from the release lane and moved beside `harness/ts_packet.py`. (b) Retire the six
+   packets with the install. Recommended: (a) while row 331 cites latest (Effect 4.0.1).
+3. **The keyed session's unrun half.** `Keyed.lean`, `run-keyed.ts`, `check-keyed.ts`,
+   `prepare-keyed-controls.ts` and four tests have no runner, and `Keyed.lean` does not elaborate.
+   (a) Delete them in a pass three, after a consumer census. (b) Repair `Keyed.lean`.
+   Recommended: (a).

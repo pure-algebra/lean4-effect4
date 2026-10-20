@@ -59,8 +59,11 @@ The Lean half, `src/OCaml5/`:
 | `Lcnf/*` | the LCNF → OCaml backend: dump, naming, the type rows as data (`TypeRows`), types, the translation rules, and the one primitive table (`Builtins`: one row for each Lean constant with its OCaml form, Lean's runtime column and its contract; the target's library with each evaluator's rule; the runtime library's functions a form names, with the definitions the target evaluator runs; the reserved names) |
 | `Tools/*` | the `--run` drivers, each a thin `main` over a library module: `LcnfDump`/`LcnfGen` (the route and the engine), `EffGen` (over `Eff`), `EffWire` (the wire goldens), `CasGoldens` (the CAS goldens) |
 
-`harness/truth/` (tracked beside this estate) is the Lean-vs-rc.112 exit differential over
-the program corpus (`run-truth.ts`, bun, `Truth.lean`).
+`harness/truth/` (tracked beside this estate) holds the truth corpus that `Truth.lean` writes
+(`make gen-truth-corpus`). The engine differential's cross face reads its Lean runs from
+`harness/truth/corpus.json` and reports them without gating. The Lean-vs-rc.112 exit
+differential over that corpus was deleted on 2026-10-20
+(`git:8e93a284f:harness/truth/run-truth.ts`).
 
 ## Building
 
