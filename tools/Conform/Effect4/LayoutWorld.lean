@@ -32,7 +32,7 @@ open Conform.Layout
 /-- The Lean type an `OCaml5.Eff.OTy` parameter instantiation stands for. Only the forms
 `OCaml5.Eff.World.blocks` actually uses need an answer. -/
 def otyRef : OCaml5.Eff.OTy → Option TypeRef
-  | .int => some (.con ``Nat [])
+  | .nat => some (.con ``Nat [])
   | .bool => some (.con ``Bool [])
   | .string => some (.con ``String [])
   | .unit => some (.con ``Unit [])

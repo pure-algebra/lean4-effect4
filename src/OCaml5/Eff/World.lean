@@ -8,11 +8,14 @@ import OCaml5.Lcnf.Types
 /-!
 # OCaml5.Eff.World
 
-**What it is.** The closed world of the `Eff` program IR as OCaml carriers: `OTy`, the carrier
+**What it is.** The closed world of the `Eff` program IR as carriers: `OTy`, the carrier
 alphabet a field or constructor argument is carried by; `Spec`/`blocks`, the Lean families in
 the order their OCaml `type … and …` groups are emitted; and `readBlocks`, which reads every
 family's constructors and their carriers off the Lean environment (`Effect4.Program.Native`).
-`OCaml5.Eff.Emit` writes the OCaml library from it, `OCaml5.Eff.Goldens` the corpus.
+`OCaml5.Eff.Emit` writes the OCaml library from it, `OCaml5.Eff.Goldens` the corpus, and
+`tools/Drivers/TsGen.lean` the TypeScript face. `OTy` names a carrier by its Lean shape and
+spells no target: its OCaml spelling is the type rows' (`OCaml5.Eff.OTy.ml`,
+`OCaml5.Lcnf.builtinTy?`).
 
 **Depends on.** `Effect4.Program.Native` (the IR and its native signature), `Lean.Meta`.
 
@@ -36,9 +39,10 @@ namespace OCaml5.Eff
 
 /-! ## OCaml carriers -/
 
-/-- The OCaml type an argument or field is carried by. -/
+/-- The carrier an argument or field is carried by: a Lean shape, named by the Lean type it
+stands for. A target spells it through its own type table (`OTy.ml` for OCaml). -/
 inductive OTy
-  | int | bool | string | unit
+  | nat | bool | string | unit
   | option (a : OTy)
   | list (a : OTy)
   | prod (a b : OTy)
@@ -46,23 +50,6 @@ inductive OTy
   /-- Strictly ascending ServiceKey list: proof-free bytes, checked at the boundary. -/
   | requirements
 deriving Repr, BEq, Inhabited
-
-mutual
-partial def OTy.render : OTy → String
-  | .int => "int"
-  | .bool => "bool"
-  | .string => "string"
-  | .unit => "unit"
-  | .option a => a.renderArg ++ " option"
-  | .list a => a.renderArg ++ " list"
-  | .prod a b => a.renderArg ++ " * " ++ b.renderArg
-  | .named n => n
-  | .requirements => "service_key list"
-/-- As a constructor argument or a type-constructor argument: products parenthesised. -/
-partial def OTy.renderArg : OTy → String
-  | .prod a b => "(" ++ OTy.render (.prod a b) ++ ")"
-  | t => t.render
-end
 
 /-- The decided names of one program type at its owner, `ocaml/eff/eff_types.ml`: its own module,
 by its short name. `typesInterface` refuses a run whose owner decided another. -/
@@ -120,7 +107,7 @@ def labelType (label : String) : String :=
 
 /-- The only target-specific erasures; unsupported canonical row elements refuse. -/
 def projectShape (path : String) : Tools.ProgramStructure.Shape → Except String OTy
-  | .nat => .ok .int
+  | .nat => .ok .nat
   | .bool => .ok .bool
   | .string => .ok .string
   | .unit => .ok .unit
@@ -150,18 +137,6 @@ structure Family where
   are still a structure's. -/
   trivial : Bool
   ctors : List Ctor
-
-/-- The OCaml type of a family as `eff_types.ml` declares it: its parameters applied
-(`NativeOp.t Eff.t`). `pre` qualifies each name (`Eff_types.`). -/
-def Family.tyRef (f : Family) (pre : String := "") : String :=
-  let name := pre ++ otype f.spec.leanName
-  let arg (t : OTy) : String := match t with
-    | .named n => pre ++ labelType n
-    | t => t.renderArg
-  match f.spec.params with
-  | [] => name
-  | [p] => arg p ++ " " ++ name
-  | ps => "(" ++ ", ".intercalate (ps.map arg) ++ ") " ++ name
 
 /-- `Effect4.Program.Term`, unambiguous beside `Lean.Term`. -/
 abbrev PTerm := Effect4.Program.Term

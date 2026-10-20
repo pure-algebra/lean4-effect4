@@ -300,4 +300,14 @@ structure Module where
   header : Option String := none
   items : List Decl
 
+/-- A compilation unit's interface, the `.mli` file (§11.10, *Module types*): a name, an
+optional header comment, and its signature items. `OCaml5.Ml.renderSignature` turns one into the
+bytes of a `.mli` file. The store's generated facts write their interfaces so
+(`OCaml5.Store.Facts`); the LCNF route infers its own from OCaml's typed tree. -/
+structure Signature where
+  name : String
+  /-- A header comment, emitted first, without the `(* *)`. -/
+  header : Option String := none
+  items : List SigItem
+
 end OCaml5.Ml

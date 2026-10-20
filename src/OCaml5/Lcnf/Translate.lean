@@ -702,10 +702,8 @@ def carrierRewrite? (n : Name) (args : Array (Arg .pure)) :
 /-- A `LetValue`, and the carrier its value holds when it holds one. -/
 def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option String) := do
   match v with
-  -- The 63-bit rule, literal half: a `Nat` literal OCaml's `int` cannot hold (`2 ^ 62` and up,
-  -- the folded `2 ^ 64` of `Val.wf` among them) is `max_int`, not an out-of-range literal
-  -- OCaml refuses. Same reading as the `Nat.pow` row; see `ocaml/gen/NOTES.md` §5.
-  | .lit (.nat n) => return (if n ≥ 4611686018427387904 then .var "max_int" else .int n, none)
+  -- A `Nat` literal is the `Nat` row's literal (`natLiteral`, the one owner of its spelling).
+  | .lit (.nat n) => return (natLiteral n, none)
   | .lit (.str s) => return (.str s, none)
   | .lit (.uint8 n) => return (.int n.toNat, none)
   | .lit (.uint16 n) => return (.int n.toNat, none)

@@ -63,7 +63,7 @@ def countOps (nativeOp : Family) : Nat × Nat × Nat × Nat × Nat :=
     | [] => (nul + 1, fn, st, indexed, typed)
     | [(_, .named "term")] => (nul, fn + 1, st, indexed, typed)
     | [(_, .named "finalizer_strategy")] => (nul, fn, st + 1, indexed, typed)
-    | [(_, .int)] => (nul, fn, st, indexed + 1, typed)
+    | [(_, .nat)] => (nul, fn, st, indexed + 1, typed)
     | [(_, .named "ty"), (_, .named "ty")] => (nul, fn, st, indexed, typed + 1)
     | _ => (nul, fn, st, indexed, typed)
 

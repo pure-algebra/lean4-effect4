@@ -147,7 +147,7 @@ partial def namedIn : OTy → List String
 
 partial def tsTy (fs : List Family) : OTy → String
   | .requirements => "ReadonlyArray<ServiceKey>"
-  | .int => "number"
+  | .nat => "number"
   | .bool => "boolean"
   | .string => "string"
   | .unit => "null"
@@ -167,7 +167,7 @@ mutually recursive and the schema constants are declared in dependency order. A 
 suspended too: `Ty.contextOf` reaches it before `ServiceKey` is declared. -/
 partial def tsSchema (fs : List Family) : OTy → String
   | .requirements => "Schema.Array(Schema.suspend((): Schema.Codec<ServiceKey> => ServiceKey)).check(Schema.makeFilter((xs) => xs.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))(xs[i - 1]))))"
-  | .int => "Schema.Int"
+  | .nat => "Schema.Int"
   | .bool => "Schema.Boolean"
   | .string => "Schema.String"
   | .unit => "Schema.Null"
@@ -244,7 +244,7 @@ def emitSchemas (fs : List Family) : String :=
 value, is an array; a pair an array of two; an option the value or `null`; `Unit` is `null`. -/
 partial def jsonOf (fs : List Family) : OTy → String → String
   | .requirements, x => s!"{x}.map(serviceKeyJson)"
-  | .int, x | .bool, x | .string, x => x
+  | .nat, x | .bool, x | .string, x => x
   | .unit, _ => "null"
   | .option a, x => s!"({x} === null ? null : {jsonOf fs a x})"
   | .list a, x => s!"{x}.map((y) => {jsonOf fs a "y"})"
@@ -381,7 +381,7 @@ def writeFn (f : Family) : String := "write" ++ tsName f
 /-- The field traversal is generated structurally from the closed world's carriers. -/
 def wireOf (fs : List Family) : OTy → String → String
   | .requirements, x => s!"(() => \{ if (!{x}.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))({x}[i - 1]))) throw new TypeError(\"noncanonical requirements\"); w.list({x}, (y) => writeServiceKey(w, y)) })()"
-  | .int, x => s!"w.nat({x})"
+  | .nat, x => s!"w.nat({x})"
   | .bool, x => s!"w.bool({x})"
   | .string, x => s!"w.str({x})"
   | .unit, x => s!"w.unit({x})"
@@ -486,7 +486,7 @@ def arr (xs : List String) : String := "[" ++ ",".intercalate xs ++ "]"
 
 /-- Field carriers for type metadata come from the same environment and wire tags as the codecs. -/
 def metadataShape (self : String) : OTy → Except String String
-  | .int => pure "{\"kind\":\"nat\"}"
+  | .nat => pure "{\"kind\":\"nat\"}"
   | .bool => pure "{\"kind\":\"bool\"}"
   | .string => pure "{\"kind\":\"string\"}"
   | .named name =>
@@ -502,7 +502,7 @@ def metadataShape (self : String) : OTy → Except String String
 
 /-- A finite constructor witness uses existing canonical field values. -/
 def metadataSample (self : String) (emptyTag : Nat) : OTy → Except String Effect4.Store.Val
-  | .int => pure (.nat 0)
+  | .nat => pure (.nat 0)
   | .bool => pure (.bool false)
   | .string => pure (.str "")
   | .named name => if name == self then pure (.ctor emptyTag []) else throw s!"unknown sample family {name}"

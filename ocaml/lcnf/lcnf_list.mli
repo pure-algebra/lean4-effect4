@@ -3,8 +3,8 @@
    What it is: `contains inst l a` is Lean's `List.contains l a`, which is `List.elem a l`. Lean's
    `List.elem a (b :: l)` tests `a == b`, so the target `a` is the instance's first argument
    (Lean 4.33.1, `Init/Data/List/Basic.lean`). Mono LCNF passes the `BEq` instance as the
-   function itself. The target evaluator runs it from its reference definition in
-   `OCaml5.Lcnf.support`.
+   function itself. The implementation, lcnf_list.ml, is GENERATED from the reference definition
+   in `OCaml5.Lcnf.support` (`lake exe lcnfgen --support`), which the target evaluator runs too.
 
    Depends on: the standard library only.
 

@@ -281,6 +281,52 @@ First, before item 1: the to-do as a user's project, outside the library
   faces contract names `eff_wire.ml` for face 6, which the owner amends. The docstring of
   `serviceKeyImage` (`src/Effect4/Machine/ContextMap.lean`) still cites `eff_wire.ml`; it waits
   for the next core rebuild.
+- **M4 landed** 2026-10-20 (`edfcb5cb2`), its first half only: E6 stopped at the Rocq lane,
+  where `Z.t` has no mapping. `OCaml5.Lcnf.typeRows` owns every OCaml spelling of a Lean type,
+  and `natLiteral` beside it owns a natural's spelling. EffGen's `OTy.ml` and
+  `OCaml5.Store.Facts`'s `nativeType` read `builtinTy?`. `OTy` names a Lean shape (`OTy.nat`) and
+  spells no target, and `tools/Drivers/TsGen.lean` still reads it. Deleted: `OTy.render`,
+  `OTy.renderArg` and `Family.tyRef`, the second spelling of each carrier. `OCaml5.Store.Facts`
+  emits an `Ml.Module` and an `Ml.Signature` per unit, and `Ml.checkModule` and the new
+  `checkSignature` read them. The result envelope's 32 bytes are read from hex, since an
+  `Ml.Syntax` string literal holds UTF-8 bytes. The rowed bodies of `Lcnf_nat` and `Lcnf_list` are
+  rendered from `OCaml5.Lcnf.support` by `lake exe lcnfgen --support`. `OCaml5.Lcnf.Gallina`'s
+  refusal is a value, `Refusal`, that names the declaration and the construct. The
+  `(* REFUSED *)` scan is deleted, and `Skeleton.v` and `StoreCode.v` are byte for byte unchanged.
+  Hand lines grew by 295 and generated lines by 75 (`git diff --numstat`). Measured by allocated
+  words: the engine differential allocates 962,415,522 words before and after, over 508 programs
+  with no divergence. A store put of the 89 goldens allocates 30,282 words before and after.
+  Regenerated: lcnf, eff and cas. Reruns of eff, cas, ts, lcnf and store-rocq into a scratch
+  directory show no drift. `make batteries-touched`: 34 batteries, built, after one repair:
+  `Test.Store.GallinaHeadPrinter` runs the printer from no refusal. `#axiom_audit`: the touched
+  battery's 16 declarations are within `[propext, Quot.sound]`, and none is modulo a planned
+  goal. The ten touched `OCaml5` modules are outside the gate. 202 of their 2,192 declarations
+  reach `Classical.choice` through string operations, against 195 of 2,139 at the base.
+  `#closure_audit` passes. Gates: `check-ocaml` and `check-ts` pass, each lane. No claim's
+  statement moved, and no `Effect4` module changed. The comparison lane's runner,
+  `ocaml/engine/test/rocq/rocq_run.ml`, is Rocq's extraction by a producer kept only in Git:
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-16-itrees/rocq/LaneExtract.v`.
+  It writes Rocq's `Z` as OCaml's `int`. Under E6 the runner fails at line 785: "This expression
+  has type Z.t but an expression was expected of type service_type_code". `make gen-rocq` does
+  map `Z.t`: one line of `rocq/tools/split_types.ml` prints it as `int`, which RocqOfOCaml
+  defines as Rocq's `Z`. With that line, E6's `Eff_types.v` is byte for byte this half's. The E6
+  work is kept, unmerged, at `c27054c2a` on the branch `m4-e6-stopped`, over this half. There
+  every OCaml directory but the comparison lane builds, and the engine differential passes. Its
+  differential allocates 954,883,486 words, 7,532,036 fewer, and its store put is unchanged.
+  `ProfileReason.belowBound` keeps the stored predecessor `n`, as the coordinator ruled for a
+  stopped E6. So the comparison `n < natBound` stands, since the lowered `Nat` wraps at 2^62
+  until E6. In the kept E6 the reason names the magnitude `n + 1`, asked of `admitsNat`, since
+  `Z.add` is exact. `ClockFlow`, `Clock` and its rows, the dual fidelity and receipt columns, the
+  saturating bodies and `ClockLowering.lean` wait with E6. So do the bound's four other
+  spellings: `NatJson.limit`, the tool schema's maximum, `Within` and `E4_clock.number_bound`.
+  Proposed: the owner rules the comparison lane's producer, and then E6 lands from `c27054c2a`.
+  The recommendation: move the producer into the tree, and extract Rocq's `Z` to Zarith's `Z.t`.
+  The other choice retires the lane, the floor under the declared facts of
+  `src/Effect4/Laws/Run/Tree.lean`. E6 also needs one edit of `tools/Compiler/Emit.lean`, the
+  coordinator's file, which reads `natBound` as a natural. Proposed too: a decisions row for M4's
+  first half and E6's stop. `rocq/Eff_types.v` lags M2's program types by `Located` and
+  `ProfileReason`, and the next `make gen-rocq` adds them. `api_gen`'s copies of `programToVal`
+  and `programOfVal` stay for M11, since they did not fall out of the type rows.
 
 - **The order from here** (the owner, 2026-10-20): the entry point's first slice, then M3, then C1's
   moves under E4. Then M4 with E6, then `run`, then M8. Seats alternate between the chain and the

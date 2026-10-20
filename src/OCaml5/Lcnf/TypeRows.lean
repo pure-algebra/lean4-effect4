@@ -290,6 +290,15 @@ def builtinTy? (n : Name) (args : List Ml.Ty) : Option Ml.Ty :=
   | some r => if args.length == r.arity then some (r.spelling.apply args) else none
   | none => none
 
+/-- **A natural as an OCaml value of the `Nat` row's spelling**: the translator's literal
+(`Translate.letValueExpr`) and every natural a producer prints as data (the `eff/` emitter's
+alphabet and witnesses, `OCaml5.Eff.Emit`). One owner, so the literal and the type it inhabits
+change together. While `Nat` is `int`, a natural OCaml's `int` cannot hold (`2 ^ 62` and up, the
+folded `2 ^ 64` of `Val.wf` among them) is `max_int`, as the `Nat.pow` row reads it
+(`ocaml/gen/NOTES.md` §5). -/
+def natLiteral (n : Nat) : Ml.Expr :=
+  if n ≥ 4611686018427387904 then .var "max_int" else .int n
+
 /-- The unqualified OCaml type names the rows spell. A Lean type of one of these names would
 shadow the one a row means, so `OCaml5.Lcnf.typeName` reserves them. -/
 def reservedTypeNames : List String :=
