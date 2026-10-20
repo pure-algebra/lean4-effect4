@@ -604,7 +604,7 @@ What this changes in the packet above, and nothing else:
   tag no longer discriminates. The helpers keep no arbitrary TypeScript refinement.
 - **The truth claim (§4).** The truth corpus gains `pRateRequest` and `pDeferredGate`
   (`tools/Drivers/Truth.lean`). The runner's import header names every atom of the generated
-  profile (`git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:git:9c197bb67:harness/truth/run-truth.ts`). It also names the twelve printed helpers that are no
+  profile (`git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). It also names the twelve printed helpers that are no
   atom. So a new atom needs no edit of the header. The lane's compiler controls gain two files.
   `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/literals.typecheck.ts` holds the literal rule's assertions and refusals.
   `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/queue-steps.typecheck.ts` holds the Queue module's six printed steps, each at
@@ -667,7 +667,7 @@ What this changes in the packet above, and nothing else:
 
 - **Quantifier 6 of §4, amended: both faces write a fiber under its number in the recorder's
   order.** The recorder numbers a fiber when it first sees it (`see`,
-  `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:git:9c197bb67:harness/truth/run-truth.ts`). Lean's reduction reads the same order from its own rows
+  `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). Lean's reduction reads the same order from its own rows
   (`numbering`, `tools/Drivers/Truth.lean`). A fiber's number is the rank of its first sight: a
   `forked` row that names it as the child, or a `started` row. Before this amendment the Lean
   face wrote the machine's ids, which follow the allocation order.
@@ -714,7 +714,7 @@ What this changes in the packet above, and nothing else:
 - **Quantifier 5 of §4, amended.** The runner's exit column compares the fork entry on both
   faces: the exit of `Api.run` with the exit of rc.112's fork run. Its sync column compares
   the sync entry on both faces, as before. Until this amendment the exit column took rc.112's
-  sync exit whenever the Lean sync run settled (`main`, `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:git:9c197bb67:harness/truth/run-truth.ts`). That
+  sync exit whenever the Lean sync run settled (`main`, `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). That
   rule is right only for a program whose two entries give one exit. It also reported a
   disagreement of the fork entry as a note.
 - **The truth claim (§4) gains two programs**: `pSemaphoreProtected` and

@@ -500,7 +500,7 @@ it reads between the release and the walk. Where the root releases, the two entr
 answer.
 
 The truth lane's exit column compared the fork run's exit with the pin's sync exit whenever the
-sync run settled (`git:8e93a284f:git:9c197bb67:harness/truth/run-truth.ts`). So P1 and P4 were no programs of
+sync run settled (`git:8e93a284f:harness/truth/run-truth.ts`). So P1 and P4 were no programs of
 that lane: on each entry the two faces give one exit, and the column was red
 (`docs/research/2026-10-06-seat-semw-evidence/README.md`). The lane ran the joined forms
 instead. A joined form's root joins the waiting fibers and does not yield four times. Its sync
