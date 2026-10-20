@@ -1,6 +1,7 @@
 # The compiler's entry point: what a compile is here, and what other compilers teach
 
-Status: review, 2026-10-20, before any slice. The owner asked for a step back. It covers the
+Status: review, 2026-10-20, before any slice. Amended the same day: the code read (§4.1, §9), the
+decisions (§7), the architecture pass (§11). The owner asked for a step back. It covers the
 basic operations and whether they accord with the algebra and the style. It asks what the
 commands should be, and what metadata a compile should write. Not the to-do's entry point: the library's.
 
@@ -76,6 +77,25 @@ The arrows are the folds. A command that is not one of them is not a command of 
 Two of these are on the reference shelf (`~/Dev/refs/ocaml-tooling`: CompCert's `driver/Driver.ml`
 has the flags above; dune). The rest are cited in §8.
 
+### 4.1 Their constructs, ours
+
+Read on 2026-10-20 from the sources of §8 and the shelf. Each row names their code, then the
+construct of ours it maps to, then the fit. The code itself is in §9, one block per project.
+
+| Project | Their construct, as code | Ours, in the tree | Fit |
+| --- | --- | --- | --- |
+| rustc | `define_output_types! { Assembly => { shorthand: "asm", extension: "s", default_filename: "CRATE_NAME.s", is_text: true } … }` | the artifact kinds of `emit`, one table as data: kind, extension, default name, text or bytes | taken |
+| rustc | `--print KIND[=PATH]` | `inspect --what KIND` | renamed: "print" is the TypeScript printer here |
+| CompCert | `set_dest PrintClight.destination option_dclight ".light.c"`, one per pass; `type mode = First \| Random \| All`; `trace := 0 \| 1 \| 2` | `--emit=eff` at the boundary and `--emit=lcnf` at the phase; `run --tape T \| --explore`; the journal as the trace | taken; a dump gains the program's address |
+| PureScript | `data CodegenTarget = JS \| JSSourceMap \| CoreFn \| Docs`; `targetFilename mn CoreFn = "corefn.json"`; the externs file first; `cache-db.json` | `--emit=module,surface,canonical,certificate`; `M.eff.json` is CoreFn under `Canonical`'s laws; the manifest's hashes are the cache | taken; the IR gains laws |
+| Idris2 | `record Codegen { compileExpr, executeExpr, incCompileFile, incExt }`; `data UsePhase = Cases \| Lifted \| ANF \| VMCode`; `mainWithCodegens : List (String, Codegen)`; `--cg`; `--dumpanf` | the target table as data: name, phase, emitter, reader of the output; `--target`; `--emit=lcnf` | adapted: data in place of functions; the output is read back |
+| Unison | `data Reference' t h = ReferenceBuiltin t \| ReferenceDerived (Id' h)`; `data Id' h = Id h Pos`; `hashComponents` substitutes hashes for names, then hashes | `Eff` binds by index; `Canonical.encode`; the sha256 address in every header; `KeyNames` outside the codec (move G) | taken: the address, names as metadata; left: the database as the medium |
+| GHC | `ModIface { mi_iface_hash, mi_mod_hash, mi_exports, mi_decls, mi_usages, mi_src_hash, … }`; `HieFile { hie_types, hie_asts, hie_exports, … }` | the certificate (exports, declarations) and the manifest (hashes, inputs); the tool protocol's queries as the typed tree | adapted: codec-typed JSON; the tree is computed, not stored |
+| OCaml | `cmt_infos { cmt_args; cmt_sourcefile; cmt_source_digest; cmt_imports : crcs; cmt_interface_digest; cmt_uid_to_decl; … }` | the manifest's `command`, `program.module`, `inputs` (the import closure with digests, the pins) and the certificate's digest | taken as fields; left: the marshalled, version-bound file |
+| wasm-tools | `subcommands! { parse, validate, print, dump, strip, component, metadata, … }`; `component embed \| new \| wit`; `metadata show \| add` | `check` is `validate`; `inspect --what header` is `metadata show`; the surface is an importable module, not a custom section | taken: the interface travels with the artifact |
+| Lean | `lean -o M.olean -i M.ilean -c M.c --deps --json` | the canonical bytes and the certificate are `.olean`; the tool protocol is `.ilean`; `--target` is `-c`; the manifest's inputs are `--deps`; a located refusal as JSON is `--json` | taken: the shape the tree already lives in; `effect4` is a `lean_exe` |
+| dune | `build`, `rules`, `describe`, `promote`; `_build/<context>/` | `describe` before `emit`; `scripts/generate.py --verify` is the promotion check; Lake and make orchestrate | taken as a boundary: the compiler is not the build |
+
 ## 5. The operations, fit for purpose
 
 One Lean executable, `effect4`, a `lean_exe` under `tools/` like `lcnfgen`, that loads the user's
@@ -129,15 +149,22 @@ writes the same bytes, as the to-do's lowering already does.
 - The native `eff` keeps serving. It is the lowered tool face, not the compiler, and the two
   names must not collide.
 
-## 7. What the owner decides
+## 7. Decisions, with recommendations
 
-1. The name: `effect4`, or another. `eff` is taken by the native tool.
-2. Whether lowering is a target of `emit` (recommended: yes, with the recipe derived) or stays
-   `lcnfgen` alone.
-3. The manifest's fields beyond §5, and where outputs live.
-4. The order. First `check` and `emit --target ts`, deleting the two hand pipelines (size S).
-   Then `emit --target ocaml` (S), then `run` over a Lean host (M), then `inspect` through the
-   tool protocol (S), and `conform` after move A.
+Each decision is one line to answer. The recommendation comes first, then its reason.
+
+| # | Decision | Recommendation | Why |
+| --- | --- | --- | --- |
+| E1 | the executable's name | `effect4`, a `lean_exe` under `tools/Compiler/` | `eff` is the native tool; the package is `effect4` |
+| E2 | lowering as an `emit` target | yes: `--target ocaml` calls the one lowering function, which `lcnfgen` calls too, with a derived recipe | one lowering, two callers; the estate keeps `roots.json`; a user program derives its roots from its host |
+| E3 | the manifest's fields | the §5 shape plus `inputs`: the import closure with each module's digest, and the pins | rustc's `dep-info` and OCaml's `cmt_imports`; a program recompiles when its address or an input changes |
+| E4 | where outputs live | `--out DIR`, default `.lake/effect4/<M>/<target>/`; the folder is self-contained: the prelude is copied in, and the module imports `./prelude/prelude.ts` | PureScript's output folder; the prelude's home stops mattering to printed text; a project promotes what it ships |
+| E5 | the prelude's home | `ts/prelude/` (five files); the session protocol in `ts/protocol/` (13 files) | product modules leave a folder named for a retired lane; under E4 the move changes no printed module |
+| E6 | the corpus producers | one: `effect4 emit` over a group; `Truth.lean --corpus`, `Drivers.Corpus` and `Drivers.Emit` become callers or go; the hand programs move to `Test/Corpus/Programs.lean` | five printers of programs today (§11, C2); the corpus is a fixture, and its producer is the compiler |
+| E7 | the order | C3's deletions once M1 lands; then C2's first slice, `check` and `emit --target ts` with the manifest, in `tools/Compiler/`; then C1's moves under E4; then `--target ocaml`, `run`, `inspect`, `describe`, `conform` | the deletions touch no path; the entry point is a new folder; the moves wait for E4, so the printed import changes once |
+
+On a yes, C3's deletions land as one commit. Then C2's first slice runs as one seat in the main
+checkout after M1. That slice deletes `apps/todo` in its commit.
 
 ## 9. The prior art, each against our semantics
 
@@ -161,6 +188,19 @@ we improve on it, and how it fits. The facts are from the primary sources of §8
 - **Fits as.** `effect4 emit M --target T --emit=kind[=path],…`. rustc's `--print` becomes
   `effect4 inspect --what …`, since "print" is our word for the TypeScript printer.
 
+```rust
+// rust-lang/rust, compiler/rustc_session/src/config.rs (read 2026-10-20)
+define_output_types! {
+    Assembly => { shorthand: "asm", extension: "s",
+        description: "Generates a file with the crate's assembly code",
+        default_filename: "CRATE_NAME.s", is_text: true, compatible_with_cgus_and_single_output: false },
+    Bitcode  => { shorthand: "llvm-bc", extension: "bc", … },
+    DepInfo  => { shorthand: "dep-info", extension: "d",
+        description: "Generates a file with Makefile syntax that indicates all the source files that were loaded …", … },
+    …
+}
+```
+
 ### 9.2 CompCert: dumps per verified pass, and the reference interpreter as a command
 
 - **Does.** `ccomp` dumps each intermediate language on request, in pass order. The flags are
@@ -182,6 +222,28 @@ we improve on it, and how it fits. The facts are from the primary sources of §8
   checked carrier begins. `effect4 run M --host H [--tape T | --explore] [--trace]` is
   `-interp` with its options. The reference interpreter ships as a command, as CompCert's does.
 
+```ocaml
+(* the shelf: compcert/driver/Driver.ml *)
+let compile_c_file sourcename ifile ofile =
+  let set_dest dst opt ext =
+    dst := if !opt then Some (output_filename sourcename ~suffix:ext) else None in
+  set_dest PrintClight.destination option_dclight ".light.c";
+  set_dest PrintCminor.destination option_dcminor ".cm";
+  set_dest PrintRTL.destination    option_drtl    ".rtl";
+  (* … LTL, Mach, the JSON dump … *)
+  let csyntax = parse_c_file sourcename ifile in
+  let asm = match Compiler.apply_partial (Compiler.transf_c_program csyntax) Asmexpand.expand_program with
+    | Errors.OK asm -> asm
+    | Errors.Error msg -> fatal_error loc "%a" print_error msg in
+  …
+  Exact "-interp", Set option_interp;
+  Exact "-random", Unit (fun () -> Interp.mode := Interp.Random);
+  Exact "-all",    Unit (fun () -> Interp.mode := Interp.All);
+(* compcert/driver/Interp.ml *)
+let trace = ref 1   (* 0 if quiet, 1 if normally verbose, 2 if full trace *)
+type mode = First | Random | All
+```
+
 ### 9.3 PureScript: the IR as a file other backends read
 
 - **Does.** `purs compile` writes per module `index.js` (with `foreign.js` and `index.js.map`),
@@ -197,6 +259,21 @@ we improve on it, and how it fits. The facts are from the primary sources of §8
   is timestamps and hashes in one file; ours is the manifest's artifact hashes and Lake's cache.
 - **Fits as.** `--emit=canonical,bytes,certificate` writes `M.eff.json`, `M.eff` and
   `M.certificate.json` beside the target's output.
+
+```haskell
+-- purescript/purescript, src/Language/PureScript/Options.hs (read 2026-10-20)
+data CodegenTarget = JS | JSSourceMap | CoreFn | Docs
+codegenTargets = Map.fromList [("js", JS), ("sourcemaps", JSSourceMap), ("corefn", CoreFn), ("docs", Docs)]
+-- src/Language/PureScript/Make/Actions.hs
+targetFilename mn = \case
+  JS          -> outputFilename mn "index.js"
+  JSSourceMap -> outputFilename mn "index.js.map"
+  CoreFn      -> outputFilename mn "corefn.json"
+  Docs        -> outputFilename mn "docs.json"
+cacheDbFile = (</> "cache-db.json")
+-- the externs file is written first; its timestamp is the module's build time
+lift $ writeCborFile (outputFilename mn externsFileName) exts
+```
 
 ### 9.4 Idris2: a backend is a record over one checked form, at the phase it chooses
 
@@ -215,6 +292,29 @@ we improve on it, and how it fits. The facts are from the primary sources of §8
 - **Fits as.** `--target` dispatches on that table. `--emit=lcnf` is the raised phase. `run` is
   `executeExpr`.
 
+```idris
+-- idris-lang/Idris2, src/Compiler/Common.idr (read 2026-10-20)
+record Codegen where
+  constructor MkCG
+  compileExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo -> (tmpDir : String) -> (outputDir : String)
+             -> ClosedTerm -> (outfile : String) -> Core (Maybe String)
+  executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo -> (tmpDir : String) -> ClosedTerm -> Core ()
+  incCompileFile : Maybe (Ref Ctxt Defs -> Ref Syn SyntaxInfo -> (sourcefile : String) -> Core (Maybe (String, List String)))
+  incExt : Maybe String
+data UsePhase = Cases | Lifted | ANF | VMCode
+record CompileData where
+  mainExpr : ClosedCExp
+  exported : List (Name, String)
+  namedDefs : List (Name, FC, NamedDef)
+  lambdaLifted : List (Name, LiftedDef)
+  anf : List (Name, ANFDef)
+  vmcode : List (Name, VMDef)
+-- src/Idris/Driver.idr and src/Idris/CommandLine.idr
+mainWithCodegens : List (String, Codegen) -> IO ()
+MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
+MkOpt ["--dumpanf"] [Required "output file"] (\f => [DumpANF f])
+```
+
 ### 9.5 Unison: definitions by hash, names as metadata
 
 - **Does.** A definition is its SHA3-512 hash, taken after names become positional references
@@ -232,6 +332,20 @@ we improve on it, and how it fits. The facts are from the primary sources of §8
 - **Fits as.** The manifest's `address` is the sha256 of the canonical bytes, and every
   artifact's header names it. `conform` results cache by address, as Unison caches tests.
 
+```haskell
+-- unisonweb/unison, codebase2/core/U/Codebase/Reference.hs (read 2026-10-20)
+data Reference' t h = ReferenceBuiltin t | ReferenceDerived (Id' h)
+data Id' h = Id h Pos
+-- unison-hashing-v2/src/Unison/Hashing/V2/ABT.hs: names become hashes before the hash is taken
+hashComponents termFromHash termsByName = do
+  let sccs = components (Map.toList termsByName)
+      go prevHashes (component : rest) = do
+        let sub = substsInheritAnnotation (Map.toList prevHashes)
+        (h, sortedComponent) <- hashComponent $ Map.fromList [(v, sub t) | (v, t) <- component]
+        let curHashes = Map.fromList [(v, termFromHash h i) | ((v, _), i) <- sortedComponent `zip` [0 ..]]
+        …
+```
+
 ### 9.6 GHC and OCaml: interface files, and the typed tree for tools
 
 - **Does.** GHC's `.hi` holds what importers need; per-declaration fingerprints decide
@@ -248,6 +362,39 @@ we improve on it, and how it fits. The facts are from the primary sources of §8
 - **Fits as.** `--out DIR` with one fixed layout under it. `inspect --what certificate` is
   `--show-iface`. The editor views stay queries.
 
+```haskell
+-- ghc/ghc, compiler/GHC/Unit/Module/ModIface.hs (read 2026-10-20)
+data ModIface_ phase = ModIface
+  { mi_iface_hash_  :: Fingerprint            -- a hash of the whole interface
+  , mi_mod_info_    :: IfaceModInfo
+  , mi_deps_        :: Dependencies
+  , mi_public_      :: IfacePublic_ phase     -- mi_exports_, mi_fixities_, mi_decls_, mi_insts_, …
+  , mi_self_recomp_ :: Maybe IfaceSelfRecomp  -- mi_src_hash, mi_usages, mi_flag_hash, …
+  , mi_docs_        :: Maybe Docs, … }
+-- compiler/GHC/Iface/Ext/Types.hs
+data HieFile = HieFile
+  { hie_hs_file :: FilePath, hie_module :: Module
+  , hie_types   :: A.Array TypeIndex HieTypeFlat, hie_asts :: HieASTs TypeIndex
+  , hie_exports :: [AvailInfo], hie_hs_src :: ByteString, … }
+```
+
+```ocaml
+(* ocaml/ocaml, file_formats/cmt_format.mli (read 2026-10-20) *)
+type cmt_infos = {
+  cmt_modname : modname;
+  cmt_annots : binary_annots;
+  cmt_args : string array;            (* Sys.argv of the compiler invocation that wrote the file *)
+  cmt_sourcefile : string option;
+  cmt_builddir : string;
+  cmt_loadpath : Load_path.paths;
+  cmt_source_digest : string option;
+  cmt_imports : crcs;
+  cmt_interface_digest : Digest.BLAKE128.t option;
+  cmt_uid_to_decl : item_declaration Shape.Uid.Tbl.t;
+  cmt_impl_shape : Shape.t option;
+  … }
+```
+
 ### 9.7 The wasm component model: the interface travels with the artifact
 
 - **Does.** `component embed` puts the interface (WIT) into the core binary as a custom
@@ -261,6 +408,17 @@ we improve on it, and how it fits. The facts are from the primary sources of §8
 - **Fits as.** Every artifact's header carries the address, the generator's identity and the
   command. `inspect --what header` is `metadata show`.
 
+```rust
+// bytecodealliance/wasm-tools, src/bin/wasm-tools/main.rs (read 2026-10-20)
+subcommands! {
+    (parse, "parse")  (validate, "validate")  (print, "print")  (smith, "smith")
+    (dump, "dump")  (objdump, "objdump")  (strip, "strip")  (compose, "compose")
+    #[command(subcommand)] (component, "component")   // embed | new | wit | targets | unbundle
+    #[command(subcommand)] (metadata, "metadata")     // show | add
+    …
+}
+```
+
 ### 9.8 dune: the build as data, and promotion
 
 - **Does.** The commands are `build`, `exec`, `test`, `rules` (dumps the rules), `describe`
@@ -273,7 +431,28 @@ we improve on it, and how it fits. The facts are from the primary sources of §8
 - **We improve.** Nothing to improve; the lesson is a boundary. dune is the build system and
   `ocamlopt` the compiler. `effect4` compiles one program; Lake and make orchestrate.
 - **Fits as.** `effect4 describe M --target T` prints what `emit` would write, before it
-  writes. Gates and regeneration stay outside the compiler.
+  writes. Gates and regeneration stay outside the compiler. The shelf holds dune's `src` and
+  `doc/hacking.rst` only; the command list is from its manual.
+
+### 9.9 Lean: the compiler the tree already lives in
+
+- **Does.** `lean M.lean -o M.olean -i M.ilean -c M.c` writes the checked form, the editor's
+  index and the C backend's input. `--deps` prints the module's imports. `--json` prints each
+  message as one JSON line. Lake runs it per module and names an executable with `lean_exe`.
+- **Accords.** One checked form, written once; a backend as a flag; the editor's data beside
+  it; dependencies and messages as data.
+- **We improve.** Nothing. `effect4` takes the shape: `check` writes the carrier and the
+  certificate, `emit --target` is `-c`, and a refusal prints as one JSON line under `--json`.
+- **Fits as.** `effect4` beside `lcnfgen` and `effect4gen` in the lakefile.
+
+```text
+$ lean --help        (the toolchain of lean-toolchain, read 2026-10-20)
+  -o, --o=oname      create olean file
+  -i, --i=iname      create ilean file
+  -c, --c=fname      name of the C output file
+      --json         report Lean output (e.g., messages) as JSON (one per line)
+      --deps         just print dependencies of a Lean input
+```
 
 ## 10. What we take, and what we leave
 
@@ -286,7 +465,8 @@ Taken:
 - the program's address in every artifact, and names as metadata (Unison);
 - the certificate as the interface, and the views as queries over one check (GHC, OCaml);
 - the interface shipped with the artifact, and extractable (wasm);
-- `describe` before `emit`, and promotion for committed outputs (dune).
+- `describe` before `emit`, and promotion for committed outputs (dune);
+- the checked form, the editor's index and the backend's input as flags of one call (Lean).
 
 Left:
 
@@ -322,30 +502,24 @@ the folder's path; `docs/research` excluded):
 | `vendor` | 1,006 | 42,864 | — | — | the Effect pin |
 | `docs/research` | 8,840 | 46,604 | — | — | the sweep proposed on 2026-10-20 |
 
-What the measurement says, and the moves it suggests:
+What the measurement says, as candidates. The architecture pass of 2026-10-20 wrote them as
+cards (`architecture-review-2026-10-20.html` in the session's scratch folder, not in the tree).
+The numbers are `git ls-files` and `git log -1` on the same day.
 
-1. **`harness/` is two things.** The prelude (`prelude.ts` and its four siblings) is imported
-   by every printed program. It and the session protocol (`session/`) are product components
-   in a folder named for a retired lane. The corpus (`Truth.lean`, `corpus.json`, `generated/`) is a
-   test fixture. Eight probe folders are reached by nothing. Move: `ts/prelude/`,
-   `ts/protocol/`, `Test/Corpus/`, the codec lane under `Test/`; delete the eight and
-   `schema-host`; `harness/` goes.
-2. **`tools/` is split by mechanism.** `Tools` holds `--run` drivers and the text writer;
-   `Drivers` holds exes; `src/OCaml5/Tools` holds `lcnfgen`. Regroup by purpose: `tools/Compiler`
-   (the `effect4` exe, `Effect4Gen`, `LcnfGen`, `Code.moduleText`), `tools/Audit` (`ProofGraph`,
-   `Conform`, `TestSupport`), `tools/View`. `ModuleSurvey` goes unless a reader is found.
-3. **`apps/todo` duplicates the dogfood.** Its `EmitTodo.lean` is the second hand pipeline. It
-   goes with the entry point's first slice; the to-do repository is the example.
-4. **`Test/` grows without a census.** The batteries sweep is cut, so a battery runs only when a
-   change reaches it. A census of batteries by last run, and the frozen packets' consumers, is
-   due before more are added. Not a move yet.
-5. **`docs/research`** is the sweep of 2026-10-20, awaiting the owner's yes.
-6. **The proof graph** is three quarters of `src`. That is the product's shape, not a disorder;
-   it stays.
+| # | Candidate | Strength | Files | KB | Reached by | A move touches |
+| --- | --- | --- | --- | --- | --- | --- |
+| C1 | `harness/` dissolves: the prelude to `ts/prelude/`, the session protocol to `ts/protocol/`, the corpus to `Test/Corpus/`, the codec lane to `Test/Codec/`, `tsdiag` to `ts/protocol/` | strong, after E4 | 5, 13, 95, 3, 1 | 2,148 | 17 Makefile lines; the target, ts-reader, tsdiag and service-identity lanes | 34 tracked files name the prelude's path; the owner's `README.md` cites `Truth.lean` three times |
+| C2 | one `emit`: five printers of programs become one deep module, `Compiler.Emit`, whose interface is the manifest | strong | `Drivers.Emit`, `Drivers.Corpus`, `Truth.lean`, `apps/todo/EmitTodo.lean`, the to-do's `Print.lean` (47 lines) and `Main.lean` (19) | — | `make corpus`, `make gen-truth-corpus`, the to-do's `lake exe todo` | `Tools.Code.Module` and `Tools.GeneratedStamp` move to `tools/Compiler/`; the lakefile gains `Compiler` and `effect4` |
+| C3 | deletions: the eight probe folders (36 files, 109 KB), `schema-host` (2, 24), the keyed lane in `session/` (9, 195; `Keyed.lean` broken at base), `ts/eff/probe` (38, 75), `ModuleSurvey` (3, 20), `apps/todo` (7, 37) | strong | 95 | 460 | nothing, except `schema-host` (3 Makefile lines) and `apps/todo` (2 lines, a `node_modules` link) | `harness/README.md`; the owner's `README.md` line 344 |
+| C4 | `tools/` by purpose: `Compiler`, `Audit` (`ProofGraph`, `Conform`, `TestSupport`), `View` (`Tools/View`, the view drivers, `tools/view`) | worth exploring, after C2 | 237 | 3,000 | 33 Makefile lines | the lakefile's `Tools` globs |
+| C5 | `Test/` census by consumer before more batteries: 539 files, 6,316 KB, all touched in October 2026 | speculative | — | — | — | not a move |
 
-The moves are mechanical, each a `git mv` with its Makefile paths and `make check-sweep`. They
-can run as one slice after the retirement's pass two and before the entry point lands. Then
-the entry point is written into the new layout.
+The proof graph is three quarters of `src`. That is the product's shape, not a disorder; it
+stays. `docs/research` is the sweep of 2026-10-20, awaiting the owner's yes.
+
+C3 runs first, once M1 lands: M1 edits `Produce.lean` in two of the probe folders. C2's first
+slice follows in `tools/Compiler/`, a new folder. C1 follows E4, so the printed import changes
+once. Then the entry point's remaining commands land in the new layout.
 
 ## 8. Sources
 
