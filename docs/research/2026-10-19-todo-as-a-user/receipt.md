@@ -66,3 +66,60 @@ The library's gates did not run: no library file changed. `make check-full`, `la
   is ignored, not committed.
 - The findings may reorder `coherence.md` §9.1; this receipt proposes no row. Findings 3.1 and
   3.2 ask for new items, and 3.3, 3.4 and 3.7 add evidence to item 9.
+
+## 5. After move G: the key names, 2026-10-20
+
+**The one thing to know:** move G breaks two files of the project at `689b0a9`. `typedJson`
+now passes the key names, and the README's lowering command writes `ocaml/todo_gen.ml` again.
+
+The project's `main` moves from `689b0a9` to `6be67a1`. Every run read the library at
+`6d12bc246` on `refactor/phase1-phase3`. The commit changes three files of the project:
+
+- `Todo/Host.lean`: `typedJson` passes the key names, and its docstring says so.
+- `ocaml/todo_gen.ml` and `ocaml/closure-todo_gen.tsv`: written again by the README's lowering
+  command.
+
+The line a user now writes gives the codec the module's key names first:
+
+```lean
+Ty.encode (nativeSignature b.table).keyNames (.exitOf b.ty.answer b.ty.error) (Machine.exitImage.toVal e)
+```
+
+`nativeSignature` (`src/Effect4/Program/Native.lean`) carries the names that the program's rows
+give their keys. The faces probe passes them the same way, in its `typedJson`
+(`docs/research/2026-10-19-schema-as-the-carrier/probe/Faces.lean`).
+
+The native side breaks too. Move G gives `Defect.missingService`
+(`src/Effect4/Machine/Alphabets.lean`) its key. The lowered file still matched the constructor
+without it. The lowering reaches the defect through `Machine.exitImage` (the same file), which
+the root `Todo.Host.resultVal` calls through `exitVal`. The new closure grows from 367 to 373
+nodes, with `Env.serviceKeyImage` (`src/Effect4/Machine/ContextMap.lean`) among them.
+
+Each Lean command ran through `python3 /private/tmp/seams-lean-one.py` from inside the project,
+in the README's order. Each time is the wall clock of `/usr/bin/time -p`.
+
+| Command | Result |
+| --- | --- |
+| `lake build` at `689b0a9`, the red control | refused at `typedJson`: `.exitOf` met the expected type `KeyNames`; 10.48 s |
+| `lake build` | passed: 249 jobs, 11.19 s; `Todo.Host` and `Todo` rebuilt, nothing of the library |
+| `lake exe todo` | eleven lines, equal to those of the `689b0a9` binary; 1.80 s |
+| `opam exec --switch=effect4 -- dune build ./todo_native.exe` before the lowering, the red control | refused: `Defect.MissingService` expects 1 argument |
+| the README's `lake exe lcnfgen …` | closure 373 of 4000; `Ml.checkModule: PASS`; 6,394 lines; a second run wrote the same bytes |
+| the README's `dune build ./todo_native.exe`, then the native run against `lake exe todo --json` | exit 0, 1.14 s; `SAME` |
+| `lake exe todo ts` into a scratch folder | both files equal `ts/todo.gen.ts` and `ts/todo.surface.gen.ts` byte for byte |
+| `lake exe todo --json \| bun ts/lean-lines.ts \| diff - <(bun ts/run.ts)` | `SAME` |
+| `lake exe todo --typed \| diff - <(bun ts/run.ts --typed)` | `SAME` |
+| each comparison with one Lean line altered, the red controls | `diff` exit 1 |
+
+No typed line differs between the faces. The eleven typed lines also equal those of the
+`689b0a9` binary, built before the move.
+
+- **Tested:** the three comparisons, a finite probe of eleven requests on one machine. The
+  TypeScript face is host-only: it ran under Bun 1.4.2 on `effect` 4.0.0-rc.112.
+- **Reproduced:** the lowered file and the printed module, each by a byte comparison against a
+  fresh producer run.
+
+The comparisons do not reach the defect's encoding. No request of the script dies, so the key
+names change no line here. `tsgo` did not run again, since the printed files and the prelude did
+not change. No library file changed but this receipt, so no library gate ran and no axiom output
+applies.
