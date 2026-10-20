@@ -402,14 +402,97 @@ value, such as programs, types and refusals.
 | R2 | Does P1, total by refusal and complete against codec admission, enter the registry as a claim with a planned goal? | yes, by a proposed row |
 | R3 | Does the surface carry the exit codec per method, with the declarations? | yes, move F, after A |
 | R4 | A program whose answer is a handle | `refused`, with the tool's carrier wire for it, marked internal |
-| R5 | The defect domain: a payload defect carrying rc.112's raw JSON, or the canonical closed alphabet with an injective encoding | the canonical alphabet now, raw for user defects and name-and-message for machine defects, with `missingService`'s key stored; the payload defect later, if the machine's own markers must match rc.112's messages exactly |
+| R5 | The defect domain: a payload defect carrying rc.112's raw JSON, or the canonical closed alphabet with an injective encoding | **ruled 2026-10-19 (the owner): "the canonical defect alphabet with an injective encoding, raw for user defects and name-and-message for machine defects, with missingService's key stored"**; the payload defect later, if the machine's own markers must match rc.112's messages exactly |
 | R6 | Is an exit observed without its annotations, at every depth? | yes, D2 |
-| R7 | One numeric bound, `safeBound`, on both wires and at the observation; and does Lean's machine refuse arithmetic past it, as the prelude does? | one bound, yes; the machine's refusal is M2's decision |
+| R7 | One numeric bound, `safeBound`, on both wires and at the observation; and does Lean's machine refuse arithmetic past it, as the prelude does? | **ruled 2026-10-19 (the owner): "one numeric bound, safeBound, on both wires and at the observation, under M2"**; the machine's own refusal past the bound stays M2's decision |
 | R8 | The first landing's scope: terminal output with expanded declarations, traces deferred to E | yes |
 | R9 | The public shape: `terminal`, `refused` and `live` as three cases, with the text profile of move C | yes |
 
 
-## 11. What this does not establish
+## 11. The queue: J, then G
+
+The owner, 2026-10-19: "Record both and queue moves J and G first, in the reworked order." The
+two briefs follow. Each lands as AGENTS.md's Working section asks: a narrow build, `#axiom_audit`
+over the touched modules, and the behaviour gate the change reaches. Semantics generation stays
+paused, so each receipt proposes its registry text.
+
+### 11.1 Move J: one numeric bound on both wires
+
+- **Concept and property.** Concept 5, exact codecs: codec admission of a natural is the
+  profile's bound, `safeBound`, on the nat wire as on the int wire. It serves R3 (data) and
+  §9.1 item 2, M2.
+- **The change.** `wireAlgebra.ty_nat` (`src/Effect4/Schema/Codec.lean`) encodes `.nat n` only
+  when `n ≤ safeBound`, and its decode keeps `nat?` under the same bound, as `intJson` and `int?`
+  do. `Val.hasTy` does not change: a natural past the bound stays a member and stops being a
+  codec value, which is what P1 says.
+- **The laws.** Every lemma of `src/Effect4/Laws/Schema/Codec.lean` with a nat arm is repaired
+  under the new guard; `decode_iff`, `decode_encode` and `encode_injective` keep their
+  statements. A new finite control reads `isCodecValue .nat (.nat (2^53-1)) = true` and
+  `isCodecValue .nat (.nat (2^53)) = false`.
+- **The controls.** `Test/Codegen/DataCodec.lean`: the two naturals above, on both sides of the
+  bound, as finite evaluations. The codec lane: `harness/truth/schema-codec/Emit.lean` gains the
+  bound pair under `encodingRefusals` and `check.ts` reads it against rc.112's `isInt`, so both
+  faces refuse 2^53 together. The faces probe's `exactBound` moves from `refusedEffect` to
+  `refusedBoth` in `probe/expected.tsv`.
+- **What it does not do.** It does not make the Lean machine's `add` refuse past the bound; the
+  prelude does, and that is M2's own decision. The ingress judgment, `natLiteralsInProfile`
+  (`src/Effect4/Codegen/Checked.lean`), stays as it is.
+- **The reach.** The codec is not in the lowered closure (`ocaml/gen/api_gen.mli` names no
+  `schema_codec` root), so no OCaml regeneration. The gate is `check-ts`.
+- **Size.** S.
+
+### 11.2 Move G: the canonical defect alphabet, encoded as Effect writes a defect
+
+- **Concept and property.** Concept 5: the defect's codec is injective on the canonical defects
+  and writes rc.112's raw form. It serves R3 and §9.1 item 5.
+- **The domain.** A defect is canonical when it is `Defect.ofError`'s normal form: `user n`,
+  `error e` with `e` neither `tag _` nor `boom`, or a machine defect. `tag n` is `user n`, and
+  `boom` is `badName`, as `ofError` already says (`src/Effect4/Machine/Alphabets.lean`). Codec
+  admission requires the canonical form.
+- **The encoding.** `user n` is the number `n`. `error (text s)` is the string `s`. `error
+  (tagged t m)` is the array `[t, m]`. `error (payload p)` is `{"payload": hex}`. A machine
+  defect is `{"name": N, "message": M}`. `asyncFiber` is rc.112's `AsyncFiberError` with its
+  message, pinned by line. `missingService key` is `Error` with "Service not found: " and the
+  key's spelling. That spelling is the service's declared name in the signature, and
+  `effect/Scope` for the built-in scope. `notImplemented` and `badName` are Lean's own, with
+  `Effect4` as the name.
+  The decoder reads each form back by its JSON kind: number, string, two-string array, a
+  `payload` object, a `name` and `message` object. Injective on the canonical domain by
+  construction, which a finite control reads.
+- **The representation.** `Defect.missingService` gains its key: `missingService (key :
+  ServiceKey)`. `serviceLookupK` (`src/Effect4/Program/Compile.lean`) stores it. Every match on
+  `Defect` follows the new-field checklist. They are `Defect.ofError`, `Defect.image`,
+  `encodeDefect` and `decodeDefect`, `src/Effect4/Machine/Stores.lean`, and the law modules that
+  name `Defect.missingService` (`Laws/Machine/ContextValue.lean`, `Laws/Machine/Witnesses.lean`,
+  `Laws/Program/DenoteR.lean`, `InterpR.lean`, `BlockMeaning.lean`, `Agreement.lean`,
+  `Agreement/Blocks.lean`, `Typed/Commands/Clauses/Spawn.lean`, `Typed/Commands/Evaluate.lean`,
+  `Laws/Schema/Codec.lean`), and the truth harness (`harness/truth/Truth.lean`).
+- **The callers.** `defectWire` in `harness/truth/run-truth.ts` goes, with its two controls;
+  the truth lane's defect JSON becomes `encodeDefect`'s. The faces probe's `dieNat`,
+  `dieString`, `forkDieJoin` and `asyncSleep` move from `differ` to `equal` in
+  `probe/expected.tsv`.
+- **The reach.** `Effect4.Machine.Defect` is an opened type of the lowered closure
+  (`ocaml/eff/eff_types.ml`), and a defect crosses the host wire inside a completion. So the
+  change reaches `make gen-eff`, `make gen-lcnf`, the wire goldens and the session fixtures.
+  The gates are `check-ts` and `check-ocaml`.
+- **Open point for the slice.** The key's spelling in a message needs the signature's
+  declarations at encode time, and the inverse at decode time. The slice settles whether the
+  defect stores the key and the codec takes the declarations, or the defect stores the
+  spelling. The brief recommends the key, with the spelling from the declarations, since the
+  key is what the machine has.
+- **Size.** M.
+
+### 11.3 The proposed decisions row
+
+For the coordinator, who owns the register. "Row 421. Schema as the carrier, the owner's
+rulings of 2026-10-19 (`docs/research/2026-10-19-schema-as-the-carrier.md` §10, after Codex's
+review). (1) The observation of a run is its exit encoded at the certificate's exit type, total
+by refusal (D1, P1). (2) The defect alphabet is canonical. Its encoding is Effect's raw form for user
+defects and name-and-message for machine defects, with `missingService`'s key stored (R5, move
+G). (3) One numeric bound, `safeBound`, on both wires and at the observation, under
+M2 (R7, move J). (4) The order: J, G, then H, D, A with C, the native comparison, B, E, F, I."
+
+## 12. What this does not establish
 
 - No theorem landed. The to-do probe is eleven requests, and the faces probe is 40 programs,
   each on one machine under one host.
@@ -424,7 +507,7 @@ value, such as programs, types and refusals.
 - The OCaml face printed nothing by D1: the native run still prints the value tree, and move A
   is what lowers D1 into the kit.
 
-## 12. The rulings packet
+## 13. The rulings packet
 
 Each ruling, with its evidence in the tree and in the probes, and the recommendation.
 
