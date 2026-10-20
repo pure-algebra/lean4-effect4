@@ -203,13 +203,14 @@ First, before item 1: the to-do as a user's project, outside the library
 | 2 | **M2, one profile judgment at ingress** (was item 9; with R2's A5.2) | `CodecProfile.carries`, `natLiteralsInProfile`, `E4_engine.check_answer` and the emitted literal walk; the A1.1 defect on `eff` | S to M |
 | 3 | **M3, one program codec, lowered** | `OCaml5.Eff.wireModule`, `ocaml/eff/eff_wire.ml` (1,267 generated lines), the 89 `.bin` goldens | M |
 | 4 | **M4, one type spelling, then E6**: `Nat` and `Int` exact in OCaml | `OCaml5.Lcnf.ClockFlow` (605 lines), the clock rows, the saturating `Lcnf_nat` bodies; the bound's five spellings into one owner, `Option Nat`, `none` for the native profile (owner, 2026-10-20) | M |
-| 5 | **M8, one observation, one check, the kit's commands as queries** (was item 6; row 414 (3); A6, with R2's A7.1) | `Api.check`, `Api.explain`, `Run.Kit.check`, `Run.Kit.admit` and `Run.Preview.admit` as separate entries; `Run.observe`, `Run.work`, `machineViewOf`; `Kit_serve`'s execution; `Kit.explore`'s missing refusal of an unsupported program (owner, 2026-10-20) | M |
-| 6 | **M9, the typing rule as two tables**, in three stages | most of `Annotate.lean` and of `annotate_eq_table`'s induction; then `EditSession`; the checker's three term arms' address fields, into located arms (M1's proposal; owner, 2026-10-20) | L |
-| 7 | **M7's rest: the old readers go, then a fold for `Shape`** | `readIn` and its siblings, `Agrees` and the binary64 families; the hand triples of `src/Effect4/Tool/Methods.lean` | M |
-| 8 | **M5, one journal construction**, without the store's part | six spellings of a state reached by its journal, into `Replayed`; about eight append laws | M |
+| 4b | **Value linkage between artifacts** (§9.3): an artifact imports another artifact's lowered roots instead of walking them, so a Lean declaration is lowered into one artifact | the copies: 894 of `api_engine.ml`'s 900 nodes and 107 of `eff_image.ml`'s 115 are `closure_gen.ml`'s | S to M |
+| 5 | **M8, one observation, one check, the kit's commands as queries** (was item 6; row 414 (3); A6, with R2's A7.1; amended by §9.3 and row 428: the observation in two layers, the machine half a function of `Api.Machine`; the check is the certificate spine in the admission order on both faces, over the full `SigApp`; `explore` is the Tool's `preview` query; `run` lowers `Run.atBudget`; `Run.Tree.level` and `statements` are named as unfoldings) | `Api.check`, `Api.explain`, `Run.Kit.check`, `Run.Kit.admit` and `Run.Preview.admit` as separate entries; `Run.observe`, `Run.work`, `machineViewOf`; `Kit_serve`'s execution; `Kit.explore`'s missing refusal of an unsupported program (owner, 2026-10-20) | M |
+| 6 | **M9, the typing rule as two tables**, in three stages (amended by §9.3: an answer at every sort; `afterRet` and the signature as inherited attributes; the layer references a named pre-pass; the root definition block the same evaluator; the lemma that a refusal's site resolves, at stage 3) | most of `Annotate.lean` and of `annotate_eq_table`'s induction; then `EditSession`; the checker's three term arms' address fields, into located arms (M1's proposal; owner, 2026-10-20) | L |
+| 7 | **M7's rest: the old readers go, then a fold for `Shape`** (the first step landed 2026-10-19, `a2cfa8de5`; amended by §9.3: `NatJson` gains `DecidableEq`; `Tools.JsonBridge`, `WireText`, `Catalogue`, four batteries and two registry pointers move; the genesis digest stays byte-identical; the three other hand recursions on `Shape` fold too) | `readIn` and its siblings, `Agrees` and the binary64 families; the hand triples of `src/Effect4/Tool/Methods.lean` | M |
+| 8 | **M5, one journal construction**, without the store's part (amended by §9.3 and row 428: two families; `Replayed` with `Located Nat ε` for the partial steps, the monoid action `Play` for the total ones; `Exchange.load` and `Live` as adapters; a duplicate node is a no-op) | eight spellings of a state reached by its journal, five proof fields; about eight append laws | M |
 | 9 | **The typed host interface from `eff_rows`** (F3; was item 7): the host record and its reactor, keys by name. A row method given an extra argument should name its arity, not the internal type `Env` | `Todo/Typed.lean`, `REPO`, the README's hand keys | M |
 | 10 | **A public-name manifest for Lean** (was item 10): each name of the entry modules taught, internal or test-only | `Program.Edit` and `Program.SketchWire` from the entry; the extra run and check entries, marked internal | S |
-| 11 | **M10, carriers as rows, one machine, then the run layer over it** | `ocaml/engine/externs.txt` outside Lean; the hand machine and its drive | L |
+| 11 | **M10, carriers as rows, one machine, then the run layer over it** (amended by §9.3 and row 428: no hand machine exists; the functor lowering with its 35 hand store bodies goes; rows for a persistent map and a persistent sequence; each row's control a differential against `closure_gen.ml`; P9 (b)'s six interfaces are the rows' specifications) | `ocaml/engine/externs.txt` outside Lean; `api_engine_prelude.ml` (573 hand lines); `api_engine.ml` as a second lowering; the `INSTANCE` transcription and `E4_diff`'s renderings; the hand drive | L |
 
 - **M1 landed** 2026-10-20 (`be13aee02`). Nine records are now `Located Site Reason`:
   `Authoring.Refusal`, `DocumentRefusal`, `FormationRefusal`, and the six record, tuple and fold
@@ -284,6 +285,10 @@ First, before item 1: the to-do as a user's project, outside the library
 - **The order from here** (the owner, 2026-10-20): the entry point's first slice, then M3, then C1's
   moves under E4. Then M4 with E6, then `run`, then M8. Seats alternate between the chain and the
   entry point whenever one unblocks a deletion in the other.
+- **Today's order** (the owner, 2026-10-20, evening: "the good solution to land", no shortcuts). M4
+  and C2's second slice hand back and merge. Then value linkage (4b), then `run`, then M8 as
+  amended. M9, M7, M5, items 9 and 10 and M10 follow in this table's order. Each brief is drawn
+  from §4 of the audit and from §9.3 here, and lands no shape that §9.3 amends unamended.
 
 ```mermaid
 flowchart LR
@@ -294,6 +299,9 @@ flowchart LR
   M1 --> M5["8 M5 one journal"]
   M8["5 M8 one check, one view"] --> M10["11 M10 carriers as rows"]
   M4 --> M10
+  M4 --> VL["4b value linkage"]
+  M3 --> VL
+  VL --> M8
   M8 --> N["10 Lean names"]
   F3["9 eff_rows host seam"] --> N
   M7["7 M7 Shape fold"]
