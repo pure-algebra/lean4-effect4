@@ -474,7 +474,7 @@ The owner ruled a fast cutover. What this changes in the packet above, and nothi
 - **Evidence.** *Proved*: `read_print`, `read_exact`, `readModule_printModule`,
   `readClassDecl_exact`, `admitModule_classDecls`. *Tested*: tsgo 7.0.0-dev.20260629.1 on a green
   file and a red twin (TS2740, TS2375, TS2353, TS2322), the TypeScript reader lane, and two truth
-  programs against rc.112. Seat E2's receipt: `docs/research/2026-10-04-seat-E2-receipt.md`.
+  programs against rc.112. Seat E2's receipt: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-04-seat-E2-receipt.md`.
 
 ## Amendment, 2026-10-05: an operation's binder term (the state plan's T5, decisions row 251)
 
@@ -604,7 +604,7 @@ What this changes in the packet above, and nothing else:
   tag no longer discriminates. The helpers keep no arbitrary TypeScript refinement.
 - **The truth claim (§4).** The truth corpus gains `pRateRequest` and `pDeferredGate`
   (`harness/truth/Truth.lean`). The runner's import header names every atom of the generated
-  profile (`harness/truth/run-truth.ts`). It also names the twelve printed helpers that are no
+  profile (`git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). It also names the twelve printed helpers that are no
   atom. So a new atom needs no edit of the header. The lane's compiler controls gain two files.
   `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/literals.typecheck.ts` holds the literal rule's assertions and refusals.
   `git:fa7bdc304b51027313a2b3d02c32df400c0e91df:harness/truth/queue-steps.typecheck.ts` holds the Queue module's six printed steps, each at
@@ -667,7 +667,7 @@ What this changes in the packet above, and nothing else:
 
 - **Quantifier 6 of §4, amended: both faces write a fiber under its number in the recorder's
   order.** The recorder numbers a fiber when it first sees it (`see`,
-  `harness/truth/run-truth.ts`). Lean's reduction reads the same order from its own rows
+  `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). Lean's reduction reads the same order from its own rows
   (`numbering`, `harness/truth/Truth.lean`). A fiber's number is the rank of its first sight: a
   `forked` row that names it as the child, or a `started` row. Before this amendment the Lean
   face wrote the machine's ids, which follow the allocation order.
@@ -698,7 +698,7 @@ What this changes in the packet above, and nothing else:
   - A fiber that is awaited before its first sight. Then rc.112's `exited` row comes after
     the joiner's rows, because the recorder adds its exit observer at the first sight. No
     renaming repairs that. No program of the lane awaits such a fiber
-    (`docs/research/2026-10-06-seat-pub-evidence/README.md`).
+    (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-06-seat-pub-evidence/README.md`).
 - **Evidence.** *Tested*, on rc.112 under bun 1.4.2, with tsgo 7.0.0-dev.20260629.1 for the
   modules: 52 programs agree on exits, schedules and sync exits, with 1 signed divergence.
   *Tested*: the six new programs agree with Lean on every field of the build ledger, on
@@ -714,7 +714,7 @@ What this changes in the packet above, and nothing else:
 - **Quantifier 5 of §4, amended.** The runner's exit column compares the fork entry on both
   faces: the exit of `Api.run` with the exit of rc.112's fork run. Its sync column compares
   the sync entry on both faces, as before. Until this amendment the exit column took rc.112's
-  sync exit whenever the Lean sync run settled (`main`, `harness/truth/run-truth.ts`). That
+  sync exit whenever the Lean sync run settled (`main`, `git:3197fde5752612a5d8c6f3ebc5d33bccac28c5d4:harness/truth/run-truth.ts`). That
   rule is right only for a program whose two entries give one exit. It also reported a
   disagreement of the fork entry as a note.
 - **The truth claim (§4) gains two programs**: `pSemaphoreProtected` and
@@ -735,7 +735,7 @@ What this changes in the packet above, and nothing else:
   disagreements. *Tested*: the build ledger holds 63 programs, and the two new ones agree
   with Lean on every field, on rc.112 and on 4.0.1. *Reproduced before the change*: the two
   programs were red in the exit column alone
-  (`docs/research/2026-10-06-seat-semw-evidence/README.md`).
+  (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-06-seat-semw-evidence/README.md`).
 
 ## Amendment, 2026-10-06: Pool's ten programs, and three sync runs that are pinned apart (decisions rows 274 and 279)
 
@@ -779,7 +779,7 @@ What this changes in the packet above, and nothing else:
   records the bound in the field `ModuleEmission.inProfile`. `Codegen.natLiterals` collects the
   literals through the generated program and term folds.
 - **The statements that change.** `emitModule_erasure`, `Api.printModule_erasure` and
-  `emitModule_complete` take `natLiteralsInProfile program = true` as one more premise.
+  `emitModule_complete` take `rc112.literalRefusal program = none` as one more premise (M2, 2026-10-20: the same value as `natLiteralsInProfile program = true` had).
   `Api.printModule_roundTrip` is unchanged: it assumes a successful print. The term printer
   stays total, so the read-print laws do not move.
 - **The reading half.** `Codegen.admitModule` refuses the same literal after formation, as
@@ -876,7 +876,7 @@ The codegen refactor's CR-8 lands DI-88's first step. Face 3 answers in face 2's
 
 ## Amendment, 2026-10-18: the OCaml estate's JSON is Lean's, lowered; face 7 has two implementations (wave 2, C6)
 
-Wave 2's C6 (merge `526c236a0`, `docs/research/2026-10-18-slices/receipt-w2-json.md`) deleted
+Wave 2's C6 (merge `526c236a0`, `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-18-slices/receipt-w2-json.md`) deleted
 `git:85f83463f644e47e7519f3092ea4f27db8697f96:ocaml/eff/eff_json.ml`, the output of `EffGen`'s
 JSON arm. It also deleted the kit's hand twins
 `git:94593523dba7931a985985e7f15c8f77e799161b:ocaml/eff/eff_json_text.ml` and

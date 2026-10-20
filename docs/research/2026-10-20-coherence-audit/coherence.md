@@ -202,9 +202,9 @@ First, before item 1: the to-do as a user's project, outside the library
 | 1 | **M1, one located refusal** (was release item 8) | `Authoring.Refusal`, `DocumentRefusal`, `FormationRefusal`, item 3b's `ReadFailure`, and the paths in `TermTypingRefusal`'s arms, into `Located Site Reason`; the second prefix rule | S |
 | 2 | **M2, one profile judgment at ingress** (was item 9; with R2's A5.2) | `CodecProfile.carries`, `natLiteralsInProfile`, `E4_engine.check_answer` and the emitted literal walk; the A1.1 defect on `eff` | S to M |
 | 3 | **M3, one program codec, lowered** | `OCaml5.Eff.wireModule`, `ocaml/eff/eff_wire.ml` (1,267 generated lines), the 89 `.bin` goldens | M |
-| 4 | **M4, one type spelling, then E6**: `Nat` and `Int` exact in OCaml | `OCaml5.Lcnf.ClockFlow` (605 lines), the clock rows, the saturating `Lcnf_nat` bodies | M |
-| 5 | **M8, one observation, one check, the kit's commands as queries** (was item 6; row 414 (3); A6, with R2's A7.1) | `Api.check`, `Api.explain`, `Run.Kit.check`, `Run.Kit.admit` and `Run.Preview.admit` as separate entries; `Run.observe`, `Run.work`, `machineViewOf`; `Kit_serve`'s execution | M |
-| 6 | **M9, the typing rule as two tables**, in three stages | most of `Annotate.lean` and of `annotate_eq_table`'s induction; then `EditSession` | L |
+| 4 | **M4, one type spelling, then E6**: `Nat` and `Int` exact in OCaml | `OCaml5.Lcnf.ClockFlow` (605 lines), the clock rows, the saturating `Lcnf_nat` bodies; the bound's five spellings into one owner, `Option Nat`, `none` for the native profile (owner, 2026-10-20) | M |
+| 5 | **M8, one observation, one check, the kit's commands as queries** (was item 6; row 414 (3); A6, with R2's A7.1) | `Api.check`, `Api.explain`, `Run.Kit.check`, `Run.Kit.admit` and `Run.Preview.admit` as separate entries; `Run.observe`, `Run.work`, `machineViewOf`; `Kit_serve`'s execution; `Kit.explore`'s missing refusal of an unsupported program (owner, 2026-10-20) | M |
+| 6 | **M9, the typing rule as two tables**, in three stages | most of `Annotate.lean` and of `annotate_eq_table`'s induction; then `EditSession`; the checker's three term arms' address fields, into located arms (M1's proposal; owner, 2026-10-20) | L |
 | 7 | **M7's rest: the old readers go, then a fold for `Shape`** | `readIn` and its siblings, `Agrees` and the binary64 families; the hand triples of `src/Effect4/Tool/Methods.lean` | M |
 | 8 | **M5, one journal construction**, without the store's part | six spellings of a state reached by its journal, into `Replayed`; about eight append laws | M |
 | 9 | **The typed host interface from `eff_rows`** (F3; was item 7): the host record and its reactor, keys by name. A row method given an extra argument should name its arity, not the internal type `Env` | `Todo/Typed.lean`, `REPO`, the README's hand keys | M |
@@ -251,6 +251,10 @@ First, before item 1: the to-do as a user's project, outside the library
   No claim's statement moved; one claim is new. Proposed: a decisions row for M2. The frozen faces
   contract still names `natLiteralsInProfile`, which the owner amends. `NatJson.limit`, the tool
   schema's maximum and `Within` still spell the bound; M4 gives them its owner.
+
+- **The order from here** (the owner, 2026-10-20): the entry point's first slice, then M3, then C1's
+  moves under E4, then M4 with E6, then `run`, then M8. Seats alternate between the chain and the
+  entry point whenever one unblocks a deletion in the other.
 
 ```mermaid
 flowchart LR
