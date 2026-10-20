@@ -138,4 +138,20 @@ example : preparedPerson.isValue present = Ty.isCodecValue personTy present :=
 #guard (Schema.Codec.prepare .number).isValue (.nat (2 ^ 53 + 1)) = false
 #guard (Schema.Codec.prepare .int).decode (.number Float64.nan) = none
 
+/-! ## One numeric bound on the nat wire (the owner's ruling R7, 2026-10-19; move J)
+
+Codec admission of a natural is the profile's bound, `safeBound`, as at `int`. Membership does
+not change: a natural past the bound stays a member of `nat` and stops being a codec value. -/
+
+-- finite evaluation: the bound itself crosses both ways
+#guard Ty.isCodecValue .nat (.nat (2 ^ 53 - 1)) = true
+#guard Schema.decode .nat (Arch.Json.ofNat (2 ^ 53 - 1)) = some (.nat (2 ^ 53 - 1))
+-- control: one past the bound has no image, and its datum does not read. Binary64 holds that
+-- datum exactly. The admission premise of `decode_encode` stops here.
+#guard Ty.isCodecValue .nat (.nat (2 ^ 53)) = false
+#guard Schema.encode .nat (.nat (2 ^ 53)) = none
+#guard Schema.decode .nat (Arch.Json.ofNat (2 ^ 53)) = none
+-- control: membership stays, so membership does not give codec admission
+#guard Val.hasTy (.nat (2 ^ 53)) .nat = true
+
 end Effect4.Test.DataCodec

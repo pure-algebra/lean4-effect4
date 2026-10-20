@@ -35,7 +35,7 @@ answerIsRef	refusedBoth
 answerIsDeferred	refusedBoth
 answerIsScope	refusedBoth
 boundNat	equal
-exactBound	refusedEffect
+exactBound	refusedBoth
 overNat	refusedBoth
 overInt	refusedBoth
 nestedInterrupt	refusedLean

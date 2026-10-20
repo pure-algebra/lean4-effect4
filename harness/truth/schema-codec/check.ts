@@ -75,6 +75,9 @@ check("nestedRecordMapTuple", schemas.nestedRecordMapTuple,
   { rows: { ["__proto__"]: [adaSome, Option.some(9), true], "a-b": [ada, Option.none(), false] } })
 check("nestedTupleRecordMap", schemas.nestedTupleRecordMap,
   [{ slot: undefined }, { "a-b": Option.none(), ["__proto__"]: Option.some("ok") }, []])
+// The nat wire's bound (the owner's ruling R7). rc.112's natural Schema checks isInt, which is
+// Number.isSafeInteger. So both faces write 2 ** 53 - 1, and both refuse 2 ** 53 (natAboveBound).
+check("natAtBound", schemas.natAtBound, 2 ** 53 - 1)
 
 interface NumericDecoding {
   input: number
@@ -171,13 +174,14 @@ function checkRefusal(name: string) {
 }
 for (const name of [
   "recordMissing", "recordExtra", "recordWrong", "mapWrong", "tuple0Long", "tuple1Short", "tuple1Long",
-  "tuple3Short", "tuple3Long", "tuple3Wrong", "intAboveBound", "intBelowBound", "intPositiveFraction",
+  "tuple3Short", "tuple3Long", "tuple3Wrong", "natAboveBound", "intAboveBound", "intBelowBound", "intPositiveFraction",
   "intNegativeFraction", "intNaN", "intPositiveInfinity", "intNegativeInfinity", "intWrongType", "numberWrongType"
 ]) checkRefusal(name)
 
 const encodingRefusalNames: string[] = []
 let matchingEncoderRefusals = 0
 for (const [name, value] of [
+  ["natAboveBound", 2 ** 53],
   ["intAboveBound", 2 ** 53],
   ["intBelowBound", -(2 ** 53)],
   ["intPositiveFraction", 0.5],

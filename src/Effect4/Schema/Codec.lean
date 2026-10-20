@@ -31,7 +31,9 @@ namespace Effect4.Schema.Codec
 open Effect4 Effect4.Program Effect4.Machine
 
 /-- Decode only exact, nonnegative, integral binary64 data in the image of `ofNat`.
-The reconstruction check rejects fractional values, negative zero and non-finite data. -/
+The reconstruction check rejects fractional values, negative zero and non-finite data.
+It holds no bound. The nat and int wires read it under `safeBound` (`natVal?`, `int?`). The
+number wire and the defect, error and interruptor images read it as it stands. -/
 def nat? : Json → Option Nat
   | .number f =>
     let bits := f.bits.toNat
@@ -184,11 +186,28 @@ structure Wire where
 def Wire.refused (type : Ty) (supported : Bool := false) : Wire :=
   ⟨type, type, supported, fun _ => none, fun _ => none⟩
 
-/-! ## The wires of `int` and `number` (decisions rows 121 and 309; the integers packet, slice 3) -/
+/-! ## The wires of `nat`, `int` and `number` (decisions rows 121 and 309; the integers packet,
+slice 3; the owner's ruling R7 of 2026-10-19, one numeric bound on the nat and int wires) -/
 
-/-- The bound of an integer's JSON image: the profile's, rc.112's `isInt`
-(`Number.isSafeInteger`, `vendor/effect-4.0.0-rc.112/src/Schema.ts`, `isInt`). -/
+/-- The bound of a natural's and an integer's JSON image: the profile's, rc.112's `isInt`
+(`Number.isSafeInteger`, `vendor/effect-4.0.0-rc.112/src/Schema.ts:8298-8304`). rc.112's natural
+Schema and its integer Schema both check `isInt`. -/
 def safeBound : Nat := rc112.natBound
+
+/-- **A natural's JSON image**: a natural inside the bound as `Arch.Json.ofNat` writes it. Outside
+the bound it refuses, though binary64 may hold it exactly. -/
+def natJson : Val → Option Json
+  | .nat n => if n ≤ safeBound then some (Arch.Json.ofNat n) else none
+  | _ => none
+
+/-- **A natural from its JSON image**: an exact, nonnegative, integral binary64 inside the bound
+(`nat?` under `safeBound`). It refuses negative zero, a negative number, a fraction, an infinity,
+a NaN and every natural outside the bound. -/
+def natVal? (j : Json) : Option Val :=
+  (nat? j).bind fun n => if n ≤ safeBound then some (Val.nat n) else none
+
+/-- The wire of `nat`, in the form of `wireAlgebra`'s fields. -/
+def natWire : Wire := ⟨.nat, .nat, true, natJson, natVal?⟩
 
 /-- The sign bit of a binary64 datum. -/
 def signBit : Nat := 2 ^ 63
@@ -254,9 +273,7 @@ def wireAlgebra : TyAlgebra (fun _ => Wire) where
   ty_unit := ⟨.unit, .unit, true,
     (fun | .unit => some .null | _ => none),
     (fun | .null => some .unit | _ => none)⟩
-  ty_nat := ⟨.nat, .nat, true,
-    (fun | .nat n => some (Arch.Json.ofNat n) | _ => none),
-    fun j => (nat? j).map Val.nat⟩
+  ty_nat := natWire
   ty_int := intWire
   ty_string := ⟨.string, .string, true,
     (fun | .str s => some (.str s) | _ => none),

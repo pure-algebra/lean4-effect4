@@ -48,7 +48,9 @@ def cases : List (String × Ty × Store.Val) := [
      ("a-b", .list [ada, .none, .bool false])])]),
   ("nestedTupleRecordMap", .tuple [slotTy, .map .string (.option .string), .tuple []],
     .list [record [("slot", .unit)], mapValue [("a-b", .none), ("__proto__", .some (.str "ok"))],
-      .list []])]
+      .list []]),
+  -- the nat wire's bound, `safeBound` (the owner's ruling R7): both faces write it
+  ("natAtBound", .nat, .nat (2 ^ 53 - 1))]
 
 /-- Duplicate-key cases retain Lean's entry-list input before host object conversion. -/
 def refusals : List (String × Ty × Json) := [
@@ -62,6 +64,7 @@ def refusals : List (String × Ty × Json) := [
   ("tuple3Short", tripleTy, .arr [Arch.Json.ofNat 7, .str "x"]),
   ("tuple3Long", tripleTy, .arr [Arch.Json.ofNat 7, .str "x", .bool true, .bool false]),
   ("tuple3Wrong", tripleTy, .arr [Arch.Json.ofNat 7, .str "x", .str "true"]),
+  ("natAboveBound", .nat, Arch.Json.ofNat (2 ^ 53)),
   ("intAboveBound", .int, .number ⟨0x4340000000000000⟩),
   ("intBelowBound", .int, .number ⟨0xC340000000000000⟩),
   ("intPositiveFraction", .int, .number ⟨0x3FE0000000000000⟩),
@@ -82,6 +85,7 @@ def refusals : List (String × Ty × Json) := [
 /-- Values with no admitted numeric JSON image, including the two inexact magnitudes.
 The host cannot carry either inexact integer before encoding; it already rounds the value. -/
 def encodingRefusals : List (String × Ty × Store.Val) := [
+  ("natAboveBound", .nat, .nat (2 ^ 53)),
   ("intAboveBound", .int, .nat (2 ^ 53)),
   ("intBelowBound", .int, .negInt (2 ^ 53 - 1)),
   ("intPositiveFraction", .int, .float 0x3FE0000000000000),

@@ -453,10 +453,12 @@ def numericCodecCases : List (String × Ty × Store.Val × Json) :=
   , ("numberLargePositive", .number, .nat (2 ^ 60), .number ⟨0x43B0000000000000⟩)
   , ("numberLargeNegative", .number, .negInt (2 ^ 60 - 1), .number ⟨0xC3B0000000000000⟩) ]
 
--- The number boundary accepts exactly representable large integers, refusing rounding.
-#guard Ty.encode .nat (.nat (2 ^ 53)) = some (Arch.Json.ofNat (2 ^ 53))
+-- The nat wire refuses every natural past `safeBound` (the owner's ruling R7, 2026-10-19). It
+-- refuses one that binary64 holds exactly and one that binary64 would round. `number` keeps the
+-- exact data.
+#guard Ty.encode .nat (.nat (2 ^ 53)) = none
 #guard Ty.encode .nat (.nat (2 ^ 53 + 1)) = none
-#guard Ty.encode .nat (.nat (2 ^ 53 + 2)) = some (Arch.Json.ofNat (2 ^ 53 + 2))
+#guard Ty.encode .nat (.nat (2 ^ 53 + 2)) = none
 #guard Ty.decode .nat (.number Float64.negZero) = none
 #guard Ty.decode .nat (.number Float64.nan) = none
 #guard Ty.decode .nat (.number Float64.posInfinity) = none
@@ -728,11 +730,11 @@ open Effect4.Schema.Codec
 -- finite evaluation: the JSON text of an image
 #guard (Ty.encode .int (.negInt 14)).map (Effect4.Codegen.JsonText.render 0) = some "-15"
 #guard Ty.encode .int (.nat 1) = some (Arch.Json.ofNat 1)
--- control: outside the bound both directions refuse; the natural wire still reads 2^53
+-- control: outside the bound both directions refuse, and the natural wire refuses 2^53 too (R7)
 #guard Ty.encode .int (.nat (safeBound + 1)) = none
 #guard Ty.encode .int (.negInt safeBound) = none
 #guard Ty.decode .int (Arch.Json.ofNat (2 ^ 53)) = none
-#guard Ty.decode .nat (Arch.Json.ofNat (2 ^ 53)) = some (.nat (2 ^ 53))
+#guard Ty.decode .nat (Arch.Json.ofNat (2 ^ 53)) = none
 -- control: negative zero, a fraction, a negative fraction, an infinity, a NaN and a string are
 -- no integers
 #guard [Json.number ⟨0x8000000000000000⟩, .number ⟨0x3FE0000000000000⟩,

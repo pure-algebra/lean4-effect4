@@ -677,6 +677,12 @@ theorem named_normJ : ∀ (fields : List (String × (Json → Option Val))),
     · rw [if_neg hk]
       exact named_normJ fields (fun f hf => h f (List.mem_cons_of_mem _ hf)) key j
 
+/-- The natural wire reads a datum and its normal form alike, under its bound: `normJ` keeps a
+number. A step of the claim `decode-iff`. Its consumer is the arm of `decodeRaw_normJ` at `nat`. -/
+theorem natVal?_normJ (j : Json) : natVal? (normJ j) = natVal? j := by
+  unfold natVal?
+  rw [nat?_normJ]
+
 /-- The integer wire reads a datum and its normal form alike: `normJ` keeps a number. The arm of
 `decodeRaw_normJ` at `int`. -/
 theorem int?_normJ (j : Json) : int? (normJ j) = int? j := by
@@ -696,10 +702,7 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
   | bool => intro j; cases j <;> rfl
   | string => intro j; cases j <;> rfl
   | lit _ => intro j; cases j <;> rfl
-  | nat =>
-    intro j
-    show (nat? (normJ j)).map Val.nat = (nat? j).map Val.nat
-    rw [nat?_normJ]
+  | nat => intro j; exact natVal?_normJ j
   | option t ih =>
     intro j
     rw [decodeRaw_option, decodeRaw_option]
@@ -831,6 +834,19 @@ theorem nat?_exact {j : Json} {n : Nat} (h : nat? j = some n) : j = Arch.Json.of
       · exact nomatch h
       · exact key _ h
   | _ => exact nomatch h
+
+/-- **Exactness of the natural wire**: a datum that reads as a natural is that natural's image,
+inside the bound. A step of the claim `decode-iff`. Its consumer is `decodeRaw_exact`, which takes
+it at the leaf `nat` with the datum itself as the witness. -/
+theorem natVal?_exact {j : Json} {v : Val} (h : natVal? j = some v) : natJson v = some j := by
+  unfold natVal? at h
+  obtain ⟨n, hn, hv⟩ := Option.bind_eq_some_iff.mp h
+  split at hv
+  · next hbound =>
+    cases hv
+    rw [nat?_exact hn]
+    simp only [natJson, if_pos hbound]
+  · exact nomatch hv
 
 
 /-! ## Exactness of the two wires of the integers packet (slice 3): `int` and `number` -/
@@ -1364,15 +1380,7 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
     cases j with
     | str s => cases h; exact ⟨.str s, rfl, rfl⟩
     | _ => exact nomatch h
-  | nat =>
-    intro j v h
-    have h' : (nat? j).map Val.nat = some v := h
-    cases hn : nat? j with
-    | none => rw [hn] at h'; exact nomatch h'
-    | some n =>
-      rw [hn] at h'
-      cases h'
-      exact ⟨Arch.Json.ofNat n, rfl, by rw [nat?_exact hn]⟩
+  | nat => intro j v h; exact ⟨j, natVal?_exact h, rfl⟩
   | option t ih =>
     intro j v h
     rw [decodeRaw_option] at h
