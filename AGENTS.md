@@ -44,8 +44,8 @@ four govern form:
 - generated files marked and regenerable;
 - every number in a report behind a command.
 
-The other five govern modeling: interfaces once and small, refusals as values, exact numbers and
-comparison by type, mutation behind pure interfaces, and outside libraries by contract.
+The other five govern modeling. They are interfaces once and small, refusals as values, exact
+numbers and comparison by type, mutation behind pure interfaces, and outside libraries by contract.
 
 ## Representation rules
 
