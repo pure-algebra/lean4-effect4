@@ -4,11 +4,11 @@ The authority for how a host answers a program's calls: what the runtime does to
 known to be wrong, the contract the external lane must meet, the interim profile, and the order
 of work. Written 2026-09-30 at `be15b062`. Decisions rows 95–100 own its open choices. The
 derivations and probes are research records:
-- [the external runtime contract](../research/2026-09-30-external-runtime-contract.md) (Codex,
+- the external runtime contract (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-external-runtime-contract.md`) (Codex,
   the full lane);
-- [host answers and the typed guarantee](../research/2026-09-30-host-answers-and-typed-guarantee.md);
-- [the plan review](../research/2026-09-30-origin-plan-review.md) and its
-  [ratification conditions](../research/2026-09-30-origin-plan-review/RemediationReview.md);
+- host answers and the typed guarantee (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-host-answers-and-typed-guarantee.md`);
+- the plan review (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-origin-plan-review.md`) and its
+  ratification conditions (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-origin-plan-review/RemediationReview.md`);
 - the probes in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-host-answers-evidence` and
   `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-external-runtime-contract`.
 
@@ -41,7 +41,7 @@ Row 373 rules two parts of that promise for the first share (2026-10-13):
   (`docs/core/system-map.md` §8, R6). The TypeScript keyed lane was finite evidence beside them
   (tested). The gates retired it on 2026-10-18, and its runner was deleted on 2026-10-20
   (`git:8e93a284f:scripts/check-host-protocol.py`). The OCaml checked session, slice DM7 of the
-  [session note](../research/2026-10-07-session-api-design.md), comes after the share.
+  session note (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-07-session-api-design.md`), comes after the share.
 - **Typed host answers** (point 3). The guarantee is claimed first on the fragment of data rows.
   On a data row no column holds a handle, and the answer's type is decided by its shape
   (`shapeDecides`, `src/Effect4/Laws/Program/Typed/Membership.lean`). The claim waits on a probe
@@ -294,8 +294,8 @@ external allocation.
 - **One test fixture falls under the rule:** the row `"cell"` of `Test/Api/ExternalContract.lean`,
   which answers a cell. Host-returned internal cells wait for the registry (row 7).
 
-This is item A of the [slice 6 brief](../research/2026-09-30-codex-brief-slice6-and-fixes.md), as
-amended by its [addendum 1](../research/2026-09-30-codex-brief-slice6-addendum-1.md).
+This is item A of the slice 6 brief (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-codex-brief-slice6-and-fixes.md`), as
+amended by its addendum 1 (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-codex-brief-slice6-addendum-1.md`).
 
 ## 6. Order
 
@@ -330,7 +330,7 @@ state at HEAD, by the decisions rows that own it.
    generic-cell work of rows 42–43. Parked.
 
 **The host-call note's three questions** (row 373 (12), 2026-10-13; the
-[host-call note](../research/2026-10-09-host-calls-and-cleanup.md)). A call is an operation of
+host-call note (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-host-calls-and-cleanup.md`)). A call is an operation of
 `RowSig table` (`src/Effect4/Laws/Program/DenoteRows.lean`). The live call view, the view of each
 waiting call, is the view of the session note's slice DM3, with each call's checked instance. The
 note's slice HC-1 folds into DM3.
@@ -339,8 +339,8 @@ note's slice HC-1 folds into DM3.
 
 Two owner rulings of 2026-09-10 govern every boundary in this document. Until 2026-10-01 they
 lived only in research notes, now force-added
-([Decision 12](../research/2026-09-10-schema-at-boundaries.md),
-[the boundary decisions](../research/2026-09-10-boundary-decisions.md)); decisions row 122 writes
+(Decision 12 (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-10-schema-at-boundaries.md`),
+the boundary decisions (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-10-boundary-decisions.md`)); decisions row 122 writes
 them here. Cite the first as "Decision 12", never "D12": in tracked files "D12" also names other
 things.
 
@@ -374,7 +374,7 @@ The finite comparisons in `harness/truth/schema-codec/check.ts` cover the new da
 The strict comparison uses `onExcessProperty: "error"` for host decoding.
 The default host decoder discards extra record fields; the Lean decoder refuses them.
 The controls retain these differences and the duplicate-key text parsing difference explicitly.
-The [Schema host receipt](../research/2026-10-03-data-language/schema-host-receipt.md) records their scope and commands.
+The Schema host receipt (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-03-data-language/schema-host-receipt.md`) records their scope and commands.
 
 S-5 remains the requested finite host check of recorded exits against their published `Schema.Exit`, under decision row 5.
 The Lean codec laws alone establish no rc.112 execution or external host progress.

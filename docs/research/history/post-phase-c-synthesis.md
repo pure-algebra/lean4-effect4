@@ -16,7 +16,7 @@ review and the proposed execution sequence. `docs/STATE.md` owns current status;
 `docs/ARCHITECTURE.md` owns placement; `docs/GENERATED.md` owns generation commands. Earlier
 research notes remain historical evidence, with this review identifying the corrections to
 carry forward. The input is preserved in
-[the evidence folder](../research/2026-09-20-foundation-review-evidence/synthesis-as-received.md).
+the evidence folder (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-foundation-review-evidence/synthesis-as-received.md`).
 No owner choice is inferred from an implementation, a reported conversation, or this review.
 
 ## 1. Scope, method and finishing criteria
@@ -92,7 +92,7 @@ The critical facts are the generated argument lists:
 - Generated `CaptureOk` checks the environment and context separately. Path and source root
   are absent from those checks.
 
-[FoundationProbe](../research/2026-09-20-foundation-review-evidence/Effect4FoundationProbe.lean)
+FoundationProbe (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-foundation-review-evidence/Effect4FoundationProbe.lean`)
 proves the resume predicates unchanged by arbitrary target/token substitution and capture
 checks unchanged by path/root substitution. These are universal facts about the generated
 predicates, checked within the allowed axiom ceiling. They do not allege a runtime defect.
@@ -193,7 +193,7 @@ before treating the protocol interface as frozen.
 The theorem at line 182 includes `h`; `include h` did not insert it into the `def` obligation.
 Take `root = .withFiber (.raceAll .nil)`, `p = rootPoint 0`, and the unconstrained `a = .getId`.
 The decoding premise holds, but the demanded equality `a = .raceAll es` is impossible.
-[RaceObligationProbe](../research/2026-09-20-foundation-review-evidence/Effect4RaceObligationProbe.lean)
+RaceObligationProbe (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-foundation-review-evidence/Effect4RaceObligationProbe.lean`)
 proves the negation of the actual instantiated obligation's `.statement`, at `[propext]`.
 This is a landed specification defect, not merely a search-normalization miss.
 
@@ -237,7 +237,7 @@ map over subsequent matches; it does not remove list entries. Under unique map I
 be a no-op. However, uniqueness alone is not preserved by `memoFork`: one map numbered zero
 with `nextName = 0` acquires another zero map. A supply bound alone also permits duplicates.
 The checked finite counterexamples are in
-[MemoProbe](../research/2026-09-20-foundation-review-evidence/Effect4MemoProbe.lean).
+MemoProbe (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-foundation-review-evidence/Effect4MemoProbe.lean`).
 
 Proposed sufficient invariant:
 
@@ -665,7 +665,7 @@ with evidence while calling the ledger closed.
 Reviewed tree: `10d5c009`; initial changes were an edited STATE pointer and an untracked core
 synthesis. This review changes planning documentation only and retains standalone evidence.
 The exact newly checked probes and the final statement-audit result are recorded in
-[the verification receipt](../research/2026-09-20-foundation-review-evidence/receipt.md).
+the verification receipt (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-foundation-review-evidence/receipt.md`).
 
 Fresh focused dependency build:
 
@@ -695,7 +695,7 @@ A fresh filesystem and TypeScript syntax inventory finds 452 `.ts` sources under
 13-family disposition below. The syntax parser reported zero syntax errors. Its counts are
 not type-checking or semantic evidence.
 
-The [source inventory and reproducible script](../research/2026-09-20-foundation-review-evidence/semantic-inventory/README.md)
+The source inventory and reproducible script (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-foundation-review-evidence/semantic-inventory/README.md`)
 retain all paths, exported names and source hashes. The snapshot counts 4,281 directly exported top-level names in root files including the barrel,
 704 internal, 3,479 unstable, and 20 testing. It includes types/aliases, merges overload names
 within a file, and does not resolve inherited export-star names, namespace members or overload
@@ -819,7 +819,7 @@ two real implementations require it.
 
 ### 11.5 All design issues are in the plan
 
-The [all-row planning map](../research/2026-09-20-foundation-review-evidence/design-issue-map.md)
+The all-row planning map (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-foundation-review-evidence/design-issue-map.md`)
 contains 194 records: all 88 numbered decision rows, DI-00 through DI-100 (101 rows), and the
 five Config packet questions. It preserves both decision registers' own status and source
 anchors and routes each row to a workstream, contract prerequisite and proposed next action.
