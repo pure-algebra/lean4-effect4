@@ -53,6 +53,5 @@ skills-lock.json
 /ocaml/**/node_modules
 
 
-/harness/truth/session/.work/
 /harness/truth/schema-codec/.work/
 

@@ -1,5 +1,0 @@
-find: ocaml: No such file or directory
-find: src/Effect4/Schema: No such file or directory
-find: Test/fixtures/trust-gate: No such file or directory
-lean-imports: cannot read /Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-service-client-overwatch/checks/imports-_6vzry1n/missing_file.lean: [Errno 2] No such file or directory: '/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-service-client-overwatch/checks/imports-_6vzry1n/missing_file.lean'
-make: *** [probe] Error 1

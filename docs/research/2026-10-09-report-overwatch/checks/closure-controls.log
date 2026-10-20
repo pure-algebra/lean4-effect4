@@ -1,5 +1,0 @@
-fixture ReviewClosure.rebuilt: lets=[table], excluded=false
-fixture ReviewClosure.instSizeOfRebuilt: lets=[table], excluded=true
-fixture _private.ClosureControls.0.ReviewClosure.privateRebuilt: lets=[table], excluded=true
-fixture ReviewClosure.proofOnly: lets=[h], excluded=false
-fixture ReviewClosure.asData: lets=[], excluded=false

@@ -8,9 +8,9 @@ Effect TypeScript or any host runtime.
 
 Status: decision record begun 2026-08-31; refreshed 2026-10-01 at `dceae006` (the DESIGN-BASIS
 refresh, seat H of the 2026-10-01 landing; receipt
-`docs/research/2026-10-01-design-basis-refresh/receipt.md`) and re-pinned at `6b3f2c92`, DB-16
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-design-basis-refresh/receipt.md`) and re-pinned at `6b3f2c92`, DB-16
 re-read there (decisions row 154; receipt
-`docs/research/2026-10-01-design-basis-refresh/receipt-H2.md`). This file owns settled decisions,
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-design-basis-refresh/receipt-H2.md`). This file owns settled decisions,
 their rationale and dated evidence receipts. It owns no live status: a row's status is a link to
 the system map's §8 (`docs/core/system-map.md`), which alone owns the status of the
 requirements; open decisions live in `docs/core/decisions.md` and `docs/DESIGN-ISSUES.md`. The
@@ -43,7 +43,7 @@ check behind it is the trust gate's, at `[propext, Quot.sound]` (the refresh ran
 Paths and commits. Tree paths are from the repository root, with lines at `6b3f2c92`, where
 decisions row 154 re-pinned them from `dceae006`; a cited line in a file that changed since may have
 moved, and this refresh's checker prints where its text sits at a later commit
-(`check_citations.py --drift <rev>`, in `docs/research/2026-10-01-design-basis-refresh/`).
+(`check_citations.py --drift <rev>`, in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-design-basis-refresh`).
 `Effects/…` is the pinned `effects` package (`lakefile.toml:126-131`: tag `v0.8.0`, `a4ee7a14`). A
 bare `Name.ts:n` is under `vendor/effect-4.0.0-rc.112/src/`. `git:<rev>:<path>` is a path at the
 commit named, in earlier history. Decisions rows are cited as `docs/core/decisions.md` holds them at
@@ -220,15 +220,15 @@ Two facts bound what extension means.
   (`src/Effect4/Laws/Program/Sched.lean`), `meaning_via_rsig`
   (`src/Effect4/Laws/Program/Sched.lean`), `denoteR_straight`
   (`src/Effect4/Laws/Program/DenoteR.lean`). Proved in research probes, by the seats named:
-  `along_bind` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:239`),
-  `interpret_along` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:253`),
-  `typed_along` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:266`),
-  `typed_antitone` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:198`), and
+  `along_bind` (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`),
+  `interpret_along` (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`),
+  `typed_along` (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`),
+  `typed_antitone` (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`), and
   the red controls `reflection_needs_back`
-  (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:190`),
+  (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`),
   `order_widening_loses_typing`
-  (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:215`),
-  `post_refinement_needed` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:332`)
+  (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`),
+  `post_refinement_needed` (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`)
   (the model probe's pedigree seat); `c4_iff`
   (`git:f62c972d:docs/research/2026-09-30-model-probe/pedigree/VerifyConservativity.lean:84`), `mono_needed`
   (`git:f62c972d:docs/research/2026-09-30-model-probe/pedigree/VerifyConservativity.lean:143`),
@@ -263,18 +263,18 @@ Two facts bound what extension means.
   retypes old programs, a reserved name, a fresh key's printed text, an unregistrable append, the
   table-monotonicity failure) have no register ids yet; the model probe proposes them as `Test`
   controls with the Σ_app slice (synthesis §6).
-- **Sources.** `docs/research/2026-09-30-model-probe/synthesis.md` §2.1, §2.2 (R1, R2), §3.1, §3.3,
-  §6 D1 (tracked); `docs/research/2026-09-30-codex-review-model-probe/audit.md` §4, §6 (tracked);
-  `docs/research/2026-09-30-model-probe/pedigree/note.md` §3 (tracked);
-  `docs/research/2026-09-30-model-probe/pedigree/verify.md` §2 items 8–9 (tracked);
-  `docs/research/2026-10-01-formal-pass/synthesis.md` §1 item 9, §2, §4.4 (tracked);
-  `docs/research/2026-10-01-formal-pass/algebra/note.md` §1 row 1, §2.1 (tracked);
-  `docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-06 (tracked);
-  `docs/research/2026-10-01-formal-pass/types/note.md` §3 (tracked);
-  `docs/research/2026-10-01-formal-pass/types/verify.md` TY-06 (tracked);
-  `docs/research/2026-09-16-core-goals-and-end-state.md` §8, §10 (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §2.1, §2.2 (R1, R2), §3.1, §3.3,
+  §6 D1 (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-codex-review-model-probe/audit.md` §4, §6 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/note.md` §3 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/verify.md` §2 items 8–9 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/synthesis.md` §1 item 9, §2, §4.4 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/note.md` §1 row 1, §2.1 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-06 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/types/note.md` §3 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/types/verify.md` TY-06 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-16-core-goals-and-end-state.md` §8, §10 (tracked).
 - **Literature.** Plotkin and Pretnar, *Handling Algebraic Effects*: read, §1 and §5
-  (`docs/research/2026-09-07-lit-papers.md` Q11). Bauer and Pretnar, *Programming with Algebraic
+  (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-07-lit-papers.md` Q11). Bauer and Pretnar, *Programming with Algebraic
   Effects and Handlers*: by name. Swierstra, *Data Types à la Carte*: read, §2 and §6 (the model
   probe's pedigree seat). Hyland, Plotkin and Power, *Combining effects: sum and tensor*: by name
   only, its content assumed. Goguen, Thatcher, Wagner and Wright (1977): by name. Ehrig and Mahr
@@ -320,7 +320,7 @@ uninspectable escape from being mislabeled as full reification.
   at `606918e` and on `archive/flow-route` (history, not re-read).
 - **Refusals.** `E4-ALG-CE-007` (archived: the higher-order carrier is not canonical program
   content); the Flow route's rows in the archive register.
-- **Sources.** `docs/research/2026-09-30-model-probe/synthesis.md` §3.3, the DB-02 row (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §3.3, the DB-02 row (tracked).
 - **Literature.** None.
 - **Status.** Settled (superseded); witnesses re-read at `6b3f2c92`.
 
@@ -372,7 +372,7 @@ different fact, injectivity of the behaviour map; the tree neither claims nor ne
 row 146, recorded), and `behaviour_unique` does not discharge it.
 
 Two invariants are proposed and not ruled: INV-TAPE-1, no off-tape choice, and INV-TAPE-2, a
-frontier records what it awaits (`docs/research/2026-09-07-lit-papers.md` Q7 and §A item 1).
+frontier records what it awaits (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-07-lit-papers.md` Q7 and §A item 1).
 No decisions row rules them (the model probe's D7 is open); where they stand is R12's.
 
 - **Decision.** Meaning is a relation over the machine and the decision tape; given a tape, the
@@ -402,13 +402,13 @@ No decisions row rules them (the model probe's D7 is open); where they stand is 
 - **Refusals.** `E4-SCHED-CE-015` (row 95's repair: the capstone counts only tapes with no host
   answer), `E4-BEH-CE-001`, `E4-BEH-CE-002`, `E4-LIVE-CE-001`, `E4-LIVE-CE-002`; DI-23, DI-57,
   DI-58, DI-68. Decisions row 95 (ruled, landed) and row 146 (recorded); status: those rows.
-- **Sources.** `docs/research/2026-09-05-runtime-semantics-core-math.md` §2, §4, §9 (tracked);
-  `docs/research/2026-09-07-lit-papers.md` Q7, Q10, §0, §A (tracked);
-  `docs/research/2026-09-05-effects-papers-review.md` §1.4, §7 (tracked);
-  `docs/research/2026-09-30-model-probe/synthesis.md` §2.2 R12, §3.1 "Behaviour is a function of the
-  tape" (tracked); `docs/research/2026-10-01-formal-pass/synthesis.md` §1 item 5, §2, §4.4
-  (tracked); `docs/research/2026-10-01-formal-pass/algebra/note.md` §1 row 5, §2.5, A7 (tracked);
-  `docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-07, ALG-13, ALG-19 (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-runtime-semantics-core-math.md` §2, §4, §9 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-07-lit-papers.md` Q7, Q10, §0, §A (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-effects-papers-review.md` §1.4, §7 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §2.2 R12, §3.1 "Behaviour is a function of the
+  tape" (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/synthesis.md` §1 item 5, §2, §4.4
+  (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/note.md` §1 row 5, §2.5, A7 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-07, ALG-13, ALG-19 (tracked).
 - **Literature.** Xia et al., *Interaction Trees*: read, §3.2 and §7 with Def. 1–2 (lit-papers Q7,
   Q10). Chappe et al., *Choice Trees*: read, §2.2, §7.1, §7.2, §8 (lit-papers Q7, §0). Jacobs,
   *Introduction to Coalgebra*: read (papers review §1.4, §7): of ch. 2, only §2.5's opening (Prop.
@@ -523,13 +523,13 @@ divergence, and a budget claims nothing about it.
   admits a bind law), `E4-APPROX-CE-001`, `E4-APPROX-CE-002`, `E4-APPROX-CE-003`,
   `E4-APPROX-CE-004`, `E4-RTERM-CE-007`; DI-10 (no general bind law; the fixed-fuel counterexample
   stands).
-- **Sources.** `docs/research/2026-09-05-runtime-semantics-core-math.md` §3, §4 (tracked);
-  `docs/research/2026-09-16-core-goals-and-end-state.md` §2.2, §4.2, §8, §9 item 4 (tracked; §4.2
-  and §9 item 4 superseded as above); `docs/research/2026-09-16-select-and-iterate-ready-packet.md`
-  §2.2–§2.3 (tracked); `docs/research/2026-09-30-model-probe/synthesis.md` §3.1 "Partiality is a
-  budget", §3.2 item 5 (tracked); `docs/research/2026-10-01-formal-pass/synthesis.md` §1 items 6 and
-  12, §2, §4.4 (tracked); `docs/research/2026-10-01-formal-pass/algebra/note.md` §1 row 3, §2.3, A8
-  (tracked); `docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-08 (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-runtime-semantics-core-math.md` §3, §4 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-16-core-goals-and-end-state.md` §2.2, §4.2, §8, §9 item 4 (tracked; §4.2
+  and §9 item 4 superseded as above); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-16-select-and-iterate-ready-packet.md`
+  §2.2–§2.3 (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §3.1 "Partiality is a
+  budget", §3.2 item 5 (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/synthesis.md` §1 items 6 and
+  12, §2, §4.4 (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/note.md` §1 row 3, §2.3, A8
+  (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-08 (tracked).
 - **Literature.** Capretta (2005): by name (core math §3). Chapman, Uustalu and Veltri (2015): by
   name (core math §3). Hasuo, Jacobs and Sokolova (2007): by name (core math §2). Jacobs,
   *Introduction to Coalgebra*, Prop. 5.3.3 and Thm. 5.3.4: read (papers review §1.4). Elgot (1975);
@@ -628,13 +628,13 @@ on those fragments (the algebra verifier's ALG-10).
 - **Refusals.** `E4-SCHED-CE-001` (the summed handler is not a semantics of the fiber operations),
   the archive's `E4-SCHED-CE-004` (`Test/Counterexamples/Archive/REGISTER.md`: raw bind terms lose
   the cleanup boundary; the register's row with that id is another statement); DI-07, DI-12, DI-57.
-- **Sources.** `docs/research/2026-09-16-core-goals-and-end-state.md` §8 (tracked);
-  `docs/research/2026-09-05-runtime-semantics-core-math.md` §5–§7 (tracked);
-  `docs/research/2026-09-07-lit-papers.md` Q2, §0 item 1 (tracked);
-  `docs/research/2026-09-30-model-probe/synthesis.md` §3.1 "Control is scoped syntax" and level 3,
-  §3.2 item 4 (tracked); `docs/research/2026-10-01-formal-pass/synthesis.md` §1 item 2, §2, §4.4
-  (tracked); `docs/research/2026-10-01-formal-pass/algebra/note.md` §1 rows 2 and 4, §2.2, §2.4
-  (tracked); `docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-10, ALG-12 (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-16-core-goals-and-end-state.md` §8 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-runtime-semantics-core-math.md` §5–§7 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-07-lit-papers.md` Q2, §0 item 1 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §3.1 "Control is scoped syntax" and level 3,
+  §3.2 item 4 (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/synthesis.md` §1 item 2, §2, §4.4
+  (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/note.md` §1 rows 2 and 4, §2.2, §2.4
+  (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-10, ALG-12 (tracked).
 - **Literature.** van den Berg and Schrijvers, *A Framework for Higher-Order Effects & Handlers*:
   read, §3 and §4.1 (lit-papers §D). Bosman, van den Berg, Tang and Schrijvers, *A Calculus for
   Scoped Effects & Handlers*: read, its headings and §3's framing only (lit-papers §C, §D). Wu,
@@ -688,11 +688,11 @@ EffHOL, not a proof of Effect4's instance.
   (`git:c407ab7:Effect4/Semantics/Logic.lean:89`).
 - **Refusals.** DI-10 (no general bind law until a neutral-stack shape is chosen; the logic inherits
   it).
-- **Sources.** `docs/research/2026-09-05-reification-effhol.md` (tracked; its "What the paper
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-reification-effhol.md` (tracked; its "What the paper
   establishes").
 - **Literature.** Cohen, Grunfeld, Kirst and Miquey, *Syntactic Effectful Realizability in
   Higher-Order Logic* (EffHOL): read, Sections IV–V, VII, IX and Appendix E
-  (`docs/research/2026-09-05-reification-effhol.md`, tracked).
+  (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-reification-effhol.md`, tracked).
 - **Status.** Settled (a constraint); witnesses re-read at `6b3f2c92`.
 
 ### DB-07 — runtime state remains observable on failure
@@ -762,13 +762,13 @@ or an optimization declares a state equation.
   (`Test/Program/StoreComodel.lean:33`).
 - **Refusals.** `E4-DEN-CE-002` (the handler's fallback on an unminted key), `E4-STORES-CE-001`;
   DI-65 (terminal cleanup needs completed-cleanup and ownership premises, not correspondence alone).
-- **Sources.** `docs/research/2026-09-30-model-probe/synthesis.md` §2.2 R11, §3.3 the DB-07 row
-  (tracked); `docs/research/2026-09-30-codex-review-model-probe/audit.md` §5 (tracked);
-  `docs/research/2026-09-07-grill-agenda.md` §3 call 9 (tracked);
-  `docs/research/2026-09-05-runtime-semantics-core-math.md` §7 (tracked);
-  `docs/research/2026-10-01-formal-pass/synthesis.md` §2 (tracked);
-  `docs/research/2026-10-01-formal-pass/algebra/note.md` §1 row 4, §2.4, A9 (tracked);
-  `docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-09 (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §2.2 R11, §3.3 the DB-07 row
+  (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-codex-review-model-probe/audit.md` §5 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-07-grill-agenda.md` §3 call 9 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-runtime-semantics-core-math.md` §7 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/synthesis.md` §2 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/note.md` §1 row 4, §2.4, A9 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-09 (tracked).
 - **Literature.** Lean `v4.33.1` sources and documentation (`EStateM.run_throw`, transformer
   ordering): read by the 2026-08-31 re-review (this file's Re-review ruling). Plotkin and Power
   (2008), comodels: by name (core math §7). Ahman and Bauer, *Runners in action* (2020): by name
@@ -907,7 +907,7 @@ that lands, the truth claim names the exercised safe fragment (DI-56).
   `Test/Program/HostSpecContract.lean` (each general law earned by a fixture); the frozen amendment
   `Test/contracts/foundation-wave2.contract.md`.
 - **Refusals.** DI-19, DI-56, DI-57, DI-58, DI-65; the number policy is row 108 (open).
-- **Sources.** `docs/research/2026-09-30-model-probe/synthesis.md` §3.3, the DB-09 row (tracked);
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §3.3, the DB-09 row (tracked);
   `docs/core/host-boundary.md` (the host lane's authority).
 - **Literature.** None; the Effect source and the language service are sources, pinned above.
 - **Status.** See system map §8, R6 (the host) and R8 (faces); witnesses re-read at `6b3f2c92`.
@@ -1003,10 +1003,10 @@ declarations in the checker's order since row 137 was ruled); DB-16 owns that de
   Decisions rows 97 (interim rule landed), 127 (ruled: register, then repair) and 149 (ruled: the
   frozen `uninhabited` stays for the `int` scan, the emptiness check is `emptyColumn`); status:
   those rows. Rows 317 and 318 then deleted the `int` scan and the refusal `uninhabited`.
-- **Sources.** `docs/research/2026-09-08-build-path.md` §3 (tracked; the 2026-09-07 plan);
-  `docs/research/2026-09-30-model-probe/synthesis.md` §3.3, the DB-11 row (tracked);
-  `docs/research/2026-10-01-data-probe/synthesis.md` §5 row 127 (tracked);
-  `docs/research/2026-10-01-formal-pass/synthesis.md` §4.4 (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-08-build-path.md` §3 (tracked; the 2026-09-07 plan);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §3.3, the DB-11 row (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-data-probe/synthesis.md` §5 row 127 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/synthesis.md` §4.4 (tracked).
 - **Literature.** Miller's thesis (2006) and Devriese, Birkedal and Piessens (2016) on capability
   safety, for the minted-handle invariant: by name (the types note §9).
 - **Status.** See system map §8, R1 (admission) and R4 (state); witnesses re-read at `6b3f2c92`.
@@ -1056,7 +1056,7 @@ order and does not enclose it (`src/Effect4/Program/Refs.lean`, `layerRefsWF`); 
 every
 target into a `const L_<path>` (`printModule`) so the host sees one object. Grill call 10
 (keep the memo store) stays settled by build order-independence
-(`docs/research/2026-09-08-build-path.md` §2 (working note)). Inserting under one
+(`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-08-build-path.md` §2 (working note)). Inserting under one
 path leaves every other path's entry untouched (`MemoWorld.find?_append_other_key`,
 `LAYER-FB-LAYER-IDENTITY`); a forged path is the refusal row.
 
@@ -1108,9 +1108,9 @@ DB-17's; the service table's place in the world and its lawful declarations are 
 - **Refusals.** `E4-PROV-CE-005` and `E4-PROV-CE-006` in `Test/Counterexamples/REGISTER.md`
   (repaired 2026-10-01; the archive's rows with those ids are other statements),
   `LAYER-FB-LAYER-IDENTITY`; DI-71. Decisions rows 104 and 105 (ruled, landed); status: those rows.
-- **Sources.** `docs/research/2026-09-08-build-path.md` §2 (tracked);
-  `docs/research/2026-09-08-host-rows-slice.md` (tracked);
-  `docs/research/2026-09-30-pass/synthesis.md` §6 slices 1–2 (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-08-build-path.md` §2 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-08-host-rows-slice.md` (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-pass/synthesis.md` §6 slices 1–2 (tracked).
 - **Literature.** None.
 - **Status.** See system map §8, R5; witnesses re-read at `6b3f2c92`.
 
@@ -1176,7 +1176,7 @@ this list.
   Tested: the executed fixtures of `Test/Machine/Runtime/SchedulerCoreContract.lean` §Wake.
 - **Refusals.** `SCHED-FB-NO-FIFO`, `SCHED-FB-PRODUCER`, `SCHED-FB-UNKNOWN-OWNER` (fallback ids, in
   the text above); DI-11. Decisions row 81 (open: Latch); status: that row.
-- **Sources.** `docs/research/2026-09-30-model-probe/pedigree/verify.md` P10 (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/verify.md` P10 (tracked).
 - **Literature.** None; Eio's `In_transition` and Riot's `Proc_state.step` are cited above for their
   roles, from those runtimes' sources.
 - **Status.** Settled; witnesses re-read at `6b3f2c92`.
@@ -1184,7 +1184,7 @@ this list.
 ### DB-14 — one logical clock, a duration decision, staged fires
 
 Adopted 2026-09-08 (the timer, A4: the three commits of
-`docs/research/2026-09-08-timer-dispatch.md` (working note)).
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-08-timer-dispatch.md` (working note)).
 
 Physical time is not modelled and never will be (DB-04 forbids fuel as time; wall-clock, drift,
 the browser's floor and `setTimeout`'s ceiling are host facts). Logical time is one store on
@@ -1201,7 +1201,7 @@ never a timestamp — and the machine runs the staged loop (`advanceState`): fir
 sleep (`RunInterp.clockStep`, the one new interpreter field), resume it, flush the
 dispatchers, repeat, then set the clock to the end. A sleep a woken fiber registers that is
 due by the end fires in the same advance (finding 4 of
-`docs/research/2026-09-04-timer-semantics-and-proofs.md` (working note)). A fired sleep resumes inline
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-04-timer-semantics-and-proofs.md` (working note)). A fired sleep resumes inline
 (`WakeMode.now`, as a Deferred's completion does); the latch-posted spelling rc.112 uses there
 is Latch's to land. Two rows reach the store: `sleep d` with `0 < d < ∞` registers
 (`Name.registerSleep`, cancel `Name.cancelSleep` = `clearTimeout`), and `clockNow` reads
@@ -1222,7 +1222,7 @@ the target's numeric profile. The stock rc.112 TestClock adapter likewise refuse
 out-of-profile advance or deadline before mutation. These are host profile refusals,
 separate from program failures and from fuel frontiers; the ordinary scalar profile
 remains DI-56's. The implementation receipt is
-`docs/research/2026-09-20-skeleton-first-receipt.md`.
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-skeleton-first-receipt.md`.
 
 What this basis refuses. `setTime` (`TIMER-FB-SET-TIME`): the clock never moves backwards. A
 kept cancelled sleep (`TIMER-FB-KEPT-CANCEL`): the store models `clearTimeout`, not the test
@@ -1238,20 +1238,20 @@ elsewhere as not worth a second structure; a keyed carrier is a later, measured 
   `clockStep` (`src/Effect4/Machine/Fibers.lean`), `wakeBy`
   (`src/Effect4/Machine/Wake.lean`); `ClockMillis` (`src/Effect4/Data/ClockMillis.lean`). The
   implementation receipt of the 2026-09-20 amendment:
-  `docs/research/2026-09-20-skeleton-first-receipt.md`.
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-skeleton-first-receipt.md`.
 - **Refusals.** `TIMER-FB-SET-TIME`, `TIMER-FB-KEPT-CANCEL`, `TIMER-FB-INFINITE` (fallback ids, in
   the text above); DI-56. Decisions row 83 (open: custom clocks and the seeded random profile);
   status: that row.
-- **Sources.** `docs/research/2026-09-08-timer-dispatch.md` (tracked);
-  `docs/research/2026-09-04-timer-semantics-and-proofs.md` finding 4 (tracked);
-  `docs/research/2026-09-20-skeleton-first-receipt.md` (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-08-timer-dispatch.md` (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-04-timer-semantics-and-proofs.md` finding 4 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-skeleton-first-receipt.md` (tracked).
 - **Literature.** None; rc.112's `TestClock` and `ClockImpl` are sources, cited above.
 - **Status.** Settled; witnesses re-read at `6b3f2c92`.
 
 ### DB-15 — strings are machine values; host records and errors cross as strings; records are type-language growth
 
 Adopted 2026-09-08 (the host rows slice, decision 3 of
-`docs/research/2026-09-08-host-rows-slice.md` §7 (working note); step 1 of its
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-08-host-rows-slice.md` §7 (working note); step 1 of its
 dispatch).
 
 A `str` literal is a machine value on the native route: `Lit.toVal (.str s) = some (.str s)`
@@ -1402,16 +1402,16 @@ admission refusals; row 2's stage (b) is ruled by row 119.
   `hasTyV_normalize_fails` (`git:f62c972d:docs/research/2026-10-01-data-probe/tree/verify-RecordRed.lean:1324`),
   `fits_coerce` (`git:f62c972d:docs/research/2026-10-01-data-probe/tree/verify-CoerciveWidth.lean:107`) (its
   verifier); in the synthesis's own model, `hasTy_normalize`
-  (`docs/research/2026-10-01-data-probe/synthesis.md:1143`) and its red control
-  `written_order_not_invariant` (`docs/research/2026-10-01-data-probe/synthesis.md:1174`).
+  (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-data-probe/synthesis.md`) and its red control
+  `written_order_not_invariant` (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-data-probe/synthesis.md`).
 - **Refusals.** `E4-TYPED-CE-001` (retired), `E4-TYPED-CE-002`; `E4-TYPED-CE-015` (registered at
   `66aa97d7`); `TYPED-FB-INT`, `ORDIE-FB-TAGGED`,
   `PROV-FB-STRING-VALUE` (fallback ids, in the text above); DI-15, DI-35, DI-56, DI-59, DI-62,
   DI-67.
-- **Sources.** `docs/research/2026-09-08-host-rows-slice.md` §7 (tracked);
-  `docs/research/2026-10-01-data-probe/synthesis.md` §1, §3.1–§3.2, §5 rows 119–132, §6.4 (tracked);
-  `docs/research/2026-10-01-formal-pass/synthesis.md` §4.4 (tracked);
-  `docs/research/2026-10-01-formal-pass/types/note.md` §2.6, §4.5 (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-08-host-rows-slice.md` §7 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-data-probe/synthesis.md` §1, §3.1–§3.2, §5 rows 119–132, §6.4 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/synthesis.md` §4.4 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/types/note.md` §2.6, §4.5 (tracked).
 - **Literature.** Wand; Rémy (1994); Gaster and Jones (1996); Leijen, *Extensible records with
   scoped labels* (2005): by name (why closed records, not row polymorphism; the data probe §6.4).
   Morris and McKinna (2019): assumed. Pierce, *TAPL* §15.2 (record rules) and §15.6 (coercion
@@ -1686,10 +1686,10 @@ Each repair changed statements only, no runtime code.
   `typedProg_not_bind_closed` (`Test/Program/TypedProgBindRed.lean`), `bind_not_typed`
   (`Test/Program/TypedProgBindRed.lean:106`), `guard_bind_not_closed`
   (`Test/Program/TypedProgBindRed.lean:120`). Proved in a probe, by the model probe's pedigree
-  seat: `typed_antitone` (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:198`)
+  seat: `typed_antitone` (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`)
   and `order_widening_loses_typing`
-  (`docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean:215`). The formal pass's
-  probes and their ports at `dceae006` (`docs/research/2026-10-01-landing/ports-at-dceae006/`) are
+  (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/Conservativity.lean`). The formal pass's
+  probes and their ports at `dceae006` (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/ports-at-dceae006`) are
   the sources of the batteries above, which replace them as witnesses.
 - **Refusals.** In the register (`Test/Counterexamples/REGISTER.md`) at `6b3f2c92`:
   `E4-TYPED-CE-003`, `E4-TYPED-CE-004`, `E4-TYPED-CE-005`, `E4-TYPED-CE-006`, `E4-TYPED-CE-007`,
@@ -1702,27 +1702,27 @@ Each repair changed statements only, no runtime code.
   (`src/Effect4/Laws/Machine/Lift.lean`), with `DecisionLift` unchanged); landed with their
   rulings their own: 135, 136, 156, and 139 in part; open: 87, 117, 140, 148, 151, 152, 153;
   status: those rows.
-- **Sources.** `docs/research/2026-09-20-m1-kickoff-confidence-and-design-representations.md` §2–§4
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-20-m1-kickoff-confidence-and-design-representations.md` §2–§4
   (tracked; its §3 mapping of `Typed.mono` is corrected below);
-  `docs/research/2026-09-18-typed-state-composed-graph.md` §4 (tracked);
-  `docs/research/2026-09-23-foundations-slice5-contract-ruling.md` (tracked);
-  `docs/research/2026-09-21-foundations-review-and-theoretical-analysis.md` §4 (tracked; its §2.4,
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-18-typed-state-composed-graph.md` §4 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-23-foundations-slice5-contract-ruling.md` (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-21-foundations-review-and-theoretical-analysis.md` §4 (tracked; its §2.4,
   §4.3 and §7.2 item 5 are corrected by the model probe's synthesis §3.2 items 2–3);
-  `docs/research/2026-09-05-effects-papers-review.md` §1.3, A2, A3, G8 (tracked);
-  `docs/research/2026-09-30-pass/membership/note.md` §2 (tracked);
-  `docs/research/2026-09-30-model-probe/synthesis.md` §3.1 levels 0–2, §3.2 items 1–3 (tracked);
-  `docs/research/2026-10-01-formal-pass/synthesis.md` §1, §2, §3.1, §4.4, §5 (tracked);
-  `docs/research/2026-10-01-formal-pass/algebra/note.md` §2.6 (tracked);
-  `docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-01, ALG-18 (tracked);
-  `docs/research/2026-10-01-formal-pass/types/note.md` §4 (tracked);
-  `docs/research/2026-10-01-formal-pass/types/verify.md` TY-01, TY-19 (tracked);
-  `docs/research/2026-10-01-formal-pass/proofs/note.md` §1, G1, G2, G4, G6 (tracked);
-  `docs/research/2026-10-01-landing/plan.md` §0, §2 (tracked);
-  `docs/research/2026-10-01-landing/receipt-B.md` (tracked; rows 135, 136);
-  `docs/research/2026-10-01-landing/receipt-C.md` (tracked; rows 134, 139);
-  `docs/research/2026-10-01-landing/receipt-I.md` (tracked; the union of seats B, C, E and F);
-  `docs/research/2026-10-01-landing/receipt-I2.md` (tracked; rows 137 and 156);
-  `docs/research/2026-10-01-landing/codex-second-eyes/review.md` (tracked; row 156).
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-effects-papers-review.md` §1.3, A2, A3, G8 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-pass/membership/note.md` §2 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §3.1 levels 0–2, §3.2 items 1–3 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/synthesis.md` §1, §2, §3.1, §4.4, §5 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/note.md` §2.6 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-01, ALG-18 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/types/note.md` §4 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/types/verify.md` TY-01, TY-19 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/proofs/note.md` §1, G1, G2, G4, G6 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/plan.md` §0, §2 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/receipt-B.md` (tracked; rows 135, 136);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/receipt-C.md` (tracked; rows 134, 139);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/receipt-I.md` (tracked; the union of seats B, C, E and F);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/receipt-I2.md` (tracked; rows 137 and 156);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/codex-second-eyes/review.md` (tracked; row 156).
 - **Literature.** Level 0, the free monad typed by a protocol per operation: Xia et al.,
   *Interaction Trees*, §3.2 and §7: read (lit-papers Q7, Q10); de Vilhena's thesis (2022), Def. 2.2,
   2.4–2.8 and the rules Bind and Monotonicity: read (papers review §1.3; Def. 2.4, 2.5, 2.8 and
@@ -1839,13 +1839,13 @@ capability question the calculus records and does not decide (`PROV-FB-KEY-FORGE
   machine's four reserved keys);
   `PROV-FB-KEY-FORGERY`, `PROV-FB-STRING-VALUE` (fallback ids); DI-20, DI-24, DI-28, DI-63.
   Decisions rows: ruled 51, 90, 104, 105, 112, 113, 114; proposed 117, 118, 147; status: those rows.
-- **Sources.** `docs/research/2026-09-04-provision-algebra.md` §§1–3, §6, §7, §10 (tracked);
-  `docs/research/2026-09-05-effects-papers-review.md` A1 (tracked);
-  `docs/research/2026-09-30-model-probe/synthesis.md` §2.2 R5, §3.1 "Services and layers are one row
-  calculus", §3.2 item 7 (tracked); `docs/research/2026-09-30-codex-review-model-probe/audit.md` §6
-  (tracked); `docs/research/2026-10-01-formal-pass/synthesis.md` §2, §4.4, §5 (tracked);
-  `docs/research/2026-10-01-formal-pass/algebra/note.md` §1 row 8, §2.8, A11 (tracked);
-  `docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-14, ALG-15, ALG-16 (tracked).
+- **Sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-04-provision-algebra.md` §§1–3, §6, §7, §10 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-effects-papers-review.md` A1 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §2.2 R5, §3.1 "Services and layers are one row
+  calculus", §3.2 item 7 (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-codex-review-model-probe/audit.md` §6
+  (tracked); `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/synthesis.md` §2, §4.4, §5 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/note.md` §1 row 8, §2.8, A11 (tracked);
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/algebra/verify.md` ALG-14, ALG-15, ALG-16 (tracked).
 - **Literature.** Burckhardt et al., *Durable Functions* (OOPSLA 2021), Thm. 5.3 and 6.4; Lamport
   and Merz, *Prophecy Made Simple*, §3–§4.1 and §7; Kuessner, Mogk, Wickert and Mezini, *Algebraic
   Replicated Data Types* (ECOOP 2023), §4–§5: read (the provision algebra §7). de Vilhena's Tes,
@@ -1967,15 +1967,15 @@ and the types verifier's §3 (tracked).
 ## Bibliography
 
 One list (2026-10-01; it replaces the former "Primary sources"). Built from the model probe's
-literature column (`docs/research/2026-09-30-model-probe/synthesis.md` §3.1), the rows' citations
-and the formal pass's marks (`docs/research/2026-10-01-formal-pass/synthesis.md` §2, §5). Each
+literature column (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §3.1), the rows' citations
+and the formal pass's marks (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/synthesis.md` §2, §5). Each
 entry carries the mark of the note that cites it: **read**, with the note that records the reading
 and the sections read; **by name**, cited without a section read in the tree; **assumed**, a claim
 about the paper's content that nobody in the tree has checked. No entry was promoted by this
 refresh, and no paper was opened for it; titles and venues are given only where a cited note or
-the former list gives them. "lit-papers" is `docs/research/2026-09-07-lit-papers.md`, whose corpus
-numbers its papers 01–21; "the papers review" is `docs/research/2026-09-05-effects-papers-review.md`;
-"core math" is `docs/research/2026-09-05-runtime-semantics-core-math.md`; "the coherence principle"
+the former list gives them. "lit-papers" is `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-07-lit-papers.md`, whose corpus
+numbers its papers 01–21; "the papers review" is `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-effects-papers-review.md`;
+"core math" is `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-runtime-semantics-core-math.md`; "the coherence principle"
 is the literature list of `docs/research/history/coherence-principle.md`.
 
 *Algebraic effects, signatures and sums*
@@ -1999,7 +1999,7 @@ is the literature list of `docs/research/history/coherence-principle.md`.
   never read in the tree (the 2026-09-02 algebra-package review lists it "primary not read"); every
   claim about its content is **assumed**. DB-01.
 - Swierstra, *Data Types à la Carte* (JFP 2008). **Read**, §2 and §6 (the model probe's pedigree
-  seat, `docs/research/2026-09-30-model-probe/pedigree/note.md`). DB-01.
+  seat, `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/pedigree/note.md`). DB-01.
 - Goguen, Thatcher, Wagner and Wright (JACM 1977). **By name** (the coherence principle). DB-01.
 - Fiore, Plotkin and Turi (LICS 1999), binding signatures. **By name** (the coherence principle).
   `Eff` as a binding signature's term algebra.
@@ -2130,7 +2130,7 @@ is the literature list of `docs/research/history/coherence-principle.md`.
 - Liron Cohen, Ariel Grunfeld, Dominik Kirst, and Étienne Miquey,
   [*Syntactic Effectful Realizability in Higher-Order Logic*](https://arxiv.org/abs/2506.09458)
   (EffHOL), arXiv v1, 2025-06-11. **Read**, Sections IV–V, VII, IX and Appendix E
-  (`docs/research/2026-09-05-reification-effhol.md`, tracked). DB-06.
+  (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-reification-effhol.md`, tracked). DB-06.
 
 *The toolchain and the target, as sources*
 
@@ -2153,7 +2153,7 @@ is the literature list of `docs/research/history/coherence-principle.md`.
 Three sections of this file are kept here as they were written, each under one line that says
 what superseded it. Their text is not corrected: citations in it are as of their dates, and the
 2026-10-01 citation check reports the ones that no longer hold as stale history
-(`docs/research/2026-10-01-design-basis-refresh/receipt.md`). Nothing here is current.
+(`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-design-basis-refresh/receipt.md`). Nothing here is current.
 
 ### Semantic decomposition (written 2026-08-31)
 

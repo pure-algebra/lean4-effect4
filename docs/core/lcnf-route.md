@@ -7,13 +7,13 @@ verified semantics." Read off the translator and the rungs, not their docs. Tree
 ## Review boundary (2026-09-19)
 
 The measurements below are the dated 2026-09-17 investigation, not a fresh whole-machine
-verification. The state/refinement review in `docs/research/2026-09-19-state-refinement-plan.md`
+verification. The state/refinement review in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-19-state-refinement-plan.md`
 corrects three claims: Rules extracts structural summaries, TargetLeanNative reflects layouts,
 and the LCNF vector lane covers the type-processing fragment. No theorem currently joins all
 of Lean definitions, compiler IR, target syntax, printed bytes and native/OCaml/Wasm execution.
 The semantic and runtime assumptions at each of those arrows remain distinct.
 
-The critique follow-up (`docs/research/2026-09-19-critique-response.md`) distinguishes this
+The critique follow-up (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-19-critique-response.md`) distinguishes this
 declaration-lowering route from compileEff, which evaluates a program at a Point into Prim
 runtime data. getMonoDecl? does not consume Prim values; no self-applied specializer establishing
 a second Futamura projection is present. Boundary probes also distinguish raw generated Nat
@@ -176,7 +176,7 @@ ourselves." Read against that document:
 
 ## 8. The compilation stages as named connections, and numbers (2026-09-30)
 
-From the external runtime contract's §8 (`docs/research/2026-09-30-external-runtime-contract.md`),
+From the external runtime contract's §8 (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-external-runtime-contract.md`),
 row 101. Two compilations exist and must not be confused:
 - **`compileEff`** turns an `Eff` at a source point into first-order runtime code (`Prim`) that
   refers back to the canonical program.
@@ -239,7 +239,7 @@ DI-56):
   inside the profile, for arguments inside it (`intAddIn_eq_some_iff`,
   `src/Effect4/Laws/Machine/IntegerProfile.lean`).
 
-The numbers seat of the 2026-09-30 pass (`docs/research/2026-09-30-pass/numbers/`) ran one
+The numbers seat of the 2026-09-30 pass (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-pass/numbers`) ran one
 checked program with small literals on all three faces and got three different answers. DI-56's
 ruling stands: inside its profile each face equals the exact Lean reference, and outside it the
 face refuses, intermediate values included. Decisions row 108 is its implementation plan, open in
@@ -251,12 +251,12 @@ the register (the owner places it, no later than WASM). What row 108 leaves open
 - **No WASM target exists** to inherit the refusal.
 - **Exact native naturals stay conditional**: only when a native use needs values above 2^62.
 
-The side audit (`docs/research/2026-09-30-side-audit/`) adds two requirements:
+The side audit (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-side-audit`) adds two requirements:
 - **The arithmetic boundary includes the store functions and the values stored in cells**
   (`incr`, `double`, `takeAndBump`, reached through Ref updates), not only the term atoms. The
   store now runs them as binder terms over the atoms above.
 - **A refusal is kept outside the program's result,** so that a `catchCause` or `exit` cannot hide
-  it. The clock boundary (`harness/truth/session/clock.ts`) already works this way.
+  it. The clock boundary (`git:98a29895b800556365a2edc9924f3ed12787b820:harness/truth/session/clock.ts`) already works this way.
 
 Floating point does not make natural numbers exact. FloatLib (arXiv 2609.19352) is a source of
 methods, not a dependency (row 109): a proved equation for every compiler substitution, and fast
@@ -368,4 +368,4 @@ its builtin row, OCaml's own datatype, the clock, or a transparent structure's f
 refuses one with no owner by name, and a `cases` that OCaml cannot match too. The census
 (`Test/Audit/ConstructorOwners.lean`) pins each owner, and the constructor lane
 (`ocaml/engine/test/ctors/`) runs each lowering against Lean's answers. The probe that found
-the gaps is `docs/research/2026-10-16-ocaml-constructors/README.md` (decisions row 403).
+the gaps is `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-16-ocaml-constructors/README.md` (decisions row 403).

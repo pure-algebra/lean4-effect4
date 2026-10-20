@@ -501,7 +501,7 @@ one host: H8. Reach: `StraightRows`, one fiber, every compile budget, finished r
 establish that a host's drive finishes (progress), nor anything of a run that stopped at a call,
 an interruption, a clock step or a handle row. Concept `translation-simulation`, role
 simulation; requirement R6. Consumer: host utilities composed with `Effects.Comodel`'s
-constructions (`docs/research/2026-10-09-host-coalgebra.md`, slice CO-5). -/
+constructions (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-host-coalgebra.md`, slice CO-5). -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem denoteRows_eq_session_host : DenoteRowsEqSessionHost StraightRows := by
   intro s hreach hfund hrest hhost hfrag σ host st st' hA ex hex

@@ -1,3 +1,0 @@
-$ race_process.exe 200   # the holder commits while a forked process keeps opening for 5 s
-parent: 0 commits ok, 200 failed (first: host:fault:io rename <dir>/control.tmp: No such file or directory)
-child: 59007 refused Locked, 0 other

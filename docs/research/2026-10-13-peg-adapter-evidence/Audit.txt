@@ -1,3 +1,0 @@
-Command: LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-13-peg-adapter-evidence/Audit.lean
-Exit code: 0
-#axiom_audit: 79 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals

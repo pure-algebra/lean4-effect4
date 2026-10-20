@@ -1,3 +1,0 @@
-'Research.Pass.FiberSlice.Typed.fiberDeclOf_native' depends on axioms: [propext, Quot.sound]
-'Research.Pass.FiberSlice.Typed.admitted_value_strong' depends on axioms: [propext, Quot.sound]
-exit 0

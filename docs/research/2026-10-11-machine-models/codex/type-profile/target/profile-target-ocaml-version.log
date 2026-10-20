@@ -1,2 +1,0 @@
-COMMAND: opam exec --switch=effect4 -- ocamlc -version
-5.1.1

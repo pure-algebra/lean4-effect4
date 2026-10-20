@@ -1,7 +1,0 @@
-✔ [259/264] Built Effect4.Laws.Machine.StoreValidity (1.5s)
-✔ [260/264] Built Effect4.Laws.Store.Names (1.0s)
-✔ [261/264] Built Effect4.Laws.Machine.StoresLaws (18s)
-✔ [262/264] Built Effect4.Laws.Machine.Handles (100s)
-✔ [263/264] Built Effect4.Laws.Machine.StoresValue (11s)
-✔ [264/264] Built Test.Machine.Runtime.StoresLawsContract (12s)
-Build completed successfully (264 jobs).

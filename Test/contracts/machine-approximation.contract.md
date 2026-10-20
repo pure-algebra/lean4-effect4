@@ -13,8 +13,8 @@ Lean battery: `Test/Machine/Runtime/ApproximationContract.lean`.
 Counterexamples: `E4-APPROX-CE-001` through `E4-APPROX-CE-004` in
 `Test/Counterexamples/REGISTER.md`; witnesses are guards in the battery.
 
-Review: `docs/research/2026-09-05-effects-papers-review.md` §3 G2; the landing note is
-`docs/research/2026-09-05-fuel-laws.md`. The shape mirrors the archived Flow module
+Review: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-effects-papers-review.md` §3 G2; the landing note is
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-fuel-laws.md`. The shape mirrors the archived Flow module
 `git:c407ab7:Effect4/Semantics/Approximation.lean`; nothing of it is copied, the machine is
 another one.
 

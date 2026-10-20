@@ -1,2 +1,0 @@
-warning: whatwg: repository 'C:\Users\kokok\Dev\effect4-peg-board\.lake/packages\whatwg' has local changes
-#axiom_audit: 4 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals

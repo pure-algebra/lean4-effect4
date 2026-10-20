@@ -1,5 +1,0 @@
-MathTransferProbe.TyCache.check_agreement exact axioms: [Quot.sound, propext]
-MathTransferProbe.TyCache.CheckedCache.query_agrees exact axioms: [Quot.sound, propext]
-MathTransferProbe.TyCache.reconstructs exact axioms: [propext, Quot.sound]
-MathTransferProbe.TyCache.answer_agrees exact axioms: [propext, Quot.sound]
-MathTransferProbe.TyCache.answer_reconstructs exact axioms: [propext, Quot.sound]

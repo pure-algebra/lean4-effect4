@@ -1,2 +1,0 @@
-/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-driver-review/AuditFull.lean:4:0: error: #axiom_audit: 1 of 3 declarations reach axioms outside [propext, Quot.sound]:
-  _private.AuditHidden.0.hiddenChoice reaches [Classical.choice]

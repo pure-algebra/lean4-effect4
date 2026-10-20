@@ -1,1 +1,0 @@
-# scratch/lean-slot.sh lake env lean docs/research/2026-10-15-ocaml-interop-explore/rpc/Transport.lean (Lean 4.33.1, effects v0.10.1): exit 0, no message; through_serve and through_serve_stacked proved; both #guard lines pass. No axiom audit was run: the file is outside every library module.

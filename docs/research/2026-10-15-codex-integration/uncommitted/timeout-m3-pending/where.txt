@@ -1,3 +1,0 @@
-tree: /private/tmp/effect4-timeout-pending
-branch: codex/timeout-m3-pending
-head: 6e60f478a11b59d57c9198e3a8be4e795502a56a

@@ -27,8 +27,8 @@ Counterexamples: `E4-TYPED-CE-001`, `E4-TYPED-CE-002`, `E4-STORES-CE-001` throug
 `E4-PROGRESS-CE-002` in `Test/Counterexamples/REGISTER.md`; witnesses are guards in the five
 batteries.
 
-Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` (untracked working note); the
-proof graph is its §6 and is cut into `docs/research/DENOTE-DAG.md` at landing.
+Plan: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-slice-1-compile-ground.md` (untracked working note); the
+proof graph is its §6 and is cut into `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/DENOTE-DAG.md` at landing.
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`, read through
 the compile's own citations (`src/Effect4/Program/Compile.lean`) and the stores'

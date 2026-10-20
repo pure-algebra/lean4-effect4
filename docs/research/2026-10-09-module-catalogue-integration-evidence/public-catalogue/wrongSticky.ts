@@ -1,1 +1,0 @@
-export const main: Effect.Effect<readonly [ReadonlyArray<number>, ReadonlyArray<number>], never, never> = Effect.flatMap(Ref.make(append(cons(1, nil()), append(cons(2, nil()), cons(3, nil())))), (a0) => Effect.flatMap(Ref.get(a0), (a1) => Effect.flatMap(Ref.get(a0), (a2) => Effect.succeed(tuple(a1, a2)))))

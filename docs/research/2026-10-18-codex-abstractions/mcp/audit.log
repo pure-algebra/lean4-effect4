@@ -1,3 +1,0 @@
-ℹ [748/748] Replayed Drivers.AbstractionsMcpAudit
-info: tools/Drivers/AbstractionsMcpAudit.lean:4:0: #axiom_audit: 73 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
-Build completed successfully (748 jobs).

@@ -13,10 +13,10 @@ Counterexamples: `E4-SEM-CE-001` through `E4-SEM-CE-007` in
 `Test/Counterexamples/Machine/Semantics/CauseExit.lean`; attack shapes in
 `git:c407ab7:test/counterexamples/semantics/ATTACKS.md`
 
-Proof graph: `CAUSE-PG-FLAT` in `docs/research/CAUSE-DAG.md`
+Proof graph: `CAUSE-PG-FLAT` in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/CAUSE-DAG.md`
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`.
-Reading: `docs/research/effect-rc112-fiber-runtime.html` section 8.
+Reading: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/effect-rc112-fiber-runtime.html` section 8.
 
 ## Claim boundary
 
@@ -32,7 +32,7 @@ makes no Effect TypeScript compatibility claim and no code-generation claim.
 It does **not** claim that `Effect4.Cause` is equivalent to rc.112's `Cause`.
 It claims that each named clause of each named census row below has an exact
 theorem over the Effect4 model, and it names, in three `CAUSE-FB-*` rows of
-`docs/research/CAUSE-DAG.md`, exactly what was dropped: the `WeakMap` host-identity
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/CAUSE-DAG.md`, exactly what was dropped: the `WeakMap` host-identity
 annotation memory, reference equality on annotation maps and on the combine
 short circuit, and the host `Error` message bytes of the last two squash arms.
 
@@ -81,7 +81,7 @@ Lean shown here is a reading aid.
 ### Existing-type and duplicate-prevention rows
 
 The six rows, their owners, relationships, pins, and assurance routes are in
-`docs/research/CAUSE-DAG.md` "Existing-type rows". They are not restated here.
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/CAUSE-DAG.md` "Existing-type rows". They are not restated here.
 
 ### D0 — annotations
 
@@ -105,7 +105,7 @@ spelling is unconstructible, and `keysNodup` is the only admission boundary.
 
 `Effect4.Data.Row` is not reused: it is the canonical finite *set*, stores no
 values, needs a lawful order on its element type, and erases both order and
-duplicates. See `docs/research/CAUSE-DAG.md` separation 3.
+duplicates. See `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/CAUSE-DAG.md` separation 3.
 
 ### D1 — the reason alphabet
 
@@ -204,7 +204,7 @@ Exit.asVoidAll              : List (Exit β ε δ ι α) -> Exit Unit ε δ ι �
 `vendor/effect-4.0.0-rc.112/src/internal/effect.ts:298-309` ends with
 `return new globalThis.Error("Empty cause")` after the three partition tests.
 The `cause.squash` census summary names only the first three; both are
-recorded in `docs/research/CAUSE-DAG.md` under "Census-summary note", and every clause
+recorded in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/CAUSE-DAG.md` under "Census-summary note", and every clause
 of the current summary still has a theorem.
 
 `Squashed` carries no annotations and has no inverse. It is a lossy projection
@@ -417,7 +417,7 @@ imported from `vendor/effect-4.0.0-rc.112/src/Array.ts` at `internal/effect.ts:1
 inside `vendor/effect-4.0.0-rc.112/src/`. The union semantics used here —
 first occurrences kept, `self` before the new elements of `that`, structural
 equality — is taken from the census summary for `cause.combine-union` and from
-`docs/research/effect-rc112-fiber-runtime.html` section 8 ("set-union of reasons by
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/effect-rc112-fiber-runtime.html` section 8 ("set-union of reasons by
 Equal, order a then new from b"). It is an authored assumption, not a byte
 observation, and it is the one place in this packet where that is true. A later
 packet that vendors `Array.ts` must re-check `combine_order` against it.
@@ -649,7 +649,7 @@ The builder phase requires all three files plus the complete project test suite
 to exit zero, with `#print axioms` receipts inside `propext`/`Quot.sound` for
 every public theorem. It does not authorize any coverage-number change: the
 runtime-coverage join in `Test/Audit/RuntimeCoverage.lean` is a separate
-packet with a separate claim, as recorded in `docs/research/CAUSE-DAG.md`.
+packet with a separate claim, as recorded in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/CAUSE-DAG.md`.
 
 ## Open question
 

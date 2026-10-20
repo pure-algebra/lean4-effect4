@@ -1,3 +1,0 @@
-import Effect4.Program.Ty
-/-! documentation -/
-import Effect4.Program.Native

@@ -1,4 +1,0 @@
-Command: lake env lean -DwarningAsError=true docs/research/2026-10-10-goals-packet/codex/R2QueueRawControls.lean
-Exit: 0
-Command: lake env lean -DwarningAsError=true docs/research/2026-10-11-machine-models/codex/guard-r2/RawMessageControl.lean
-Exit: 0

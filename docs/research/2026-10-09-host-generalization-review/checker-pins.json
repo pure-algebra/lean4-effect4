@@ -1,7 +1,0 @@
-{
-  "commit": "8a61361518c5409e1aeae309ebb287ded641c47c",
-  "files": {
-    "src/Effect4/Laws/Api/SessionMeaning.lean": "f4da76a0ede574ae509f191016c742990e491a7ee4cdfab34fcad1c60686b50b",
-    "Test/Api/SessionMeaning.lean": "2ebcba6b544a5d9bdf1b4314599dcd409444b228911dc67494d39441926b3ceb"
-  }
-}

@@ -1,6 +1,0 @@
-✔ [1424/1428] Built Test.Dogfood.Proofs.CrewLogHistory (6.5s)
-✔ [1425/1428] Built Test.Dogfood.Scenario.Workers.Assertions (1.9s)
-✔ [1426/1428] Built Test.Dogfood.Scenario.QueueWorkers.Assertions (1.0s)
-✔ [1427/1428] Built Test.Dogfood.Scenario.Workers (4.7s)
-✔ [1428/1428] Built Test.Dogfood.Scenario.QueueWorkers (35s)
-Build completed successfully (1428 jobs).

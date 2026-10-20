@@ -1,6 +1,0 @@
-OCaml=5.1.1 int_size=63 max_int=4611686018427387903
-float=0 bits=0000000000000000 fits_current_nonnegative_int=true
-float=1 bits=3ff0000000000000 fits_current_nonnegative_int=true
-float=2 bits=4000000000000000 fits_current_nonnegative_int=false
-float=-0 bits=8000000000000000 fits_current_nonnegative_int=false
-float=-1 bits=bff0000000000000 fits_current_nonnegative_int=false

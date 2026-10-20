@@ -1,6 +1,0 @@
-✔ [11/15] Built Effects.Coalgebra.Comodel (326ms)
-✔ [12/15] Built Effects.Coalgebra.Protocol (224ms)
-✔ [13/15] Built Effects.Coalgebra.Run (244ms)
-✔ [14/15] Built Effects.Coalgebra (169ms)
-✔ [15/15] Built EffectsTest.Coalgebra.CoalgebraContract (319ms)
-Build completed successfully (15 jobs).

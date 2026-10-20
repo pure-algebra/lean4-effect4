@@ -1,6 +1,0 @@
-'Tools.View.Algebra.cata_prod' depends on axioms: [propext]
-'Tools.View.Program.layer' depends on axioms: [propext, Classical.choice, Quot.sound]
-'Tools.View.Flow.flowLayer' depends on axioms: [propext, Classical.choice, Quot.sound]
-'Tools.View.Flow.waits' depends on axioms: [propext]
-'TerminalBoundary.readings_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
-10

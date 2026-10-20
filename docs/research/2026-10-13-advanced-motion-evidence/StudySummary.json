@@ -1,8 +1,0 @@
-{
-  "scope": "Exact rational construction, sampled displacement; SVG coordinates rounded to 12 decimals.",
-  "source": "tools\\view\\out\\advanced-motion-before",
-  "files": 366,
-  "connectors": 1298,
-  "rational_g2_joins": 44288,
-  "sampled_max_displacement_px": 0.7608682234047268
-}

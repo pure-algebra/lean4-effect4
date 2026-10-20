@@ -31,7 +31,7 @@ answers with exits, and a funded run at rest. It does not establish that a drive
 that its rounds suffice (progress), that a run is funded (the open claim
 `embedded-budget-sufficient`), or anything of a reactor outside the envelope, whose refused
 answers move its state with no decision on the tape. Consumer: the run interface's hosts
-composed by `Effects.Comodel` (`docs/research/2026-10-09-host-coalgebra.md`, slice CO-6).
+composed by `Effects.Comodel` (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-host-coalgebra.md`, slice CO-6).
 -/
 
 set_option autoImplicit false

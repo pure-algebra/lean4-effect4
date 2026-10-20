@@ -1,5 +1,0 @@
- M src/Effect4/Laws/Machine/AnswerFlowContextualFamily.lean
-?? src/Effect4/Laws/Machine/AnswerFlowEmbedding.lean
-!! .lake/
-!! scratch/
-!! scripts/lib/__pycache__/

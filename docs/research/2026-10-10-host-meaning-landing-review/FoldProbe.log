@@ -1,6 +1,0 @@
-Effect4.Program.Denote.denoteRowsB.eq_cata (table : Effect4.Program.RowTable) (k : Nat) (a✝ : Effect4.Program.NativeEff)
-  (a✝¹ : List Effect4.Machine.Val) :
-  Effect4.Program.Denote.denoteRowsB table k a✝ a✝¹ =
-    (Effect4.Program.cata_eff (Effect4.Program.Denote.denoteRowsB.alg table k) a✝).snd a✝¹
-
-Exit: 0

@@ -1,5 +1,0 @@
-canonical-service: accepted
-changed-argument: accepted
-distinct-service-names: accepted
-colliding-service-names: unbound
-PASS: actual public emit/read/admit controls

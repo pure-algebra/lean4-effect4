@@ -90,7 +90,7 @@ the whole input without a second decoder. `Test.Program.TypingCheckContract` exe
 
 The case-site audit (`Lcnf.Cases`), the rule extraction (`Lcnf.Rules`), `Core.Proof`, `Spec.Reflect`,
 `Model.Container` and the drivers `Cli.Selftest` and `Cli.BoundaryControls` went on 2026-10-15: no
-gate, script or test imported or ran them (`docs/research/2026-10-15-lowering-state/README.md`, K4).
+gate, script or test imported or ran them (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-15-lowering-state/README.md`, K4).
 They are at `git:eaa45b6b9:tools/Conform/`.
 
 The generic modules do not import Effect4. They import the route's own walk from `OCaml5.Lcnf`:

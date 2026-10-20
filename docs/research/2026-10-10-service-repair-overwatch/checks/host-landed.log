@@ -1,5 +1,0 @@
-{"kind":"signed-divergence-controls","checks":9,"failures":[]}
-| program | Lean exit | rc.112 exit | agree | schedule agree | runSyncExit agree | entry | notes |
-|---|---|---|---|---|---|---|---|
-| pSemaphoreService | success [1,false,2] | success [1,false,2] | yes | yes | yes | runPromiseExit | same value; client through the service key: agrees (success [1,false,2]) |
-PASS: 1 programs agree on exits, schedules and sync exits; 0 signed divergence(s)

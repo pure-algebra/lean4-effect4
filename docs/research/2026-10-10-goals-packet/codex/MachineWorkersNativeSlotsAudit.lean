@@ -1,4 +1,0 @@
-import MachineWorkersCapturedSlots
-import Effect4.Laws.Program.NativeScopeStore
-import ProofGraph.AxiomAudit
-#axiom_audit Effect4.Laws.Machine.ScopeFields Effect4.Laws.Program.NativeScopeStore MachineWorkersNativeSlots MachineWorkersCapturedSlots

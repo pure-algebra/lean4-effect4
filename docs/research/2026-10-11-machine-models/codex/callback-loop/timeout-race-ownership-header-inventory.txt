@@ -1,4 +1,0 @@
-src/Effect4/Laws/Program/NativeConfiguration.lean: 19 old theorem headers; changed=[]; lines 265->282
-src/Effect4/Laws/Program/NativeEvaluation.lean: 27 old theorem headers; changed=[]; lines 380->397
-src/Effect4/Laws/Program/NativeActions.lean: 1 old theorem headers; changed=[]; lines 121->140
-src/Effect4/Laws/Machine/Clauses.lean: existing source retained byte-for-byte; 32 shared clause lines inserted

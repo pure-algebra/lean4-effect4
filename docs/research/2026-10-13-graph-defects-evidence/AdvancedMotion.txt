@@ -1,7 +1,0 @@
-warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
-graph-motion: nested-forks: 61 SVGs, 11 routes, 304x393
-graph-motion: wide-race: 61 SVGs, 17 routes, 744x323
-graph-motion: race-loop: 61 SVGs, 8 routes, 397x274
-graph-motion: await-all: 61 SVGs, 11 routes, 352x321
-graph-motion: nested-scopes: 61 SVGs, 7 routes, 200x664
-graph-motion: handler-scope: 61 SVGs, 8 routes, 194x342

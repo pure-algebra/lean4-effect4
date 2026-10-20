@@ -1,9 +1,0 @@
-built ProbeView.Fast
-built ProbeView.Layout
-built ProbeView.Retained
-built ProbeView.Inc
-built ProbeView.Live
-== StageBench2
-chain 12 (97 lines), tenths of ms: answer 6; lines inc 9 (fresh 208); page 23; code 126; waits inc 1 (fresh 16); flow inc 14; layout 49; groups 94; scene 107; diff 82; rows 227 (201)
-chain 18 (145 lines), tenths of ms: answer 19; lines inc 25 (fresh 458); page 49; code 260; waits inc 2 (fresh 52); flow inc 32; layout 98; groups 200; scene 219; diff 167; rows 675 (321)
-chain 24 (193 lines), tenths of ms: answer 22; lines inc 29 (fresh 462); page 79; code 316; waits inc 4 (fresh 92); flow inc 45; layout 118; groups 250; scene 251; diff 194; rows 890 (449)

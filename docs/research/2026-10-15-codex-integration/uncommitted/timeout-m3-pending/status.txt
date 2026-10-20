@@ -1,5 +1,0 @@
- M src/Effect4/Laws/Program/NativeActionRows.lean
-?? src/Effect4/Laws/Program/OperationBudget.lean
-!! .lake/
-!! scratch/
-!! scripts/lib/__pycache__/

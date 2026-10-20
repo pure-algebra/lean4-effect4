@@ -1,8 +1,0 @@
-# the monitor's admission check replaced by 'if false' (sed), rebuilt and run, 2026-10-15; exit 2 expected
-PASS a source row behind the lens feeds the unchanged Eio.Flow.copy
-PASS the unchanged Eio.Buf_read reads lines through one-byte chunks
-PASS the lens writes exactly the answered prefix into the slice
-PASS read_exact keeps the prefix already written when the row ends early
-PASS a standard Eio source, consumed as a row behind the monitor, answers its bytes
-PASS the monitor keeps end of input absorbing on an honest provider
-Fatal error: exception Failure("FAILED: the monitor refuses bytes answered after end of input (red control)")

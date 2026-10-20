@@ -22,7 +22,7 @@ Three artefacts carry it:
 
 The pinned source is `effect@4.0.0-rc.112` as vendored under
 `vendor/effect-4.0.0-rc.112/src/`; the generator refuses any other bytes.
-The reading of that source is `docs/research/effect-rc112-fiber-runtime.html` (untracked working note).
+The reading of that source is `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/effect-rc112-fiber-runtime.html` (untracked working note).
 
 ## Vocabulary
 
@@ -111,7 +111,7 @@ changed is a deliberate re-pin: the whole pin moves together, never one row.
 normal packet discipline. The frozen surface census that used to shadow
 `src/Effect4/Machine/*` (`git:b60fe28cecc1db30844eda87f638b1d09bbf6477:Effect4Test/Concurrency/FiberAssurance.lean` and its
 generated projection) was retired on 2026-09-04 with the machines it counted
-(`docs/research/2026-09-04-retire-old-machines.md` (untracked working note)), so a concurrency
+(`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-04-retire-old-machines.md` (untracked working note)), so a concurrency
 declaration now moves only the coverage join.
 
 ## Path to full coverage

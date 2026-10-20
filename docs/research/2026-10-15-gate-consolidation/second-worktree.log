@@ -1,5 +1,0 @@
-PASS native: shared result c2cf62ad7629
-PASS compiler: shared result dede494fc1bf
-python3 scripts/check-lock-install.py .
-bun.lock names 47 packages: 19 installed at the locked version, 0 at another version, 0 absent, 28 of another platform
-PASS schema-codec: shared result 05571388d97a

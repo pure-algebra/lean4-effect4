@@ -1,5 +1,0 @@
-{"kind":"signed-divergence-controls","checks":9,"failures":[]}
-| program | Lean exit | rc.112 exit | agree | schedule agree | runSyncExit agree | entry | notes |
-|---|---|---|---|---|---|---|---|
-| pSemaphoreService | success [2,false,1] | success [2,false,1] | yes | yes | yes | runPromiseExit | same value; client through the service key: disagrees (success [2,false,2]) |
-FAIL: 1 of 1 programs disagree with rc.112 (pSemaphoreService)

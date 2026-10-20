@@ -1,1 +1,0 @@
-COMMAND: opam exec --switch=effect4 -- ocamlc -w +8 -warn-error +8 -I _build/default/clock/.effect4_clock.objs/byte -c -o /private/tmp/Profile_api_gen.cmo gen/api_gen.ml

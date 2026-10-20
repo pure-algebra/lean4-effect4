@@ -1,5 +1,0 @@
-; A scratch check (not in the tree): the admissible tapes test_diff draws are the same drawn on
-; the Ref instance and drawn on the generated machine.
-(executable
- (name tapecheck)
- (libraries effect4_engine effect4_eff effect4_gen e4_gen_instance))

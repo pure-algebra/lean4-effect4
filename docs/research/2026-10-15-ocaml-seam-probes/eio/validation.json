@@ -1,8 +1,0 @@
-{
-  "probe_pass_lines": 22,
-  "positive_probe_run": "passed",
-  "expected_compile_refusal": "observed Lookup interface diagnostic",
-  "document_language_findings": 0,
-  "capture_python_syntax": "checked",
-  "machine_or_runtime_correspondence": "not exercised"
-}

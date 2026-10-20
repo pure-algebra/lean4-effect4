@@ -1,4 +1,0 @@
-Effect4.Run.runWith {σ : Type} (b : Effect4.Api.Built) (r : Effect4.Run.Reactor σ) (st : σ) (id : String := "run")
-  (budget : Effect4.Api.Budget := { }) (rounds : Nat := 64) : Effect4.Run × σ
-/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-driver-review/PublicRunControls.lean:4:7: error(lean.unknownIdentifier): Unknown constant `Effect4.Run.Reactor.guardRows`
-/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-driver-review/PublicRunControls.lean:5:7: error(lean.unknownIdentifier): Unknown constant `Effect4.Run.rowPosition`

@@ -3,7 +3,7 @@
 Status: FROZEN breaker packet, 2026-08-31; its pre-implementation revision is
 required to be RED, and fired findings are recorded below
 
-Ruling input: `docs/research/ENVIRONMENT-DAG.md`, node `L0` and its open question 1,
+Ruling input: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/ENVIRONMENT-DAG.md`, node `L0` and its open question 1,
 "Is a context key a first-order identity with `DecidableEq`, or does it carry a
 type index?"
 
@@ -31,7 +31,7 @@ object, never canonical content.
 
 1. `AGENTS.md`, "Representation rules", requires that canonical program content
    be first-order data and that Lean functions not be stored program syntax. A
-   key is canonical content: `docs/research/ENVIRONMENT-DAG.md` makes a requirement a row
+   key is canonical content: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/ENVIRONMENT-DAG.md` makes a requirement a row
    over keys, and a requirement row is authored, compared, and — at P10 — lowered
    to a target. A `Key : Type u → Type` puts a Lean `Type` inside that content.
 2. The row lane needs more than `DecidableEq`. `PORT-MANIFEST.md`, "Canonical
@@ -97,7 +97,7 @@ It does **not** freeze, and makes no claim about:
   stated or proved here, and the choice is an ordering ruling rather than a
   derived result;
 - any persisted or wire spelling of a key. `ServiceName` is a `Nat`, and this
-  slice serializes nothing — `docs/research/ENVIRONMENT-DAG.md`, "Non-edges", records
+  slice serializes nothing — `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/ENVIRONMENT-DAG.md`, "Non-edges", records
   that Schema does not gate it. A later wire profile owns tag strings, exactly
   as `E4-SCHEMA-CE-039` assigns persisted key spellings away from a carrier;
 - compatibility with Effect's `Context.Tag`, in either direction;
@@ -108,12 +108,12 @@ requirement.
 
 ## Upstream edge status
 
-`docs/research/ENVIRONMENT-DAG.md` draws one inbound edge, `Data/Row → Context/Key`, and
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/ENVIRONMENT-DAG.md` draws one inbound edge, `Data/Row → Context/Key`, and
 describes `Data/Row.lean` as existing and closed with `DATA-ROW-01/02/03`
 already closed.
 
 That is not the state of the tree. `src/Effect4/Data/Row.lean` is an empty breadth
-stub with no declaration, `docs/research/SCHEMA-CUTOVER.md` records `DATA-ROW-01/02/03`
+stub with no declaration, `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md` records `DATA-ROW-01/02/03`
 as open, and `PORT-MANIFEST.md`, "Canonical row extraction", says in its "Open"
 paragraph that no declaration may enter the row module before a breaker freezes
 the `DATA-ROW` contract.
@@ -129,7 +129,7 @@ section records the observation rather than editing that document.
 
 ## Edge content this packet widens
 
-`docs/research/ENVIRONMENT-DAG.md` says the `Context/Key → Context/Service` edge carries
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/ENVIRONMENT-DAG.md` says the `Context/Key → Context/Service` edge carries
 "key identity only". This packet puts `ServiceUniverse`, `ServiceKey.Carrier`,
 and `ServiceKey.transport` on that edge as well.
 
@@ -163,7 +163,7 @@ Packet-local obligation IDs, used by the ENSURES list below, are `ENV-KEY-01`
 through `ENV-KEY-04` mapping to declaration groups D1 through D4. They are
 packet-local on purpose: this slice has no cutover document of its own yet, and
 minting slice-wide IDs here would put a fact in this file that
-`docs/research/ENVIRONMENT-DAG.md` or a later environment cutover ruling should own.
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/ENVIRONMENT-DAG.md` or a later environment cutover ruling should own.
 
 The axiom receipt for this node is the gate's (`Test/Audit/AxiomGate.lean`), which
 audits every declaration; the per-slice report file it once had was retired on

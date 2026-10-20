@@ -1,6 +1,0 @@
-✔ [916/1147] Built Tools.Graph.Path (368ms)
-✔ [1585/1588] Built Tools.Graph.Summary (913ms)
-✔ [1586/1588] Built ProofGraph.Why (1.3s)
-✔ [1587/1588] Built ProofGraph.Summary (1.0s)
-✔ [1588/1588] Built ProofGraph.AxiomAudit (891ms)
-Build completed successfully (1588 jobs).

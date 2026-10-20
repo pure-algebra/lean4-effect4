@@ -22,7 +22,7 @@ The batteries keep the pinned outputs and the finite controls.
 Decisions rows 219–222, 230, 235 and 238–243 own the selected Queue contract.
 Row 251 orders the public implementation after FOLD, T5 and the mask.
 The corrected research contract remains the detailed API specification:
-`docs/research/2026-10-05-claude-lead/queue-contract/queue-contract.md`.
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-05-claude-lead/queue-contract/queue-contract.md`.
 
 `Effect4.Queue.Model` in `src/Effect4/Library/Queue/Model.lean` is the abstract transition model.
 The research model names it `QueueContract`.
@@ -32,7 +32,7 @@ It adds no program representation or production Queue.
 
 `Test/Program/QueueContract.lean` retains the small named controls.
 The separate `QueueLargeControls.lean` retains both million-element controls and the bounded exploration.
-It sits beside the research model, in `docs/research/2026-10-05-claude-lead/queue-contract/`.
+It sits beside the research model, in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-05-claude-lead/queue-contract`.
 That file is not an ordinary Test import.
 
 ## State and operations
@@ -135,7 +135,7 @@ One red control starts above the bound. The other runs `sliding` at capacity zer
 An independent Python mirror covers six named cases and 3,744 grid cases, and rejects the deliberate append mutation.
 It does not establish source agreement or a Lean proof.
 The mirror and the extraction validator are kept in
-`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/queue/package/`.
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/queue/package`.
 
 The extraction validator has separate controls.
 It accepts the exact split, rejects a changed model body and rejects a missing control file.

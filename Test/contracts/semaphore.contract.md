@@ -33,7 +33,7 @@ change. The packet states no law of a whole run.
 
 Decisions rows 259 to 261 own the selected contract, and row 265 starts the slice. The card
 is the detailed specification:
-`docs/research/2026-10-05-claude-lead/module-cards/semaphore.md`. The pinned source is
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-05-claude-lead/module-cards/semaphore.md`. The pinned source is
 `vendor/effect-4.0.0-rc.112/src/Semaphore.ts`: `SemaphoreImpl.take`, `takeIfAvailable`,
 `releaseUnsafe`, `withPermits` and `waitForPermits`.
 
@@ -142,7 +142,7 @@ case is at a total of 2, but P7 at a total of 1. The request A is 1, B is 2 and 
 run as programs over the library's operations on the Lean machine, in
 `Test/Program/SemaphoreScenarios.lean`. Each gives the model's final counts, and the pinned
 Effect's answer
-(`docs/research/2026-10-05-claude-lead/module-cards/semaphore-probes/semaphore-wake.rc112.out`).
+(`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-05-claude-lead/module-cards/semaphore-probes/semaphore-wake.rc112.out`).
 
 **The cases on the pinned host.** The truth lane runs ten programs of the operations on
 rc.112 (`harness/truth/Truth.lean`). They are P2, P3 and P7, P1 and P4 in two forms each, and
@@ -152,7 +152,7 @@ the batteries write them, and in a joined form, where the root joins the waiting
 the batteries write them, the two entries of a run settle on two exits. The two faces give
 one exit on each entry. The runner's exit column compares the fork entry on both faces, and
 its sync column compares the sync entry (decisions row 279, point 1). The records of the
-runner's former rule are in `docs/research/2026-10-06-seat-semw-evidence/README.md`.
+runner's former rule are in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-06-seat-semw-evidence/README.md`.
 
 **The named control of the machine's reading.** A waiter that a visit resumes runs inside the
 helper's task. On the trace of P1 the fibers exit in this order: A, B, the helper, C, the root.

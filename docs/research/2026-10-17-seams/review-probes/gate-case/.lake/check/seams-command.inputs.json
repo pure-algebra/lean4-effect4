@@ -1,1 +1,0 @@
-{"environment":[],"inputs":["input"],"key":"5289417825c1bc8a9a7583fad17c3af76392e18cf3592d28e1dbde4919b4b453","name":"seams-command","optional":[],"runtime":"none","snapshot":{"environment":{},"host":["Darwin","arm64"],"inputs":{"input":"f2567f257754a3b1a97eb98577322172a809eb460b96b1646c089a30823556a1"},"packages":{},"tools":{"python":"Python 3.13.14"},"version":1}}

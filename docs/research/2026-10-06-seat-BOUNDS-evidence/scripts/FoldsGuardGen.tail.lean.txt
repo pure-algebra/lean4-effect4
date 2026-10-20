@@ -1,3 +1,0 @@
-namespace Bounds
-#eval runFoldsGuard "gen" ((List.range 400).map fun i => (s!"g{i}", ([] : RowTable), Test.Program.Gen.program i 4))
-end Bounds

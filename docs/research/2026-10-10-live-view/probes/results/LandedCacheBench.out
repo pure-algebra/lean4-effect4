@@ -1,6 +1,0 @@
-load: 16:26  up 25 days,  2:16, 1 user, load averages: 18.04 14.36 13.93
-pFork, motion 20: 121 pictures; round 1: fresh 1951 ms, carried 1781 ms (rows 12330 = 12330: true); round 2: fresh 2428 ms, carried 4331 ms (rows 12330 = 12330: true); cache 69 strokes, 1242 segments
-chain 6, motion 1: 44 pictures; round 1: fresh 7639 ms, carried 3408 ms (rows 16470 = 16470: true); round 2: fresh 2961 ms, carried 2266 ms (rows 16470 = 16470: true); cache 100 strokes, 1800 segments
-chain 4, motion 20: 581 pictures; round 1: fresh 38569 ms, carried 28046 ms (rows 153516 = 153516: true); round 2: fresh 34968 ms, carried 23483 ms (rows 153516 = 153516: true); cache 408 strokes, 7344 segments
-chain 6, motion 20: 861 pictures; round 1: fresh 71309 ms, carried 39505 ms (rows 314594 = 314594: true); round 2: fresh 192420 ms, carried 90163 ms (rows 314594 = 314594: true); cache 614 strokes, 11052 segments
-load: 16:35  up 25 days,  2:25, 1 user, load averages: 49.10 36.71 24.46

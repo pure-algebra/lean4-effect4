@@ -1,1 +1,0 @@
-{ "compilerOptions": { "strict": true, "noEmit": true, "target": "es2022", "module": "es2022", "moduleResolution": "bundler", "skipLibCheck": true, "exactOptionalPropertyTypes": true }, "files": ["distrib.ts"] }

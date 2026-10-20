@@ -1,3 +1,0 @@
-gen: term addresses 98
-gen: term addresses 98; wall time 14 ms
-wall=2s exit=0

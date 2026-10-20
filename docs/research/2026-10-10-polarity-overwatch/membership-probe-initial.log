@@ -1,3 +1,0 @@
-docs/research/2026-10-10-polarity-overwatch/MembershipProbe.lean:21:3: error: unexpected token 'matches'; expected identifier
-docs/research/2026-10-10-polarity-overwatch/MembershipProbe.lean:26:57: error: unexpected token 'matches'; expected term
-(16, [false, true, true, false])

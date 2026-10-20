@@ -1,5 +1,0 @@
-COMMAND: lean --root=/private/tmp/profile-tool-baseline -DwarningAsError=true -o /private/tmp/profile-tool-baseline/OCaml5/Lcnf/Externs.olean /private/tmp/profile-tool-baseline/OCaml5/Lcnf/Externs.lean
-COMMAND: lean --root=/private/tmp/profile-tool-baseline -DwarningAsError=true -o /private/tmp/profile-tool-baseline/OCaml5/Lcnf/Builtins.olean /private/tmp/profile-tool-baseline/OCaml5/Lcnf/Builtins.lean
-COMMAND: lean --root=/private/tmp/profile-tool-baseline -DwarningAsError=true -o /private/tmp/profile-tool-baseline/OCaml5/Lcnf/Translate.olean /private/tmp/profile-tool-baseline/OCaml5/Lcnf/Translate.lean
-COMMAND: lean --root=/private/tmp/profile-tool-baseline -DwarningAsError=true -o /private/tmp/profile-tool-baseline/OCaml5/Tools/LcnfGen.olean /private/tmp/profile-tool-baseline/OCaml5/Tools/LcnfGen.lean
-COMMAND: lean --root=/private/tmp/profile-tool-baseline -DwarningAsError=true -o /private/tmp/profile-tool-baseline/Effect4Gen/PreludeAtoms.olean /private/tmp/profile-tool-baseline/Effect4Gen/PreludeAtoms.lean

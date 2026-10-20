@@ -1,5 +1,0 @@
-Except.ok ()
-true
-some (false, true, true)
-false
-true

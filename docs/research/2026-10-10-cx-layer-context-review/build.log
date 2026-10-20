@@ -1,4 +1,0 @@
-$ lake build Effect4.Api Effect4.Laws.Program.Typed.Scope Effect4.Laws.Program.ReferenceTyping ProofGraph.AxiomAudit
-Build completed successfully (353 jobs).
-
-Exit: 0

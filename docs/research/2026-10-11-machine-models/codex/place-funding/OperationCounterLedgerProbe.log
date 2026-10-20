@@ -1,1 +1,0 @@
-COMMAND: lean --root=/private/tmp/effect4-place-counter-current -DwarningAsError=true -o /private/tmp/effect4-place-counter-current/OperationCounterLedgerProbe.olean /private/tmp/effect4-place-counter-current/OperationCounterLedgerProbe.lean

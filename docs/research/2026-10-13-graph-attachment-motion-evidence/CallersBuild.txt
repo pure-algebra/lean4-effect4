@@ -1,8 +1,0 @@
-warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
-✔ [428/434] Built Tools.View.GraphCheck (1.0s)
-✔ [430/434] Built Tools.View.Run (2.6s)
-✔ [495/510] Built Tools.View.GraphLayout (1.8s)
-✔ [508/510] Built Tools.View.Build (4.8s)
-✔ [509/510] Built Tools.View.Specimen (1.9s)
-✔ [510/510] Built Drivers.View (5.2s)
-Build completed successfully (510 jobs).

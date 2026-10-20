@@ -3,9 +3,9 @@
 Status: FROZEN / GREEN in the working tree, R3 and R4 together at the owner's
 request, base `c462cd1`. The owner also authorized R2's control-boundary
 correction on 2026-09-06. Design and evidence:
-`docs/research/2026-09-06-r3-r4-implementation.md`. Amended for P1b and P2
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-06-r3-r4-implementation.md`. Amended for P1b and P2
 (2026-09-06, from `a1fb467`) under the frozen bounded design of
-`docs/research/2026-09-06-p0-fable-record.md` §4: the term counts what the
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-06-p0-fable-record.md` §4: the term counts what the
 corrected frame machine counts, and the frame machine's corrected clauses are
 the host's on the checkpoint table of that record. The delivery review at
 `acfc2fc` found remaining source discrepancies D4–D7; that checkpoint's green
@@ -255,7 +255,7 @@ ID allocator; host ID realization remains an explicit target boundary.
 
 The coordinator independently checked the P3/P4 implementation at base `acfc2fc`
 plus the reviewed working changes. This section owns the accepted statements;
-`docs/research/2026-09-07-p3-p4-audit.md` owns the review evidence and
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-07-p3-p4-audit.md` owns the review evidence and
 `2026-09-06-wave2-synthesis.md` owns the next work order.
 
 `Effect4.Program.Sched.run_eq_ref e fuel tape choices` has no premise. It

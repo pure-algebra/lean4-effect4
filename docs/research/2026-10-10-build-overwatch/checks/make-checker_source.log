@@ -1,4 +1,0 @@
-python3 scripts/check-conform.py cases
-mkdir -p .lake/check && touch .lake/check/cases
-find: ocaml: No such file or directory
-find: Test/fixtures/trust-gate: No such file or directory

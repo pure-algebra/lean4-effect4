@@ -1,9 +1,0 @@
-("accepted ordinary author programs", 7)
-("refused ordinary author programs", 17)
-true
-some { path := [1, 0, 0, 0, 1, 1, 0], reason := DetProbe.Reason.conflict 0 [1, 1, 0, 0, 0, 1, 0] }
-some { path := [1, 1, 0], reason := DetProbe.Reason.parentDuringWorkers }
-[(2, 255, true, true), (2, 255, true, true), (2, 255, true, true), (2, 255, true, true), (2, 255, true, true),
-  (2, 255, true, true), (2, 255, true, true)]
-[("success (Val.list [(Val.nat 1), (Val.nat 2)]) | refs [(Val.nat 2)]", [3]),
-  ("success (Val.list [(Val.nat 2), (Val.nat 1)]) | refs [(Val.nat 2)]", [3])]

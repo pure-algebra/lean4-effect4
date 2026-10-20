@@ -1,5 +1,0 @@
-{
-  "//": "Seat SVC's red control of the host declaration: the module alone leaves TodoRepo unbound (TS2304) until seat ROWS declares its key.",
-  "extends": "./tsconfig.json",
-  "include": ["prelude/*.ts", "todo/todo.gen.ts"]
-}

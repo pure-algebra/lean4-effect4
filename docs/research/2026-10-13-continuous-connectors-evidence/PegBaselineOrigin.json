@@ -1,9 +1,0 @@
-{
-  "effect4Head": "de03ba2acfa54bd3f73cacc15caa04e7d9a75cab",
-  "kitHead": "e77e9d0ed68d120ecce5477d16c086cc40cc3561",
-  "pegBridgeBlob": "0923457d9af7811906cab668dbb8ee5ea65adb97",
-  "buildCommand": "LEAN_NUM_THREADS=3 lake build Tools.View.Tube.PegRender Tools.View.Tube.PegChecks",
-  "auditCommand": "LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-13-peg-bridge-baseline-evidence/Audit.lean",
-  "buildExitCode": 0,
-  "auditExitCode": 1
-}

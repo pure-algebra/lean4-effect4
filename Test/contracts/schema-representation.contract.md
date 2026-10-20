@@ -3,7 +3,7 @@
 Status: FROZEN breaker packet, 2026-08-31; its pre-implementation revision is
 required to be RED, and fired findings are recorded below
 
-Ruling input: `docs/research/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census"
+Ruling input: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census"
 
 Implementation fence: `src/Effect4/Schema/Representation.lean`
 
@@ -22,7 +22,7 @@ the case-sensitive wire spelling of each member.
 It deliberately does **not** freeze the payload carrier. `Representation`
 itself, its per-tag persisted fields, `Check`, annotations, `Document`, and
 `MultiDocument` remain unopened. In the obligation graph of
-`docs/research/SCHEMA-CUTOVER.md` this packet targets the tag portion of `SC-REP-02`
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md` this packet targets the tag portion of `SC-REP-02`
 (`Nodup` and lexical source completeness) and the tag portion of `SC-REP-03`
 (structural equality and the exact dependent recursor). Those edges remain
 open while this breaker packet is red. `SC-REP-01` (payload declaration and
@@ -48,7 +48,7 @@ not each receive an otherwise empty graph.
 
 ## Source authority and its limit
 
-The census is taken from the frozen table in `docs/research/SCHEMA-CUTOVER.md`, whose
+The census is taken from the frozen table in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md`, whose
 authority pins are `effect@4.0.0-rc.112` and upstream revision
 `2600f62f4532026928454dcea8d1c48557b3f942`.
 
@@ -215,7 +215,7 @@ licenses any claim about how a full representation decodes.
   coverage.
 
 `E4-SCHEMA-CE-001` through `E4-SCHEMA-CE-016`, reserved by
-`docs/research/SCHEMA-CUTOVER.md`, attack the payload, denotation, codec, and wire
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md`, attack the payload, denotation, codec, and wire
 layers. They are owned by later packets and are **not** discharged here. See
 `Test/Counterexamples/Schema/ATTACKS.md`.
 

@@ -1,9 +1,0 @@
-ℹ [1025/1033] Replayed Test.Machine.EditFields
-info: Test/Machine/EditFields.lean:60:0: frame rules: 11 checked theorems, 20 reused clauses, 2 explicit premises
-✔ [1028/1033] Built Effect4.Laws.Program.Typed.Commands.Clauses.Command (7.7s)
-✔ [1029/1033] Built Effect4.Laws.Program.Typed.Commands.Clauses.Close (5.0s)
-✔ [1030/1033] Built Effect4.Laws.Program.Typed.Commands.Clauses.All (4.3s)
-✔ [1031/1033] Built Effect4.Laws.Program.Typed.Results (6.3s)
-✔ [1032/1033] Built Effect4.Laws.Program.Typed.AdmittedSource (6.3s)
-✔ [1033/1033] Built Effect4.Laws (5.9s)
-Build completed successfully (1033 jobs).

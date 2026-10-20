@@ -93,7 +93,7 @@ therefore an internal agreement at the empty table with no external answers, and
 it is not a table-aware claim and not a host claim.
 
 The target proposition, which no proof yet discharges, is the one scout B
-elaborated (`docs/research/2026-09-09-scout-proof-statements.md` §6, an untracked
+elaborated (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-09-scout-proof-statements.md` §6, an untracked
 working note), verbatim:
 
 ```lean

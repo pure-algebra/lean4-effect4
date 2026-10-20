@@ -1,7 +1,0 @@
-✖ [706/1118] Building Effect4.Program.Compile (3.1s)
-trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4-codex/src/Effect4/Program/Compile.lean -o /Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean/Effect4/Program/Compile.olean -i /Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean/Effect4/Program/Compile.ilean -c /Users/pooks/Dev/lean4-effect4-codex/.lake/build/ir/Effect4/Program/Compile.c --setup /Users/pooks/Dev/lean4-effect4-codex/.lake/build/ir/Effect4/Program/Compile.setup.json --json
-error: src/Effect4/Program/Compile.lean:1455:99: unexpected identifier; expected '}'
-error: Lean exited with code 1
-Some required targets logged failures:
-- Effect4.Program.Compile
-error: build failed

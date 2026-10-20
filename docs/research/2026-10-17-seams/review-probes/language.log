@@ -1,1 +1,0 @@
-PASS check-language: no finding in docs/research/2026-10-17-seams/codex-review.md; the other documents carry 2046 finding(s) (report: python3 scripts/check-language.py)

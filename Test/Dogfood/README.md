@@ -37,7 +37,7 @@ of row 204 moves at least one program forward.
 ## The reference texts
 
 The model probe's programs seat wrote the five programs on 2026-09-30, and its verifier reran
-them with identical lines (`docs/research/2026-09-30-model-probe/synthesis.md` §2.4). Commit
+them with identical lines (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-model-probe/synthesis.md` §2.4). Commit
 `ce2ece4f` recorded them
 (`git:ce2ece4f:docs/research/2026-09-30-model-probe/programs/ts/hostruns.log`), and `f7ccf52e`
 dropped them from the research tree. Every file of `rc112/` is byte-identical to its blob at

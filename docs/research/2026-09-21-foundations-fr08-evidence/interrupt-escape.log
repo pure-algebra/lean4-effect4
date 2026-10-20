@@ -1,2 +1,0 @@
-'Test.Counterexamples.InterruptEscape.escaped_exit_does_not_fit' depends on axioms: [propext, Quot.sound]
-'Test.Counterexamples.InterruptEscape.escaped_exit_fits_region' depends on axioms: [propext, Quot.sound]

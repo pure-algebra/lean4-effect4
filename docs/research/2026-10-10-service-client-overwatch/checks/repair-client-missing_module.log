@@ -1,5 +1,0 @@
-{"kind":"signed-divergence-controls","checks":9,"failures":[]}
-| program | Lean exit | rc.112 exit | agree | schedule agree | runSyncExit agree | entry | notes |
-|---|---|---|---|---|---|---|---|
-| pQueueService | success [true,1] | not run | n/a | n/a | n/a | — | printer refused: internal action defs |
-FAIL: 1 of 1 programs disagree with rc.112 (pQueueService)

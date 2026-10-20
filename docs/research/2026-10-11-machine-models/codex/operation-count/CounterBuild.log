@@ -1,1 +1,0 @@
-COMMAND: lean --root=/private/tmp -DwarningAsError=true -o /private/tmp/OperationCounterLedgerProbe.olean /private/tmp/OperationCounterLedgerProbe.lean

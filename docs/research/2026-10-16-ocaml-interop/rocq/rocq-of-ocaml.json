@@ -1,6 +1,0 @@
-{
-  "renaming_rules": [
-    ["Stdlib.Ok", "inl"],
-    ["Stdlib.Error", "inr"]
-  ]
-}

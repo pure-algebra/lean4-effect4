@@ -1,3 +1,0 @@
-tree: /private/tmp/meanings-queue-runtime
-branch: codex/meanings-queue-runtime
-head: 50ebf1599d7595f74990bfb86af498cd5c11fa85

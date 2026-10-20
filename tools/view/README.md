@@ -2,7 +2,7 @@
 
 Frames of a program as it is built and as it runs, in a window, a terminal or files. A picture
 is data computed in Lean (`tools/Tools/View/`). The C programs here replay it and decide nothing.
-The design and its rulings: `docs/research/2026-10-09-visual-pipeline.md` and decisions row 336.
+The design and its rulings: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-visual-pipeline.md` and decisions row 336.
 
 The view is being pared back to one graph layout, `Tools.View.Graph.layout` (the owner, 2026-10-18).
 A run, the journal's or the host's, is to be shown as a plain table, not as a graph. A proposal
@@ -20,7 +20,7 @@ for the graph's interface is pending, and it decides what the view keeps.
 
 Run from the repository's root. `v` builds the Lean modules that its driver imports and the
 stale programs that its mode runs, writes the frames, and shows them. Every run is kept in
-`tools/view/out/runs/TIME-NAME-MODE/`, labelled with its commit and time, with its page
+`tools/view/out/runs/`, one folder per run named by its time, name and mode, labelled with its commit and time, with its page
 `index.html`. The studio `tools/view/out/index.html` lists every kept run, newest first, links the
 looks, the PC's probe pages and the documents, and reloads itself when a run is kept (decisions row
 362). Keep it open in the Claude app's browser pane: the `studio` server of `.claude/launch.json`
@@ -69,7 +69,7 @@ A move is shown at its end: the motion of a move is not drawn yet.
 
 Every choice of style is data (`tools/Tools/View/Look.lean`). A look holds the colour of each role,
 the faces, the strokes and corners, the form of an edge, and the timing of motion. An organic
-stroke follows growth rules (`docs/research/2026-10-09-organic-strokes.md`). A line's width is its
+stroke follows growth rules (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-organic-strokes.md`). A line's width is its
 share of the work, by da Vinci's rule. It widens into a collar where it meets a box or a bar. The
 dark look sets the noise to zero (decisions row 354, point 9). The look `organic` turns it on: the
 edges of a line then vary by noise that its key seeds, inside a bounded band. The look `classic`

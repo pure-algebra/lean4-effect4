@@ -1,5 +1,0 @@
-Command: LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-13-empty-region-evidence/Controls.lean
-Exit code: 0
-warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
-[(true, 32, 40, ["[]/empty"]), (true, 48, 80, ["[0]/empty"]), (true, 136, 112, ["[0]/empty", "[1]"]),
-  (true, 136, 112, ["[0]", "[1]/empty"])]

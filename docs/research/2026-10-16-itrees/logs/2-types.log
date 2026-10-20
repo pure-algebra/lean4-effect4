@@ -1,7 +1,0 @@
-$ inrocq ocamlfind ocamlopt -package compiler-libs.common -linkpkg split_types.ml -o split_types
-$ inrocq ocamlfind ocamlopt -package compiler-libs.common -linkpkg extract_map.ml -o extract_map
-$ split_types eff_types.ml > eff_types.ml
-$ extract_map eff_types.ml > EffExtract.v
-$ inrocq ocamlfind ocamlc -bin-annot -c eff_types.ml
-$ inrocq rocq-of-ocaml -output Eff_types.v eff_types.ml
-[32m✔️[0m File 'Eff_types.v' successfully generated

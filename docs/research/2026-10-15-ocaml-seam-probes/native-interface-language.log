@@ -1,1 +1,0 @@
-PASS check-language: no finding in docs/research/2026-10-15-ocaml-seam-probes/native-interfaces.md; the other documents carry 2053 finding(s) (report: python3 scripts/check-language.py)

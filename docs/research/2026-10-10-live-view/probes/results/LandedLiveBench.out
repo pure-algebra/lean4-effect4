@@ -1,5 +1,0 @@
-load: 15:55  up 25 days,  1:45, 1 user, load averages: 3.24 8.26 14.44
-pFork: 7 frames; batch 106.95 ms, 747 stream rows; live 37.31 ms (mean 5.33, worst 7.38), 674 patch rows
-chain 6: 44 frames; batch 1071.70 ms, 16470 stream rows; live 738.90 ms (mean 16.79, worst 35.49), 8367 patch rows
-chain 12: 86 frames; batch 4892.95 ms, 58965 stream rows; live 4031.16 ms (mean 46.87, worst 152.93), 25992 patch rows
-chain 18: 128 frames; batch 43563.18 ms, 128278 stream rows; live 18886.93 ms (mean 147.55, worst 407.36), 53700 patch rows

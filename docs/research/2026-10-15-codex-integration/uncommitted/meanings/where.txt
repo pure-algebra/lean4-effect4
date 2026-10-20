@@ -1,3 +1,0 @@
-tree: /Users/pooks/Dev/lean4-effect4-codex
-branch: codex/meanings
-head: 118b944dd1c5767c2bbf8da43500eecc00a0fa65

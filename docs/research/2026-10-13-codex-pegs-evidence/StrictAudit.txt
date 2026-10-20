@@ -1,3 +1,0 @@
-warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
-#axiom_audit: 309 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
-#axiom_audit: 129 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals

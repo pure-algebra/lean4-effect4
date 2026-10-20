@@ -1,2 +1,0 @@
-docs/research/2026-10-09-co6b-overwatch/collision.ts(8,14): error TS2451: Cannot redeclare block-scoped variable 'SLayer'.
-docs/research/2026-10-09-co6b-overwatch/collision.ts(12,14): error TS2451: Cannot redeclare block-scoped variable 'SLayer'.

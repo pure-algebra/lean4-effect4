@@ -22,7 +22,7 @@ for the rows routed by row, a host renamed along a lens, rows implemented by pro
 rows, a recording host whose transcript replays.
 
 Placement: concept `translation-simulation`, a compatibility helper. It is a step of the planned
-claim H9 (`rows-denotation-reactor`, `docs/research/2026-10-09-host-coalgebra.md`, slice CO-3);
+claim H9 (`rows-denotation-reactor`, `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-host-coalgebra.md`, slice CO-3);
 its consumers are H9's statement and the host utilities of slice CO-6. It establishes nothing of
 a machine or a session: it relates two readings of the same call tree.
 -/

@@ -9,8 +9,8 @@ derivations and probes are research records:
 - [host answers and the typed guarantee](../research/2026-09-30-host-answers-and-typed-guarantee.md);
 - [the plan review](../research/2026-09-30-origin-plan-review.md) and its
   [ratification conditions](../research/2026-09-30-origin-plan-review/RemediationReview.md);
-- the probes in `docs/research/2026-09-30-host-answers-evidence/` and
-  `docs/research/2026-09-30-external-runtime-contract/`.
+- the probes in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-host-answers-evidence` and
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-external-runtime-contract`.
 
 **Status.** On 2026-09-30 the owner put three things first: the interim rule (§5), the M6
 in-scope repair (row 95) and the value membership fix (row 96). All three landed by 2026-10-01
@@ -123,7 +123,7 @@ The others are closed:
 | The runtime check accepted a live handle of the wrong declared type. A program checked at `nat` finished with a string on the certified live session (start, bind, submit, apply) and on the checked replay. Fiber handles were exploitable. | By refusal: the interim rule (§5, row 97) landed on 2026-09-30 (`90df5d21a`, merged at `bc77e97fb`). A reply carries no handle but a fresh external allocation (`externalValue`, `src/Effect4/Program/Compile.lean`). `Val.hasTy` still checks a handle by kind only (`src/Effect4/Program/Typed.lean`), so lifting the rule for a kind needs its declarations (§4.3). | `E4-HOST-CE-007`, REPAIRED (`Test/Counterexamples/Machine/Runtime/HostHandleForgery.lean`); `host-answers-evidence/Probe.lean` §2 |
 | The proof's value predicate checked nothing inside products, Results or successful exits, and a union could take shape from one branch and handle evidence from another. A closed program with no host stored a fiber handle in a pair, projected it and awaited it; it checked at `nat` and ran to 7. | Row 96 landed on 2026-09-30: the membership judgment `Fits` (`src/Effect4/Laws/Program/Typed/Membership.lean`) has one arm for each `Ty` constructor, and its union arm reads one whole branch. | the contract's `PredicateProbe.lean`; `host-answers-evidence/PathProbes.lean` §D |
 | M6's statement counted every decision tape: a `sleep` answered with `42` finished with `42`. | Row 95 landed on 2026-09-30 (`eca77d6a1`): M6 and M7 count only tapes with no host answer (`NoHostAnswer`, `src/Effect4/Laws/Program/Typed/Assembly.lean`). | `E4-SCHED-CE-015`, REPAIRED for host answers, then RETIRED with its battery (`Test/Counterexamples/Archive/REGISTER.md`) |
-| The runtime check accepted a host failure carrying `badName` or `notImplemented`, the machine's own markers for malformed code, which the typed exit judgment refuses (`NoShapeDefect`, row 152); so `admit = none` did not imply `AnswerOk` on failures. | Row 191, on 2026-10-03: admission refuses them on both paths (`Refusal.reservedDefect`). | `docs/research/2026-10-03-session-work/t4-audit.lean` (Codex); `Test/Counterexamples/Machine/Runtime/HostReservedDefect.lean` (`E4-HOST-CE-008`) |
+| The runtime check accepted a host failure carrying `badName` or `notImplemented`, the machine's own markers for malformed code, which the typed exit judgment refuses (`NoShapeDefect`, row 152); so `admit = none` did not imply `AnswerOk` on failures. | Row 191, on 2026-10-03: admission refuses them on both paths (`Refusal.reservedDefect`). | `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-03-session-work/t4-audit.lean` (Codex); `Test/Counterexamples/Machine/Runtime/HostReservedDefect.lean` (`E4-HOST-CE-008`) |
 
 ## 4. The contract (proposed; rows 96–100)
 

@@ -1,3 +1,0 @@
-(executable
- (name typed_lint)
- (libraries compiler-libs.common))

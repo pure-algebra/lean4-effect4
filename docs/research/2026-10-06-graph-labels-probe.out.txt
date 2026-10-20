@@ -1,2 +1,0 @@
-'Label.ranked_acyclic' depends on axioms: [propext, Quot.sound]
-'Label.Walk.rank_lt' depends on axioms: [propext, Quot.sound]

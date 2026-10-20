@@ -1,2 +1,0 @@
-warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
-[(10, 6, true), (14, 10, true), (10, 6, true), (34, 30, true), (8, 4, true), (10, 6, true)]

@@ -3,16 +3,16 @@
 Status: FROZEN / GREEN, amended for R3/R4. On 2026-09-06 the owner authorized retaining
 handler and cleanup boundaries after a probe against `c462cd1` showed that
 the former denotation erased a difference observable under interruption.
-Design and evidence: `docs/research/2026-09-06-r3-r4-implementation.md`.
+Design and evidence: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-06-r3-r4-implementation.md`.
 The earlier fuel and answer corrections remain recorded in
-`docs/research/2026-09-06-w3-r2-continuation.md`.
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-06-w3-r2-continuation.md`.
 
 Implementation: `src/Effect4/Laws/Program/DenoteR.lean`, with the answer and frontier
 amendments in `src/Effect4/Laws/Program/Sched.lean`. Tests:
 `Test/Program/DenoteRContract.lean` and
 the existing scheduler signature battery. The obligations below are proved;
 whole-tree integration and the R3/R4 runtime gate also pass. Final receipt:
-`docs/research/2026-09-06-r3-r4-implementation.md`.
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-06-r3-r4-implementation.md`.
 
 ## Frozen corrected meaning
 

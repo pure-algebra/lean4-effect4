@@ -6,7 +6,7 @@ Implementation: `src/Effect4/Codegen/Schema.lean`
 
 Battery: `Test/Codegen/SchemaGenerationContract.lean`
 
-Host harness: `scripts/check-schema-typescript-generation.sh`
+Host harness: `git:38b94bdec8426dac48e7d43e1e6361115eadbd7f:scripts/check-schema-typescript-generation.sh`
 
 Coverage corpus: `Test/Codegen/SchemaGenerationCoverage.lean`
 

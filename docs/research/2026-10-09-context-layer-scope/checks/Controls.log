@@ -1,1 +1,0 @@
-PASS: raw builders can inspect holes; equal-fuel unfolding fails; nested forwarding keeps captures; smaller errors change inferred exit types; ordinary calls retain inactive frames; missing parameters are refused.

@@ -1,5 +1,0 @@
-exit 0
-== ALL PASS: 0 failure(s) ==
-exit 0
-== ALL PASS: 0 failure(s) ==
-exit 0

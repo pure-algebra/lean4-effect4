@@ -1,6 +1,0 @@
-none
-true
-true
-true
-some true
-false

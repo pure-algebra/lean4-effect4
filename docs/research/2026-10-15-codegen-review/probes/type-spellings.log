@@ -1,4 +1,0 @@
-probe: types 76, spellings differ at 2
-probe: differ	renderRaw readonly ["a" | "b", boolean]	printed readonly ["a", boolean] | readonly ["b", boolean]
-probe: differ	renderRaw readonly ["a" | "b" | "c" | "d" | "e", "a" | "b" | "c" | "d" | "e"]	printed readonly ["a", "a"] | readonly ["a", "b"] | readonly ["a", "c"] | readonly ["a", "d"] | readonly ["a", "e"] | readonly ["b", "a"] | readonly ["b", "b"] | readonly ["b", "c"] | readonly ["b", "d"] | readonly ["b", "e"] | readonly ["c", "a"] | readonly ["c", "b"] | readonly ["c", "c"] | readonly ["c", "d"] | readonly ["c", "e"] | readonly ["d", "a"] | readonly ["d", "b"] | readonly ["d", "c"] | readonly ["d", "d"] | readonly ["d", "e"] | readonly ["e", "a"] | readonly ["e", "b"] | readonly ["e", "c"] | readonly ["e", "d"] | readonly ["e", "e"]
-types exit 0 in 1 s

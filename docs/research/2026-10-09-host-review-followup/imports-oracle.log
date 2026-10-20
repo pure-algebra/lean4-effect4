@@ -1,7 +1,0 @@
-{"headerErrors":false,"imports":["Effect4.Program.Ty"],"path":"/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-review-followup/cases/comments.lean.txt"}
-{"headerErrors":false,"imports":["Effect4.Program.Ty"],"path":"/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-review-followup/cases/declaration-doc.lean.txt"}
-{"headerErrors":false,"imports":["Effect4.Program.Ty"],"path":"/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-review-followup/cases/module-doc.lean.txt"}
-{"headerErrors":false,"imports":["Effect4.Program.Ty","Effect4.Program.Native"],"path":"/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-review-followup/cases/ordinary.lean.txt"}
-{"headerErrors":false,"imports":["Effect4.Program.Ty"],"path":"/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-review-followup/cases/public.lean.txt"}
-{"headerErrors":false,"imports":["Effect4.Program.Ty"],"path":"/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-review-followup/cases/quoted.lean.txt"}
-{"headerErrors":false,"imports":["Effect4.Program.Ty"],"path":"/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-review-followup/cases/stopped.lean.txt"}

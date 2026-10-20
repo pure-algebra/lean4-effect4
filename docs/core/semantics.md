@@ -16,8 +16,8 @@ What this document does not own, and who does:
 - **The goal, the sorts, the arrows and the requirements.** `docs/core/system-map.md`.
 - **What is next.** `docs/STATE.md`.
 - **Counterexamples.** `Test/Counterexamples/REGISTER.md`.
-- **The sources.** `docs/research/2026-10-01-semantics/sources/README.md` (vendored with
-  checksums) and `docs/research/2026-10-01-semantics/citations-audit.md` (every locator read off a
+- **The sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-semantics/sources/README.md` (vendored with
+  checksums) and `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-semantics/citations-audit.md` (every locator read off a
   vendored page). A theorem, rule or in-section page number of TAPL or ATTAPL is not verified
   until the owner's copies are vendored; those references are marked as cited.
 
@@ -338,7 +338,7 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   Three properties are planned goals: inhabitance complete against membership, membership
   invariant under normalization, and one fixed point on a guarded table.
   It establishes nothing of `Fits`, a world, a parameter or a face.
-  The formal note is `docs/research/2026-10-15-recursive-types/formal.md`.
+  The formal note is `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-15-recursive-types/formal.md`.
 - **A step types at its type (`step-language-typed`)**: A step is data over typed inputs
   (`Step`, `src/Effect4/Step.lean`), and it has a source term at every scope.
   Let the caller's terms type at the inputs' types, and let the step's typing facts hold.
@@ -769,7 +769,7 @@ The generated feature view selects all M6 command goals and the actual frame, tr
 assembly declarations. Its proof-reference arrows come from Lean expressions; its authored
 prerequisite arrows explain the intended assembly. The TYPES 2003 basis—Adams's feature
 structure, Ballarin's preservation of context assumptions, and Wiedijk's significant proof
-steps—is documented in the [proof-view method](../research/2026-10-02-proof-feature-graph/method.md).
+steps—is documented in the proof-view method (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-02-proof-feature-graph/method.md`).
 Neither kind of arrow proves an open goal. Full statements, hypotheses, literature associations
 and checked/wanted evidence remain available through the existing report and architecture page.
 
@@ -1373,7 +1373,7 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   accepts the entries that `prepare` builds, so `answer` returns the fold at every type
   (`answer_eq`). The property establishes no speed and no reuse after an edit. It reads no
   typing judgment and no input that the layer inherits: the type is the whole key. Its consumer
-  is slice D6 of `docs/research/2026-10-09-program-graph-design.md`, serving R14.
+  is slice D6 of `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-program-graph-design.md`, serving R14.
 - **A checked summary of cyclic dependencies (`dependency-summary-exact`)**: a finite graph
   gives each node its seeded labels and its ordered children (`Tools.Graph.Summary.Graph`,
   `tools/Tools/Graph/Summary.lean`). Cycles are allowed. A summary is a table with a distance
@@ -1460,7 +1460,7 @@ def Satisfies (self : Context U) (r : Requirement) : Prop := r.Subset self.keysR
 - **I/O Automata & Labeled Transitions**: Lynch & Vaandrager (1995, *Forward and Backward Simulations I:
   Untimed Systems*, Information and Computation 121, pp. 214–233, audit C4, C47).
 - **Comodels and runners**: four texts, each locator read in
-  `docs/research/2026-10-09-comodel-papers/README.md` (decisions row 338).
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-comodel-papers/README.md` (decisions row 338).
   Plotkin and Power (2008, *Tensors of Comodels and Models for Operational Semantics*, MFPS XXIV,
   ENTCS 218).
   Their Definition 3.1 defines a comodel of a countable Lawvere theory.
@@ -1584,7 +1584,7 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   The host's silence is a premise.
   A wait is a frontier, never a failure, and no progress claim follows.
   Neither law says anything of a fork, a scope or an interruption (slice L4,
-  `docs/research/2026-10-10-l4-frontiers.md`).
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-10-l4-frontiers.md`).
   (`Run.rows_loop_frontier`, `Run.rows_loop_frontier_host`
   (`src/Effect4/Laws/Api/SessionMeaningLoop.lean`)).
 - **Frontier awaitHost inversion (`frontier-awaithost`)**: Machine awaitingAsync state matches frontier reason.
@@ -1650,8 +1650,8 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   A budget cut is no failure and no divergence.
   Each statement of H8 and H9 takes one fiber and a recorded run that is funded, at rest and
   driven by a host. None claims progress.
-  The packet is `docs/research/2026-10-07-packet-host-meaning.md`, and the loops are
-  `docs/research/2026-10-10-host-meaning-widening/README.md` (DI-57, DI-69).
+  The packet is `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-07-packet-host-meaning.md`, and the loops are
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-10-host-meaning-widening/README.md` (DI-57, DI-69).
 
 #### 3. Project Definition and Judgment
 Agreement theorems and fragment definitions are modeled in `src/Effect4/Laws/Program/Agreement/Segment.lean`
@@ -1946,7 +1946,7 @@ concepts until generation resumes.
 #### 1. What the Literature Defines
 - **Typed holes.** An expression with holes is the object an editor holds. The source is Omar,
   Voysey, Hilton and others, *Hazelnut: A Bidirectionally Typed Structure Editor Calculus*, POPL
-  2017 (read in `docs/research/2026-10-06-seat-GAP-study.md` §3). Each hole has an entry with its
+  2017 (read in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-06-seat-GAP-study.md` §3). Each hole has an entry with its
   type, and filling a hole is an operation of its own. The source is Omar, Voysey, Chugh and
   Hammer, *Live Functional Programming with Typed Holes*, ICFP 2019 (vendored as
   `vendor/papers/gradual-holes/omar-live-typed-holes-1805.00155v4.pdf`).
@@ -1959,7 +1959,7 @@ concepts until generation resumes.
   Madhavapeddy and Omar 2026, Theorem 5.2 (read in the head of
   `src/Effect4/Laws/Program/Typing/Replace.lean`).
 - **Incremental attribute evaluation.** An edit re-evaluates only the attributes it reaches
-  (Reps, Teitelbaum and Demers 1983; recalled, `docs/research/2026-10-08-live-authoring.md` §2).
+  (Reps, Teitelbaum and Demers 1983; recalled, `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-08-live-authoring.md` §2).
 
 #### 2. Effect4 Adaptation, Assumptions, and Exclusions
 - **A hole is a host row.** A sketch is a program over its application's row table, extended by
@@ -2077,4 +2077,4 @@ Each site is now cited by name and path, not by line.
    theorems over specified fragments (`Straight`, `Looped`, empty host table `M7Fragment`), never
    as unqualified "equivalence".
 4. **Literature Tracking**: Every textbook chapter and academic paper citation is audited against
-   vendored copies in `docs/research/2026-10-01-semantics/citations-audit.md`.
+   vendored copies in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-semantics/citations-audit.md`.

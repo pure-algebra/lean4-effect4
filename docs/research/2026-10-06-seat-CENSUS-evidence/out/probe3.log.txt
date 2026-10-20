@@ -1,2 +1,0 @@
-probe 3: every guard above holds
-wall=2s exit=0

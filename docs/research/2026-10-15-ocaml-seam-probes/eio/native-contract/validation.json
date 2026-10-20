@@ -1,7 +1,0 @@
-{
-  "native_provider_pass_lines": 14,
-  "expected_type_refusals": 2,
-  "language_findings": 0,
-  "source_capture_syntax": "checked",
-  "evidence_scope": "finite native Eio provider interoperability; no machine or network backend"
-}

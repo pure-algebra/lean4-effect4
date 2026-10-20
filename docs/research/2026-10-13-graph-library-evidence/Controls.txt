@@ -1,6 +1,0 @@
-warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
-#axiom_audit: 237 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
-checked specimen frames: 9
-flow allocation controls: 16/16
-identity, parallel edge, first refusal, generated point collision controls: pass
-remaining gap control: self-loop centreline exceeds admitted allocation canvas

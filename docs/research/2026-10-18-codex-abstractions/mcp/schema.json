@@ -1,1 +1,0 @@
-{"status": "PASS", "protocol": "2025-06-18", "schema_checks": 61, "input_messages": 15, "output_messages": 13, "tools": 19, "exact_large_id": "18446744073709551616", "scope": "finite stdio trace; official schemas and generated argument schemas"}

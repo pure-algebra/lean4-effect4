@@ -1,6 +1,0 @@
-#axiom_audit: 199 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
-finite-controls,9,pass
-count,repetitions,elapsed_ns,example_rows,width,height,item_area,oversize_count,checksum
-100,100,37883400,10,1194,846,709374,0,7317887001843540454
-1000,20,77343500,97,1200,8111,7109052,0,2744859526830665557
-10000,4,168163100,976,1200,81517,71148936,0,3002701760012970422

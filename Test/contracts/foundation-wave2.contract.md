@@ -157,7 +157,7 @@ value/error order, without adding a second type constructor here.
 ### Formal foundations amendment (owner ruled 2026-09-11)
 
 Rows DI-15, DI-17, DI-23, DI-39, DI-55, DI-57, DI-58 amended and DI-67 to DI-71 added;
-map ticket T-13; the packet is `docs/research/2026-09-11-eff-formal-foundations-implementation.md`
+map ticket T-13; the packet is `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-11-eff-formal-foundations-implementation.md`
 (untracked working note).
 
 **Type identity.** Two types are the same type when each is a subtype of the other. `Ty.sub`

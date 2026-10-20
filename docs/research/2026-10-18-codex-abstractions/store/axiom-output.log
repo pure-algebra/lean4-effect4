@@ -1,3 +1,0 @@
-ℹ [1165/1165] Built Tools.StorePortAudit (9.4s)
-info: tools/Tools/StorePortAudit.lean:6:0: #axiom_audit: 492 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
-Build completed successfully (1165 jobs).

@@ -1,9 +1,0 @@
-# tsgo Version 7.0.0-dev.20260629.1
-## faces.ts
-faces.ts(9,13): error TS2456: Type alias 'Json' circularly references itself.
-rc=1
-## expr.ts
-expr.ts(3,20): error TS2304: Cannot find name 'lit'.
-rc=1
-## json-fix.ts
-rc=0

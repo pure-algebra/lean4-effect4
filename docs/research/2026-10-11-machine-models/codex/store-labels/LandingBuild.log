@@ -1,6 +1,0 @@
-✔ [1111/1115] Built Effect4.Laws.Program.NativeHeapExecution (11s)
-✔ [1112/1115] Built Effect4.Laws.Program.NativeHeapHistory (25s)
-✔ [1113/1115] Built Test.Dogfood.Proofs.PrimitiveProducerReader (25s)
-✔ [1114/1115] Built Test.Dogfood.Proofs.HostTimeoutNumberState (38s)
-✔ [1115/1115] Built Test.Machine.ReferenceFootprint (19s)
-Build completed successfully (1115 jobs).

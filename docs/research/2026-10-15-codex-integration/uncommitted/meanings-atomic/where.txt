@@ -1,3 +1,0 @@
-tree: /private/tmp/meanings-atomic
-branch: codex/meanings-atomic
-head: 57e0c006b88bef275c392f72fd25872db169419f

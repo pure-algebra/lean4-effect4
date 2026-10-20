@@ -8,15 +8,15 @@ observation and control choices remain proposals in rows 78–83; §6 points to 
 
 The current proposed sequence and whole-core semantic workstreams are in
 `docs/research/history/post-phase-c-synthesis.md`; the earlier contracts are retained in
-`docs/research/2026-09-19-state-refinement-plan.md`. That earlier plan includes a finite rc.112 control
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-19-state-refinement-plan.md`. That earlier plan includes a finite rc.112 control
 showing that changing wake timing can change a returned value. It does not establish general
 agreement for a composed API or a lowered backend.
 
 The evidence is three notes, each cited by section below:
 
-- `docs/research/2026-09-19-stores-and-event-log-map.md` — the full map, field by field.
-- `docs/research/2026-09-19-stm-scout.md` — rc.112's transactions as rules, and the smaller design.
-- `docs/research/2026-09-19-stateful-api-catalogue.md` — the surveyed API families, and a review of the map.
+- `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-19-stores-and-event-log-map.md` — the full map, field by field.
+- `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-19-stm-scout.md` — rc.112's transactions as rules, and the smaller design.
+- `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-19-stateful-api-catalogue.md` — the surveyed API families, and a review of the map.
 
 ## 1. What the machine holds
 
@@ -92,7 +92,7 @@ derived.
 | promise cells | storage now holds Completion data; the shape invariant and partial decoder are removed | retain deferred Ref reads and do not claim arbitrary Deferred.completeWith support; the mapping/representation connector landed through Phase C |
 | memo entries | the unused effect field is removed and census witnesses inspect the cell | cell-based witnesses and the connector landed through Phase C; identity-write deletion remains conditional on unique map IDs below the allocation supply and its reachable-state connector |
 | supervision and events | the holder now reads the fiber's origin instead of the event trace | retain separate semantic, holder/replay and diagnostic observations; prove the source-path and observation statements in the Laws graph |
-| optimized containers | OCaml already has interfaces and property tests, but no Lean refinement certificate for the swaps; the list twins and the `Ref` instance were retired on 2026-10-18, when a mutant campaign showed the comparison with `Api_gen` catches every mutant they caught (`docs/research/2026-10-18-slices/receipt-w2-engine.md`) | use separate lawful interfaces for dense arenas, keyed tables, ordered work, append sequences and persistent paths; prove a relation to the reference |
+| optimized containers | OCaml already has interfaces and property tests, but no Lean refinement certificate for the swaps; the list twins and the `Ref` instance were retired on 2026-10-18, when a mutant campaign showed the comparison with `Api_gen` catches every mutant they caught (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-18-slices/receipt-w2-engine.md`) | use separate lawful interfaces for dense arenas, keyed tables, ordered work, append sequences and persistent paths; prove a relation to the reference |
 | identities | scope/finalizer/token/race spaces share Nat | distinguish their types while retaining the shared allocation policy; target overflow/freshness obligations remain |
 
 The completion and memo changes affect positions walked by the typed-state ledger. The proposed
@@ -127,7 +127,7 @@ public decision/session boundary does not retain the complete command and outer-
 A fresh command with more fuel is not resumption of that remainder. Choose either replay from
 the original state with more fuel, or a retained driver suspension, before relying on ownership
 across budgets. The checked witness and proposed control law are in
-`docs/research/2026-09-19-critique-response.md` §5; no STM implementation exists yet.
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-19-critique-response.md` §5; no STM implementation exists yet.
 
 **Composed APIs.** The catalogue has 20 API-family rows, not an exhaustive export census.
 DI-11 already chooses composite programs for Queue, Mailbox and PubSub. The proposed basis
@@ -193,7 +193,7 @@ Row 233 orders the slices. §5's conditions on a transaction still hold. Rows 22
 how the first profile meets them, and the relation to the source's behaviour stays open (row 80).
 
 `docs/research/history/post-phase-c-synthesis.md` now owns the proposed staged sequence and acceptance;
-`docs/research/2026-09-19-state-refinement-plan.md` is its historical contract basis:
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-19-state-refinement-plan.md` is its historical contract basis:
 contracts and observations, completion/memo migration, generic-cell/world tooling and the
 concrete ledger, typed-state proofs, one storage refinement, then the additional primitive
 families and target profiles. The data and placement slices of the owner's skeleton-first redirect are landed. Next are
@@ -204,7 +204,7 @@ a prerequisite for designing or proving the next real semantic slice.
 ## 7. Storage interfaces, creation ledgers, derived declarations (2026-09-30)
 
 From the external runtime contract's §7
-(`docs/research/2026-09-30-external-runtime-contract.md`), row 101. Six operational interfaces,
+(`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-external-runtime-contract.md`), row 101. Six operational interfaces,
 each with a small lawful model before a real consumer moves onto it. None is a universal container
 that hides order or allocation policy.
 

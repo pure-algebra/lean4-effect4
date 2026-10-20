@@ -1,6 +1,0 @@
-("reverse edit delta", Effect4.Program.Edit.Delta.spliced [[0], [0, 0], [0, 0, 0]])
-("reverse cached flow equals fresh", false)
-("old waits", [("[1]", ["[0 0]"])])
-("fresh waits", [])
-("cached waits after edit", [("[1]", ["[0 0]"])])
-("edit delta", Effect4.Program.Edit.Delta.spliced [[0], [0, 0], [0, 1], [0, 1, 0], [0, 1, 0, 0]])

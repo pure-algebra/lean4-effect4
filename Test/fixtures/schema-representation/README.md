@@ -177,7 +177,7 @@ false
 [{"type":"string","value":"b"},{"type":"string","value":"a"}]
 ```
 
-`docs/research/SCHEMA-CUTOVER.md` says object property declaration order "is normalized
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md` says object property declaration order "is normalized
 as a keyed structural collection only after representation admission establishes
 unique property keys". At the host, before any such admission, the emitted
 `propertySignatures` array is in source order and two orders give two byte

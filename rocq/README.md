@@ -11,7 +11,7 @@ Two rules hold the workspace:
 * a definition a proof reads is generated (`make gen-rocq`), marked, and regenerable.
 
 The research developments of 2026-10-16 (the vessel and to-do studies, the hand transcription
-`BudgetDefs.v`) stay in `docs/research/2026-10-16-itrees/`. They are history, not authority.
+`BudgetDefs.v`) stay in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-16-itrees`. They are history, not authority.
 
 ## Map
 
@@ -85,5 +85,5 @@ cd rocq && for f in Eff_types Skeleton SkeletonApprox Assumptions StoreCode Stor
 store's theorems: parameters of `Prim` and the three equality laws of `PrimLaws`, and nothing
 else.
 
-`docs/research/2026-10-16-itrees/reproduce.sh` (step 12) compiles a copy of this workspace. It
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-16-itrees/reproduce.sh` (step 12) compiles a copy of this workspace. It
 checks that `Eff_types.v` is its own pipeline's, and that a mutated skeleton fails the proof.

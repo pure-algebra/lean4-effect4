@@ -1,7 +1,0 @@
-#axiom_audit: 227 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
-Effect4.Program.ReleaseCustody.Execution.history: goal; nearest []; 0 lemmas, 0 definitions
-next goals: 1
-  goal Effect4.Program.ReleaseCustody.Execution.history : ∀ (b : Api.Built) (fuel : Nat) (q : List Nat) (m : NativeMachine),
-  SourceScope.Fragment b.program →
-    SourceScope.SequentialSource b.program →
-      SourceScope.RaceFreeSource b.program → Run.HistoryOf b fuel m → Execution.Ready q m

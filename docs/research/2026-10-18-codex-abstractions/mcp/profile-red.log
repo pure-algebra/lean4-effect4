@@ -1,7 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/pooks/.codex/worktrees/codex-abstractions/lean4-effect4/scripts/check-mcp-protocol.py", line 95, in <module>
-    main()
-  File "/Users/pooks/.codex/worktrees/codex-abstractions/lean4-effect4/scripts/check-mcp-protocol.py", line 87, in main
-    assert by_id[request_id]["error"]["code"] == -32602
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError

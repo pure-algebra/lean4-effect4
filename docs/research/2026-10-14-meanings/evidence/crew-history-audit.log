@@ -1,6 +1,0 @@
-#axiom_audit: 476 declarations within [propext, Quot.sound], 3 of them modulo planned goals; 2 planned goals
-Test.Dogfood.Scenario.Workers.Assertions.logs_step: proved; nearest []; 0 lemmas, 0 definitions
-Test.Dogfood.Scenario.QueueWorkers.Assertions.logs_history: proved; nearest []; 0 lemmas, 0 definitions
-Test.Dogfood.Scenario.Workers.workers: proved; nearest []; 0 lemmas, 0 definitions
-Test.Dogfood.Scenario.QueueWorkers.releases_once: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0

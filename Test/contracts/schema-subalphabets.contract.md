@@ -3,7 +3,7 @@
 Status: FROZEN breaker packet, 2026-08-31; its pre-implementation revision is
 required to be RED, and fired findings are recorded below
 
-Ruling input: `docs/research/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census"
+Ruling input: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census"
 
 Companion packet: `Test/contracts/schema-representation.contract.md`
 

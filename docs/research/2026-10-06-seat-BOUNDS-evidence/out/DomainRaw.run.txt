@@ -1,1 +1,0 @@
-DomainRaw: wall 12 s, exit 0

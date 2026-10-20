@@ -13,10 +13,10 @@ Counterexamples: `E4-RUN-CE-001` through `E4-RUN-CE-009` in
 `Test/Counterexamples/Machine/Runtime/Scope.lean`; attack shapes in
 `git:c407ab7:test/counterexamples/runtime/ATTACKS.md`
 
-Proof graph: `SCOPE-PG-STATE` in `docs/research/SCOPE-DAG.md`
+Proof graph: `SCOPE-PG-STATE` in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCOPE-DAG.md`
 
 Pinned source: `effect@4.0.0-rc.112` under `vendor/effect-4.0.0-rc.112/src/`.
-Reading: `docs/research/effect-rc112-fiber-runtime.html` section 6.
+Reading: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/effect-rc112-fiber-runtime.html` section 6.
 
 ## Claim boundary
 
@@ -34,7 +34,7 @@ Effect TypeScript compatibility claim and no code-generation claim.
 
 It does **not** claim that `Effect4.Scope` is equivalent to rc.112's `Scope`.
 It claims that each named clause of each named census row in the per-row table
-of `docs/research/SCOPE-DAG.md` has an exact theorem over the Effect4 model, and it
+of `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCOPE-DAG.md` has an exact theorem over the Effect4 model, and it
 names, in four `SCOPE-FB-*` rows of that document, exactly what was dropped:
 host key freshness, host state-object identity, the meaning of a finalizer
 name, and the whole fiber machine. Six of the fifteen assigned census rows are
@@ -98,7 +98,7 @@ operation compares keys, then the explicit arguments.
 ### Existing-type and duplicate-prevention rows
 
 The five rows — three native, two reuse — with their owners, relationships,
-pins, and assurance routes are in `docs/research/SCOPE-DAG.md` "Existing-type rows",
+pins, and assurance routes are in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCOPE-DAG.md` "Existing-type rows",
 together with the per-declaration records for every definition. They are not
 restated here.
 
@@ -114,7 +114,7 @@ FinalizerStrategy.all : List FinalizerStrategy
 ```
 
 rc.112's `"sequential" | "parallel"` union. It is a label with no scheduler
-payload; `docs/research/SCOPE-DAG.md` separation 7 records why.
+payload; `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCOPE-DAG.md` separation 7 records why.
 
 ### D1 — the scope state machine
 
@@ -223,7 +223,7 @@ duplicate-free, which the `Nodup`-preservation receipts establish rather than
 assume. `Effect4.Data.Row` is not reused (it is the canonical finite *set*:
 order-erasing, duplicate-erasing, value-less) and neither is
 `Effect4.ReasonAnnotations` (a `String`-keyed annotation map with a different
-owner, key domain, and merge). See `docs/research/SCOPE-DAG.md` separation 4.
+owner, key domain, and merge). See `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCOPE-DAG.md` separation 4.
 
 ### D4 — registration, removal, close, fork, brackets
 
@@ -265,7 +265,7 @@ promise, and `close_reentrant_add` says what a finalizer observes.
 
 `Scope.runScoped` carries rc.112's `scoped` name. `scoped` is a Lean keyword,
 so `Effect4.Scope.scoped` would need `«scoped»` at roughly ten ascription
-sites; the rename is recorded in `docs/research/SCOPE-DAG.md`'s declaration table.
+sites; the rename is recorded in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCOPE-DAG.md`'s declaration table.
 `runScoped` takes the body's registration trace as first-order data rather than
 a computation, which is the same defunctionalization DB-05 requires of every
 scoped operation.
@@ -661,7 +661,7 @@ scope that has already closed must run the release now, not leak it.
 
 The clause-by-clause table, including which clauses are left to the
 fork/supervision and continuation-machine packets and the expected coverage
-state of each of the fifteen rows after the join, is in `docs/research/SCOPE-DAG.md`
+state of each of the fifteen rows after the join, is in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCOPE-DAG.md`
 "Census rows this packet targets". It is not duplicated here, because two
 copies of a clause map is exactly the ownership error `AGENTS.md` forbids.
 
@@ -735,7 +735,7 @@ to exit zero, with `#print axioms` receipts inside `propext`/`Quot.sound` for
 every one of the ninety-eight public theorems. It does not authorize any
 coverage-number change: the runtime-coverage join in
 `Test/Audit/RuntimeCoverage.lean` is a separate packet with a separate
-claim, as recorded in `docs/research/SCOPE-DAG.md`.
+claim, as recorded in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCOPE-DAG.md`.
 
 ## Open questions
 

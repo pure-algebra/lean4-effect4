@@ -1,3 +1,0 @@
-'FormalPass.AlgebraVerify.ProvideMerge.provideMerge_assoc_rows' depends on axioms: [propext, Quot.sound]
-'FormalPass.AlgebraVerify.ProvideMerge.provideMerge_assoc' depends on axioms: [propext, Quot.sound]
-'FormalPass.AlgebraVerify.ProvideMerge.provide_provide' depends on axioms: [propext, Quot.sound]

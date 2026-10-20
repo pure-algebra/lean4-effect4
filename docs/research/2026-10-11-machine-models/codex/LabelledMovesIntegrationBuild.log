@@ -1,8 +1,0 @@
-✔ [1122/1128] Built Effect4.Laws.Program.FinalizerMoves (1.9s)
-✔ [1123/1128] Built Effect4.Laws.Program.FinalizerTransfer (1.6s)
-✔ [1124/1128] Built Effect4.Laws.Program.LedgerRun (1.9s)
-✔ [1125/1128] Built Effect4.Laws.Program.FinalizerCommands (1.4s)
-✔ [1126/1128] Built Effect4.Laws.Program.FinalizerRun (1.3s)
-✔ [1127/1128] Built Test.Dogfood.Scenario.Atomic.Cleanup (2.9s)
-✔ [1128/1128] Built Test.Dogfood.Scenario.Atomic (3.1s)
-Build completed successfully (1128 jobs).

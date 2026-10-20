@@ -1,4 +1,0 @@
-load: 16:09  up 25 days,  1:59, 1 user, load averages: 6.69 12.74 14.45
-chain 12 (97 lines), tenths of ms: answer 4; lines along the edit 7 (fresh 14); page 11; code 80; waits 10; flow 21; layout 44; groups 75; scene 68; diff 47; rows 114 (197); whole step 513
-chain 18 (145 lines), tenths of ms: answer 6; lines along the edit 13 (fresh 20); page 27; code 127; waits 26; flow 45; layout 71; groups 124; scene 103; diff 71; rows 243 (311); whole step 894
-chain 24 (193 lines), tenths of ms: answer 11; lines along the edit 22 (fresh 30); page 61; code 186; waits 55; flow 86; layout 103; groups 188; scene 146; diff 104; rows 438 (439); whole step 1470

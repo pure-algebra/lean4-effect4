@@ -1,3 +1,0 @@
-!! .lake/
-!! scratch/
-!! scripts/lib/__pycache__/

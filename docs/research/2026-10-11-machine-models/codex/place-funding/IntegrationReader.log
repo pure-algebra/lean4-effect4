@@ -1,1 +1,0 @@
-COMMAND: lean -DwarningAsError=true docs/research/2026-10-11-machine-models/codex/place-funding/PromotionReader.lean

@@ -1,9 +1,0 @@
-#axiom_audit: 513 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
-Test.Dogfood.Scenario.Timeout.stale_never_applies: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
-Test.Dogfood.Scenario.Timeout.retries_declared: goal; nearest []; 0 lemmas, 0 definitions
-next goals: 1
-  goal Test.Dogfood.Scenario.Timeout.retries_declared : Test.Dogfood.Scenario.Timeout.RetriesDeclared
-Test.Dogfood.Scenario.Timeout.cleanup_keeps: goal; nearest []; 0 lemmas, 0 definitions
-next goals: 1
-  goal Test.Dogfood.Scenario.Timeout.cleanup_keeps : Test.Dogfood.Scenario.Timeout.CleanupKeeps

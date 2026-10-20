@@ -1,8 +1,0 @@
-{
-  "command": [
-    "python3",
-    "scripts/test-lean-imports.py"
-  ],
-  "cwd": "/Users/pooks/Dev/lean4-effect4",
-  "exit_code": 0
-}

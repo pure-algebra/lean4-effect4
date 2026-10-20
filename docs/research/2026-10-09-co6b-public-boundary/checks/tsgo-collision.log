@@ -1,2 +1,0 @@
-docs/research/2026-10-09-co6b-public-boundary/collision.ts(16,14): error TS2451: Cannot redeclare block-scoped variable 'SLayer'.
-docs/research/2026-10-09-co6b-public-boundary/collision.ts(20,14): error TS2451: Cannot redeclare block-scoped variable 'SLayer'.

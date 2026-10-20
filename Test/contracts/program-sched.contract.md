@@ -1,13 +1,13 @@
 # Program sched contract packet
 
 Status: FROZEN / GREEN, amended for R3/R4, authored 2026-09-06 (slice two, R1 of
-`docs/research/2026-09-05-slices-2-3-worksheets.md`; plan
-`docs/research/2026-09-05-runtime-proof-graph.md` §3, Layer R). The module landed with its
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-slices-2-3-worksheets.md`; plan
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-05-runtime-proof-graph.md` §3, Layer R). The module landed with its
 battery and its report; every theorem below is proved. The owner authorized R2's
 dependent answers and residual frontier addresses, then the R3/R4 correction
 retaining handler/cleanup boundaries and naming synthesized bodies. The signature,
 battery and dependency receipts pass their focused build and the coordinator's
-whole-tree gate. Final receipt: `docs/research/2026-09-06-r3-r4-implementation.md`.
+whole-tree gate. Final receipt: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-06-r3-r4-implementation.md`.
 
 Implementation: `src/Effect4/Laws/Program/Sched.lean`; its R2 consumer and corrected
 denotation contract are `Program/DenoteR.lean` and `program-denote-r.contract.md`.
@@ -36,7 +36,7 @@ decisions, bookkeeping and stores, not a handler into `StateT Stores Id`.
    operations retain source points. None carries a
    program. `GuardKind` names success, failure, both-arm and exit-finalizer boundaries;
    `guard_`, `unguard` and `finishFinalizer` retain their explicit entry and exit
-   markers for the evaluator. Since P2 (2026-09-06, `docs/research/2026-09-06-p0-fable-record.md`
+   markers for the evaluator. Since P2 (2026-09-06, `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-06-p0-fable-record.md`
    §4) four operations are the checkpoints the pinned host counts where the term has
    no store or fiber work of its own: `suspend` (the counted step that returns code,
    `Suspend`), `sync` (a pure thunk's value through the `answered` phase), and the

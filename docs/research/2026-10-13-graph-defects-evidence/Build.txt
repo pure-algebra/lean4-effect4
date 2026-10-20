@@ -1,3 +1,0 @@
-warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
-✔ [520/520] Built Tools.View.GraphContact (1.9s)
-Build completed successfully (520 jobs).

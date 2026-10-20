@@ -1,5 +1,0 @@
-Owned files: Hosted, HostedLoop, Api/SessionMeaning, Api/SessionMeaningLoop.
-Focused final check: LAKE_CACHE_DIR=/private/tmp/proc6-blockproof-cache scratch/lean-slot.sh lake build Effect4.Laws.Api.SessionMeaningLoop
-Result: session-3.log; exit 0; 536 jobs. Uses completed parent Machine, Segment and ContextSegment source, no support placeholders.
-Forward check: f-calls/build-2.log; exit 0; 408 jobs.
-No own goals remain. Per owner steering, final combined audit and behavior gates belong to coordinator.

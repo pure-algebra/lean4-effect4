@@ -1,3 +1,0 @@
-tree: /private/tmp/meanings-queue-current
-branch: codex/meanings-queue-current
-head: b4b8f78c0576494fdc20ecc719476464d2a189b9

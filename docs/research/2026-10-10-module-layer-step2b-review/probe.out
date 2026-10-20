@@ -1,4 +1,0 @@
-/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Probe.lean:24:0: error: Expression
-  succeedsWith block 7
-did not evaluate to `true`
-([], [[1, 0, 0]], false, true)

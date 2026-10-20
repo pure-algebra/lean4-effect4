@@ -1,7 +1,0 @@
-{
-  "commit": "37d566d80dbb5c3b89d2f61a4b90d6f955618364",
-  "files": {
-    "src/Effect4/Laws/Program/Agreement/Hosted.lean": "165ed87e36abb8aeef2143fdc0e4d65f4f939590d6be6358d6765b6ca2321f52",
-    "src/Effect4/Laws/Api/SessionMeaning.lean": "965c00e2602dd8c9bdb11590944efcadaa1ea93f890d1e64cf95e9efae9fa0de"
-  }
-}

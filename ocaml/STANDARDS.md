@@ -3,7 +3,7 @@
 The estate is reusable, library-level software, not one-off scripts. Every lane, agent or
 person, follows nine rules. The first four govern form, and the other five govern how code
 models meaning. `AGENTS.md` summarizes them. The second edition adds rules 5 to 9 from the
-refactor plan (`docs/research/2026-10-17-ocaml-estate-review/plan.md`, §2).
+refactor plan (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-17-ocaml-estate-review/plan.md`, §2).
 
 ## Form
 

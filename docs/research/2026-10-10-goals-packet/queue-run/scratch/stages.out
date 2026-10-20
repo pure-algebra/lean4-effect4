@@ -1,2 +1,0 @@
-host acts, depth 3, seven bases: nodes=50680 classified=50680 stages=[some (StageProbe.Stage.calling), some (StageProbe.Stage.running 1), some (StageProbe.Stage.helper), some (StageProbe.Stage.exited), some (StageProbe.Stage.taking 1), some (StageProbe.Stage.offering), some (StageProbe.Stage.taking 2), some (StageProbe.Stage.unstarted 3), some (StageProbe.Stage.unstarted 2), some (StageProbe.Stage.running 2), some (StageProbe.Stage.rootGate), some (StageProbe.Stage.unstarted 1)]
-unclassified: []

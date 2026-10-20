@@ -1,3 +1,0 @@
-$ git diff --exit-code f00008eeaef00b67fe93cfd0327754c9f42694ee -- src tools Test lakefile.toml lake-manifest.json
-
-Exit: 0

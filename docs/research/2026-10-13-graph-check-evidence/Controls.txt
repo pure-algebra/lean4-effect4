@@ -1,7 +1,0 @@
-Command: LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-13-graph-check-evidence/Controls.lean
-Exit code: 0
-warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
-["PASS fork and join", "PASS a wait inside a region", "PASS a fiber awaits a fiber", "PASS await all",
-  "PASS an item of a tuple", "PASS a release at its scope's close", "PASS an empty race", "PASS a race",
-  "PASS a handler around a scope", "PASS a loop"]
-"PASS empty scoped generator"

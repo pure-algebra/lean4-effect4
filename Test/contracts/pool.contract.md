@@ -36,7 +36,7 @@ whole run.
 Decisions rows 267 to 269 own the selected contract, and row 237 starts the slice. Row 276
 gives the closer's step and the protected form, and row 279 gives the answer at a closed pool.
 The card is the detailed specification:
-`docs/research/2026-10-05-claude-lead/module-cards/pool.md`.
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-05-claude-lead/module-cards/pool.md`.
 The pinned source is `vendor/effect-4.0.0-rc.112/src/Pool.ts`, and the release's is
 `vendor/effect-4.0.1/src/Pool.ts`: `use`, `getSlowWith`, `leaseItemBookkeeping`,
 `releaseItem`, `waitForItem`, `wakeWaiters`, `addAvailableFront` and `shutdown`. The two
@@ -279,7 +279,7 @@ the sync entry no helper of a child's return runs before the root's end.
 **Row 268's difference keeps no case out of the truth lane.** The lane runs the module's
 expansion on both faces, and no program calls the pin's own `Pool`. The pin's answers are the
 card's probes
-(`docs/research/2026-10-05-claude-lead/module-cards/pool-probes/pool-close.ts`).
+(`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-05-claude-lead/module-cards/pool-probes/pool-close.ts`).
 
 **The named control of the machine's reading.** A borrower that a helper resumes runs inside
 the helper's task. On the trace of PP5's control the fibers exit in this order: A, the helper,

@@ -1,3 +1,0 @@
-tree: /private/tmp/effect4-timeout-control
-branch: codex/timeout-m3-control
-head: d11e6dc9dc1e80bb13658f165be7c5c3fb13d9e7

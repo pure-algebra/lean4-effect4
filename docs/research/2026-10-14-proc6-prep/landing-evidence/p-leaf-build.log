@@ -1,7 +1,0 @@
-✖ [542/546] Building Effect4.Laws.Program.BlockMeaning (4.6s)
-trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4-codex/src/Effect4/Laws/Program/BlockMeaning.lean -o /Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean/Effect4/Laws/Program/BlockMeaning.olean -i /Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean/Effect4/Laws/Program/BlockMeaning.ilean -c /Users/pooks/Dev/lean4-effect4-codex/.lake/build/ir/Effect4/Laws/Program/BlockMeaning.c --setup /Users/pooks/Dev/lean4-effect4-codex/.lake/build/ir/Effect4/Laws/Program/BlockMeaning.setup.json --json
-error: src/Effect4/Laws/Program/BlockMeaning.lean:178:15: Unknown constant `List.Forall2`
-error: Lean exited with code 1
-Some required targets logged failures:
-- Effect4.Laws.Program.BlockMeaning
-error: build failed

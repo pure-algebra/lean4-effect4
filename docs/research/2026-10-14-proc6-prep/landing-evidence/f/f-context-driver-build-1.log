@@ -1,8 +1,0 @@
-✔ [386/388] Built Effect4.Laws.Program.Agreement.Machine (15s)
-✔ [387/388] Built Effect4.Laws.Program.Agreement.Segment (1.0s)
-✖ [388/388] Building Effect4.Laws.Program.Agreement.ContextSegment (1.3s)
-trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4-codex/src/Effect4/Laws/Program/Agreement/ContextSegment.lean -o /Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean/Effect4/Laws/Program/Agreement/ContextSegment.olean -i /Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean/Effect4/Laws/Program/Agreement/ContextSegment.ilean -c /Users/pooks/Dev/lean4-effect4-codex/.lake/build/ir/Effect4/Laws/Program/Agreement/ContextSegment.c --setup /Users/pooks/Dev/lean4-effect4-codex/.lake/build/ir/Effect4/Laws/Program/Agreement/ContextSegment.setup.json --json
-error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:164:23: Unknown constant `Nat.strong_induction_on`
-error: Lean exited with code 1
-Some required targets logged failures:
-- Effect4.Laws.Program.Agreement.ContextSegment

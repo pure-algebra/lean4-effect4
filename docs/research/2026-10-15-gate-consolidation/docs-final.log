@@ -1,5 +1,0 @@
-python3 scripts/check-docs.py --fix
-PASS check-docs: every path, link, citation and make target in 113 documents resolves
-python3 scripts/check-docs.py
-PASS check-docs: every path, link, citation and make target in 113 documents resolves
-PASS docs: recorded 18c877ac341c (0.545s)

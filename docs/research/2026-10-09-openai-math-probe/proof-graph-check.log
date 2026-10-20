@@ -1,5 +1,0 @@
-collector graph: 43 nodes, 1 labels; accepted; poisoned omission refused
-dependency explanation: [MathTransferProbe.ProofGraphProbe.MemoCycle.quiet,
- MathTransferProbe.ProofGraphProbe.MemoCycle,
- MathTransferProbe.ProofGraphProbe.MemoCycle.loud,
- MathTransferProbe.ProofGraphProbe.memoLeaf]

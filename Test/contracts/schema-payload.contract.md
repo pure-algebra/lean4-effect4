@@ -5,7 +5,7 @@ the fixed production payload-surface and ownership gate is green. Cutover and
 semantic closure remain OPEN. Its pre-implementation revision is required to
 be RED, and fired findings are recorded below
 
-Ruling input: `docs/research/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census",
+Ruling input: `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md`, "Frozen rc.112 persisted census",
 "Verified persisted-field snapshot", and the obligation graph
 
 Layer below: `Test/contracts/schema-representation.contract.md` and
@@ -41,7 +41,7 @@ non-recursive scalar and record types it is built from, the tag projection
 that ties it back to the alphabet, and the field-admission predicate that
 matches the pinned rc.112 field constraints.
 
-In the obligation graph of `docs/research/SCHEMA-CUTOVER.md` this packet targets:
+In the obligation graph of `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md` this packet targets:
 
 - `SC-REP-01` — declaration and persisted-field snapshot. The persisted-field
   *snapshot* half is already recorded in the ruling; this packet adds the Lean
@@ -78,7 +78,7 @@ necessary condition and nothing more. The table is in "Reserved rows" below.
 
 ## Obligation IDs
 
-Reused from the graph in `docs/research/SCHEMA-CUTOVER.md`, because the graph already
+Reused from the graph in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md`, because the graph already
 names them:
 
 | ID | This packet's share |
@@ -120,7 +120,7 @@ before implementation is admitted.
 
 ## Entry-gate position, stated rather than assumed
 
-`docs/research/SCHEMA-CUTOVER.md` lists six entry-gate conditions and says conditions 2
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md` lists six entry-gate conditions and says conditions 2
 through 5 gate the payload carrier, the denotation, and the codec calculus.
 Conditions 2 through 5 are **not** satisfied: `src/Effect4/Data/Row.lean` is a
 stub, there is no Program-based Getter, no four-index codec, and no Lean owner
@@ -206,7 +206,7 @@ keyword tags `:969`, `Literal :1000`, `UniqueSymbol :1010`, `Enum :1015`,
 `Objects :1054`, and `Union :1060` are exact.
 
 The drift is small and changes no field name or shape. It is recorded rather
-than repaired in place because `docs/research/SCHEMA-CUTOVER.md` is outside this
+than repaired in place because `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md` is outside this
 packet's fence. Every citation in *this* file is the re-read number.
 
 ## The three open questions
@@ -329,7 +329,7 @@ characterise the string domain, and they are not run by `lake build`.
 
 **This cannot be answered from the pin, and the reason is not that the pin is
 silent.** `SC-REP-03` is an Effect4 obligation named in
-`docs/research/SCHEMA-CUTOVER.md`; it is a statement about a Lean carrier that does not
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md`; it is a statement about a Lean carrier that does not
 exist yet. The pin can constrain the answer but cannot supply it.
 
 What the pin does say: JavaScript `===` equates `+0` and `-0` and disequates
@@ -379,7 +379,7 @@ envelope's `type`/`value` keys, and the envelope's discriminator values — and
 `E4-SCHEMA-CE-018` already established that a Lean constructor name does not
 determine a persisted spelling.
 
-The ruling already assigns them. `docs/research/SCHEMA-CUTOVER.md` §5 gives the Schema
+The ruling already assigns them. `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md` §5 gives the Schema
 wire adapter, under the `Effect4Rc112` profile identity in
 `Effect4.Protocol.Profile`, "the 22-tag JSON shape, document envelopes,
 annotation pruning, global-symbol encoding, normalization, source coverage, and
@@ -1104,7 +1104,7 @@ than presented as red evidence.
 ## Reserved rows
 
 `E4-SCHEMA-CE-001` through `E4-SCHEMA-CE-016` are reserved by
-`docs/research/SCHEMA-CUTOVER.md` for the payload, denotation, codec, and wire layers.
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md` for the payload, denotation, codec, and wire layers.
 **This packet discharges none of them.** Its relationship to each:
 
 | ID | Payload role | Discharged by |
@@ -1222,7 +1222,7 @@ The payload contract battery (`git:def8babcca767ee4d6aef8f789ee285a768a1d37:Test
 ### `E4-SCHEMA-CE-025` was stated without naming the rc.112 layer
 
 BROKE: `Test/Counterexamples/Schema/ATTACKS.md` and
-`docs/research/SCHEMA-CUTOVER.md` said "rc.112 **accepts** all of: a `$ref` naming no
+`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/SCHEMA-CUTOVER.md` said "rc.112 **accepts** all of: a `$ref` naming no
 table entry; a self alias `A -> A`; a two-step alias cycle `A -> B -> A`; a
 structural cycle with no `Suspend` on the path; and a dead table entry nothing
 points at."

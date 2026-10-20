@@ -1,6 +1,0 @@
-✔ [1165/1169] Built Effect4.Laws.Machine.PlaceLedger (5.9s)
-✔ [1166/1169] Built Effect4.Laws.Program.PlaceLedgerConnect (6.3s)
-✔ [1167/1169] Built Test.Dogfood.Scenario.Atomic.WriterMachine (10s)
-✔ [1168/1169] Built Effect4.Laws.Program.ReleaseCustody.IterationDebit (11s)
-✔ [1169/1169] Built Effect4.Laws.Program.ReleaseCustody.NativeAccounting (7.9s)
-Build completed successfully (1169 jobs).

@@ -1,8 +1,0 @@
-{
-  "path": "apps/todo/.work/todo.gen.ts",
-  "before_sha256": "7645c0e535c71c7acddca9f2a15d402679c6164b1bb7b9323bb4542d8f64eae3",
-  "after_sha256": "7645c0e535c71c7acddca9f2a15d402679c6164b1bb7b9323bb4542d8f64eae3",
-  "byte_identical": true,
-  "bytes": 8585,
-  "conditional_gates": "check-target and check-ts-reader are not reached when the emitted service is unchanged"
-}

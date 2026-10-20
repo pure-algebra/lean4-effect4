@@ -474,7 +474,7 @@ the next callers slice, not a deletion.
 
 ### 7.8 The callers of `effTy` moved; the hand checker deleted (2026-09-18)
 
-The plan is `docs/research/2026-09-18-efftys-callers-plan.md`; this is what landed, in the
+The plan is `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-18-efftys-callers-plan.md`; this is what landed, in the
 order that kept every commit green.
 
 - **The proof graph moved first, beside the old** (`d7ea2bd9`): `Laws/Program/Typing/
@@ -510,7 +510,7 @@ order that kept every commit green.
   (`EmitSpecs`, `specs.json`, Makefile, `generate.py`, `GENERATED.md`); `Provision.lean`'s
   `build_total`/`buildAll_total` (no consumer, 175 lines); `effTy_provideService_twice` (no
   consumer); `Schema/Endpoint.lean`, `Schema/Transform.lean`, `Laws/Schema/Transform.lean`
-  (the wipe list, `docs/research/2026-09-17-ontology-and-do-now-probe.md` §3; imported only by `Api` re-exports and one test section,
+  (the wipe list, `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-17-ontology-and-do-now-probe.md` §3; imported only by `Api` re-exports and one test section,
   both cut). `Laws/Program/Typing/Check.lean` stays: the typing-check contract consumes it.
 
 Every battery in `Test/All.lean` and both roots build; `effTy_sound`, `hasTy_weaken`,
@@ -586,13 +586,13 @@ The generator therefore refuses an unclassified constructor before emitting sour
 
 `Test/Program/FragmentCensusContract.lean` compares samples with `ctorNames` in `src/Effect4/Program/LayerView.lean`.
 It checks definition blocks, operation admission, and rejected children in each visited position.
-The independent baseline comparison and verification commands are in `docs/research/2026-10-09-fragment-classification/README.md`.
+The independent baseline comparison and verification commands are in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-fragment-classification/README.md`.
 These checks establish no new execution or host claim.
 
 ### 7.11 The instrument's three blind spots closed (2026-10-01)
 
 The organization seat of the formal pass and its verifier found the census unable to measure the
-distance (`docs/research/2026-10-01-formal-pass/organization/note.md` §1.4, `verify.md` ORG-04 and
+distance (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-formal-pass/organization/note.md` §1.4, `verify.md` ORG-04 and
 §3 M1): it classed a row `wf` only when the definition's own value named `WellFounded.fix`, but
 on this toolchain a well-founded definition of two or more arguments keeps its fixpoint in a
 `_unary`/`_mutual` helper, and a `Nat` measure uses `WellFounded.Nat.fix`, so `wf` was 0 for every
@@ -646,7 +646,7 @@ exhaustiveness inventory reads the same authored definitions, so it now sees pri
 `#exhaustive_gate Effect4.Program.Ty` reports 66 matches, 28 with no catch-all (65 / 27 before);
 the new one is `ofNormalized`'s twenty-arm match, which row 119's `Ty.record` must also extend.
 
-## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
+## 8. Scout G — the tooling that exists (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-17-lean-tooling-scout-G.md`)
 
 Read against the converter: **no recursion-schemes or generic-programming library exists** for
 Lean 4 (Mathlib's `DeriveTraversable` refuses indices, mutual families and recursive fields;
@@ -677,7 +677,7 @@ Dead or blocked at 4.33: lean-egg, LeanInk, QpfTypes, loogle, CanonicalLean, Pap
 At `630e6c37` the census reads 122 takers of `Ty` (fold 5, generated 8, structural 22, wf 1,
 one-level 14) and the gate 66 matches (43 of them in 40 hand definitions, 23 of which have
 catch-alls only). Probe U places every row in one of ten families
-(`docs/research/2026-10-01-type-language-probe/U/inventory.tsv`) and proves 21 of the hand
+(`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-type-language-probe/U/inventory.tsv`) and proves 21 of the hand
 traversals equal to a generic fold over the emitted view, and `Val.hasTy` equal to the fold of
 its own algebra: the spelling folds are a face table read by one interpreter per face; the
 classifiers, four generic folds reading the columns of a classifier table or, for the two located
