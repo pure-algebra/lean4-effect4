@@ -282,7 +282,7 @@ First, before item 1: the to-do as a user's project, outside the library
   for the next core rebuild.
 
 - **The order from here** (the owner, 2026-10-20): the entry point's first slice, then M3, then C1's
-  moves under E4, then M4 with E6, then `run`, then M8. Seats alternate between the chain and the
+  moves under E4. Then M4 with E6, then `run`, then M8. Seats alternate between the chain and the
   entry point whenever one unblocks a deletion in the other.
 
 ```mermaid
@@ -314,6 +314,144 @@ the TypeScript slice ahead of it.
 4. **The exchange natively** (the slices plan's X1) and MCP 2026-07-28 (X2).
 
 The rest of the repair wave follows the order: R2's A4.1 and A9.1, and R3.
+
+### 9.3 The shapes, reviewed (2026-10-20)
+
+Each shape of §9.1 was read against the code at `fb7804182` and against the peer that owns its
+pattern. A verdict names what the shape is an instance of, the law that pins it, and what it
+leaves open. Five read-only surveys gave the facts. They covered the journal spellings, the check entries
+and observations, the typing rule, the engine's externs and the carrier JSON. Where the
+audit's §4 text and the code differ, the code wins, and the brief of the move takes the amendment.
+
+| Move | The shape | Instance of | Verdict |
+| --- | --- | --- | --- |
+| M1, landed | `Located Site Reason`, `mapSite`, one prefix rule | a product, with the free monoid of steps acting on list sites; complete against each judgment by its `_none_iff` law | solid. Open: no law says that a refusal's site resolves to a node (`focusAt`). Its consumer is M9's stage 3 |
+| M2, landed | an algebra of `cata_val` into `Option ProfileRefusal`, the first refusing child under its index; the literal fold over the generated path fold | a monoid-valued fold, complete by `valueRefusal_eq_none_iff` and `literalRefusal_eq_none_iff` | solid. One wart: `belowBound` carries `n`, not the magnitude, until E6 |
+| M3, landed | `encode_program = Eff_val.to_bytes ∘ programToVal`; `decode_program = programOfVal ∘ decode_exact`; Lean's definitions lowered | two exact embeddings composed; exactness by the reader's re-encoding (C2); the trust shape of Coq extraction | solid as a design. Two costs: the read is 2.1–3.2× (row 426), and the codec is compiled twice |
+| M4, running | `OCaml5.Lcnf.typeRows`, 22 rows with spelling, fidelity, domain and receipt; E6 flips `Nat` and `Int` to `Z.t` | Coq's `Extract Constant` with a fidelity column; `ExtrOcamlZBigInt` is the sound mapping | solid. After E6, the rows left in `.domain` are `USize`, `Fin`, `BitVec` and `String`, each named |
+| M8 | one machine observation, one check, the kit's commands as Tool queries | K3, one named observation with projections; one certificate spine | the model holds; the shape as written does not. Amended below |
+| M9 | the typing rule as per-production tables, inherited and synthesized | an L-attributed attribute grammar, one left-to-right pass; the layer references as a reference attribute | the right model, and the largest proof-cost return. Three gaps and two outside parts, below |
+| M7 | one carrier tree, `NatJson`; a generated fold for `Shape` | one free object per carrier; `Shape` is polynomial: five catamorphisms, three paramorphisms | right. The first step landed (`a2cfa8de5`); the deletion list conflicts with itself and misses consumers |
+| M5 | `Replayed step init`: actions, state, `foldM step init actions = .ok state` | K5, the monoid action | fits one of two families; the store's part hides a ruling on duplicates |
+| M10 | the stores as Lean definitions over primitive rows; one lowering; no functor | trusted extraction of data structures, as `Array` to `Lcnf_array` | the right direction. The rows do not exist yet, their control is finite points, and P9 (b) needs one reading |
+| M11 | the store's core lowered, after M5 and M4 | M3's shape, for the store | solid once M5's ruling stands; measure first |
+| item 9 | the host record and its reactor generated from `eff_rows` | an interface description compiled to stubs | solid; public (S-2) |
+| item 10 | a public-name manifest for Lean | `ocaml/gen/public-names.tsv`, for Lean | solid, small |
+| C2 | `Compiler.main app args` by static import; a manifest with the program's address, the pins and the checks | the compiler as a library over a value; content addressing | solid. `inputs` carries no module closure yet |
+
+**What the surveys change in the briefs.**
+
+- **M8, one observation.** `Run.view` reads the run, the session and the machine, and calls
+  `Run.work` for `atRest`. `machineViewOf` reads a bare machine, with no run. So the one
+  observation is two layers: a machine half, one function of `Api.Machine`, and a session half
+  over it. `View`, `Observation`, `Work` and `MachineView` are projections of the pair. `pending`
+  becomes a projection by definition, since no law states that the pending slots are the held
+  replies of the awaited calls.
+- **M8, one check.** Three entries are one judgment in three wrappers: `Api.explain`,
+  `Api.check` and `Run.Kit.check`. `Run.Kit.admit` decides the signature and the columns only,
+  and refuses no ill-typed program. `Run.Preview.admit` decides more than admission and records
+  the extra checks in no certificate. Natively, `check_json` reports typing, then the signature,
+  then the columns; `admitProgram` reports the signature, formation, typing, then the columns.
+  So one program is refused differently on the two faces. The one check is the certificate spine
+  that exists, `TypedProgram`, `AdmittedProgram`, `Built`, with one order, the admission order,
+  on both faces. `Kit.app` sets `types = []`, so the native commands never see services or named
+  types. The native check takes the full `SigApp`, or it is a different judgment. The claim of
+  `Run/Kit.lean` that formation is not decided natively is stale: `api_built_of_sketch` is
+  lowered.
+- **M8, the queries.** The Tool's `preview` query already refuses fully, then explores. Lean's
+  `Run.Kit.explore` has no refusal: a node outside the tree becomes a program exit with
+  `Defect.notImplemented`, a refusal shown as a defect. The native `explore` becomes that query.
+  `Kit.run` has no Lean counterpart, and `Run.atBudget` is not lowered: `run` lowers
+  `Run.atBudget`, and the hand choice in `kit.ml` goes. The precedent is `kit_tool.ml`, which
+  interprets no request.
+- **M8, the named traversals.** `Run.Tree.level` and `statements` recurse through `unfold`, the
+  loop and continuation thunks, not only on children. They are fuel-bounded unfoldings, not
+  folds. The connector states the structural part, and the census names the unfolding. Both are
+  printed into Rocq (`treeSpec`), so a definitional change regenerates `Skeleton.v`.
+- **M9, the tables.** Every inherited read is of a left sibling or of the node's own terms, so one
+  left-to-right pass evaluates the rule. Three gaps the brief states. The synthesized answer is
+  stored only at `eff` nodes, and it exists at every sort (`StmtTy`, `GenTy`, `LayerTy`).
+  `NodeEnv` lacks two inherited attributes that the checker threads: `afterRet`, and the
+  signature at a definition block. `returnNotLast` is located at the return through `afterRet`. Two parts
+  stay outside the grammar, named. The layer references are a pre-pass that expands them and
+  maps the table back. The root definition block becomes the same evaluator once the signature
+  is an inherited attribute. The cost today: `childEnv_replace_kept` runs at 1,600,000
+  heartbeats over 56 arms, and `annotate_eq_table` is a 724-line hand induction at 400,000.
+- **M7, the rest.** `Canonical.printArrays` no longer exists: `a2cfa8de5` made it
+  `Canonical.print`, the binary64 reading of `printTree`. The trees differ only in the number leaf.
+  `NatJson` keeps strictly more than the carrier writes, so no carrier value is lost. The losses
+  are all on the binary64 side, and the move removes them. `Canonical.print` is not injective at
+  2^53 + 1 today. Deleting `toBinary64` makes `Canonical.print` return `NatJson`, which has no
+  `DecidableEq`: the guards need one. Consumers the audit does not list: `Tools.JsonBridge`,
+  `Tools.WireText`, `Tools.Catalogue`, four batteries and two registry pointers
+  (`json-read-exact`, `read_toBinary64`). `orderIn`'s list rule flips to arrays, so the normal
+  form changes. `render` still writes list families as tagged unions into the genesis digest, and
+  that output stays byte-identical. The fold: `under`, `nested` and `supported` use a child
+  itself, so they are paramorphisms, which `fold_of` already pairs for `Val.WF`. Three more hand
+  recursions on `Shape`: `Tools.Catalogue.inlineForms`, `Tools.JsonBridge.shapeText` and
+  `OCaml5.Tools.EffWire.sumsIn`, a `partial def`.
+- **M5, two families.** Eight spellings, not six, in two families. Partial steps with an
+  index-located refusal: `Tool.State`, `Doc`, `CasOf`, `Word.apply`, `Store.restore`, and
+  `Exchange.load` as an adapter on `Tool.State`. Total steps with an output: `Run` and `Runner`,
+  whose phases are the observation (`replay_unique`, `behaviour`). `Live` is total too, and its
+  event is zero or more commands chosen by reading the run. `Replayed` fits the first family, with
+  `Located Nat ε` as its refusal. The second family is the monoid action the laws already state
+  (`Play`, `replayPlay`); it stays, with `Live` as its adapter. "A refused step changes nothing"
+  holds at `Runner`, and `Run` records the refused row with its phase: the law is stated at
+  `Runner`. Four spellings nest inside `Tool.Raw` (`Doc`, `FillSet`, the `Live`s), so a step may
+  itself be a `Replayed`. The audit counts six proof fields; there are five.
+- **M5, the store.** `Store.verify` checks a finished store in any order; `Word.wf` then
+  `Word.apply` is a replay. The change of observation on forward references is recorded (E-1).
+  A second one is not: `Word.apply` and `putNode` accept a duplicate node as a no-op, and
+  `Word.wf` refuses it. Proposed ruling: the store accepts a duplicate node as a no-op, since a content-addressed
+  store is idempotent by definition. The word's refusal of a repeat is a canonical-form judgment,
+  kept distinct. `E4_cas.checked_image` follows the same ruling in M11.
+- **M10, what exists.** There is no hand machine. Every transition is the lowered
+  `Prepared.step`. "The second machine" is a second lowering of the one Lean machine, as a
+  functor over seven carrier module types. 28 `fn` rows splice 35 hand store bodies into it:
+  `refStep`'s 13 arms, `spawn`, `Api.load`, the scope fork and the memo. Those bodies are the
+  hand copies that row 416 (1) forbids, 573 lines of them. All 52 extern rows are store carriers:
+  24 retype a list, 28 are those bodies. The functor makes the generated types generative per
+  application, which is why `E4_diff` compares renderings and `INSTANCE` transcribes the
+  machine's types by hand. Deleting the functor deletes both.
+- **M10, the rows.** Only `Array` has a type row with operation rows today. The stores need a
+  persistent-map row and a persistent-sequence row. A derived view is a Lean definition with an
+  invariant over the keyed-table row, not a row. `FIBERS` takes `~exit_of` and `PPATH` takes
+  `Node.child`: in Lean those are ordinary definitions over the primitive rows. The row's contract
+  is prose with finite-point tests, no property test and no proof (`Lcnf_array`). Each row's
+  control becomes a differential against the lowered list model, which `closure_gen.ml` already
+  is. The whole-machine differential goes when the rows' controls catch the mutant campaign.
+- **M10, the reading of P9 (b).** The collation's "families typed by the six interfaces" reads as
+  parameterisation; M10's guard forbids a machine re-parameterised over carriers. One reading
+  satisfies both. The six interfaces of `machine-state.md` §7 are the specifications of the rows,
+  stated in Lean as laws over the list model. The machine stays over concrete Lean types, and the
+  rows substitute at the lowering. The design note M10 starts with takes this reading.
+- **The artifacts.** A `roots.json` artifact is one closed walk; artifacts share only the type
+  owner. So 894 of `api_engine.ml`'s 900 nodes and 107 of `eff_image.ml`'s 115 are copies of
+  `closure_gen.ml`'s. Wave 2's "declarations compiled twice: 0" (row 416 (1)) no longer holds.
+  M10 adds value linkage: an artifact imports another artifact's lowered roots instead of walking
+  them. Then "lowered once" is true of the artifacts too.
+
+**Where a consolidation could paper over a design issue.** Named, so that no brief does.
+
+1. **The trust base.** "One implementation" means one Lean definition and a compiler we trust.
+   The compiler is the lowering (`src/OCaml5`, 14,352 lines), the byte kernels and `ocamlopt`,
+   tied by finite goldens only (row 391). Every lowered move widens what rests on it. That is the trust shape of
+   Coq extraction, and it is recorded; it is not a proof.
+2. **Refusal sites.** A site is a `List Nat`, which lowers where a dependent address would not.
+   No law states that a refusal's site resolves. One lemma per judgment, at its consumer.
+3. **The number boundary.** Two trees for two observations is right: the Schema plane keeps
+   every binary64 datum apart (`-0 ≠ 0`, NaN payloads); the carrier keeps exact naturals. Lean's
+   `JsonNumber` parser and `NatJson.parse` disagree on `-0` and `1e2` today; one parser ends it.
+4. **The native face.** The native check decides a different judgment in a different order from
+   Lean's, with no services. M8 fixes both, or it is cosmetic.
+5. **Hand semantics in the engine's stores**, until M10.
+6. **The store's duplicate**, ruled before M5.
+7. **A refusal as a defect exit** in `Run.Kit.explore`, until M8.
+
+**Corrections to §4's numbers.** M5: five proof fields, not six. M10: 52 extern rows, not 51;
+`api_engine.ml` is 17,420 lines, not 15,928; `api_gen.ml` is a 5-line facade over
+`closure_gen.ml`. M7: the first step landed on 2026-10-19 (`a2cfa8de5`).
 
 ## 10. What the owner decides
 
