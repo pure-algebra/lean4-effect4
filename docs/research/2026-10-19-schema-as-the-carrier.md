@@ -461,9 +461,9 @@ paused, so each receipt proposes its registry text.
   construction, which a finite control reads.
 - **The representation.** `Defect.missingService` gains its key: `missingService (key :
   ServiceKey)`. `serviceLookupK` (`src/Effect4/Program/Compile.lean`) stores it. Every match on
-  `Defect` follows the new-field checklist. They are `Defect.ofError`, `Defect.image`,
-  `encodeDefect` and `decodeDefect`, `src/Effect4/Machine/Stores.lean`, and the law modules that
-  name `Defect.missingService` (`Laws/Machine/ContextValue.lean`, `Laws/Machine/Witnesses.lean`,
+  `Defect` follows the new-field checklist. The sites are `Defect.ofError`, `Defect.image`,
+  `encodeDefect`, `decodeDefect` and `src/Effect4/Machine/Stores.lean`. The law modules that
+  name `Defect.missingService` follow (`Laws/Machine/ContextValue.lean`, `Laws/Machine/Witnesses.lean`,
   `Laws/Program/DenoteR.lean`, `InterpR.lean`, `BlockMeaning.lean`, `Agreement.lean`,
   `Agreement/Blocks.lean`, `Typed/Commands/Clauses/Spawn.lean`, `Typed/Commands/Evaluate.lean`,
   `Laws/Schema/Codec.lean`), and the truth harness (`harness/truth/Truth.lean`).
