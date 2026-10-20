@@ -1,14 +1,16 @@
 import Compiler.Main
 import Effect4.Author
 import Test.Dogfood.Scenario.Todo.Data
+import Test.Dogfood.Scenario.Todo.HostLane
 
 /-!
-# The compiler's emission, read: one corpus program's folder, and its controls
+# The compiler's emission and its run, read: one corpus program's folder, the dogfood to-do's run, and their controls
 
-Readers and controls over `Compiler.emitProgram`, `Compiler.emitTs`, `Compiler.emitGroup` and
-`Compiler.check` (`tools/Compiler/`; the entry point's first two slices,
+Readers and controls over `Compiler.emitProgram`, `Compiler.emitTs`, `Compiler.emitGroup`,
+`Compiler.check` and `Compiler.runFrom` (`tools/Compiler/`; the entry point's three slices,
 `docs/research/2026-10-20-compiler-entry/README.md` §5, E3 and E6). A battery reads no file, so the
-prelude's closure and the pins are data here; the IO that reads them is `Compiler.Main`'s.
+prelude's closure, the pins and a script's text are data here; the IO that reads them is
+`Compiler.Main`'s.
 
 - **The folder of the wire corpus's first program**, `p42`, admitted at the empty application:
   its files and their kinds, the manifest read back from its own bytes, the address, the
@@ -27,6 +29,15 @@ prelude's closure and the pins are data here; the IO that reads them is `Compile
   wraps, with no services, the reading boundary refuses it at its first row service. With the
   table's row services read first, as `Api.readFile` reads them, it admits the file, and the
   to-do emits.
+- **The run** (`Compiler.Run`): the dogfood to-do over its reference repository, from no to-do, on
+  the host lane's script (`Test.Dogfood.Scenario.Todo.HostLane.script`). Each request gives one
+  line in each of the three modes, the host's state threads from request to request, and a title
+  outside ASCII passes through as UTF-8. The controls: a request that the build refuses is the
+  build's located refusal under its entry, and leaves the state as it was; a request that names no
+  entry, or gives other than one argument a parameter, has no module, though the module at an
+  extra argument builds; at fuel 0 no request reaches an exit, a frontier and no refusal; and an
+  application with no host, or a group, refuses `run` (`Source.hosted?`). Then the script's reader,
+  the inverse of a line's print of a literal, and the options' reader, with their refusals.
 
 Every check is a `#guard`, so the rendered bytes stay inside them.
 -/
@@ -313,5 +324,126 @@ def mixed : Application NativeOp :=
       | .error _ => false
     | .error _ => false
   | .error _ => false
+
+/-! ## The run: the dogfood to-do on the Lean machine
+
+Every rendered line stays inside a `#guard`. -/
+
+/-- The dogfood to-do's host as `run` takes it: the reference repository, from no to-do
+(`HostLane.start`), its state shown as the host lane shows it (`Host.repoVal`). -/
+def todoHosted : Hosted :=
+  { σ := Test.Dogfood.Scenario.Todo.Repo, initial := Test.Dogfood.Scenario.Todo.HostLane.start,
+    reactor := Test.Dogfood.Scenario.Todo.repository, view := Test.Dogfood.Scenario.Todo.Host.repoVal }
+
+/-- The host lane's script (`HostLane.script`) as requests, each argument a literal
+(`Tools.RunChecks.literal`); empty when an argument is none. -/
+def todoScript : List Request :=
+  ((Test.Dogfood.Scenario.Todo.HostLane.script.mapM fun (entry, args) =>
+    (args.mapM Tools.RunChecks.literal).map fun lits => ⟨entry, lits⟩ : Option (List Request))).getD []
+
+/-- Each request of the script with its module (`Request.moduleOf?`). -/
+def todoRequests : List (Request × Module NativeOp) :=
+  todoScript.filterMap fun r => (r.moduleOf? Test.Dogfood.Scenario.Todo.application).map (r, ·)
+
+-- finite evaluation: the script is the host lane's seven requests, and each has its module, the
+-- same that the command's check of the script gives.
+#guard todoScript.length == 7 && todoRequests.length == 7 &&
+  (match modulesOf Test.Dogfood.Scenario.Todo.application todoScript with
+    | .ok requests => requests.map (·.1) == todoScript
+    | .error _ => false)
+
+-- finite evaluation: `--json` gives one line a request and refuses none. Each line is the result's
+-- value tree: the request, its exit's image and the repository after it. The second title passes
+-- through as UTF-8, and the last line holds the reference model's state after the script.
+#guard match (runFrom todoHosted .json {} todoRequests todoHosted.initial).map (·.toOption) with
+  | [some first, some second, _, _, _, _, some last] =>
+    first == "[\"add\",[\"milk\"],{\"_ctor\":0,\"args\":[{\"_ctor\":0,\"args\":[[\"done\",\"id\",\"title\"]," ++
+        "[false,1,\"milk\"]]}]},[2,[[1,\"milk\",false]]]]" &&
+      second == "[\"add\",[\"café 日本 🙂\"],{\"_ctor\":0,\"args\":[{\"_ctor\":0,\"args\":[[\"done\",\"id\"," ++
+        "\"title\"],[false,2,\"café 日本 🙂\"]]}]},[3,[[1,\"milk\",false],[2,\"café 日本 🙂\",false]]]]" &&
+      last == "[\"list\",[],{\"_ctor\":0,\"args\":[[{\"_ctor\":0,\"args\":[[\"done\",\"id\",\"title\"]," ++
+        "[false,2,\"café 日本 🙂\"]]}]]},[3,[[2,\"café 日本 🙂\",false]]]]"
+  | _ => false
+
+-- finite evaluation: `--typed` writes each exit at its own type, Effect's `Schema.Exit` encoding;
+-- `--text` writes that exit and the repository after it.
+#guard match (runFrom todoHosted .typed {} todoRequests todoHosted.initial).map (·.toOption),
+    (runFrom todoHosted .text {} todoRequests todoHosted.initial).map (·.toOption) with
+  | some typed :: _, [_, _, _, _, _, some removed, _] =>
+    typed == "add(\"milk\") {\"_tag\":\"Success\",\"value\":{\"done\":false,\"id\":1,\"title\":\"milk\"}}" &&
+      removed == "remove(1) -> {\"_tag\":\"Success\",\"value\":null} | [3,[[2,\"café 日本 🙂\",false]]]"
+  | _, _ => false
+
+-- control: the build refuses `complete` at a string, a located refusal of the checker under the
+-- entry's name; the request after it runs from the state before it, so `tea` is the first to-do.
+#guard match modulesOf Test.Dogfood.Scenario.Todo.application
+    [⟨"complete", [.str "one"]⟩, ⟨"add", [.str "tea"]⟩] with
+  | .ok requests =>
+    match runFrom todoHosted .json {} requests todoHosted.initial with
+    | [.error ⟨some "complete", .typing _⟩, .ok line] =>
+      line == "[\"add\",[\"tea\"],{\"_ctor\":0,\"args\":[{\"_ctor\":0,\"args\":[[\"done\",\"id\",\"title\"]," ++
+        "[false,1,\"tea\"]]}]},[2,[[1,\"tea\",false]]]]"
+    | _ => false
+  | .error _ => false
+
+-- control: a request that names no entry, or gives other than one argument a parameter, has no
+-- module, and the command's check names it by its place. Why the count is checked: the module of
+-- `add` at an extra argument builds, the argument dropped (`Application.Entry.applied`).
+#guard (Request.moduleOf? Test.Dogfood.Scenario.Todo.application ⟨"delete", [.nat 1]⟩).isNone &&
+  (Request.moduleOf? Test.Dogfood.Scenario.Todo.application ⟨"add", [.str "a", .str "b"]⟩).isNone &&
+  (Request.moduleOf? Test.Dogfood.Scenario.Todo.application ⟨"add", []⟩).isNone &&
+  (match modulesOf Test.Dogfood.Scenario.Todo.application [⟨"list", []⟩, ⟨"delete", [.nat 1]⟩] with
+    | .error why => why == "the request 1, delete(1): no entry is named delete; the entries are " ++
+        "add, list, complete, remove"
+    | .ok _ => false) &&
+  ((Test.Dogfood.Scenario.Todo.application.entry? "add").map fun e =>
+    (Api.Author.build (Test.Dogfood.Scenario.Todo.application.moduleOf e [str "a", str "b"])).toBool) ==
+    some true
+
+-- red: at fuel 0 no request reaches an exit. A frontier is no refusal: the line holds no exit, and
+-- the repository is as it was.
+#guard match (runFrom todoHosted .json { fuel := 0 } todoRequests todoHosted.initial).map (·.toOption),
+    (runFrom todoHosted .typed { fuel := 0 } todoRequests todoHosted.initial).map (·.toOption) with
+  | some json :: _, some typed :: _ =>
+    json == "[\"add\",[\"milk\"],null,[1,[]]]" && typed == "add(\"milk\") no exit"
+  | _, _ => false
+
+-- red: an application with no host refuses `run`, and so does a group of programs; with its host
+-- the dogfood to-do runs, with the script it was given.
+#guard match (Source.application (offset 1)).hosted?, (Source.programs "corpus" Wire.Corpus.all).hosted?,
+    (Source.application Test.Dogfood.Scenario.Todo.application (some todoHosted) todoScript).hosted? with
+  | .error _, .error _, .ok (app, _, script) => app.name == "todo" && script == todoScript
+  | _, _, _ => false
+
+-- The script's reader is the inverse of a line's print of a literal: each literal printed in a
+-- result's value tree reads back to itself.
+#guard [Lit.unit, .nat 7, .bool false, .str "café"].all fun l =>
+  litOfJson (Run.Kit.valShape.printTree (litVal l)) == some l
+
+-- A script's text reads to its requests: `args` may be left out, and `null` is the unit.
+#guard match NatJson.parse (("[{\"entry\":\"add\",\"args\":[\"milk\"]},{\"entry\":\"complete\",\"args\":[1]}," ++
+    "{\"entry\":\"list\"},{\"entry\":\"x\",\"args\":[true,null]}]").toUTF8.data.toList.map UInt8.toNat) with
+  | .ok t => (scriptOf t).toOption ==
+      some [⟨"add", [.str "milk"]⟩, ⟨"complete", [.nat 1]⟩, ⟨"list", []⟩, ⟨"x", [.bool true, .unit]⟩]
+  | .error _ => false
+
+-- red: the reader refuses a negative number, a key it does not know, a repeated key, a request with
+-- no entry, `args` that is no array, and a script that is no array.
+#guard ["[{\"entry\":\"complete\",\"args\":[-1]}]", "[{\"entry\":\"add\",\"arg\":[\"x\"]}]",
+    "[{\"entry\":\"list\",\"entry\":\"list\"}]", "[{\"args\":[]}]",
+    "[{\"entry\":\"add\",\"args\":\"x\"}]", "{\"entry\":\"list\"}"].all fun text =>
+  match NatJson.parse (text.toUTF8.data.toList.map UInt8.toNat) with
+  | .ok t => (scriptOf t).toOption.isNone
+  | .error _ => false
+
+-- The options of `run`: the mode, the script's file and the fuel; `--json` is the default. Each
+-- value is read, and an option with no value, a budget that is no natural, or an unknown option
+-- refuses.
+#guard (match RunOptions.read ["--typed", "--budget", "5", "--script", "s.json"] {} with
+    | .ok o => o.mode == .typed && o.budget.fuel == 5 && o.script == some "s.json"
+    | .error _ => false) &&
+  (RunOptions.read [] {}).toOption.map (·.mode) == some .json &&
+  [["--budget", "x"], ["--budget"], ["--script"], ["--bogus"]].all fun args =>
+    (RunOptions.read args {}).toOption.isNone
 
 end Test.Codegen.CompilerEmit

@@ -17,6 +17,10 @@ project's executable imports its application (decision E1; the entry point's sec
   prelude's import closure once, and one manifest (`Compiler.emitGroup`).
 - `todo`, the dogfood to-do (`Test.Dogfood.Scenario.Todo.application`): one application, emitted
   as a project's executable emits its own (`Compiler.emitTs`).
+
+`run` takes the host that a project passes to `Compiler.main`, and no group here has one: `run
+--group NAME` refuses, as a usage error. The battery `Test/Codegen/CompilerEmit.lean` runs the
+dogfood to-do over its reference repository.
 -/
 
 /-- The tree's groups, by name: the wire corpus and the dogfood to-do. -/

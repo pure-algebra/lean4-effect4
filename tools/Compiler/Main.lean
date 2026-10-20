@@ -1,4 +1,5 @@
 import Compiler.Emit
+import Compiler.Run
 
 /-!
 # Compiler.Main — the compiler's entry point
@@ -11,6 +12,7 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
     check [--json]
     emit --target ts [--out DIR] [--emit=module,surface,canonical,certificate,manifest]
     describe --target ts [--out DIR] [--emit=…]
+    run [--json | --typed | --text] [--script FILE] [--budget N]
 
 - `check` builds the application's service module (`Compiler.check`) and prints its certificate:
   as text, or as one line of JSON under `--json`. A refusal is one located refusal, printed the
@@ -18,6 +20,12 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
 - `emit` writes the checked emission into one folder (`Compiler.emitTs`), by default
   `.lake/effect4/<name>/ts/`. `--emit` selects the kinds; the default is all of them.
 - `describe` prints the manifest that `emit` with the same options would write, and writes nothing.
+- `run` runs each request of a script on the Lean machine over the application's host, and prints
+  one line a request (`Compiler.Run`): the result's value tree as JSON (`--json`, the default), the
+  exit encoded at its own type (`--typed`), or a readable line (`--text`). The host and the default
+  script are what the project passes to `Compiler.main`; `--script FILE` reads a JSON array of
+  requests instead. `--budget N` plays every row at `N` steps of fuel. An application with no host
+  refuses `run`, as a usage error.
 
 `Compiler.mainOver groups args` is the same command line over named sources, one chosen by
 `--group NAME` (`lake exe effect4`, `Compiler.Exe`, C2 slice 2). A source is one application, or a
@@ -27,7 +35,9 @@ each program's certificate under its name, and `emit` writes one folder with one
 
 The pins and the prelude are read from the library's checkout, which the project's
 `lake-manifest.json` locates (`libraryRoot`). So the command runs from the project's root, as
-`lake exe` does. The exit code is `0` on success, `1` on a refusal, and `2` on a usage error.
+`lake exe` does. The exit code is `0` on success, `1` on a refusal, and `2` on a usage error. A
+`run` whose request the build refuses prints the located refusal as `check` does, runs the rest,
+and exits with `1`.
 -/
 
 namespace Compiler
@@ -37,7 +47,8 @@ open Effect4 Effect4.Program Effect4.Program.Authoring
 /-- The command line, in words. -/
 def usage : String :=
   "usage: check [--json] | emit --target ts [--out DIR] [--emit=KIND,…] | describe --target ts " ++
-    "[--out DIR] [--emit=KIND,…]; a KIND is one of " ++ ", ".intercalate (Kind.selectable.map Kind.name)
+    "[--out DIR] [--emit=KIND,…] | run [--json | --typed | --text] [--script FILE] [--budget N]; " ++
+    "a KIND is one of " ++ ", ".intercalate (Kind.selectable.map Kind.name)
 
 /-- The options of `emit` and `describe`: the target, the output folder and the kinds. -/
 structure Options where
@@ -102,22 +113,32 @@ def readInputs (root : System.FilePath) : IO Inputs := do
     catch _ => pure none
   return { lean, library, effect, tsgo }
 
-/-- **What a command runs over**: one application, or a named group of programs, each admitted at
-the empty application (`checkProgram`), as the wire corpus is. -/
+/-- **What a command runs over**: one application, with the host and the script that `run` takes
+when the project passes them; or a named group of programs, each admitted at the empty application
+(`checkProgram`), as the wire corpus is. -/
 inductive Source where
-  | application (app : Application NativeOp)
+  | application (app : Application NativeOp) (hosted : Option Hosted := none)
+      (script : List Request := [])
   | programs (name : String) (programs : List (String × NativeEff))
 
 /-- A source's name: the application's, or the group's. It names the default output folder. -/
 def Source.name : Source → String
-  | .application app => app.name
+  | .application app _ _ => app.name
   | .programs name _ => name
+
+/-- **What `run` runs over**: an application with its host and the script the project passes; or,
+in words, why the source has no host. -/
+def Source.hosted? : Source → Except String (Application NativeOp × Hosted × List Request)
+  | .application app (some h) script => .ok (app, h, script)
+  | .application app none _ =>
+    .error s!"the application {app.name} has no host; a project passes one to Compiler.main (hosted := …)"
+  | .programs name _ => .error s!"the group {name} is programs, with no host"
 
 /-- `check`: the certificate, or the refusal. Over a group, each program's, under its name; the
 command refuses when one program refuses. -/
 def checkCommand (source : Source) (json : Bool) : IO UInt32 := do
   match source with
-  | .application app =>
+  | .application app _ _ =>
     match check app with
     | .ok b =>
       if json then IO.println (jsonText (certificate b))
@@ -154,7 +175,7 @@ text. -/
 def emissionOf (source : Source) (command : List String) (kinds : List Kind) :
     IO (Except String Emission) := do
   match source with
-  | .application app =>
+  | .application app _ _ =>
     match check app with
     | .error why => return .error why.text
     | .ok b => return (emitTs (← readSpec app.name command kinds) b).mapError (·.text)
@@ -184,25 +205,65 @@ def emitCommand (source : Source) (command rest : List String) (write : Bool) : 
     else IO.println (jsonText e.manifest)
     return 0
 
+/-- **`run` over a host**: the script, the project's or the one that `--script FILE` names, each
+request with its module (`modulesOf`); then each request on the Lean machine (`runFrom`), one line
+each. A refused build is printed as `check` prints it: as one line of JSON under `--json`, else as
+text on the error stream. A usage error runs nothing. -/
+def runHosted (app : Application NativeOp) (h : Hosted) (passed : List Request) (o : RunOptions) :
+    IO UInt32 := do
+  let script ← match o.script with
+    | none => pure passed
+    | some file =>
+      match ← EIO.toBaseIO (readJson file) with
+      | .error e => IO.eprintln s!"run: {e}"; return 2
+      | .ok t =>
+        match scriptOf t with
+        | .ok requests => pure requests
+        | .error why => IO.eprintln s!"run: {file}: {why}"; return 2
+  let requests ← match modulesOf app script with
+    | .ok requests => pure requests
+    | .error why => IO.eprintln s!"run: {why}"; return 2
+  let mut refused := false
+  for outcome in runFrom h o.mode o.budget requests h.initial do
+    match outcome with
+    | .ok line => IO.println line
+    | .error why =>
+      refused := true
+      match o.mode with
+      | .json => IO.println (jsonText why.json)
+      | _ => IO.eprintln ("run: " ++ why.text)
+  return if refused then 1 else 0
+
+/-- **`run`**: the options read (`RunOptions.read`), then the source's host (`Source.hosted?`); a
+source with no host refuses, as a usage error. -/
+def runCommand (source : Source) (rest : List String) : IO UInt32 := do
+  match RunOptions.read rest {}, source.hosted? with
+  | .error why, _ => IO.eprintln s!"{why}; {usage}"; return 2
+  | .ok _, .error why => IO.eprintln s!"run: {why}"; return 2
+  | .ok o, .ok (app, h, passed) => runHosted app h passed o
+
 /-- The arguments of the `emit` that a `describe` describes: its first `describe` read as `emit`. -/
 def asEmit : List String → List String
   | [] => []
   | "describe" :: rest => "emit" :: rest
   | a :: rest => a :: asEmit rest
 
-/-- **The command line over a source**: `check`, `emit` or `describe`. `args` are the arguments as
-given, which a header and the manifest record; `rest` are the ones the command reads. -/
+/-- **The command line over a source**: `check`, `emit`, `describe` or `run`. `args` are the
+arguments as given, which a header and the manifest record; `rest` are the ones the command reads. -/
 def run (source : Source) (args rest : List String) : IO UInt32 :=
   match rest with
   | ["check"] => checkCommand source false
   | ["check", "--json"] => checkCommand source true
   | "emit" :: options => emitCommand source args options true
   | "describe" :: options => emitCommand source (asEmit args) options false
+  | "run" :: options => runCommand source options
   | _ => do IO.eprintln usage; return 2
 
-/-- **The compiler's entry point** over one application: `check`, `emit` or `describe`. -/
-def main (app : Application NativeOp) (args : List String) : IO UInt32 :=
-  run (.application app) args args
+/-- **The compiler's entry point** over one application: `check`, `emit`, `describe` or `run`.
+`run` takes the application's host and the script of requests that the project passes. -/
+def main (app : Application NativeOp) (args : List String) (hosted : Option Hosted := none)
+    (script : List Request := []) : IO UInt32 :=
+  run (.application app hosted script) args args
 
 /-- The group that the first `--group NAME` names, and the arguments without those two. -/
 def takeGroup : List String → Option String × List String
