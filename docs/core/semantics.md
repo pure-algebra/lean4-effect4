@@ -160,7 +160,7 @@ Assigning every theorem to a chapter does not establish metatheory coverage.
 ### 1.5 Constructing and explaining the proofs
 
 The inspected TYPES 2003 chapters add methods for organizing proofs. They supply no new Effect4
-semantic result. The [source audit](../research/2026-10-01-semantics/types-2003-scout/book-scout.md)
+semantic result. The source audit (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-semantics/types-2003-scout/book-scout.md`)
 records the edition, checksum, pages and limits of each connection.
 
 Ballarin's *Locales and Locale Expressions in Isabelle/Isar* (§§3.2–3.5, pp. 37–41) explains how
@@ -184,7 +184,7 @@ affected transitions.
 
 For each slice, the prose records the literature relation, the local adaptation and cuts, the
 argument and the consumer. The semantics registry and the generated report own the exact statement and its
-evidence status. The [tooling follow-up](../research/2026-10-01-semantics/types-2003-scout/tooling-adoption.md)
+evidence status. The tooling follow-up (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-semantics/types-2003-scout/tooling-adoption.md`)
 records the source-resolution and rendering gaps and two bounded adoption slices. Planned
 prerequisites stay distinct from checked theorem applications.
 
@@ -737,7 +737,7 @@ exclusions. `registrationDone_preserves` combines this transport, race payload t
 cancellation-frame typing for the accepted, deferred-interrupt and ordinary park branches.
 It supplies the unchanged `registrationDone_preserves` goal; the CE-028 battery separately
 checks refusal of the historical countdown collision and acceptance after removing only that
-countdown. The [receipt](../research/2026-10-02-codex-lead/registration-receipt.md) records each
+countdown. The receipt (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-02-codex-lead/registration-receipt.md`) records each
 helper's concrete consumer. This remains a local invariant proof, with the same limits as above.
 
 The machine generates two internal administrative markers during execution that are not user-space programs, and the typing invariant places each strictly where the operational semantics expects it (decisions row 188):
