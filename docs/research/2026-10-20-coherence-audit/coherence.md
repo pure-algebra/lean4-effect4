@@ -261,7 +261,7 @@ The rest of the repair wave follows the order: R2's A4.1 and A9.1, and R3.
 | Id | Question | State | When |
 | --- | --- | --- | --- |
 | D2 | The public JSON's lists | decided 2026-10-19: arrays; `Canonical.print` becomes the array print (probe: `probes/d2/`) | done, the TypeScript slice |
-| D3 | The native profile after E6 | open; recommended: the profile is a datum the run is checked against at ingress | before item 2, M2 |
+| D3 | The native profile after E6 | settled 2026-10-20 by the coordinator under the owner's go of the chain: the profile is a datum the run is checked against at ingress | M2 lowers that one judgment |
 | S-2 | Is the generated host interface public? | open; recommended: yes | before item 9 |
 | D1 | The log: harden it, or one commit construction | deferred (the owner, 2026-10-19) | §9.2 item 2 |
 | S-1 | Is the store's on-disk format meaning? | deferred with D1 | §9.2 item 2 |
