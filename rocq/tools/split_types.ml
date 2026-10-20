@@ -1,5 +1,6 @@
 (* split_types.ml -- the program types of ocaml/eff/eff_types.ml, printed again as one flat type
-   group split into its strongly connected components in dependency order.
+   group split into its strongly connected components in dependency order; and, with --extract,
+   the Rocq extraction directives that send each flat type back to its owner's module.
 
    What it is: the LCNF route declares each program type in its own module named as Lean names it
    (`module Ty = struct type t = Never | ... end`), and a cycle as `module rec`. rocq-of-ocaml
@@ -11,7 +12,14 @@
       `M.t` in a type expression names the flat type of `M`;
    2. split: the flat group is printed as its components (Tarjan), dependencies first.
    These are the names and the order the Rocq workspace was built on, so `Eff_types.v` keeps its
-   spelling when the OCaml layout changes. Depends on: compiler-libs (Parse, Pprintast).
+   spelling when the OCaml layout changes.
+   With --extract it prints the inverse of step 1 as Rocq directives, one `Extract Inductive` per
+   variant and per record (`E4.Eff_types.eff` is `Eff_types.Eff.t`, `Eff_succeed` is
+   `Eff_types.Eff.Succeed`). Rocq code extracted over `Eff_types.v` then speaks the estate's own
+   types, so the comparison lane's runner (rocq/LaneExtract.v, `make gen-rocq-lane`) meets Lean's
+   lowered code with no second copy of a type. A type abbreviation needs no directive: Rocq unfolds
+   it. A record crosses through a building function and a matching function, by the OCaml labels.
+   Depends on: compiler-libs (Parse, Pprintast).
 
    Properties:
    S0  Every module of the input is one type module or one `module rec` of type signatures, and
@@ -24,9 +32,16 @@
                                                                           tested
    S4  For the types of 6689f0833 the Rocq file is the one the flat layout of 81f9a4354 gave,
        byte for byte (the receipt of 2026-10-17's seat rocq-cas).          tested
+   S5  With --extract, every variant and every record of the input has exactly one directive. It
+       names the flat type of S1 and the owner's type, with the constructors in declaration order;
+       an abbreviation has none. S0's refusals hold in this mode too.     by construction
+   S6  The directives compile against `Eff_types.v`, and Rocq's extraction over them type-checks
+       against effect4_eff: `make gen-rocq-lane` and the lane's build (engine/test/rocq) are the
+       test.                                                              tested
 
    Run: ocamlfind ocamlopt -package compiler-libs.common -linkpkg split_types.ml -o split_types
-        ./split_types eff_types.ml > eff_types_split.ml *)
+        ./split_types eff_types.ml > eff_types_split.ml
+        ./split_types --extract eff_types.ml > EffExtract.v *)
 
 open Parsetree
 
@@ -89,8 +104,9 @@ let rename_decl (m : string) (d : type_declaration) : type_declaration =
 let module_name (mb : module_binding) : string =
   match mb.pmb_name.txt with Some m -> m | None -> refuse "an anonymous module"
 
-(* The type declarations a module item carries, renamed; `None` for an item outside any module. *)
-let decls_of_item (item : structure_item) : type_declaration list option =
+(* The type declarations a module item carries, each with its module, as the input spells them;
+   `None` for an item outside any module. *)
+let owned (item : structure_item) : (string * type_declaration) list option =
   match item.pstr_desc with
   | Pstr_module mb ->
     let m = module_name mb in
@@ -100,7 +116,7 @@ let decls_of_item (item : structure_item) : type_declaration list option =
          (List.concat_map
             (fun i ->
               match i.pstr_desc with
-              | Pstr_type (_, ds) -> List.map (rename_decl m) ds
+              | Pstr_type (_, ds) -> List.map (fun d -> m, d) ds
               | _ -> refuse ("an item other than a type in module " ^ m))
             items)
      | _ -> refuse ("module " ^ m ^ ", which is no structure"))
@@ -114,12 +130,16 @@ let decls_of_item (item : structure_item) : type_declaration list option =
              List.concat_map
                (fun s ->
                  match s.psig_desc with
-                 | Psig_type (_, ds) -> List.map (rename_decl m) ds
+                 | Psig_type (_, ds) -> List.map (fun d -> m, d) ds
                  | _ -> refuse ("an item other than a type in module rec " ^ m))
                sigs
            | _ -> refuse ("module rec " ^ m ^ ", which has no signature"))
          mbs)
   | _ -> None
+
+(* The type declarations a module item carries, renamed; `None` for an item outside any module. *)
+let decls_of_item (item : structure_item) : type_declaration list option =
+  Option.map (List.map (fun (m, d) -> rename_decl m d)) (owned item)
 
 (* Every module's types as one recursive group, after the items that are no module. *)
 let flatten (structure : structure) : structure =
@@ -198,7 +218,55 @@ let split_item (item : structure_item) : structure_item list =
       (components names edges)
   | _ -> [ item ]
 
+(* ---- 3. extract: the directives back to the owner's modules ---- *)
+
+(* One declaration of module `m` as an `Extract Inductive`: a variant by its constructors, a record
+   by a building and a matching function over its labels; `None` for an abbreviation. *)
+let directive (m : string) (d : type_declaration) : string option =
+  if d.ptype_name.txt <> "t" then refuse ("type " ^ d.ptype_name.txt ^ " in module " ^ m);
+  let flat = flat_name m in
+  let owner = Printf.sprintf "Eff_types.%s.t" m in
+  let annotation =
+    match d.ptype_params with
+    | [] -> owner
+    | ps -> Printf.sprintf "(%s) %s" (String.concat ", " (List.map (fun _ -> "_") ps)) owner
+  in
+  match d.ptype_kind with
+  | Ptype_variant cs ->
+    let ctor c = Printf.sprintf "\"Eff_types.%s.%s\"" m c.pcd_name.txt in
+    Some
+      (Printf.sprintf "Extract Inductive E4.Eff_types.%s => \"%s\" [ %s ]." flat owner
+         (String.concat " " (List.map ctor cs)))
+  | Ptype_record fields ->
+    let labels = List.map (fun f -> f.pld_name.txt) fields in
+    let build =
+      Printf.sprintf "(fun (%s) -> ({ %s } : %s))" (String.concat ", " labels)
+        (String.concat "; " (List.map (fun l -> Printf.sprintf "Eff_types.%s.%s = %s" m l l) labels))
+        annotation
+    in
+    let case =
+      Printf.sprintf "(fun g (r : %s) -> g %s)" annotation
+        (String.concat " " (List.map (fun l -> Printf.sprintf "r.Eff_types.%s.%s" m l) labels))
+    in
+    Some
+      (Printf.sprintf "Extract Inductive E4.Eff_types.%s.record => \"%s\" [ \"%s\" ] \"%s\"." flat owner
+         build case)
+  | Ptype_abstract | Ptype_open -> None
+
+let extract (structure : structure) : string list =
+  "(* GENERATED by `make gen-rocq-lane` (rocq/tools/split_types.ml --extract of ocaml/eff/eff_types.ml); do not edit. *)"
+  :: "From Stdlib Require Import Extraction."
+  :: "Require E4.Eff_types."
+  :: List.filter_map (fun (m, d) -> directive m d) (List.concat (List.filter_map owned structure))
+
 let () =
-  let path = Sys.argv.(1) in
-  let structure = Parse.implementation (Lexing.from_string (read_file path)) in
-  Format.printf "%a@." Pprintast.structure (List.concat_map split_item (flatten structure))
+  match Array.to_list Sys.argv with
+  | [ _; path ] when path <> "--extract" ->
+    let structure = Parse.implementation (Lexing.from_string (read_file path)) in
+    Format.printf "%a@." Pprintast.structure (List.concat_map split_item (flatten structure))
+  | [ _; "--extract"; path ] ->
+    let structure = Parse.implementation (Lexing.from_string (read_file path)) in
+    List.iter print_endline (extract structure)
+  | _ ->
+    prerr_endline "usage: split_types [--extract] eff_types.ml";
+    exit 2

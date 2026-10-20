@@ -1,6 +1,6 @@
 (* lane_eval.ml -- Lean's evaluator, as the realization of Rocq's in the extracted runner.
 
-   What it is: the constants that docs/research/2026-10-16-itrees/rocq/LaneExtract.v realizes
+   What it is: the constants that rocq/LaneExtract.v realizes
    by `Extract Constant` (Denote.v's eval_term, decide, fail_exit, bad_shape and outside), each
    one Lean function lowered into ocaml/gen/api_gen.ml, and Rocq's exit type, which the extracted
    runner (rocq_run.ml) takes from here. So the comparison lane runs Rocq's tree with Lean's

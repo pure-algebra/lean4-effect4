@@ -507,3 +507,21 @@ Inductive completion (b e d i a : Set) : Set :=
 
 Arguments Completion_ofExit {_ _ _ _ _}.
 Arguments Completion_ofRefGet {_ _ _ _ _}.
+
+Module located.
+  Record record {site reason : Set} : Set := Build {
+    site : site;
+    reason : reason;
+  }.
+  Arguments record : clear implicits.
+  Definition with_site {t_site t_reason} site (r : record t_site t_reason) :=
+    Build t_site t_reason site r.(reason).
+  Definition with_reason {t_site t_reason} reason
+    (r : record t_site t_reason) :=
+    Build t_site t_reason r.(site) reason.
+End located.
+Definition located := located.record.
+
+Inductive profile_reason : Set :=
+| ProfileReason_aboveBound : int -> profile_reason
+| ProfileReason_belowBound : int -> profile_reason.
