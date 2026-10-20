@@ -186,6 +186,44 @@ that check. The alternative is one `make` lane over the seven runners.
 On a yes, E7 (1) lands as one commit. Then C2's first slice runs as one seat in the main checkout
 after M2. That slice deletes `EmitTodo.lean` and the to-do's `Print.lean`.
 
+- **Slice 1 landed** 2026-10-20 (`888be58a7`, to-do `9d3eba7`). The library `Compiler`
+  (`tools/Compiler/`) holds `Compiler.main`, which the to-do's `Main.lean` calls by static import
+  (E1). `check` builds the application's service module and prints its certificate, as text or as
+  one JSON line. A refusal is the build's located refusal, through `Api.BuildRefusal`'s generated
+  encoder, with a refused entry named beside it. `emit --target ts` writes one folder: the module,
+  the surface, the prelude's closure, the canonical bytes and print, the certificate and the
+  manifest. The closure is read off the files' imports, five files today. Every check runs before
+  a file is written. The manifest names each check, what it established and its limit, and what
+  `emit` does not perform. `describe` prints that manifest. The service is named for the
+  application: `todo` gives `TodoApp`. Deleted: the to-do's `Todo/Print.lean`, `Drivers.Emit`'s
+  hand list of prelude files with its own re-exporting `prelude.ts`, and `Tools.Styles.programJson`.
+  Their one owners are now `Compiler.Prelude.closure` and `Compiler.programJson`, and the corpus
+  is the same byte for byte. `Tools.Code.generate` writes through the new `addressOf`,
+  `headerBlock` and `originsAt`. A scratch probe found the same text for the wire corpus's eight
+  programs. That edit landed inside the documents commit `7cc8d03c8`, which took the uncommitted
+  file. `Tools.Code.*` and `Tools.GeneratedStamp` stay where they are. 26 other files import them
+  (`git grep`), `src/OCaml5` and `Effect4Gen` among them, so the move is no mechanical one. The
+  read-back is `Api.readFile`. `Api.admitModule` refuses the to-do's module
+  (`ReadRefusal.shape "module"`): its envelope reads no service declaration. In the to-do,
+  `lake exe todo emit --target ts --out ts` regenerated `ts/`, and a second run wrote the same
+  bytes. No artifact names the library's checkout. `bun --no-install ts/run.ts --typed` equals
+  `lake exe todo --typed` on all eleven requests, and tsgo 7 checks `ts/`. A copy without
+  `prelude/control.ts` fails tsgo (TS2307) and Bun. `make batteries-touched BASE=98a29895b`: one
+  battery, `Test.Codegen.CompilerEmit`, built. `#axiom_audit`: its 29 declarations are within
+  `[propext, Quot.sound]`, none modulo a planned goal. The tool modules reach `Classical.choice`
+  only through the toolchain's string and path functions. That is 29 of the 326 declarations of
+  `Compiler.*`, and 4 of 44 in `Tools.Code.Module`, as `moduleText` did before. `#closure_audit`:
+  `Test/Audit/ClosureAudit.lean` passes, and none of the slice's 1,098 declarations binds a table
+  before a returned closure. Gates: `make check-ts` passes twice, the second after the move, on
+  the first run's keys. `check-ocaml` is not owed, since nothing under `ocaml/` or `src/OCaml5`
+  changed. Proposed: a decisions row for the slice, with the service's name and the manifest's
+  fields. The manifest's `program.module` is the application's name, since a static import knows
+  no Lean declaration. Proposed too: `Api.admitModule` reads row services and service blocks, as
+  `Api.readFile` does, so the envelope check joins the read-back. The next slice moves
+  `Tools.Code.*` and `Tools.GeneratedStamp` under `tools/Compiler/` with their importers, and E6's
+  producers call `Compiler.Emit`. `tools/Compiler` needs a row in
+  `tools/Tools/ArchitectureRoles.lean`, and `Compiler` a prefix in the closure audit's file.
+
 ## 9. The prior art, each against our semantics
 
 The owner asked for care: what each project does, what of it accords with our semantics, where
