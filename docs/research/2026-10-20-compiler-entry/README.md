@@ -265,6 +265,60 @@ after M2. That slice deletes `EmitTodo.lean` and the to-do's `Print.lean`.
   the reserved files' repair as one commit, and one sweep of those comments. Proposed too:
   `make gen-tsdiag` in its own commit. And in the role register, `ts/prelude`, `Test/Corpus` and
   `tools/tsdiag` replace the `harness` row, and the moved drivers' imports of `Test` are accepted.
+- **Slice 2 landed** 2026-10-20 (`2233ebd5f`): the text writer stands under the compiler,
+  `Compiler.Emit` holds the one artifact mechanics, and `lake exe effect4` runs the tree's groups.
+  `git mv` moved `Tools.Code.*` and `Tools.GeneratedStamp` to `tools/Compiler/Code/` and
+  `tools/Compiler/GeneratedStamp.lean`, and 27 of their 28 importers follow. Their namespaces stay
+  `Tools.Code` and `Tools.GeneratedStamp`, so every name that a document cites still resolves. The
+  28th importer, `tools/Drivers/TsGen.lean`, is the M4 seat's file. So `Tools.GeneratedStamp` stays
+  as one import that re-exports the stamp, and it goes when that import moves. `Compiler.Emit` holds
+  the mechanics: `moduleFile`, `header`, `generatedHeader` and `manifestFields`. The three drivers
+  lay out their modules through it, and `Drivers.Emit` takes its header and address there too.
+  `generate` moved from `Tools.Code.Module` into `Drivers.Emit`, its one caller, since it now calls
+  `Compiler.Emit`. Each driver keeps its own observations: the index and the trees, the diagnostics
+  modules and the oracles, the runs and `corpus.json`. Every output is the same bytes as at the
+  base, tested: `Drivers.Emit`'s 22 files, the printed corpus's 1,637 files, and the truth corpus's
+  94 files. `lake exe effect4` (`Compiler.Exe`, `Compiler.mainOver`) runs `check`, `emit` and
+  `describe` over `--group corpus` and `--group todo`. `emit --group corpus` writes 38 files with
+  one manifest (`Compiler.emitGroup`), and a second run wrote the same bytes. The dogfood to-do
+  emits as an application, at the to-do project's address, since a row namespace's name is metadata.
+  `admitModule` takes `services`, the rows whose services a module declares, and `ModuleReading`
+  takes them as an index. The default reads none, so every law over `admitModule` keeps its
+  statement and its proof. The compiler's read-back is `Api.admitModule` at the table's services,
+  and the manifest's `readBack` check names it. The module's own binding check folds into it, so a
+  manifest lists nine checks. The prelude copy's limit now says that the target lane runs the
+  self-test table, as C1 made it. The battery gains three group readers, two red controls that
+  refuse by name, and the to-do's read-back. With no services, the reading boundary refuses the
+  to-do's file at its first row service; with them, it admits the file. The role register puts
+  `tools/Compiler` at height 3, and its writer and stamp at 2, since `tools/Tools` and the view
+  import them. It accepts the executable's import of the dogfood to-do. A re-reading of the
+  direction rule finds no other import of the compiler against it. The closure audit covers
+  `Compiler`, and `Tools.Exposure` maps its modules to their paths. The narrow builds cover the
+  touched modules and their direct dependents, 43 batteries among them.
+  `make batteries-touched BASE=fb7804182`: nine batteries, built. `#axiom_audit`: the touched core
+  and laws (297 declarations) and `Test.Codegen.CompilerEmit` (41) are within
+  `[propext, Quot.sound]`, none modulo a planned goal. The tool modules reach `Classical.choice`
+  only through the toolchain's string, path and loop functions and the pinned renderer. That is 42
+  of the 409 declarations of the compiler's modules, its writer and stamp aside. It is 3 of 18 in
+  `Tools.Code.Module`, and 4 of 38 in `Drivers.Emit`. `#closure_audit`:
+  `Test/Audit/ClosureAudit.lean` passes, and none of the compiler's 1,038 declarations binds a table
+  before a returned closure. Gates: `make check-ts` passes on all six lanes. The target lane
+  resolves 104 of 104, and the corpus keeps 408, 385 readable, 0 refused. `make check-gen`
+  regenerated eight groups, `ts` among them through the re-exporting module, and no committed file
+  changed. `make gen-host-protocol` and `make gen-truth-corpus` changed none either. The language,
+  census, schema-pin and tool checks pass. `check-docs` finds one stale reference, the owner's
+  `README.md` line 81, which names `tools/Tools/Code/Module.lean`. `check-roots` was not run: it is
+  `lake build Test`. `make check-ocaml` is not owed, since no output of `src/OCaml5` changed. In the
+  to-do, `lake exe todo emit --target ts --out ts` changes four files, left uncommitted there. The
+  module's header names `Api.admitModule`, the manifest names the new commit and nine checks, and
+  the prelude's two files carry C1's comments. A second run wrote the same bytes, tsgo 7 checks
+  `ts/`, and Bun equals Lean on the eleven typed requests. Two notes still state the old tree: a
+  comment in `src/Effect4/Codegen/Target.lean` names the old path, and the lakefile says the
+  `Compiler` library declares no `main`. Proposed: a decisions row for the slice, and the
+  re-exporting module's deletion once M4 has landed. Proposed too: each lane module's header names
+  its program's address, which changes the 93 truth modules by one line. And
+  `ModuleEmission.admitFile`, the certificate form of `ModuleEmission.readFile`, once a consumer
+  needs it.
 
 ## 9. The prior art, each against our semantics
 
