@@ -223,6 +223,48 @@ after M2. That slice deletes `EmitTodo.lean` and the to-do's `Print.lean`.
   `Tools.Code.*` and `Tools.GeneratedStamp` under `tools/Compiler/` with their importers, and E6's
   producers call `Compiler.Emit`. `tools/Compiler` needs a row in
   `tools/Tools/ArchitectureRoles.lean`, and `Compiler` a prefix in the closure audit's file.
+- **C1 landed** 2026-10-20 (`600e1e19c`): `harness/` is gone, and each piece stands with its owner
+  (E5). The prelude's five files and the host-protocol projection are in `ts/prelude/`. The truth
+  corpus is data in `Test/Corpus/`, with no Lean module. The corpus producer and the codec producer
+  are `--run` drivers, `tools/Drivers/Truth.lean` and `tools/Drivers/CodecValues.lean`. The codec
+  check is in `ts/eff/test/codec/`, and the diagnostics lane is `tools/tsdiag/run-tsdiag.mjs`. That
+  lane refuses a prelude file outside `ts/prelude`. `harness/README.md` is deleted. The owners are
+  updated: the manifest's `PreludeAtoms` path, the Makefile's path sets, recipes and gate keys, and
+  `Compiler.Prelude.source`. So are `Drivers.Emit`, `Drivers.Corpus`, `Tools.RowTypes`, the target
+  lane's queries, the reader recipe, the lookup in `corpora.ml`, `.gitignore` and ten documents.
+  `Tools.HostProtocol` and `ts/eff/check.ts` stay as they are: each takes its folder as an argument.
+  Two links resolve `effect`, `ts/prelude/node_modules` and `Test/Corpus/node_modules`, and the
+  target lane's key makes both first. Without the corpus link the target lane refuses 93 of its 104
+  queries (TS2307), reproduced. `ts/eff/tsconfig.json` excludes `test/codec`. Without that, a fresh
+  clone's typecheck fails on the ignored `.work/values.ts` (TS2307), reproduced. `Drivers.Corpus`
+  drops the diagnostics project's dead `session` include. The codec producer had not compiled since
+  M1 renamed `Located.path` to `Located.site`. One token repairs it. Regenerated: the derived group
+  changes `ts/prelude/prelude-atoms.gen.ts` alone, in two comment lines, its regenerate command and
+  its self-test note. The fixtures and the host-protocol projection are the same bytes.
+  `make gen-truth-corpus` rewrites 94 files. Each differs from the base only by its header's
+  producer path, and 76 modules by 85 prelude imports. The codec lane, run by hand, writes the same
+  `values.ts` and passes as at the base. The prelude's self-test table runs in the target lane, as
+  the owner ruled. Its 88 cases hold, and each of the 45 atoms has a case. Its controls refuse a
+  wrong `succ` answer and an atom with no case, each by name, tested. The prelude's notes and the
+  generator's note say so, so an emitted prelude closure differs in comments only.
+  `make batteries-touched BASE=c78fa6691`: no battery reached. `#closure_audit` passes, and six
+  probes find no table bound before a returned closure in the landing's modules. `#axiom_audit`:
+  those tool modules reach `Classical.choice` only through the toolchain's string, path and JSON
+  functions. Gates: `make check-ts` passes on all six lanes. The target lane resolves 104 of 104,
+  and the corpus keeps 408, 385 readable, 0 refused. `make check-ocaml` passes. Its cross face reads
+  `Test/Corpus/corpus.json`: 93 programs, 9 agreeing and 2 differing, as at the base.
+  `make check-gen` and `make check-language` pass. `check-docs` finds 43 stale references, all in
+  files this seat leaves to the coordinator. `AGENTS.md` line 283 names `harness/truth`, and line
+  290 names `harness/`. The owner's `README.md` lines 80, 244, 276 and 309 name `harness/truth/`.
+  The others are in `docs/core/decisions.md` (14), five contract packets (22) and
+  `generated/semantics.md` line 6290. That line's producer is a docstring in
+  `src/Effect4/Laws/Codegen/Mask.lean`. The committed `generated/tsdiag-agreement.tsv` still names
+  the old script. A fresh promote also moves 59 rows' reasons, from `term` to `refusedArguments`,
+  drift since 2026-10-15; so it is not promoted here. Comments in 12 `src` files, 14 batteries, two
+  `ts/eff` tests, the registry and four `ocaml/engine/test` files still name `harness/`. Proposed:
+  the reserved files' repair as one commit, and one sweep of those comments. Proposed too:
+  `make gen-tsdiag` in its own commit. And in the role register, `ts/prelude`, `Test/Corpus` and
+  `tools/tsdiag` replace the `harness` row, and the moved drivers' imports of `Test` are accepted.
 
 ## 9. The prior art, each against our semantics
 
