@@ -332,3 +332,17 @@ A.
   from no program here, and the codec lane holds it at the value level.
 - The OCaml face printed nothing by D1: the native run still prints the value tree, and move A
   is what lowers D1 into the kit.
+
+## 12. The rulings packet
+
+Each ruling, with its evidence in the tree and in the probes, and the recommendation.
+
+| Id | Question | Evidence | Recommended |
+| --- | --- | --- | --- |
+| R1 | Is D1 the observation of a run? | `Ty.exitOf` is a type (`src/Effect4/Program/TyCore.lean`); `wireAlgebra`'s `ty_exitOf` arm writes rc.112's `Exit` encoding; `decode_iff` is exact modulo `normJ`; the to-do's eleven exits and 31 of the 35 faces print the same text on both runtimes (`probe/out/lean.txt`, `probe/out/bun.txt`) | yes; §9.1 item 5 says so |
+| R2 | Does P1 enter the registry now? | its parts are theorems: `run_typed` on `Straight`, `typedState_reachable` on the reference machine, `fits_hasTy`, `fits_of_hasTy_shapeDecides`, `decode_encode`; the composition is in no claim | yes, a claim with a planned goal, by a proposed row |
+| R3 | Does the surface carry the exit codec per method? | the to-do runner composed `Schema.toCodecJson(Schema.Exit(…))` by hand from `TodoAppSchemas`; the probe wrote the same per case (`probe/out/cases.gen.ts`) | yes, move F |
+| R4 | A handle as the answer | `Codec.isSupported` refuses `fiberOf`, `refOf`, `deferredOf` and `handle`; `SchemaCode.ofTy` refuses the `Fiber` declaration; the five handle cases print `refused` on both faces | the tool's carrier wire, marked internal |
+| R5 | The defect carrier | `encodeDefect` writes `{"user":n}`, `{"error":…}` and a machine defect's name; rc.112's `Defect()` is `Json` decoded to `Unknown`, so it writes `7`, `"boom"`, and `{name, message}`; `defectWire` in `harness/truth/run-truth.ts` projects by hand; four faces differ | Effect's raw JSON, move G |
+| R6 | Annotations on a reason | `causeImage.ofVal` reads the annotated reason, `encodeRaw` writes it without annotations, `Prepared.encode`'s exactness guard refuses it; rc.112's `toCodecJson` drops annotations; with `Faces.bare` the case agrees | observe without annotations, move H |
+
