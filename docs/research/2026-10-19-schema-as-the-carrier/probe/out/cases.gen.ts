@@ -1,0 +1,31 @@
+// The exit Schema of each case as a JSON codec, written by Faces.lean. Do not edit.
+import { Schema } from "effect"
+export const cases = {
+  "successUnit": Schema.toCodecJson(Schema.Exit(Schema.Void, Schema.Never, Schema.Defect())),
+  "successNat": Schema.toCodecJson(Schema.Exit(Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), Schema.Never, Schema.Defect())),
+  "successBool": Schema.toCodecJson(Schema.Exit(Schema.Boolean, Schema.Never, Schema.Defect())),
+  "successString": Schema.toCodecJson(Schema.Exit(Schema.String, Schema.Never, Schema.Defect())),
+  "successSome": Schema.toCodecJson(Schema.Exit(Schema.Option(Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0))), Schema.Never, Schema.Defect())),
+  "successNone": Schema.toCodecJson(Schema.Exit(Schema.Option(Schema.Never), Schema.Never, Schema.Defect())),
+  "successList": Schema.toCodecJson(Schema.Exit(Schema.Array(Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0))), Schema.Never, Schema.Defect())),
+  "successPair": Schema.toCodecJson(Schema.Exit(Schema.Tuple([Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), Schema.Literal("x")]), Schema.Never, Schema.Defect())),
+  "successTuple": Schema.toCodecJson(Schema.Exit(Schema.Tuple([Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), Schema.Literal("a"), Schema.Boolean]), Schema.Never, Schema.Defect())),
+  "successRecord": Schema.toCodecJson(Schema.Exit(Schema.Struct({ id: Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), nick: Schema.optionalKey(Schema.String), title: Schema.String }), Schema.Never, Schema.Defect())),
+  "successRecordOptional": Schema.toCodecJson(Schema.Exit(Schema.Struct({ id: Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), nick: Schema.optionalKey(Schema.String), title: Schema.String }), Schema.Never, Schema.Defect())),
+  "successMap": Schema.toCodecJson(Schema.Exit(Schema.Record(Schema.String, Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0))), Schema.Never, Schema.Defect())),
+  "successUnion": Schema.toCodecJson(Schema.Exit(Schema.Union([Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), Schema.String]), Schema.Never, Schema.Defect())),
+  "successExitOfFail": Schema.toCodecJson(Schema.Exit(Schema.Exit(Schema.Never, Schema.String, Schema.Defect()), Schema.Never, Schema.Defect())),
+  "successExitOfSucceed": Schema.toCodecJson(Schema.Exit(Schema.Exit(Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), Schema.Never, Schema.Defect()), Schema.Never, Schema.Defect())),
+  "successCause": Schema.toCodecJson(Schema.Exit(Schema.Cause(Schema.String, Schema.Defect()), Schema.Never, Schema.Defect())),
+  "failString": Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.String, Schema.Defect())),
+  "failNat": Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)), Schema.Defect())),
+  "failTagged": Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.Tuple([Schema.Literal("EmptyTitle"), Schema.Literal("a title is required")]), Schema.Defect())),
+  "failRecord": Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.Struct({ _tag: Schema.Literal("NotFound"), id: Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0)) }), Schema.Defect())),
+  "dieNat": Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.Never, Schema.Defect())),
+  "dieString": Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.Never, Schema.Defect())),
+  "interruptNoOne": Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.Never, Schema.Defect())),
+  "exitOfInterrupt": Schema.toCodecJson(Schema.Exit(Schema.Exit(Schema.Never, Schema.Never, Schema.Defect()), Schema.Never, Schema.Defect())),
+  "forkFailJoin": Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.String, Schema.Defect())),
+  "forkDieJoin": Schema.toCodecJson(Schema.Exit(Schema.Never, Schema.Never, Schema.Defect())),
+  "forkInterruptJoin": Schema.toCodecJson(Schema.Exit(Schema.Void, Schema.Never, Schema.Defect()))
+}

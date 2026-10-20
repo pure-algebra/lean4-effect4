@@ -1,0 +1,28 @@
+successUnit	void	never
+successNat	number	never
+successBool	boolean	never
+successString	string	never
+successSome	Option.Option<number>	never
+successNone	Option.Option<never>	never
+successList	ReadonlyArray<number>	never
+successPair	readonly [number, "x"]	never
+successTuple	readonly [number, "a", boolean]	never
+successRecord	{ readonly id: number; readonly nick?: string; readonly title: string }	never
+successRecordOptional	{ readonly id: number; readonly nick?: string; readonly title: string }	never
+successMap	Readonly<Record<string, number>>	never
+successUnion	number | string	never
+successExitOfFail	Exit.Exit<never, string>	never
+successExitOfSucceed	Exit.Exit<number, never>	never
+successCause	Cause.Cause<string>	never
+failString	never	string
+failNat	never	number
+failTagged	never	readonly ["EmptyTitle", "a title is required"]
+failRecord	never	{ readonly _tag: "NotFound"; readonly id: number }
+dieNat	never	never
+dieString	never	never
+interruptNoOne	never	never
+exitOfInterrupt	Exit.Exit<never, never>	never
+forkFailJoin	never	string
+forkDieJoin	never	never
+forkInterruptJoin	void	never
+answerIsFiber	Fiber.Fiber<void, never>	never
