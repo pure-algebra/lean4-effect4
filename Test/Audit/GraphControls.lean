@@ -35,7 +35,7 @@ open Tools.View Whatwg.Svg.Scene
 
 /-- A node keyed as the layout keys a long edge's point at rank 1 (`Graph.pointKey`). -/
 def collision : Graph :=
-  { nodes := #[⟨"a", "A", "", false⟩, ⟨"long@1", "B", "", false⟩, ⟨"c", "C", "", false⟩],
+  { nodes := #[⟨"a", "A", "", false, .box⟩, ⟨"long@1", "B", "", false, .box⟩, ⟨"c", "C", "", false, .box⟩],
     edges := #[⟨"ab", 0, 1⟩, ⟨"bc", 1, 2⟩, ⟨"long", 0, 2⟩] }
 
 -- control: `input_iff` admits the input, and `laid_iff` refuses its layout. The point that the
@@ -46,7 +46,7 @@ def collision : Graph :=
   | .ok _ => false
 
 /-- One node with an edge to itself. -/
-def selfLoop : Graph := { nodes := #[⟨"a", "A", "", false⟩], edges := #[⟨"loop", 0, 0⟩] }
+def selfLoop : Graph := { nodes := #[⟨"a", "A", "", false, .box⟩], edges := #[⟨"loop", 0, 0⟩] }
 
 -- control: the routing width alone cuts a self-loop. The loop's control hull passes the routing
 -- width, and the canvas that `reserveCanvas` widens (`reserveCanvas_notShrink`) holds it.

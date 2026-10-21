@@ -348,6 +348,16 @@ def formRows (p : Placed) : Int :=
     | _ => BOXROWS
   | none => BOXROWS
 
+/-- A form takes at least one row, and at most its allocation. -/
+theorem formRows_bounds (p : Placed) : 1 ≤ formRows p ∧ formRows p ≤ BOXROWS := by
+  unfold formRows
+  split
+  · split <;> decide
+  · decide
+
+/-- Growth changes no form. -/
+theorem formRows_grow (p : Placed) (g : Nat) : formRows { p with grow := g } = formRows p := rfl
+
 /-- The painted bounds of a box at its current growth, in logical pixels: its form's rows,
 centred in its allocation, so an edge meets the painted form. -/
 def boxBounds (p : Placed) : Rect :=

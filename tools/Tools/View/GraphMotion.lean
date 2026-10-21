@@ -269,9 +269,12 @@ Nonnegative width is a premise; route, mark, region, and text ink are outside th
 theorem family_boxes_inside (p : Placed) (factor : Nat) (width : 0 ≤ p.w) :
     (paintedBox { p with grow := familyGrowth p.grow factor }).Inside (allocatedBox p) := by
   have hw := scaledLength p.w (familyGrowth p.grow factor) width (family_growth_le _ _)
-  have hh := scaledLength (ROWH * BOXROWS) (familyGrowth p.grow factor)
-    (by decide) (family_growth_le _ _)
-  simp only [paintedBox, Laid.boxBounds, allocatedBox, Whatwg.Svg.Scene.IBox.Inside]
+  have hr := Laid.formRows_bounds p
+  have hh := scaledLength (ROWH * Laid.formRows p) (familyGrowth p.grow factor)
+    (Int.mul_nonneg (by decide) (by omega)) (family_growth_le _ _)
+  have hle : ROWH * Laid.formRows p ≤ ROWH * BOXROWS :=
+    Int.mul_le_mul_of_nonneg_left hr.2 (by decide)
+  simp only [paintedBox, Laid.boxBounds, allocatedBox, Whatwg.Svg.Scene.IBox.Inside, Laid.formRows_grow]
   refine ⟨?_, ?_, ?_, ?_⟩ <;> omega
 
 /-- Scale one complete scene family at its fixed endpoint places. -/
