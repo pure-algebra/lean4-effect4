@@ -577,8 +577,9 @@ audit's §4 text and the code differ, the code wins, and the brief of the move t
 - **The artifacts.** A `roots.json` artifact is one closed walk; artifacts share only the type
   owner. So 894 of `api_engine.ml`'s 900 nodes and 107 of `eff_image.ml`'s 115 are copies of
   `closure_gen.ml`'s. Wave 2's "declarations compiled twice: 0" (row 416 (1)) no longer holds.
-  M10 adds value linkage: an artifact imports another artifact's lowered roots instead of walking
-  them. Then "lowered once" is true of the artifacts too.
+  Value linkage (4b, landed): an artifact links every declaration of a used artifact's walk
+  instead of walking it again. Roots alone would have left 104 of the 107 copies. Then "lowered
+  once" is true of the artifacts too; `api_engine.ml`'s copies go with M10.
 
 **Where a consolidation could paper over a design issue.** Named, so that no brief does.
 
