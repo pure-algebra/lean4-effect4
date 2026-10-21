@@ -1,8 +1,6 @@
 # The host boundary: host answers, handle declarations, and the external-reply contract
 
-The authority for how a host answers a program's calls: what the runtime does today, what is
-known to be wrong, the contract the external lane must meet, the interim profile, and the order
-of work. Written 2026-09-30 at `be15b062`. Decisions rows 95–100 own its open choices. The
+This document owns how a host answers a program's calls. It records runtime behaviour, known defects, the external-reply contract, the interim profile, and the work order. Written 2026-09-30 at `be15b062`. Decisions rows 95–100 own its open choices. The
 derivations and probes are research records:
 - the external runtime contract (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-external-runtime-contract.md`) (Codex,
   the full lane);
@@ -23,9 +21,8 @@ questions (§6). The parked parts stay written down so the path is known (`syste
 
 "Complete" has two named scopes.
 
-1. **The current admitted core.** Every permitted row, value, completion and session case has
-   semantics, an executable admission check, a proof that the prepared answer is typed, and a
-   table-aware agreement with the reference machine. A case outside the published profile is
+1. **The current core of admitted programs.** Every permitted row, value, completion and session case has semantics and an executable reply admission check.
+   Each case has a prepared-answer typing proof and table-aware agreement with the reference machine. A case outside the published profile is
    refused, with a located reason, before execution.
 2. **Module and target expansion.** Each new host binding, stored-behavior API, transaction
    profile, runtime container and compiler target brings its own obligations. Nothing about all
@@ -50,14 +47,23 @@ Row 373 rules two parts of that promise for the first share (2026-10-13):
 
 ## 2. How host answers flow today
 
+A deployment's reactor reads its external client as a partial comodel of the row signature (`Reactor`, `src/Effect4/Run/Basic.lean`).
+A gate's reactor replays a prescribed trace.
+`Reactor.tensor` combines reactors on product state; disjoint supported rows give the comodel tensor equations (`src/Effect4/Run/Runner.lean`).
+Overlapping supported rows use the left answer.
+`Reactor.queue` represents a reply-blind client of the session rows, with the remaining requests as state.
+The caller supplies that state separately; the queue's `requests` argument initializes nothing.
+No driver or client is generated.
+General client unfolding remains open in `semantics.md`, concept 9.
+
 - **The live session is the canonical route.** `advance` refuses an answer given as a plain
   decision (`advance`, `src/Effect4/Api/HostSession.lean`). A reply enters only by `submit`
   through `preflight`, and `applyReply` checks it again when it applies it.
 - **The admission check** (`Program/Admit.lean`). `admit` (`:77`) requires the fiber to be parked
   at that token on an external row. `admitAnswer` then checks the answer:
   - a success value goes through `externalValue` (`src/Effect4/Program/Compile.lean`). At a
-    handle-typed row a number is an allocation request that becomes a new external handle; any
-    other value must pass `Val.hasTy` and carry no external handle;
+    handle-typed row a number requests a fresh external handle.
+    Any other value must pass `Val.hasTy` and carry no external handle;
   - every handle must exist (`mintedIn`, `src/Effect4/Program/Admit.lean`);
   - typed failures must fit the row's error type;
   - a delayed cell read (`ofRefGet`) is checked by what the cell holds at that moment.
@@ -66,8 +72,8 @@ Row 373 rules two parts of that promise for the first share (2026-10-13):
   again at the checker's instance at that address (`acceptAtInstance`,
   `src/Effect4/Program/Admit.lean`; `HostSession.instanceAt`). A success admitted there is a
   member of the instance's answer column with no handle, and it reaches the program unchanged
-  (`instance_prepared_success`). The checked replay takes this path: `LiveRecord.restore` admits the program and feeds a
-  journal through the session, so each applied reply was admitted at its call
+  (`instance_prepared_success`). The checked replay takes this path. `LiveRecord.restore` admits the program and feeds a
+  journal through the session. Each applied reply was admitted at its call
   (`Live.replay_at_call_instance`, `src/Effect4/Laws/Api/Live.lean`).
 - **Preparation.** `prepareExternalAnswer` (`src/Effect4/Program/Compile.lean`) turns an accepted reply into the
   code the fiber resumes with, allocating any new external handle.
@@ -165,9 +171,8 @@ or refused.
 The runtime keeps no types in values, and a host reply cannot create, replace or widen the
 declaration of an existing internal handle. Declarations are derived:
 
-- **A fiber.** From its creation record, read by the checker: the fork ledger's site and the
-  creating construct's kind (`machine-state.md` §7; row 91), with the checker's static
-  environment at that site. A probe derives `string` for a forged fiber and `nat` for an honest
+- **A fiber.** The checker reads its creation record: the fork ledger's site and the creating construct's kind (`machine-state.md` §7; row 91).
+  It uses the static environment at that site. A probe derives `string` for a forged fiber and `nat` for an honest
   one (`PathProbes.lean`, path B).
 - **Forks the runtime makes without a source point** record the empty site: finalizer forks, and
   races without a source site. They carry their construct's kind, which fixes their type.
@@ -219,8 +224,8 @@ For completions:
 
 ### 4.5 Theorem shapes
 
-**Receipt.** Under the typed-state invariant, `RegistryAgrees`, a lawful table and a live call,
-accepting a reply establishes the envelope and the boundary judgment at the receipt state. It
+**Receipt.** Assume the typed-state invariant, `RegistryAgrees`, a lawful table and a live call.
+Accepting a reply then establishes the envelope and the boundary judgment at the receipt state. It
 promises nothing about applying it later.
 
 **Application.** At application time, under the same invariants, a still-live key, the retained
@@ -244,7 +249,7 @@ accepted.
 | raw `Api.replay` | a named test entry; the caller admits decisions (row 373 (8)) |
 | `replayAdmitted` | gone (row 373 (8)) |
 | a list of host answers | deleted from the machine and the run entries (DI-23, DI-58). A host that answers from a list drives the session: `Run.runWith` (`src/Effect4/Run/Basic.lean`) with `Reactor.ofHost` (`src/Effect4/Laws/Api/HostDrive.lean`) over `tapeHost` (`src/Effect4/Laws/Program/HostRuns.lean`) |
-| timers, yields, deferred deliveries | typed through their own delivery paths, never through external admission |
+| timers, yields, deferred deliveries | typed through their own delivery paths, never through external reply admission |
 | the OCaml engine | needs a table-aware keyed entry path of its own: the session note's slice DM7, after the first share (row 373 (2)) |
 
 ### 4.7 Required controls
@@ -273,9 +278,8 @@ accepted.
 
 ## 5. The interim profile (row 97)
 
-Until declarations for a handle kind land, host rows whose answer or error types carry that
-internal kind (fiber, cell, deferred, scope, context) are refused when a table is admitted, with a
-located refusal. All fifteen host rows in the tree pass this rule
+Until declarations for a handle kind land, table admission gives a located refusal for host rows carrying that internal kind.
+This applies to answer and error types carrying fibers, cells, deferreds, scopes or contexts. All fifteen host rows in the tree pass this rule
 (`PathProbes.lean`, path A). The rule is stricter than row 7's open recommendation, which admits
 handles arriving in-process. It is lifted kind by kind as declarations land.
 
@@ -287,12 +291,11 @@ external allocation.
 - **Typed failures need no new check.** The error alphabet is closed, and every decoded error is
   handle-free (`valOfErr_keys`, `causeImage_handleFree`).
 - **Reserved defects are refused (row 191).** A failure whose cause dies with `badName` or
-  `notImplemented` is refused before its error column is read (`reservedDie`, `Program/Typed.lean`),
-  on the decision path and in `externalAdmits` alike. Every other defect and every interrupt stays
-  admitted at every error column. An accepted failure therefore satisfies the typed judgment's
+  `notImplemented` is refused before its error column is read (`reservedDie`, `Program/Typed.lean`).
+  Both the decision path and `externalAdmits` apply this rule. Every other defect and interrupt stays admitted as an answer at every error column. An accepted failure therefore satisfies the typed judgment's
   defect exclusion (`preflight_failure_noShapeDefect`, `Laws/Api/HostSession.lean`).
 - **One test fixture falls under the rule:** the row `"cell"` of `Test/Api/ExternalContract.lean`,
-  which answers a cell. Host-returned internal cells wait for the registry (row 7).
+  which answers a cell. Host-returned internal cells wait for the handle declaration registry (row 7).
 
 This is item A of the slice 6 brief (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-codex-brief-slice6-and-fixes.md`), as
 amended by its addendum 1 (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-codex-brief-slice6-addendum-1.md`).
@@ -380,10 +383,12 @@ S-5 remains the requested finite host check of recorded exits against their publ
 The Lean codec laws alone establish no rc.112 execution or external host progress.
 Decision 12 answers DI-08 for the persisted description plane.
 
-**The boundary rule.** The owner's rule for every boundary: "fidelity to a normal Effect TS
-project where possible; never break host code because a type at a boundary was declared narrower
-or differently than the host sees it; be comprehensive and overload rather than refuse"
-(`2026-09-10-boundary-decisions.md` §1). There are four boundaries where a type is declared on
+**The boundary rule.** The owner gives this rule in `2026-09-10-boundary-decisions.md` §1:
+
+> fidelity to a normal Effect TS project where possible; never break host code because a type at a boundary was declared narrower
+> or differently than the host sees it; be comprehensive and overload rather than refuse
+
+There are four boundaries where a type is declared on
 one side and observed on the other:
 
 | boundary | declared by | observed by | what "not breaking" means |
@@ -393,8 +398,8 @@ one side and observed on the other:
 | B-row | a row's request, answer and error columns | the real package through the adapter | the adapter's projection inhabits the column exactly |
 | B-tape | the row's answer and error columns | a recorded host answer on replay | admitted whenever the host's value is a member, at any subtype of the column |
 
-"Overload" means: at B-accept and B-tape, widen what Lean admits; at B-print, declare what the
-compiler would infer; at B-row, project at the adapter, never in the program.
+"Overload" has one meaning per boundary. At B-accept and B-tape, widen the programs and replies Lean admits.
+At B-print, declare what the compiler would infer. At B-row, project at the adapter, never in the program.
 
 **Route A, the one boundary decode route** (row 122). Host data enters a program as a typed host
 answer, checked by membership at the reply (§4.4). Every reply the session accepts at a call is a

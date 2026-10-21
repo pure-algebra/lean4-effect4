@@ -22,7 +22,7 @@ in the tree (reading, `git grep`): they wait for the module toolkit's G3 and G2 
 | Program objects | `src/Effect4/Program/Object.lean`, `src/Effect4/Api/Object.lean` | `Object.{ofBuilt,open,bytes,read,load,ref,table,services}`; `Built.certificate` | `Object.{open_ofBuilt,open_ok_iff,read_exact,load_bytes,table_root_of_open}` in `src/Effect4/Laws/Api/Object.lean` |
 | Service sessions | `src/Effect4/Api/Session.lean` | `Object.session : Object → String → Except SessionRefusal Object` (data to data), `Built.session : Built → String → Except SessionRefusal Built` (its admission, requirement row closed modulo the signature) | `Built.session_ok_iff`, `Built.session_retains` in `src/Effect4/Laws/Api/Session.lean` |
 | `Author`: sketches and the edit session (since `90940a540`) | `src/Effect4/Program/Sketch.lean`, `src/Effect4/Program/Edit.lean`, `src/Effect4/Program/SketchWire.lean`, `src/Effect4/Program/Typing/PartsTable.lean` | `Sketch` (a program with its hole table), `Row.hole`, `SigApp.withHoles`; `Sketch.{hole,check,fillAt,omitAt,focusAt,table,refusals}`, the table part by part; `EditSession.{open,feed,feedStep,run,view}` over `Edit`; a sketch's canonical bytes, `Sketch.{encode,decode}`. `Sketch.check` checks the program as written, so it refuses a layer reference (`layerReference`) that program admission accepts; row 373 (7) rules the repair | `holes_conservative`, `Sketch.check_fill`, `Sketch.check_omit`, `Sketch.check_filled_module`; `EditSession.run_coherent`, `EditSession.reached_view`, `EditSession.feed_undo`; `Sketch.decode_encode`, `Sketch.decode_exact`; all through `Effect4.Laws.Author` |
-| `Run` | `src/Effect4/Run/Basic.lean` | `Run.open` (cannot refuse), `Rows.{start,flush,clock,receive,answer,control,tape}` into `List Command`, `Run.{play,step,answer,receive,control}`, `Run.observe : Observation` (first-order, with `fibers`), `Run.inspect : Inspection` (holds the machine), `Run.{work,nextControl,controlOnce}`, `Reactor σ`, `Run.drive`, `runPure`/`runClock`/`runWith` | `open_total`, `journal_replays`, `drive_eq_play`, `drive_envelope`, `runPure_eq_run`, `answer_once`, `answer_accepted`, `bindCall_at`, `nextControl_spec`, `controlOnce_journal`, `play_controls_eq_replay`, `runClock_eq_run` |
+| `Run` | `src/Effect4/Run/Basic.lean`, `src/Effect4/Run/Runner.lean` | `Run.open` (cannot refuse), `Rows.{start,flush,clock,receive,answer,control,tape}` into `List Command`, `Run.{play,step,answer,receive,control}`, `Run.observe : Observation` (first-order, with `fibers`), `Run.inspect : Inspection` (holds the machine), `Run.{work,nextControl,controlOnce}`, `Reactor σ`, `Reactor.tensor`, `Reactor.queue`, `Run.drive`, `runPure`/`runClock`/`runWith` | `open_total`, `journal_replays`, `drive_eq_play`, `drive_envelope`, `runPure_eq_run`, `answer_once`, `answer_accepted`, `bindCall_at`, `nextControl_spec`, `controlOnce_journal`, `play_controls_eq_replay`, `runClock_eq_run`; `Reactor.queue_spec`, `Reactor.tensor_left`, `Reactor.tensor_right` (`src/Effect4/Laws/Run/Runner.lean`) |
 | `Run`, the tape | `src/Effect4/Run/Tape.lean` | What a tool reads off a run. The raw replay: `machineOf`, `replayFrom`, `enoughFor`. The machine's view: `MachineView`, `machineViewOf`, `machineView`. The tape of a journal: `Position`, `replyDecision`, `decisionOf`, `receiptRow`, `openedOf`, `readsOn`, `tapeFrom`, `tapeOf`. A run's budget premise and rest: `funded`, `atRest`. Reachable from the `Effect4` root; `Effect4.Api` does not export them yet | `tape_replays`, `funded_replays`, `tapeFrom_cut_replays`, `tapeFrom_position_replays` (`src/Effect4/Laws/Run/Tape.lean`); `applied_selects`, `control_retires` (`src/Effect4/Laws/Run/Rows.lean`) |
 | `Run`, the live session (decisions row 373) | `src/Effect4/Run/Live.lean`, `src/Effect4/Run/View.lean`, `src/Effect4/Run/LiveRecord.lean` | `Built.ofSketch` admits before `Live.open`. `Live.feed` and `Live.feedAll` apply commands. `LiveRecord.restore` admits and replays a record. | `Built.ofSketch_error_iff`, `LiveRecord.restore_save`, `Live.view_classifies`, `Live.view_funded`, `Live.replay_at_call_instance` in `src/Effect4/Laws/Api/` |
 | `Author`: an application and moved references (2026-10-13) | `src/Effect4/Program/Authoring/Application.lean`, `src/Effect4/Program/RowProtocol.lean`, `src/Effect4/Program/Address.lean` | `Application` (named entries with typed parameters over one row table, as one `Module`), a row's declared protocol; `Eff.rebaseRefs`, `Node.rebaseRefs`, `Path.rebase` | `moduleOf_table`; `conforms_sat`, `agrees_hostRun` (`src/Effect4/Laws/Program/Validated.lean`); `references_move` (`src/Effect4/Laws/Program/AddressMove.lean`) |
@@ -54,9 +54,17 @@ The lifetime provides nothing: the keys it requires are the signature's services
 Construction does not establish target printing, transport support, termination, or physical host behaviour.
 The host continues through existing call-instance reply admission.
 
+`Reactor.tensor` combines two host states and gives the left answer priority.
+For disjoint supported rows, each reactor changes only its own state component.
+`Reactor.queue requests` answers the session's request and reply rows.
+Its `requests` argument does not initialize state: pass the initial list separately to `Run.runWith`.
+The remaining list is the queue's state; replies remain observable through the run's journal.
+The equations have compatibility role under `queue-reactor`, serving R6 and R13.
+They establish no client/session agreement theorem or host progress.
+
 ### 1.1 Editing, session work and composition (2026-10-03)
 
-**Edit, then check the complete candidate.** `Node.replaceAt` replaces an existing node with
+**Edit, then check the whole candidate.** `Node.replaceAt` replaces an existing node with
 another of the same sort. Paths follow structural children: `[]` names the root; for
 `bind p q`, `[0]` names `p` and `[1]` names `q`. A missing path or wrong sort returns `none`.
 This path language covers the seven program-node sorts; it does not descend into `Term`.
@@ -68,7 +76,7 @@ one update mechanism. The lookup, overwrite, restoration and disjoint-path laws 
 successful result supplies the newly admitted program and type; the type may differ from the
 old one. It reuses the final admission step of `Author.build`, including located typing
 refusals. It does not relocate variables or references, or establish unchanged behavior.
-Here the outer result reports a structural failure and the inner result reports admission:
+Here the outer result reports a structural failure and the inner result reports program admission:
 
 ```lean
 open Effect4
@@ -82,7 +90,7 @@ def editProgram (b : Api.Built) (path : List Nat)
 ```
 
 [`AuthorContract`](../../Test/Program/AuthorContract.lean) exercises a changed result type
-with a nonempty host table, retains table/names, and refuses an unbound variable or a removed
+with a nonempty row table, retains table/names, and refuses an unbound variable or a removed
 reference target. Whole-program checking matters: even a layer replacement with the same
 local type can invalidate references from elsewhere in the program.
 
@@ -100,7 +108,7 @@ An empty work view does not certify completion or deadlock.
 work alongside a host wait, pending receipts, timer waits and insufficient fuel. The selection
 and journal laws live in [`Laws.Run`](../../src/Effect4/Laws/Run.lean). For a control sequence,
 `play_controls_eq_replay` compares its resulting machine with raw replay when every newly
-recorded phase is `.progressed`; the existing history may contain other phases. That premise
+recorded phase is `.progressed`. The existing history may contain other phases. That premise
 is accepted execution at the supplied budgets, not a general progress or termination theorem.
 
 For successful host replies, `HostSession.preflight_success_prepared_fits` and its
@@ -118,7 +126,7 @@ suspension is one concrete use. `run_agrees_at_bound` supplies sufficient budget
 programs and concludes equal exits/stores from the existing empty initial machine setup.
 [`MeaningEqContract`](../../Test/Program/MeaningEqContract.lean) checks a rewrite under failure
 and cleanup, including retained state. This comparison does not cover traces, arbitrary
-finite-fuel frontiers, loops, scheduling, host tables or target execution; it is a contribution
+finite-fuel frontiers, loops, scheduling, row tables or target execution. It contributes
 to T5, not the general relation. Typing an edited program still uses admission separately.
 
 ### 1.2 Named records
@@ -243,10 +251,10 @@ Section 1.2 describes the authoring surface.
 The decisions register owns the rulings.
 
 **D-B — what a handle publishes, and whether a described handle crosses.** (D's D-2, C's D8.)
-*Recommend:* a host reviver mints the index (rc.112's `SchemaRepresentation.ts:574`, the same
-mechanism the six `effect/schema/*` declarations need for D-E); the MCP face refuses a row whose
-request or completion describes a handle when it arrives from another process, admits it
-in-process. Not a schema check — the schema accepts it either way.
+*Recommend:* a host reviver mints the index (rc.112's `SchemaRepresentation.ts:574`).
+The six `effect/schema/*` declarations need that mechanism for D-E.
+The MCP face refuses a row whose request or completion describes a handle from another process, but admits that row in-process.
+The schema accepts it either way; this is not a schema check.
 
 **D-C — the table travels by digest.** (C's D3 + D7.) *Recommend yes now:* `Built.digest`,
 `(digest, Run.id)` as the wire identity, the `Call`/`Header` carrying the digest. Changes the
@@ -264,47 +272,61 @@ P4 (a), and 395 (9). The text is a second algebra of the representation fold,
 `toCodeDocument` with a reviver table. rc.112's code quotes a `__proto__` key, so its object
 literal drops that field.
 
-**D-F — the MCP server.** (C's D1, D2, D4, D9, D10, D11 — one choice.) *Recommend:* a Lean
-`--run` driver `Tools.McpRun` over a `ToolSpec` table inside the gate
-(`Effect4.Tooling.ToolSpec`), fourteen tools with `run.play` withheld, the server holding
-the journal (`journal_replays` makes the cached `Run` an optimisation), no reactor over the wire,
-the run protocol before R12's inspection protocol (four of its nine commands are buildable; five
-need a `Doc` that does not exist). The decisive reason is `Built`: a `Module` is a Lean function
-and a certificate is a `Prop` record, so only a Lean host gets `open_total`.
+**D-F — the MCP server.** (C's D1, D2, D4, D9, D10, D11 — one choice.)
+*Recommend:* a Lean `--run` driver `Tools.McpRun` over a `ToolSpec` table inside the gate (`Effect4.Tooling.ToolSpec`).
+It offers fourteen tools with `run.play` withheld.
+The server holds the journal; `journal_replays` makes the cached `Run` an optimisation.
+No reactor crosses the wire.
+The run protocol precedes R12's inspection protocol.
+Four of its nine commands are buildable; five need a `Doc` that does not exist.
+`Built` supplies the reason: a `Module` is a Lean function, and a certificate is a `Prop` record.
+Only a Lean host gets `open_total`.
 
-**D-G — the three root modules and the daemon words.** (D-I2, daemons D4.) *Recommend:*
-`Effect4.Author` / `Effect4.Run` / `Effect4.Face` as the imports an agent writes, `Api.*` the deep
-source underneath (a file-move wave; settled by decisions row 332 as five entry modules); `fork` / `daemon p in s` / `detach p` as the three fiber
-words, no author-written flag at a pin.
+**D-G — the three root modules and the daemon words.** (D-I2, daemons D4.)
+*Recommend:* agent imports `Effect4.Author`, `Effect4.Run` and `Effect4.Face`, with `Api.*` as the deep source underneath.
+Decisions row 332 settles that file-move wave as five entry modules.
+The recommended fiber words are `fork`, `daemon p in s` and `detach p`, without an author-written flag at a pin.
 
 **D-H — one machine edit.** (Daemons D3 + §2.11.) *Recommend yes:* a path on `RunEvent.forked`
 (closes "at those paths") and the race-entrant options named once, in the same rebuild.
 
-**D-I — `nativeSignatureWith` and `gen`.** (D-I3, §2.9.) *Recommend:* keep the custom-carrier
-check at the declaration site until an application needs a seventh carrier (threading it changes
-`Built`, `Built.ofSketch`, `Run.open` and the admission statements); and confirm that `gen`
-stays a printer spelling with no authoring lift, so authored programs never contain `Stmt` —
-or say that the statement family is to be retired from `Eff` after all.
+**D-I — `nativeSignatureWith` and `gen`.** (D-I3, §2.9.)
+*Recommend:* keep the custom-carrier check at the declaration site until an application needs a seventh carrier.
+Threading it changes `Built`, `Built.ofSketch`, `Run.open` and the program admission statements.
+The recommendation also asks whether `gen` stays a printer spelling without an authoring lift.
+Under that choice, authored programs never contain `Stmt`.
+The alternative is to retire the statement family from `Eff`.
 
-**D-J — how canonical TypeScript is generated** (owner, later on 2026-09-17: "the semantics
-of how we generate canonical TypeScript representations might need to be refined", and "refactor
-the lowering with LCNF so we can author canonical parts for Effect in TypeScript — the session
-APIs — and prove API correctness, robustness, version handling, data structures"). Three rules,
-each one a gate can hold: (1) every TypeScript artefact names the canonical object it is a fold
-of — `Eff` for programs (the template table, laws 11/12), `Document` for types and schemas (the
-rc.112 mirror, the retraction, the pins), the LCNF closure for code (the session transitions,
-the codecs, the atoms; the Conform rungs as the differential) — and a fold from anything else
-(the Lean environment, as `TsGen` reads today; a hand transcription, as `prelude.ts` is) fails
-`check-gen`; (2) the TypeScript side holds no second representation of a schema — static types
-come from the same `Document` the runtime schema does, so `eff.gen.ts`'s `TaggedUnion` and
-`Ty.schema`'s `anyOf` become one encoding; (3) code that has a law in Lean crosses only by
-lowering, never by mirror — `runner.gen.ts` and `prelude.ts` lowered from LCNF beside
-`ocaml/gen`, so `advance_step` is a sentence about the TypeScript host too. *Recommend:* adopt
-the three rules now (they decide D-E and D-F the same way); build the LCNF-to-TypeScript backend
-after D-C/D-F land the Lean driver, so it inherits a settled `ToolSpec` table. Diagrams and the
-kv walk-through are in the session of 2026-09-17 (three inline diagrams: where a schema lives
-today, the proposed pipeline, the kv module's crossings).
+**D-J — how canonical TypeScript is generated.** The owner raised these requests later on 2026-09-17:
 
-Not decisions, recorded as such: the error column stays wide (D's D-4 — sound, not tight; D-H
-was rejected); `FiberStatus.root` stays (daemons D1); the six `rfl` proofs stay `rfl` (daemons
-D2); `Repr` is not derived (C D12).
+> the semantics of how we generate canonical TypeScript representations might need to be refined
+
+> refactor the lowering with LCNF so we can author canonical parts for Effect in TypeScript — the session
+> APIs — and prove API correctness, robustness, version handling, data structures
+
+The proposal gives three rules that gates can check:
+
+1. Every TypeScript artifact names the canonical object it folds.
+   Programs fold `Eff` through the template table (laws 11/12).
+   Types and schemas fold `Document` (the rc.112 mirror, the retraction, the pins).
+   Code folds the LCNF closure (session transitions, codecs, atoms; the Conform rungs provide the differential).
+   `check-gen` rejects folds from other inputs.
+   These include the Lean environment, which `TsGen` reads today, and hand transcription, as in `prelude.ts`.
+2. The TypeScript side holds no second schema representation.
+   Static types and runtime schemas come from the same `Document`.
+   Thus `eff.gen.ts`'s `TaggedUnion` and `Ty.schema`'s `anyOf` become one encoding.
+3. Code with a Lean law crosses only by LCNF lowering, never by mirror.
+   The proposal lowers `runner.gen.ts` and `prelude.ts` from LCNF beside `ocaml/gen`.
+   `advance_step` would then describe the TypeScript host too.
+
+*Recommend:* adopt these rules now; they decide D-E and D-F the same way.
+The LCNF-to-TypeScript backend follows D-C/D-F's Lean driver, inheriting a settled `ToolSpec` table.
+The session of 2026-09-17 holds the kv walk-through and three inline diagrams.
+They show today's schema locations, the proposed pipeline, and the kv module's crossings.
+
+The following observations are not decisions:
+
+- The error column stays wide (D's D-4, a sound answer type relative to the checker judgment, without tightness); D-H was rejected.
+- `FiberStatus.root` stays (daemons D1).
+- The six `rfl` proofs stay `rfl` (daemons D2).
+- `Repr` is not derived (C D12).

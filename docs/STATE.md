@@ -77,7 +77,7 @@ and a document are each a state reached by its journal. The dictionary
   module's imports.
 - The Rocq comparison lane now extracts the generated development (row 436). The six hand copies and their evaluator adapter retire.
 - The compiler emits OCaml from declared roots (row 438). The external to-do now builds freshly through that command.
-- Program objects hold the application signature and program (row 439).
+- Program objects hold the application typing signature and program (row 439).
   `check --out` saves their node bytes; `open FILE` checks them without application source.
   Row names are derived, and `LiveRecord` stores the shared object.
 - The object's load is a composite of two exact embeddings, and the row-name projection is gone (row 440).
@@ -87,6 +87,8 @@ and a document are each a state reached by its journal. The dictionary
   It provides nothing: the signature's services are the host's at every target. It initializes once, keeps definition positions, and appends request and reply rows.
   The driver, the engine and the file loader remain later slices; the per-request runner and the OCaml to-do lane retire with them.
   The landing is `research/2026-10-21-session-landing/README.md`; its review is `research/2026-10-21-session-review/README.md`.
+
+- `Reactor.tensor` combines host states, and `Reactor.queue` answers session rows; `queue-reactor` states their equations (R6 and R13).
 
 ## Next, in order
 

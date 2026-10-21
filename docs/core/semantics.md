@@ -1,30 +1,27 @@
 # Semantics: the language's judgments, their literature and their obligations
 
-The authority for what Effect4's semantic judgments mean, which literature each adopts or adapts,
-where the language cuts away from that literature, and which properties each must have. Eleven
+This document owns Effect4's semantic judgments, their literature, their cuts and their required properties. Eleven
 concepts, each in four parts: what the literature defines; our adaptation, assumptions and
 exclusions; the definition and judgment in the tree; the required properties.
 
 What this document does not own, and who does:
 
-- **Status.** Whether a property is proved, wanted, refuted, absent or assumed is measured, never
-  written here: `generated/semantics.md` (`make gen-semantics`;
-  `docs/GENERATED.md`, group `semantics`), produced from the registry
-  `tools/ProofGraph/Registry.lean` and the loaded environment, every status derived through
-  `ProofRef.validate` and `ProofGraph.check`.
+- **Status.** `generated/semantics.md` measures whether each property is proved, wanted, refuted, absent or assumed.
+  `make gen-semantics` produces it from `tools/ProofGraph/Registry.lean` and the loaded environment (`docs/GENERATED.md`, group `semantics`).
+  `ProofRef.validate` and `ProofGraph.check` derive every status.
 - **Decisions.** `docs/core/decisions.md`; the cuts below cite its rows by number.
 - **The goal, the sorts, the arrows and the requirements.** `docs/core/system-map.md`.
 - **What is next.** `docs/STATE.md`.
 - **Counterexamples.** `Test/Counterexamples/REGISTER.md`.
 - **The sources.** `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-semantics/sources/README.md` (vendored with
   checksums) and `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-semantics/citations-audit.md` (every locator read off a
-  vendored page). A theorem, rule or in-section page number of TAPL or ATTAPL is not verified
-  until the owner's copies are vendored; those references are marked as cited.
+  vendored page). TAPL and ATTAPL locators remain unverified until the owner's copies are vendored.
+  This includes theorem numbers, rule numbers and in-section page numbers. Those references are marked as cited.
 
-Drafted by Gemini from the semantics pass of 2026-10-01 (concept-first after Codex's review),
-reviewed against the tree by the coordinator and checked mechanically (every declaration named
-with a `path:line` locator is declared within three lines of it:
-`python3 docs/research/2026-10-01-semantics/check-gemini-drafts.py docs/core/semantics.md`).
+Gemini drafted this document on 2026-10-01, concept-first after Codex's review.
+The coordinator reviewed it against the tree and ran the historical locator check:
+`python3 docs/research/2026-10-01-semantics/check-gemini-drafts.py docs/core/semantics.md`.
+That check found every declaration with a `path:line` locator within three lines of its cited position.
 
 ---
 
@@ -67,51 +64,51 @@ model and are not stored function values in `Eff` or `Val`.
 `Fits` is value membership in a world. `TypedProg` is residual program typing: ordinary operation
 clauses require certificate permission and typed continuations for permitted replies at later worlds. Its
 `unguard` and `finishFinalizer` clauses require an exit payload without a continuation premise.
-The scope-exit marker is typed only at the run position of the guard the `scoped` arm installs
-(`scopedGuard`, with a live scope and a fitting restored context; decisions row 188 (a)): as current
-code the counted step answers it `badShapeExit` (`E4-TYPED-CE-034`). `DenotesTyped` connects admitted
+The scope-exit marker is typed only at the run position of the guard the `scoped` arm installs (`scopedGuard`).
+This requires a live scope and a fitting restored context (decisions row 188 (a)).
+As current code, the counted step answers it `badShapeExit` (`E4-TYPED-CE-034`). `DenotesTyped` connects admitted
 source points to that residual judgment. These definitions resemble protocol-based program logics,
 but identifying them with weakest preconditions would require a named execution interpretation and
 a stated correspondence. The unrestricted bind counterexample (`E4-TYPED-CE-030`) alone does not
 settle every possible weakest-precondition interpretation.
 
-A claim's title, role and selected evidence express an authored interpretation. The printed
+A claim's title, role and selected evidence express an authored interpretation. The rendered
 proposition states exactly what its theorem proves or its planned goal requests. Checking a theorem
 does not check the English interpretation. Refutation and contest links therefore expose the
 registered attacked statement and revision alongside the witness. Historical attacks do not
 automatically refute repaired propositions.
 
-Progress, preservation, scheduling service and interpreter agreement ask different questions. An
+Progress, preservation relative to a step relation, scheduling service and interpreter agreement ask different questions. An
 invariant can exclude a halted configuration without establishing a successor. Progress must account
-for finished states, permitted transitions and live frontiers; preservation concerns covered
-transitions. Finite scheduling service concerns actual callback entry under its stated readiness
+for finished states, permitted transitions and live frontiers.
+Preservation relative to a step relation concerns its covered transitions. Finite scheduling service concerns actual callback entry under its stated readiness
 and bounds. Internal replay agreement retains its empty-host fragment. None of these statements
 alone proves termination or eventual host cooperation.
 
 The generated report checks every concept's selected claims in the loaded environment. A
 concept's claims are a selection, not a complete inventory: an owed property is made visible as
 an `absent` claim. A planned goal placed at a requirement (`@[semantics "concept" (requirement :=
-Rn)]`, decisions row 207) is one of that requirement's nodes; a goal neither placed nor reached is
-listed as unplaced. Generated tables own evidence status, propositions,
+Rn)]`, decisions row 207) is one of its nodes.
+A goal neither placed nor reached is listed as unplaced. Generated tables own evidence status, propositions,
 and counts; prose explains meaning, scope, and boundaries. Cuts own applicability.
 
 ### 1.2 API and Evidence Boundary
 
 This specification distinguishes authored descriptions from evidence checked in the loaded Lean
-environment. A claim's title and role explain why its evidence matters; the printed proposition
+environment. A claim's title and role explain why its evidence matters; the rendered proposition
 states exactly what was proved or requested.
 
 | Item | Owner | What readers can conclude |
 | --- | --- | --- |
 | Claim identity, concept, role, title and evidence pointer | `Tools.Semantics.registry` | Authored assignments identifying a theoretical question and its selected evidence. |
 | Theorem statement, universes, module and axioms | Loaded Lean environment | A `witness` is checked as a theorem of its own printed proposition under the semantic axiom ceiling `[propext, Quot.sound]`. |
-| Obligation proposition and checked/wanted evidence | Existing `ProofGraph` ledger | A `goal` is a declared question. Its checked witness or wanted placeholder must match that question, including binders and universes. Selected goals do not establish coverage of an entire ledger scope. |
+| Obligation proposition and checked/wanted evidence | Existing `ProofGraph` ledger | A `goal` is a declared question. Its checked witness or wanted hole must match that question, including binders and universes. Selected goals do not establish coverage of an entire ledger scope. |
 | Refutation and contest associations | Registry links to `Test/Counterexamples/REGISTER.md` | Checks the referenced row and witness theorem. Read the row's attacked statement and revision alongside the printed evidence. |
 | Applicability | Decisions register, referenced by `Cut` | A cut limits the question's domain. It does not prove, refute or discharge the question. |
-| Declaration placement | Explicit concept tag, then registry module default | Each eligible declaration has one primary home; inherited placement is provisional. |
+| Declaration placement | Explicit concept tag, then semantics registry module default | Each eligible declaration has one primary home; inherited placement is provisional. |
 
-Status indicators describe the selected evidence: `absent` means no witness, goal, or refutation is
-selected, distinguishing an owed obligation from a role outside the cut (citing decisions rows).
+Status indicators describe the selected evidence. `absent` means no witness, goal, or refutation is selected.
+It distinguishes an owed obligation from a role outside the cut, which cites decisions rows.
 `assumed` denotes an external assumption outside the closed runtime. Status counts are evidence
 inventories, not completion percentages.
 
@@ -127,7 +124,7 @@ verified Chapter 6 (Crary).
 | Ahmed on mutable-state types | Worlds, monotonicity, semantic-store circularity | Does not impose step indexing on the current finite structural `Fits` definition |
 | Interaction Trees | Semantic operation continuations as meta-level functions | That source is coinductive; the imported `Effects.Program` here is inductive |
 | De Vilhena–Pottier | Effect protocols and weakest-precondition reasoning | An analogy until a particular local judgment and correspondence are stated; bind rules depend on the chosen judgment |
-| PLF / Harper | Precise progress, preservation, canonical-forms and substitution questions | Apply each to the local judgment; do not substitute codec or invariant facts |
+| PLF / Harper | Precise progress, preservation relative to a step relation, canonical-forms and substitution questions | Apply each to the local judgment; do not substitute codec or invariant facts |
 | Lynch–Vaandrager | Simulation and trace-inclusion methods | Their safety methods do not supply liveness; local one-step interfaces are particular instances, not the whole paper |
 
 ---
@@ -205,17 +202,15 @@ method of formalization projects, with the edges read from proof terms rather th
   TAPL §13.5, pp. 165–169 (*Safety*, audit T1, T2, T7, T44). A store typing $\Sigma$ maps allocated
   locations to static types, breaking circular dependency during mutable assignment.
 - **Monotonicity (Store Weakening)**: TAPL §13.5 (audit T7); PLF `References.v` (`store_weakening`,
-  line 1539, audit F5, F17). Allocating fresh cells preserves the typing of previously allocated
-  locations under store extension ($\Sigma \subseteq \Sigma'$).
-- **World Indexing & Kripke Models**: ATTAPL ch. 6 (Karl Crary, *Logical Relations and a Case Study
-  in Equivalence Checking*, pp. 223–244; §6.7 *A Monotone Logical Relation*, p. 236, audit A2, A4,
-  A8, A12–A15); Amal Ahmed (2004, *Semantics of Types for Mutable State*, PhD thesis, Princeton,
-  audit P1, C1). World-indexed semantic interpretations with future-world accessibility ($w \le w'$).
+  line 1539, audit F5, F17). Under store extension ($\Sigma \subseteq \Sigma'$), allocating fresh cells keeps previously allocated locations typed.
+- **World Indexing & Kripke Models**: ATTAPL ch. 6, Karl Crary, "Logical Relations and a Case Study in Equivalence Checking", pp. 223–244.
+  Section 6.7 is *A Monotone Logical Relation*, p. 236 (audit A2, A4, A8, A12–A15).
+  Amal Ahmed (2004), *Semantics of Types for Mutable State*, PhD thesis, Princeton (audit P1, C1).
+  These works give world-indexed semantic interpretations with future-world accessibility ($w \le w'$).
 
 #### 2. Effect4 Adaptation, Assumptions, and Exclusions
-- **Adapting Kripke Worlds**: Effect4 adapts Kripke store typings into `Effect4.Program.Typed.World`
-  with explicit partitioned tables for fibers ($\Gamma$), promises ($\Pi$), heap references (`Ρ`, Greek rho, field `w.Ρ`),
-  and ghost resume states ($\Theta$).
+- **Adapting Kripke Worlds**: Effect4 adapts Kripke store typings into `Effect4.Program.Typed.World`.
+  Its explicit partitions hold fibers ($\Gamma$), promises ($\Pi$), heap references (`Ρ`, Greek rho, field `w.Ρ`), and ghost resume states ($\Theta$).
 - **Exclusion of Stored Functions (Row 163)**: Stored `Eff` syntax and stored values `Val` contain
   no function values or closures (`../research/history/language-cut.md` §1). Consequently, `Fits` contains **no arrow clause**
   and recurses over finite type structure. Worlds carry syntactic type declarations. Reference
@@ -229,7 +224,7 @@ method of formalization projects, with the edges read from proof terms rather th
   operation produces a suitable extended world, typed contents and the promised reply.
   `StoreImplements` and `storeStep_typed` own that connection (`src/Effect4/Laws/Program/Typed/Adequacy.lean`).
 - **Checker Order & Normalization (Rows 96, 137)**: Handle arm subtyping uses `Equiv` under `subN`
-  (normalized subtyping both ways), as raw subtyping does not distribute products over unions (`E4-TYPED-CE-009`).
+  (normalized subtyping both ways). Raw subtyping does not distribute products over unions (`E4-TYPED-CE-009`).
 - **Scope Handle Persistence (Row 156)**: Scope handles require `ScopeLive w sc`; dangling handles do not fit `Ty.scope`.
 
 #### 3. Project Definition and Judgment
@@ -237,7 +232,7 @@ Value membership in Effect4 is defined by the judgment `Effect4.Program.Typed.Fi
 ```lean
 def Fits (w : World) (v : Val) : Ty → Prop
 ```
-(`src/Effect4/Laws/Program/Typed/Membership.lean:112`). It asserts that runtime value `v` inhabits semantic type `ty`
+(`src/Effect4/Laws/Program/Typed/Membership.lean`). It asserts that runtime value `v` inhabits semantic type `ty`
 under world `w`. Handle leaves verify capability declarations against `w.Ρ`, `w.«Π»`, `w.Γ`, and scope
 persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause is checked to be `ShapeFree`
 (excluding defects `badName` and `notImplemented`, decisions row 152).
@@ -364,8 +359,8 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   fairness, liveness or anything of a program.
   (`profile_closed`, `lease_enrols_iff` (`src/Effect4/Laws/Library/Pool/Profile.lean`)).
 - **The waiting forms are typed once (`waiting-wrapper-typed`, `protected-form-typed`)**:
-  The waiting wrapper at a caller's restore answers its result type at every typed scope,
-  when the module's part is typed (`waitRetryAt_answers`). The result type is in normal form.
+  Assume the module's part is typed.
+  The waiting wrapper at a caller's restore then answers its result type at every typed scope (`waitRetryAt_answers`). The result type is in normal form.
   The wrapper with no loop answers its hint's type at every typed scope, when the module's
   part is typed at that type (`waitAnswer_answers`). It asks no normal form of the hint's
   type: a type with a hint's three rows is its own normal form (`HintTy.canonical`).
@@ -376,7 +371,7 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   theorems are in `src/Effect4/Laws/Step/Waiting.lean`.
 - **Pool's operations are typed at every scope (`pool-use-typed`, `pool-make-typed`,
   `pool-close-typed`)**: `use` keeps its body's effect type. The lease and the return add
-  no failure and no requirement, and the refusal at a closed pool adds none: an interruption
+  no failure and no requirement. The refusal at a closed pool adds none: an interruption
   has no failure type. `make` answers the pool's handle. Its failure type is the
   acquisition's, so a failed acquisition fails `make`. Its requirement is the acquisition's
   with the scope's key, so a pool is made inside a scope. The close answers the unit, with no
@@ -405,10 +400,8 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   trees with positional inputs. Lean function continuations exist solely in the semantic carrier `RProgram`.
 - **Refutation of Unrestricted Bind (Row 148, `E4-TYPED-CE-030`)**: `TypedProg` is **not closed under
   unrestricted monadic bind**. Closing markers (`unguard ex`) carry exit values directly; sequencing across
-  non-local control flow violates naive bind typing. Sequencing is therefore established per-construct via
-  explicit compatibility lemmas: `guardBind_typed`, the general form, and its shapes `seqGuard_typed`
-  (`onSuccess`), `catchGuard_typed` (`onFailure`), `allGuard_typed` (`all`, `onExit`), `onExit_typed`
-  and `seq_typed` (seat D2, `src/Effect4/Laws/Program/Typed/Seq.lean`).
+  non-local control flow violates naive bind typing. Sequencing therefore needs per-construct compatibility lemmas in `src/Effect4/Laws/Program/Typed/Seq.lean` (seat D2).
+  The general form is `guardBind_typed`. Its shapes are `seqGuard_typed` (`onSuccess`), `catchGuard_typed` (`onFailure`), `allGuard_typed` (`all`, `onExit`), `onExit_typed` and `seq_typed`.
 - **Closed Root Requirement Rows (Row 117)**: Admitted programs enforce `rootTy.requires = empty` at load time,
   reflecting rc.112's `runPromise` contract (`Effect.ts:17494-17497`).
 
@@ -417,11 +410,10 @@ Residual programs resulting from elaboration are typed by `Effect4.Program.Typed
 ```lean
 inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Prop
 ```
-(`src/Effect4/Laws/Program/Typed/Residual.lean:266`). Operation clauses require certificate validation and enforce that
-continuations type for all permitted replies at later worlds. Dedicated typing arms govern control
-bracket markers: `.guard`, `.unguard`, `.finishFinalizer`, and the `scoped` guard whose run arm is the
-scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of that guard is
-`FrameAccepts.scopedResume`.
+(`src/Effect4/Laws/Program/Typed/Residual.lean`). Operation clauses require certificate validation and enforce that
+continuations type for all permitted replies at later worlds. Dedicated typing arms govern `.guard`, `.unguard`, `.finishFinalizer`, and the `scoped` guard.
+The last guard's run arm is the scope-exit callback (`.scopedGuard`, decisions row 188 (a)).
+Its saved slot is `FrameAccepts.scopedResume`.
 
 #### 4. Required Properties and Obligations
 - **Sequence compatibility (`seq-typed`)**: Compatibility lemma for sequence composition.
@@ -434,9 +426,9 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
 - **Fundamental elaboration property (`denote-typed`)**: Denotation of a checked program is `TypedProg`.
   `typeOfProgram root.sig root.prog = some ty → TypedProg root w ty (denoteR root)`
   (`denoteR_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)), proved at every source by
-  `denotesTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`); the load
-  (`load-typed`) by `loadsTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`), through
-  the load connector whose race-marker premise the root code's typing discharges
+  `denotesTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`).
+  `loadsTyped` proves the load (`load-typed`) in that file.
+  It uses the load connector whose race-marker premise the root code's typing discharges
   (`loadsTyped_of_denotesTyped_typed`, `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
   The displayed implication abbreviates the premises of `DenotesTyped`. The first is the source's
   formation (`SourceWF`): well-formed layer references, and a definition block's bodies typed. The
@@ -451,41 +443,37 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   It does not establish progress, liveness or the termination of a recursive definition.
 - **Failure handler compatibility (`on-failure-typed`)**: Compatibility lemma for the error recovery bracket `onFailure` (decisions row 148), proved by
   `catchGuard_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean`).
-- **M5 on the layer-free fragment (`denote-typed-layer-free`), and the layer family's arm
-  (`provide-layer-arm`)**: every arm of `denoteR` is assembled by induction on fuel
-  (`childDenotes_upto` (`src/Effect4/Laws/Program/Typed/Denotation.lean`)): at no fuel the
-  frontier, at positive fuel each constructor's arm with its children's hypotheses taken at the
-  children's nodes. The layer family's arm enters there as the hypothesis `ProvideLayerArm`
-  (`src/Effect4/Laws/Program/Typed/Denotation.lean`), so `denotesTyped_of_provideLayer` (`src/Effect4/Laws/Program/Typed/Assembly.lean`) is conditional;
-  on programs no node of which is a `provideLayer` (`LayerFree`, `src/Effect4/Laws/Program/Typed/Denotation.lean`) the arm cannot
-  be reached (`denotesTyped_of_layerFree`, `src/Effect4/Laws/Program/Typed/Assembly.lean`). The arm itself is proved at every
-  source (`provideLayerArm`, `src/Effect4/Laws/Program/Typed/LayerArm.lean`, decisions rows 176 (b), 185–187;
-  `E4-TYPED-CE-023` and `-031` repaired): every `LayerTerm` constructor's build at an admitted layer
-  point answers the built context at the layer's checked error type (`layerBuild_typed`,
-  `src/Effect4/Laws/Program/Typed/LayerArm.lean`, structural on the term inside an induction on the fuel a reference's hop
-  spends; the hop's point typed because expansion fixes checked terms and checking is
-  path-independent, `ExpandFix`), a memo hit is typed by the memo-table clause (`memoize_typed`,
-  `src/Effect4/Laws/Program/Typed/LayerArm.lean`), a merge's awaited exits either all read back or fail with reasons that fit
-  (`mergeContexts_typed`, `src/Effect4/Laws/Program/Typed/LayerArm.lean`), and the protocol around the build is typed
-  (`provideLayer_arm`, `src/Effect4/Laws/Program/Typed/LayerArm.lean`). The store-row arm
-  is the textbook's reference-read argument in its adapted form (TAPL §13.4's store typing; PLF
-  `References.v`'s `store_weakening`): membership in `refOf A` exposes a declaration
-  (`fits_refOf_inv`, `src/Effect4/Laws/Program/Typed/Denotation.lean`) at a type equivalent to
-  `A` under normalized subtyping, not syntactic equality; `leHost` keeps the declaration; the reply's
-  lookup identifies it, and `fits_subN` transports the reply (`refRead`,
-  `src/Effect4/Laws/Program/Typed/Denotation.lean`). The `Ref` and `Deferred` rows are templates
-  (the state plan's T3a). `syncRow_typed` (`src/Effect4/Laws/Program/Typed/Denotation.lean`)
-  reads the node's checked instance off the row's match (`rowTy_fits`). It is consumed by
-  `perform_arm`
-  (`src/Effect4/Laws/Program/Typed/Denotation.lean`). The service arm keeps the source/world
-  service-table agreement as a premise and admits the missing-service defect, which is not a service
-  value (`service_arm`, `src/Effect4/Laws/Program/Typed/Denotation.lean`); `exit` covers its inline
-  branch through `inlineYield_typed` (`src/Effect4/Laws/Program/Typed/Denotation.lean`).
-  The load connector needs only the fundamental property: typed root code is never a race
-  registration marker, so `loadsTyped_of_denotesTyped_typed`
-  (`src/Effect4/Laws/Program/Typed/Commands/Finish.lean`) discharges the marker premise, and a
-  checked layer-free program loads into `J` (`loadsTyped_of_layerFree`,
-  `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
+- **M5 on the layer-free fragment (`denote-typed-layer-free`), and the layer family's arm (`provide-layer-arm`)**:
+  `childDenotes_upto` assembles every `denoteR` arm by fuel induction (`src/Effect4/Laws/Program/Typed/Denotation.lean`).
+  Zero fuel gives the frontier. Positive fuel uses each constructor's arm, with children's hypotheses taken at their nodes.
+  The layer family enters as the `ProvideLayerArm` hypothesis in that file.
+  Thus `denotesTyped_of_provideLayer` is conditional (`src/Effect4/Laws/Program/Typed/Assembly.lean`).
+  `LayerFree` programs have no `provideLayer` node (`src/Effect4/Laws/Program/Typed/Denotation.lean`).
+  They cannot reach that arm (`denotesTyped_of_layerFree`, `src/Effect4/Laws/Program/Typed/Assembly.lean`).
+  `provideLayerArm` proves the arm at every source (`src/Effect4/Laws/Program/Typed/LayerArm.lean`).
+  Decisions rows 176 (b), 185–187 record it; `E4-TYPED-CE-023` and `-031` are repaired.
+  `layerBuild_typed` types every `LayerTerm` constructor's build at an admitted layer point.
+  The build answers the built context at the layer's checked error type.
+  The proof is structural on the term, inside induction on fuel spent by reference hops.
+  Expansion fixes checked terms, and checking is path-independent (`ExpandFix`), so each hop's point is typed.
+  `memoize_typed` types memo hits through the memo-table clause.
+  `mergeContexts_typed` shows awaited merge exits either all read back or fail with fitting reasons.
+  `provideLayer_arm` types the protocol around the build.
+  These four theorems live in `src/Effect4/Laws/Program/Typed/LayerArm.lean`.
+  The store-row arm adapts the textbook reference-read argument: TAPL §13.4's store typing and PLF `References.v`'s `store_weakening`.
+  Membership in `refOf A` exposes a declaration (`fits_refOf_inv`, `src/Effect4/Laws/Program/Typed/Denotation.lean`).
+  Its type equals `A` under normalized subtyping, not syntactic equality.
+  `leHost` keeps the declaration, and the reply's lookup identifies it.
+  `fits_subN` transports the reply (`refRead`, `src/Effect4/Laws/Program/Typed/Denotation.lean`).
+  The `Ref` and `Deferred` rows are templates (the state plan's T3a).
+  `syncRow_typed` reads the node's checked instance off the row's match (`rowTy_fits`).
+  `perform_arm` consumes it; both live in `src/Effect4/Laws/Program/Typed/Denotation.lean`.
+  `service_arm` keeps source/world service-table agreement as a premise and admits the missing-service defect, which is not a service value.
+  `exit` covers its inline branch through `inlineYield_typed`; both live in `src/Effect4/Laws/Program/Typed/Denotation.lean`.
+  The load connector needs only the fundamental property: typed root code is never a race registration marker.
+  `loadsTyped_of_denotesTyped_typed` discharges that marker premise (`src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
+  A checked layer-free program therefore loads into `J` (`loadsTyped_of_layerFree`, in that file).
+
 - **The restore site's body (`scoped-body-substitution-boundary`)**: The mask adds no scoped
   constructor (decisions rows 245 and 246).
   A restore site is one node that binds nothing, and its checked body is child 0.
@@ -535,7 +523,7 @@ Scope state and finalization lifecycles are modeled in `src/Effect4/Machine/Scop
 structure Scope (κ φ β ε δ ι α : Type u) where
   state : ScopeState κ φ β ε δ ι α
 ```
-(`src/Effect4/Machine/Scope.lean:750`). A scope transitions from `openEmpty` or `openMap` to `closed exit`. Scope presence
+(`src/Effect4/Machine/Scope.lean`). A scope transitions from `openEmpty` or `openMap` to `closed exit`. Scope presence
 in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Laws/Program/Typed/World.lean`)), witnessed by `fits_scope_inv`.
 
 #### 4. Required Properties and Obligations
@@ -572,9 +560,7 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   It states nothing for a region that changes no flag, and nothing about a module.
   It establishes no progress.
   (`saved_mask_restoration` (`src/Effect4/Laws/Program/Typed/Mask.lean`)).
-- **The saved mask's chain through a pop (`saved-mask-pop-discipline`)**: At one fixed base
-  bit, the restoring frames of a fiber's stack alternate from the negation of the flag
-  (`MaskChain`). The frame machine's pop keeps the chain, from an empty scratch stack.
+- **The saved mask's chain through a pop (`saved-mask-pop-discipline`)**: At a fixed base bit, a fiber's restoring frames alternate from the negation of its flag (`MaskChain`). The frame machine's pop keeps the chain, from an empty scratch stack.
   `getCont`, the finished frame's path and the entry of each region keep it too. Two fibers
   with one base and one stack have one flag. It is a local law of the frame machine. It
   states no law of a run, no completed exit and no bracket of a region.
@@ -596,9 +582,7 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   no bracket of a region. The bracket is `saved-mask-region-bracket`. It states nothing of
   an exited fiber, of cleanup, of delivery or of progress.
 - **A region ends at its entry's stack and at its entry flag (`saved-mask-region-bracket`,
-  `stepped-fiber-live`)**: A region is no syntax of the machine. Its entry is a cut of a
-  run, and a later cut is inside it where the fiber's stack is own frames over the entry's
-  stack. The later cut's stack shape `above ++ below` is a premise, and it is the region's
+  `stepped-fiber-live`)**: A region is no syntax of the machine. Its entry is a run cut. A later cut is inside it where the fiber's stack is own frames over the entry's stack. The later cut's stack shape `above ++ below` is a premise, and it is the region's
   only mark on the machine. The theorem then gives the entry's stack and the entry flag at
   the region's end. It does not give that a body's run keeps that shape. The end is inside a
   pop: the fiber that the pop of the own frames leaves, where no own frame answers. At a
@@ -612,8 +596,7 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
 - **Pool's return and close on the model (`pool-return-front`, `pool-return-once`,
-  `pool-close-refuses`, `pool-drain-waits`)**: A held lease's return puts its item at the
-  front of the idle items, and it keeps every item. The lease then holds nothing
+  `pool-close-refuses`, `pool-drain-waits`)**: A held lease's return puts its item before the idle items. It keeps every item. The lease then holds nothing
   (`giveBack_front`). A second return of that lease changes nothing (`giveBack_once`). After
   the close's first step every lease is refused (`close_refuses`). The closer's step answers
   true exactly where no lease is outstanding, and it enrols the closer otherwise
@@ -644,10 +627,11 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
 - **Exclusions (Rows 106, 107, 134, 188, 189)**: Unbounded tokens are excluded by `GuardState.keysBelow` in `QueueOk` (Row 106).
   Defect-bearing exits are excluded by `NoShapeDefect` (Row 107). Timer and race columns are separated in configuration typing;
   queued enrollment children are bounded below `nextId` (`EnrollRaceOk`, row 134 (e), `E4-TYPED-CE-032`).
-  Administrative markers are excluded from ordinary program typing: the raw `scopeExit` marker remains in the semantic carrier
-  but is excluded by `TypedProg`, admitting the callback only at the `scoped` guard's run position and saved slot (`scopedGuard`, `scopedResume`,
-  row 188 (a), `E4-TYPED-CE-034`); registration callbacks under injected yields are admitted by the host-stack judgment as correlated arrows
-  carrying race existence and token typing (`HostStack`, `PositionStack`, row 188 (b), `E4-TYPED-CE-033`).
+  Ordinary program typing excludes administrative markers.
+  The raw `scopeExit` remains in the semantic carrier, but `TypedProg` excludes it.
+  `TypedProg` admits the callback only at the `scoped` guard's run position and saved slot (`scopedGuard`, `scopedResume`, row 188 (a), `E4-TYPED-CE-034`).
+  The host-stack judgment admits registration callbacks under injected yields as correlated arrows carrying race existence and token typing.
+  These are `HostStack` and `PositionStack` (row 188 (b), `E4-TYPED-CE-033`).
   Queued observe sources are bounded below `nextId` (`QueueOk.observer`, `HeadOk.observer`, row 189, `E4-TYPED-CE-035`) to prevent vacuous
   antitone $\Gamma$-reads admitting unallocated future fibers.
 
@@ -657,8 +641,8 @@ The operational configuration and decision types are defined in `src/Effect4/Mac
 structure RunMachine (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v)) ...
 inductive RunDecision ...
 ```
-(`src/Effect4/Machine/Fibers.lean:438`). Machine type safety is maintained by the configuration invariant `MachineTyped root rootTy w m`
-(`src/Effect4/Laws/Program/Typed/Assembly.lean:251`).
+(`src/Effect4/Machine/Fibers.lean`). Machine type safety is maintained by the configuration invariant `MachineTyped root rootTy w m`
+(`src/Effect4/Laws/Program/Typed/Assembly.lean`).
 
 #### 4. Required Properties and Obligations
 - **Invariant non-halted consequence (`machine-typed-not-halted`)**: A halted machine cannot satisfy `MachineTyped`.
@@ -679,9 +663,8 @@ inductive RunDecision ...
   (`fairTape_unarmed` (`src/Effect4/Laws/Machine/Scheduling.lean`)). It is the finite half of R12.
   It says nothing about infinite tapes, termination or host progress. `flush_fair` permits
   rearming, so it is not general scheduler fairness.
-- **Frontier names work (`frontier-names-work`)**: At a live, unfinished machine whose tape ran
-  out, the frontier is empty exactly at a deadlock: no runnable fiber, no armed owner, no host
-  request, no timer and no compile budget.
+- **Frontier names work (`frontier-names-work`)**: At a live, unfinished machine whose tape ran out, the frontier is empty exactly at a deadlock.
+  Deadlock means no runnable fiber, armed owner, host request, timer or compile budget.
   `m.stuck = none → m.finished = false → (frontierReasons .tape m = [] ↔ Deadlocked m)`
   (`frontier_empty_iff_deadlocked` (`src/Effect4/Laws/Api/Frontier.lean`)). It is R12-b, the
   frontier half of `scheduler-progress`'s classification. It says nothing about what a decision
@@ -700,24 +683,21 @@ inductive RunDecision ...
   (decisions row 139).
 - **Infinite liveness (`fair-scheduling`)**: Temporal liveness under weak fairness (Requirement R12).
 - **The Queue model's run invariant on the first profile (`queue-first-step-invariant`,
-  `queue-first-run-flags`)**: One step of a first operation keeps the run invariant
-  `FirstRunInv`: the profile, the buffer's bound, `tidy`, `quiet`, and the run's two flags.
+  `queue-first-run-flags`)**: One step of a first operation keeps `FirstRunInv`.
+  This invariant includes the profile, the buffer's bound, `tidy`, `quiet`, and the run's two flags.
   So both flags hold after every list of first operations from the empty queue of a positive
   capacity. It is the model's half of `wait-registration-no-gap` and of
   `waiting-request-obligation-preserved`. It states nothing of a program, of a signal's
   delivery or of liveness.
   (`first_step_inv`, `first_run_flags` (`src/Effect4/Laws/Library/Queue/Invariant.lean`)).
-- **Pool's wake selection on the model (`pool-select-takes-first`)**: One selection takes the
-  first waiters of the state that it finds, at most its count, and it changes the waiters
-  alone. It is one selection: it states no run and no liveness.
+- **Pool's wake selection on the model (`pool-select-takes-first`)**: One selection takes the first waiters of its input state, at most its count. It changes only the waiters. It is one selection: it states no run and no liveness.
   (`select_takes_first` (`src/Effect4/Laws/Library/Pool/Profile.lean`)).
 
 #### 5. How the scheduler proofs use the theory
 
 The proof structure is induction on executions: establish the loaded configuration, prove each
-command and decision case, then assemble reachability. This follows the invariant method in
-Lynch and Vaandrager, *Forward and Backward Simulations I*, §6 (audit C4), rather than inferring
-whole-machine typing from isolated command tests. `decisionKeeps_of_steps` and
+command and decision case, then assemble reachability. This follows Lynch and Vaandrager's invariant method, *Forward and Backward Simulations I*, §6 (audit C4).
+Isolated command tests do not establish whole-machine typing. `decisionKeeps_of_steps` and
 `typedState_reachable_of_steps` expose the remaining premises; their formal consumers are
 `decision_preserves` and `typedState_reachable`.
 
@@ -725,9 +705,8 @@ Within a command, two smaller arguments meet. `configTyped_frame` transports cla
 store edit under its explicit unchanged-view, typing, key and due-owner hypotheses.
 `completionStrong_await` moves a completed Deferred's answer and error evidence to a declared
 waiter type. `wake_preserves` uses both arguments at the actual machine step, and supplies
-`wake_preserves`'s checked witness. The analogy to the frame rule and protocol subsumption in
-de Vilhena and Pottier, *A Separation Logic for Effect Handlers*, §3.3 and §4.2.4 (audit P8), guides
-this decomposition. Our ordinary Lean predicates do not implement that paper's Iris resource
+`wake_preserves`'s checked witness. The frame-rule and protocol-subsumption analogy guides this decomposition.
+Its source is de Vilhena and Pottier, *A Separation Logic for Effect Handlers*, §3.3 and §4.2.4 (audit P8). Our ordinary Lean predicates do not implement that paper's Iris resource
 algebra or separation logic; the displayed theorem premises are the local contract.
 
 Registration completion adds a pending record at one race key. `ObsViewOff` and
@@ -740,9 +719,10 @@ checks refusal of the historical countdown collision and acceptance after removi
 countdown. The receipt (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-02-codex-lead/registration-receipt.md`) records each
 helper's concrete consumer. This remains a local invariant proof, with the same limits as above.
 
-The machine generates two internal administrative markers during execution that are not user-space programs, and the typing invariant places each strictly where the operational semantics expects it (decisions row 188):
+The machine generates two internal administrative markers during execution.
+They are not user-space programs. The typing invariant places each where the operational semantics expects it (decisions row 188):
 1. **Scope-Exit Callbacks (`E4-TYPED-CE-034`)**: When a `.scoped` block executes, it creates a scope-exit callback to close the scope and restore the surrounding context. The raw `scopeExit` marker remains in the semantic program carrier, but ordinary `TypedProg` admission excludes it. The scope callback is admitted at the `scoped` guard's run position and saved slot (`scopedGuard`, `scopedResume`). This repairs the typing contract around the evaluator's explicit `badShapeExit` fallback (`evaluateFiberR`); it does not remove syntax or prove general loop/delivery preservation. The evaluation walk yields the `CallbackSaved` alternative of `WalkTyped`, which `prepareScopedExitR` consumes directly.
-2. **Race Registration Callbacks under Injected Yields (`E4-TYPED-CE-033`)**: When `beginRace` sets up a race, budget preemption (`injectYield`) can save the registration marker inside a success continuation on the stack. The host-stack judgment composes ordinary frames and registration arrows that carry race existence, the matching host and token typing. It admits the injected-callback shapes while requiring those correlations. Preservation by the actual injected yield and subsequent walk remains part of the open loop/delivery proofs.
+2. **Race Registration Callbacks under Injected Yields (`E4-TYPED-CE-033`)**: `beginRace` sets up a race. Budget preemption (`injectYield`) can then save the registration marker inside a success continuation on the stack. The host-stack judgment composes ordinary frames and registration arrows that carry race existence, the matching host and token typing. `HostStack` admits the injected-callback shapes while requiring those correlations. Preservation of typing by `injectYield` and the subsequent walk remains part of the open loop/delivery proofs.
 
 All saved-stack judgments are factored through a unified typed-path relation (`Contracts.FramePath Edge`, decisions row 48):
 - `Contracts.FramePath Edge` is a Prop-valued typed-path relation over frame lists, interpreting composition through existential middle types.
@@ -752,8 +732,12 @@ All saved-stack judgments are factored through a unified typed-path relation (`C
 - Conversions (`positionStack_of_host`, `hostStack_of_stackAccepts`) and Kripke-monotonicity transports (`hostStack_mono`, `positionStack_mono`) are derived as single functorial edge maps (`FramePath.map`).
 
 
-Queued command arguments are bounded below `nextId` wherever an antitone declaration reading would otherwise admit unallocated future fibers (decisions rows 134 (e) and 189). In particular, `RCmdOk`'s `observe` arm reads the static fiber environment $\Gamma$ antitonically:
-$$\forall ty,\; \Gamma(\text{source}) = \text{some } ty \implies \text{ExitOk } ty \text{ exit}$$
+Queued command arguments are bounded below `nextId` wherever an antitone declaration reading would otherwise admit unallocated future fibers (decisions rows 134 (e) and 189). `RCmdOk`'s `observe` arm reads the static fiber environment $\Gamma$ antitonically.
+
+```text
+∀ ty, Γ(source) = some ty → ExitOk ty exit
+```
+
 If a queued command names an unallocated fiber ID, this premise is satisfied vacuously. When `launch` subsequently allocates that ID below the race's column, the retained exit can violate the child's declared type (`E4-TYPED-CE-035`). Requiring `source.value < m.nextId` in `QueueOk.observer` and `HeadOk.observer` closes this gap, mirroring the enrollment bound for race children (`EnrollRaceOk`).
 
 
@@ -761,9 +745,8 @@ In particular, token bounds, disjointness from external requests, and race/obser
 are different properties. They do not state that every internal key occurs at most once, nor
 that a reply will eventually arrive. A “sender transfer” is explanatory language for a checked
 implication between two typing demands. Unique ownership, at-most-once delivery and liveness
-require their own stated invariants or operational theorems. The CE-026 battery checks the old
-wrong-column witness is refused and the corrected wake is typed; its repeated-wake equation is
-a finite control, not a general exclusivity theorem.
+require their own stated invariants or operational theorems. The CE-026 battery checks that the old wrong-column witness is refused and the corrected wake is typed.
+Its repeated-wake equation is a finite control, not a general exclusivity theorem.
 
 The generated feature view selects all M6 command goals and the actual frame, transfer and
 assembly declarations. Its proof-reference arrows come from Lean expressions; its authored
@@ -798,8 +781,8 @@ and checked/wanted evidence remain available through the existing report and arc
   recovery. The public encoder (`Schema.encode`) refuses those values, so every successful encoding still
   round-trips (`decode_of_encode`, at every type), and `decode_iff` stays exact modulo `normJ`.
 - **Records (rows 119, 165)**: a record value carries its canonical field names (row 165 (a), ruled). The
-  Schema bridge describes a record type as a struct (`schemaAlg.ty_record`, `src/Effect4/Schema/Bridge.lean`),
-  and the JSON codec encodes a record value by its own arm (`wireAlgebra.ty_record`,
+  Schema bridge describes a record type as a struct (`schemaAlg.ty_record`, `src/Effect4/Schema/Bridge.lean`).
+  The JSON codec encodes a record value by its own arm (`wireAlgebra.ty_record`,
   `src/Effect4/Schema/Codec.lean`). The claim `record-codec-layout` is proved by `decode_iff`.
 
 #### 3. Project Definition and Judgment
@@ -815,7 +798,7 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 - **Program objects (`object-exact`, `object-bytes-exact`, `object-load-exact`, row 439)**: an object holds its signature and program.
   `Object.open_ofBuilt`, `Object.read_exact` and `Object.load_bytes` state the laws in `src/Effect4/Laws/Api/Object.lean`.
   They serve R13 with compatibility role. Byte retraction requires the encoded value's `Val.WF`.
-  Admission, exact node reading and hashing retain their existing owners.
+  Program admission, exact node reading and hashing retain their existing owners.
   Equal references imply equal objects or an exhibited collision, without a hash injectivity assumption.
   These laws establish no cross-layout migration, host execution or persistence property.
 - **Service-role reading (`service-view-printed`, `service-view`, rows 439 and 440)**: one profiled check separates role formation from target naming.
@@ -829,11 +812,11 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   It serves R12 and establishes no total writing, raw JSON text identity or native parser correctness.
 - **Stored byte reading (`cas-node-read-exact`)**: every successful `Node.read` returns an exactly encoded node.
   The pointer is `Node.read_exact` (`src/Effect4/Store/Domain/NodeRead.lean`), with compatibility role.
-  This law establishes no admission, hashing, capacity, or persistence property.
+  This law establishes no codec value admission, hashing, capacity, or persistence property.
 - **Typed stored reading (`cas-get-exact`)**: a successful `Cas.get` names the carrier's exact resident node.
   The pointer is `Cas.get_exact` (`src/Effect4/Store/Domain/Cas.lean`), with compatibility role.
   Version, kind, per-value specification, and canonical payload checks retain the genesis exception.
-  The replay parameter stays explicit; this law establishes no atomicity or admission property for an arbitrary interpreter.
+  The replay parameter stays explicit; this law establishes no atomicity or codec value admission property for an arbitrary interpreter.
 - **Content handles (`cas-admission-handles`)**: every successful node insertion passes the kind's handle rule before edges and residency.
   The pointer is `putNode_ok_handleFree` (`src/Effect4/Store/Domain/Store.lean`), with preservation role.
   `Store.Sound.handles` and accepted words carry this rule; no host persistence or progress claim follows.
@@ -856,8 +839,7 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 - **`cas-interrupted-roots`**: An accepted cut retains the exact old root table or returns the exact committed store.
   The pointer is `interrupted_roots` (`src/Effect4/Store/Domain/Cas.lean`), with compatibility role.
   These transaction laws establish no host persistence, crash, or progress property.
-- **The result envelope (`cas-result-envelope`, seams ST3)**: a node answers a designated query exactly when it is
-  the node of a version-0 `Answered` envelope of that query at the common specification.
+- **The result envelope (`cas-result-envelope`, seams ST3)**: a node answers a designated query exactly when it encodes that query's version-0 `Answered` envelope at the common specification.
   The pointer is `Node.resultQuery?_eq_some_iff` (`src/Effect4/Store/Domain/Action.lean`), with compatibility role.
   The designated query is the envelope's query field, never a reference inside the output.
   It establishes no result truth, host determinism, or hash injectivity.
@@ -870,9 +852,9 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   It assumes no hash injectivity and establishes no cross-store equality or host persistence property.
 - **Exactness modulo key sorting (`decode-iff`)**: JSON decoding is exact modulo `normJ`
   (`decode_iff` (`src/Effect4/Laws/Schema/Codec.lean`)).
-- **Retraction on codec-admitted values (`decode-encode`)**: at a canonical type (`CTy`), decoding the
-  encoding of a value that passes the shape check and is codec-admitted (`Ty.isCodecValue`) recovers it
-  (`decode_encode`, `src/Effect4/Laws/Schema/Codec.lean`).
+- **Retraction on codec-admitted values (`decode-encode`)**: Assume a canonical type (`CTy`).
+  Fix a value passing its shape check and codec admission (`Ty.isCodecValue`).
+  Decoding its encoding recovers the value (`decode_encode`, `src/Effect4/Laws/Schema/Codec.lean`).
 - **Schema exactness modulo nine keys (`of-schema-exact`)**: Schema decoding is exact modulo `normS`
   (`ofSchema_exact` (`src/Effect4/Schema/Bridge.lean`)).
 - **Schema retraction (`of-schema-schema`)**: Inverting schema representations on reserved-free types
@@ -933,13 +915,13 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   The constants stand before the layers and the main declaration.
   A definition is an arrow from its request, with its declared result type, around a
   suspension of its body.
-  Each parameter whose value is a program follows the request, as a function named by its
-  declaration (`paramType`, slice HO-3a), and its run prints as the call of that name.
+  Each program parameter follows the request as a function named by its declaration (`paramType`, slice HO-3a).
+  Its run prints as a call of that name.
   An invocation prints as the definition's name applied to its request.
-  An invocation with programs prints as that name applied to the request and to each program,
-  as an arrow of the binder due at the call (`printInvoke`, slice HO-3b).
-  It reads back under the block's laws of invocations (`LawfulInvokes`): a name spells its
-  definition, and no row of the domain carries the name of a definition that takes programs.
+  An invocation with programs prints as that name applied to its request and programs.
+  Each program prints as an arrow of the binder due at the call (`printInvoke`, slice HO-3b).
+  It reads back under the block's laws of invocations (`LawfulInvokes`).
+  A name spells its definition. No domain row carries a program-taking definition's name.
   The statement fixes declarations with readable columns, a canonical requirement row and names
   with no layer path (`DefDecl.readable`).
   A header reads its columns under the module's payload classes (`readDefHead`).
@@ -953,9 +935,8 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   The block's module layers print after the services, as constants named by their paths
   (`printModuleLayers`), and a reference to one prints as that name.
   Each body reads back at the signature its parameters extend, through the spelling map its
-  parameters' names extend (`paramsSpell`). A body's own hoisted layers print as constants at the
-  top of its suspension, named by their paths (`printDefs`, `suspension`), so each run of the body
-  makes its own layer objects, as rc.112 builds one object per evaluation of the body. They read
+  parameters' names extend (`paramsSpell`). A body's own hoisted layers print as path-named constants at its suspension's top (`printDefs`, `suspension`).
+  Each run of the body makes its own layer objects, as rc.112 builds one object per body evaluation. They read
   back at the body's signature (`bodyDeclOf`; row 341, step 3b).
   The main program, each layer and each module layer read back at the block's signature,
   through the block's spelling map (`defsSpell`).
@@ -981,9 +962,9 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   (`PrintRefusal.callbackRequirement`): the printed header closes a parameter's row as `never`.
   It establishes nothing that tsgo accepts and nothing of a run of the printed module.
   The truth lane runs the block programs on the pin, a finite check (`make check-ts`).
-  Three counted programs compare the builds of a body's own layer with rc.112: two calls build
-  twice, one call that provides its layer twice by reference builds once, and a call nested in
-  another through the program it passed builds twice.
+  Three counted programs compare a body's own layer builds with rc.112.
+  Two calls build twice. One call providing its layer twice by reference builds once.
+  A call nested in another through its passed program builds twice.
 - **The reader reads the typed print (`typed-print-read`)**: The statement fixes a readable
   program and a lawful spelling.
   After the named erasure, the reader reads a successful typed print back to its program
@@ -1035,8 +1016,7 @@ It establishes no execution property for generated TypeScript.
 - **Subtyping Metatheory**: TAPL ch. 15 (*Subtyping*, pp. 181–208; §15.1 *Subsumption*, §15.2 *The Subtype
   Relation*, §15.4 *Top and Bottom*, audit T9, T48, T49). Preorder properties: reflexivity, transitivity.
 - **Algorithmic Subtyping & Joins**: TAPL ch. 16 (*Metatheory of Subtyping*, pp. 209–220; §16.1 *Algorithmic
-  Subtyping*, §16.2 *Algorithmic Typing*, §16.3 *Joins and Meets*, audit T10, T50, T51). Algorithmic soundness,
-  completeness, and join-semilattice properties.
+  Subtyping*, §16.2 *Algorithmic Typing*, §16.3 *Joins and Meets*, audit T10, T50, T51). Soundness and completeness relative to the declarative subtyping judgment, and join-semilattice properties.
 - **Set-Theoretic & Semantic Subtyping**: Giuseppe Castagna (2024, *Programming with Union, Intersection,
   and Negation Types*, audit P6, C6). Subtyping in the presence of union and bottom types.
 
@@ -1050,10 +1030,10 @@ It establishes no execution property for generated TypeScript.
   The match by bounds (`Bounds.matchB`) binds each parameter at the join of its lower bounds.
   It keeps the bindings exactly when the request is below the template's instance, both sides normalized.
   The guard is the law (`Bounds.matchB_sound`), so the match is sound whatever it binds.
-- **Records, maps, tuples and applications (rows 119, 162)**: the constructors are in `Ty`. `Ty.sub` compares
-  records with the same canonical names and optionality field by field, covariantly (no width rule); maps
-  exactly in the key and covariantly in the value; tuples of one length pointwise; and applications of one
-  name and arity argument by argument, by each argument's declared variance (`argVariance`). The laws below
+- **Records, maps, tuples and applications (rows 119, 162)**: the constructors are in `Ty`.
+  `Ty.sub` compares records with identical canonical names and optionality field by field, covariantly, without a width rule.
+  It compares maps exactly in the key and covariantly in the value. It compares equal-length tuples pointwise.
+  It compares applications of one name and arity argument by argument, using each argument's declared variance (`argVariance`). The laws below
   quantify over every `Ty`, so they cover these constructors.
 
 #### 3. Project Definition and Judgment
@@ -1062,7 +1042,7 @@ The static type language `Ty` possesses a decidable subtyping preorder `Ty.subN`
 def subN (a b : Ty) : Bool := sub a.normalize b.normalize
 theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.normalize = b.normalize
 ```
-(`src/Effect4/Laws/Program/TypeAlgebra.lean:1067`). Canonical types `CTy` form a bounded join-semilattice.
+(`src/Effect4/Laws/Program/TypeAlgebra.lean`). Canonical types `CTy` form a bounded join-semilattice.
 
 #### 4. Required Properties and Obligations
 - **Raw formation (`raw-formation`)**: The raw check agrees with distinct record names, the admitted map-key predicate,
@@ -1116,8 +1096,8 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   It establishes nothing of tsgo's inference.
   The printed type arguments and the prelude's declarations answer to that.
   The truth lane tests them on finite programs.
-- **Minimal type slices of a monotone view (`slice-lattice-minimal`)**: The statement fixes a view: a
-  monotone map from the type slices of one program to a preorder of types.
+- **Minimal type slices of a monotone view (`slice-lattice-minimal`)**: The statement fixes a view.
+  This is a monotone map from one program's type slices to a preorder of types.
   A type slice is the list of its kept sites, and a smaller type slice keeps less.
   A query is valid for a type slice when the slice's type is at or above it.
   A minimal valid slice exists below each valid slice, and the one-pass descent returns one.
@@ -1136,8 +1116,8 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   It answers the least answer at `never`.
   At one normal union member it is the member rule, up to the join with the least answer.
   Two types with one normal form have one answer.
-  Where the member rule is monotone on normal union members, a smaller target has an answer
-  where a larger one has, and the answer is smaller.
+  Assume the member rule is monotone on normal union members.
+  If a larger target answers, a smaller target answers too, and its answer is smaller.
   A property of a value and an answer that the join keeps on each side passes from the union
   members to the lifted rule.
   It is proved (`UnionRule.lift_laws`, `src/Effect4/Laws/Program/UnionRule.lean`; seat UNION).
@@ -1156,18 +1136,18 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   The order is read in Lean core's classes.
   A carrier with those classes, a least answer and `join = max` is a carrier of answers
   (`AnswerOrder.ofCore`).
-  On raw types the checker's order is the order of canonical types, by definition (`subN_iff_le`),
-  and an eliminator's adjoint form is stated in `≤` there (`Eliminator.adjoint_le`).
+  On raw types the checker's order is the order of canonical types, by definition (`subN_iff_le`).
+  An eliminator's adjoint form uses `≤` there (`Eliminator.adjoint_le`).
   A join in those classes has its laws once (`src/Effect4/Laws/Program/Order.lean`): the equations
   of `CTy` and of `ErrTy` are one application each.
   The two record rules are its instances, and each equals its earlier definition by `rfl`
   (`Test/Program/UnionRule.lean`).
   It establishes no conversion of an eliminator, no `checker-monotone` and nothing at an
   invariant position.
-  The upper form is false in the raw order `Ty.sub`, and the field read has no upper form:
-  the order has no width rule (decisions row 178).
-- **A converted eliminator is the full fallback of its member rule (`union-rule-extend`)**: The
-  statement fixes an eliminator: a member rule with the three facts of `Eliminator`.
+  The upper form is false in the raw order `Ty.sub`.
+  The field read has no upper form: the order has no width rule (decisions row 178).
+- **A converted eliminator is the full fallback of its member rule (`union-rule-extend`)**: The statement fixes an eliminator.
+  This is a member rule with the three facts of `Eliminator`.
   The full fallback is the member rule's own answer where the member rule answers at the raw
   target.
   Elsewhere it is the lifted rule, which reads every union member of the normal form.
@@ -1197,8 +1177,8 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
 ### 2.7 Concept 7: Initial Algebras & Catamorphic Folds (`initial-algebras-folds`)
 
 #### 1. What the Literature Defines
-- **Initial Algebra Semantics**: Meijer, Fokkinga, Paterson (1991, *Functional Programming with Bananas,
-  Lenses, Envelopes and Barbed Wire*, FPCA '91, LNCS 523, pp. 124–144, audit P24, C7, C14).
+- **Initial Algebra Semantics**: Meijer, Fokkinga, Paterson (1991), *Functional Programming with Bananas, Lenses, Envelopes and Barbed Wire*.
+  FPCA '91, LNCS 523, pp. 124–144 (audit P24, C7, C14).
   Catamorphisms, anamorphisms, and the universal property of initial algebras.
 - **Algebraic Calculation & Fusion**: Jeremy Gibbons (2002, *Calculating Functional Programs*, LNCS 2297,
   pp. 149–203, audit P12, C19). Catamorphism fusion and fold uniqueness laws.
@@ -1214,7 +1194,7 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
 - **Provable Uniqueness vs. Defeq**: Fold uniqueness (`hom_eq_cata_eff`) is a **provable proposition** via induction,
   not a definitional equality (`rfl`).
 - **Finite Syntax Folding (Row 127)**: `inhabited` is a fold over finite syntax, not an infinite equi-recursive unfolding.
-- **Free-Category Path Interpretation (Row 48)**: Saved-stack judgments are factored through `Contracts.FramePath Edge`, a Prop-valued typed-path relation over frame lists interpreting composition through existential middle types. Identity (`nil`), append (`append`), splitting (`split`), and transport along edge implications (`map`) are proved once. Concrete stack judgments (`HostStack`, `PositionStack`) instantiate `FramePath` over `HostEdge` and `PositionEdge`; the unchanged `StackAccepts` is connected by two conversion theorems, with conversions and transports realized as functorial edge maps (`FramePath.map`).
+- **Free-Category Path Interpretation (Row 48)**: Saved-stack judgments are factored through `Contracts.FramePath Edge`, a Prop-valued typed-path relation over frame lists interpreting composition through existential middle types. Identity (`nil`), append (`append`), splitting (`split`), and transport along edge implications (`map`) are proved once. Concrete stack judgments (`HostStack`, `PositionStack`) instantiate `FramePath` over `HostEdge` and `PositionEdge`. Two conversion theorems connect the unchanged `StackAccepts`. Conversions and transports use functorial edge maps (`FramePath.map`).
 
 #### 3. Project Definition and Judgment
 Catamorphic folds and algebra homomorphisms are defined in `src/Effect4/Program/Fold.lean`:
@@ -1234,9 +1214,8 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
 - **Fold congruence (`cata-eff-congr-on`)**: Fold congruence over agreeing algebra implementations
   (`cata_eff_congr_on` (`src/Effect4/Program/Typing/SignatureSupport.lean`)).
 - **Traversal census maintenance**: 100% fold coverage enforced by `#traversal_census`.
-- **Operation data scoped (`operation-data-scoped`)**: the scope fold decides a `perform` node
-  from its operation's own data, read by the alphabet's `ScopedOp`, and from its request
-  (`Eff.perform_scoped_iff` (`src/Effect4/Laws/Program/Authoring.lean`)). Scope is not typing.
+- **Operation data scoped (`operation-data-scoped`)**: the scope fold decides `perform` from the operation data and request (`Eff.perform_scoped_iff`, `src/Effect4/Laws/Program/Authoring.lean`).
+  The alphabet's `ScopedOp` reads the operation data. Scope is not typing.
   Weakening is the frontier fold over the same data: it maps an operation's binder term with the
   program (`ScopedOp.mapTerm`, `src/Effect4/Program/ScopedOp.lean`).
   The checker's weakening law holds at every signature that is natural in that term
@@ -1254,18 +1233,16 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   `Api.explain_eq_if_refsWF`, `src/Effect4/Laws/Api/Codegen.lean`). The property is about the
   expansion that typing reads. The compile does not expand: it redirects a reference to its
   target, and a run shares the layer by its path.
-- **A sketch is a conservative extension (`sketch-conservative`)**: a program that performs no
-  hole row is checked the same with any hole table, refusals included
-  (`holes_conservative` (`src/Effect4/Laws/Program/Sketch.lean`)). It is the reflection of an
+- **A sketch is a conservative extension (`sketch-conservative`)**: For programs performing no hole row, every hole table gives the same checker result, refusals included
+  (`holes_conservative`, `src/Effect4/Laws/Program/Sketch.lean`). It is the reflection of an
   extension of the typing signature, at a hole table. It says nothing of a program that
   performs a hole.
 - **More holes keep a sketch (`sketch-weakening`)**: a sketch that the checker admits stays
   admitted at its type when more holes are declared. The checker reads the rows of the holes
   that the sketch performs and no later row
   (`sketch_weakening` (`src/Effect4/Laws/Program/Sketch.lean`)).
-- **The hole's rule (`hole-rule`)**: a hole has the type that its row declares, in every
-  environment, for a row with a unit request and closed, formed columns
-  (`Sketch.hole_hasTy` (`src/Effect4/Laws/Program/Sketch.lean`)). The typing judgment gains no
+- **The hole's rule (`hole-rule`)**: Consider a row with a unit request and closed, formed columns.
+  Its hole has the declared type in every environment (`Sketch.hole_hasTy`, `src/Effect4/Laws/Program/Sketch.lean`). The typing judgment gains no
   rule. The three properties establish no admission of a sketch to a later stage, no law of
   filling a hole and no run.
 - **A definition block is a conservative extension (`defs-conservative`)**: a program that
@@ -1296,7 +1273,7 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   These compatibility properties serve R14 and establish no program admission, progress, or native execution.
 - **Source sessions and accepted document actions (seams S1)**: The following properties serve R14.
   Every conditional property retains its stated premises.
-  They establish no admission, progress, liveness, or native execution.
+  They establish no program admission, progress, liveness, or native execution.
 - **`source-feed-coherent`**: A successful feed preserves the source table under initial coherence and the selected policy.
   The pointer is `SourceSession.feed_coherent` in `src/Effect4/Laws/Program/SourceTable.lean`.
 - **`source-feed-edit`**: A successful feed retains the application and exact edit; an invalid edit retains the source, and a valid edit returns its candidate.
@@ -1331,7 +1308,7 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   The pointer is `FillSet.add_wf` in `src/Effect4/Laws/Program/FillSet.lean`.
 - **`pending-fill-publication`**: A successful publication agrees with old materialization at its exact coherent anchor, under positive-base and reference-free premises.
   The pointer is `FillSet.publish_eq_materialize` in `src/Effect4/Laws/Program/FillSet.lean`.
-  These R14 properties establish no admission, progress, or native execution.
+  These R14 properties establish no program admission, progress, or native execution.
 - **The replacement law (`typed-replacement`)**: a typed node splits at an address of a program
   into an environment and a type of the focus. Every program of that type in that environment
   stands in the focus's place, under every extension of the typing signature
@@ -1342,9 +1319,8 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   are closed, formed and in normal form. The focus's type is kept exactly: the law says nothing
   at a type that is equal only after normalization, and nothing of behaviour. The environment
   and the type are existential there, and the focus function answers them.
-- **The focus function (`focus-function`)**: at an address of a program in a typed node, a
-  function answers the environment of the focus, and the checker answers its type there
-  (`Node.envAt`, `focusAt` (`src/Effect4/Program/Typing/Focus.lean`)). The replacement law
+- **The focus function (`focus-function`)**: At a program address in a typed node, `Node.envAt` answers the focus environment.
+  `focusAt` answers its type there (`src/Effect4/Program/Typing/Focus.lean`). The replacement law
   holds at that pair with no existential (`NodeHasTy.replace_envAt`
   (`src/Effect4/Laws/Program/Typing/Replace.lean`); `check_replace_focusAt`
   (`src/Effect4/Laws/Program/Typing/Focus.lean`)). The step has one case for each arm of
@@ -1355,9 +1331,8 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   and no other (`mem_addresses_iff` (`src/Effect4/Laws/Program/Typing/Table.lean`), from
   `Node.mem_foldList_iff` (`src/Effect4/Laws/Program/PathFold.lean`)). An entry of a program
   holds the typing environment that the step function answers, and the checker's answer there
-  (`table` (`src/Effect4/Program/Typing/Table.lean`)). The distinct refusals of the entries
-  start with the located refusal of `explain`, and the list is empty exactly when the checker
-  admits the program (`refusals_head`, `refusals_nil_iff`). An entry after a refused sibling is
+  (`table` (`src/Effect4/Program/Typing/Table.lean`)). The distinct refusals start with the located refusal of `explain` (`refusals_head`).
+  Their list is empty exactly when the checker admits the program (`refusals_nil_iff`). An entry after a refused sibling is
   not reached. The table is a specification, and each of its entries costs up to one check
   of the program. No law orders the refusals after the head, and no theorem states the frame
   of an edit.
@@ -1429,8 +1404,8 @@ Context structures and satisfaction are modeled in `src/Effect4/Machine/Context.
 abbrev Requirement : Type := Row ServiceKey
 def Satisfies (self : Context U) (r : Requirement) : Prop := r.Subset self.keysRow
 ```
-(`src/Effect4/Machine/Context.lean:76`). Layer composition and capability discharge are governed by `LayerTy`
-(`src/Effect4/Program/Provision.lean:87`).
+(`src/Effect4/Machine/Context.lean`). Layer composition and capability discharge are governed by `LayerTy`
+(`src/Effect4/Program/Provision.lean`).
 
 #### 4. Required Properties and Obligations
 - **Empty requirement satisfaction (`satisfies-empty`)**: Empty requirements are unconditionally satisfied.
@@ -1449,24 +1424,19 @@ def Satisfies (self : Context U) (r : Requirement) : Prop := r.Subset self.keysR
   (`provide_discharges` (`src/Effect4/Program/Provision.lean`)).
 - **Closed layer composition (`provide-closed`)**: Composing closed layers yields closed requirements.
   (`provide_closed` (`src/Effect4/Program/Provision.lean`)).
-- **Build totality (`build-total`)**: Under a typed leaf semantics, a layer the checker types
-  builds under every context that satisfies its requirement row, and the built context satisfies
-  its output row (`build_total` (`src/Effect4/Laws/Program/BuildTotal.lean`), restored under
-  decisions row 147). The machine's build refining `build` is the row's other half, still owed.
+- **Build totality (`build-total`)**: Assume typed leaf semantics and a layer the checker types.
+  It builds under every context satisfying its requirement row. The built context satisfies its output row.
+  `build_total` states this in `src/Effect4/Laws/Program/BuildTotal.lean` (restored under decisions row 147). The machine's build refining `build` is the row's other half, still owed.
 - **Layer sharing invariants (`layer-sharing-contract`)**: Dynamic layer memoization and sharing invariants
-  (`LayerSharingContract.lean`). A build is keyed by the layer's path and, in a definition's
-  body, the running call (`Point.layerKey`, `src/Effect4/Program/Compile.lean`; decisions row 341,
-  step 3): a body's layer is built once per call, as rc.112 builds one layer object per
-  evaluation of the body. The memo table types a cell by its key's path alone
-  (`LayerCellTyped`, `src/Effect4/Laws/Program/Typed/Adequacy.lean`), since every call of one
-  body checks the layer at the body's one signature.
+  (`LayerSharingContract.lean`). A build's key holds the layer's path and, inside a definition body, the running call (`Point.layerKey`, `src/Effect4/Program/Compile.lean`).
+  A body's layer builds once per call, as rc.112 builds one layer object per body evaluation (decisions row 341, step 3). The memo table types a cell by its key's path alone (`LayerCellTyped`, `src/Effect4/Laws/Program/Typed/Adequacy.lean`).
+  Every call of one body checks the layer at the body's one signature.
 
 ### 2.9 Concept 9: Host Session Protocol & Boundary (`host-session-protocol`)
 
 #### 1. What the Literature Defines
-- **Session Types & Propositions as Sessions**: Philip Wadler (2012 ICFP / 2014 JFP, *Propositions as Sessions*,
-  JFP 24(2-3): 384–418, audit P35, P41, C46); Honda, Vasconcelos, Kubo (1998, *Language Primitives and
-  Type Discipline for Structured Communication-Based Programming*, ESOP '98, audit P16, C9).
+- **Session Types & Propositions as Sessions**: Philip Wadler (2012 ICFP / 2014 JFP), *Propositions as Sessions*, JFP 24(2-3): 384–418 (audit P35, P41, C46).
+  Honda, Vasconcelos, Kubo (1998), *Language Primitives and Type Discipline for Structured Communication-Based Programming*, ESOP '98 (audit P16, C9).
   Duality, session sequencing, and protocol safety.
 - **I/O Automata & Labeled Transitions**: Lynch & Vaandrager (1995, *Forward and Backward Simulations I:
   Untimed Systems*, Information and Computation 121, pp. 214–233, audit C4, C47).
@@ -1493,8 +1463,8 @@ def Satisfies (self : Context U) (r : Requirement) : Prop := r.Subset self.keysR
   The note maps these definitions to the tree's declarations and proves nothing.
 
 #### 2. Effect4 Adaptation, Assumptions, and Exclusions
-- **Adapting 4-State Session Automaton**: The interaction between the Effect4 runtime machine and the
-  external host is governed by a 4-state protocol automaton (`.idle`, `.awaitingAsync`, `.parked`, `.terminated`).
+- **Adapting 4-State Session Automaton**: A four-state protocol automaton governs interaction between the Effect4 runtime machine and external host.
+  Its states are `.idle`, `.awaitingAsync`, `.parked` and `.terminated`.
 - **A host is a comodel**: In the laws, a host of a row table is an
   `Effects.Comodel (RowSig table) σ` (`RowSig`, `src/Effect4/Laws/Program/DenoteRows.lean`).
   From a state of its own, it answers each operation with its next state, or gives `none`.
@@ -1527,7 +1497,7 @@ structure Protocol where
 def allows (source : State) (label : Label) (target : State) : Bool :=
   hostProtocol.transitions.contains ⟨source, label.tag, target⟩
 ```
-(`src/Effect4/Api/HostProtocol.lean:48`). External answers are submitted through `HostSession.submit` and applied via `HostSession.applyReply`.
+(`src/Effect4/Api/HostProtocol.lean`). External answers are submitted through `HostSession.submit` and applied via `HostSession.applyReply`.
 
 #### 4. Required Properties and Obligations
 - **Exact checker asks (`checker-ask-value`)**: Every certified oracle ask returns the exact uncached verdict.
@@ -1606,8 +1576,8 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   (`tool-serve-refuses`, `tool-serve-query`). Any certified oracle serves the same answers and trace (`tool-serve-transparent`).
   A state's transcript replays to it (`tool-transcript-replays`). The theorems live in `src/Effect4/Laws/Tool/Serve.lean`.
   They serve R6 and R13 and establish no native execution, external-effect rollback or host progress.
-- **Tool replies pair with requests (seams S3b)**: every reply that `Tool.serve` gives pairs with its request
-  (`tool-serve-answers`, `Tool.serve_answers` in `src/Effect4/Laws/Tool/Wire.lean`, by cases on each action and query branch).
+- **Tool replies pair with requests (seams S3b)**: Every `Tool.serve` reply pairs with its request.
+  `Tool.serve_answers` proves `tool-serve-answers` in `src/Effect4/Laws/Tool/Wire.lean`, by cases on each action and query branch.
   It serves R6 and establishes no JSON decoding exactness, native driver behaviour or host progress.
 - **Workspaces over the store (seams ST4)**: a workspace persists as a chain of `WorkspaceEntry` nodes under a journal root
   `workspace/<name>`, never as derived state. Loading replays the chain through `serve` and compares each stored program.
@@ -1632,11 +1602,50 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   `Built.session_ok_iff` and `Built.session_retains` state these properties in `src/Effect4/Laws/Api/Session.lean`.
   They serve R6 and R13. Neither establishes transport support, termination, or equality with the replaced main program's behaviour.
 
+- **Queue and tensor equations (`queue-reactor`)**: `Reactor.queue_spec` has compatibility role and serves R6 and R13.
+  It states the queue's two equations in `src/Effect4/Laws/Run/Runner.lean`.
+  `Reactor.tensor_left` and `Reactor.tensor_right` are helpers of this claim in the same file.
+  Their definitions are `Reactor.queue` and `Reactor.tensor` in `src/Effect4/Run/Runner.lean`.
+  `ServiceSession.nextName`, `replyPrefix` and `isReplyRow` own the row spellings in `src/Effect4/Api/Session.lean`.
+  The queue reads its current list from reactor state; its `requests` argument initializes nothing.
+
+  ```text
+  queue requests next v q    = some (success (head? q), tail q)
+  queue requests reply_m v q = some (success unit, q)
+  tensor r s row v (a,b)     = some (answer,(a',b))     if r row v a = some (answer,a')
+  tensor r s row v (a,b)     = map (answer,b') ↦ (answer,(a,b')) (s row v b)  if r row v a = none
+  ```
+
+  The tensor equations act on separate state components.
+  They realize the comodel tensor for disjoint supported rows; overlapping supports give the left answer priority.
+  `Reactor` is partial over erased values, so its interpretation uses `StateT σ Option` and requires reply admission.
+  These equations establish no host progress, session/client agreement theorem, or state-monad interpretation of every `Eff` constructor.
+  The to-do agreement on replies and final repository is finite evidence in `Test/Api/SessionContract.lean`.
+- **Open part: a general client as a reactor**: No definition, proof pointer or planned goal exists for this property.
+  A client is a program over service methods; the definition block handles those calls through its bodies.
+  The required property serves R6 and R13: compare replies and application store under the generated session protocol.
+  Running the session against the client as a reactor must agree with running the handled client against the application reactor.
+  For the free-monad interpretation of those method calls, one-step unfolding gives these equations:
+
+  ```text
+  C : T_Σsvc 1
+  next    (unit, return unit) = (none, return unit)
+  next    (unit, m(a,k))      = (some (m,a), m(a,k))
+  reply_m (e, m(a,k))         = (unit, k e)
+  ```
+
+  The equations cover legal alternating requests and matching replies; they define no response to a mismatched reply.
+  The general client advances on reply, while the queue advances on next.
+  Repeating next therefore distinguishes them: the general client repeats its request, while the queue consumes another item.
+  A future simulation must relate these states under the generated protocol, not assert unrestricted reactor equality.
+  Its definition needs the machine to step a client one method call at a time.
+  `docs/research/2026-10-21-runner-slice/README.md` §2.5 records the design; no hosted stage lands here.
+
 ### 2.10 Concept 10: Translation & Simulation Metatheory (`translation-simulation`)
 
 #### 1. What the Literature Defines
 - **Compiler Correctness & Semantic Preservation**: Xavier Leroy (2009, *Formal Verification of a
-  Realistic Compiler*, CACM 52(7), audit C10). Semantic preservation relating source and target behaviors.
+  Realistic Compiler*, CACM 52(7), audit C10). Semantic preservation relative to the compiler correctness theorem relates source and target observations.
 - **Forward & Backward Simulations**: Lynch & Vaandrager (1995, *Forward and Backward Simulations I:
   Untimed Systems*, Information and Computation 121, pp. 214–233, audit C4). Trace inclusion and simulation relations.
 - **Coalgebraic Moore Behaviors**: Bart Jacobs (2012 draft, *Introduction to Coalgebra: Mathematics
@@ -1654,9 +1663,8 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   not the milestones' premises or conclusions themselves. In the registry, the claim `m7-route` is
   `.fundamentalProperty` (a witness for the route theorem). The M7 results are separate claims, listed under the
   required properties below.
-- **Boundary & Fragment Exclusions (Rows 138, 95, 117)**: M7 is stated strictly on `M7Fragment` with the host
-  row table **fixed empty** (`root.table = []`), decision tapes answer-free, and requirement rows closed
-  (`rootTy.requires = empty`). The agreement at a non-empty row table is R6's (DI-57).
+- **Boundary & Fragment Exclusions (Rows 138, 95, 117)**: M7 is stated strictly on `M7Fragment`.
+  Its row table is **fixed empty** (`root.table = []`), decision tapes are answer-free, and requirement rows are closed (`rootTy.requires = empty`). The agreement at a non-empty row table is R6's (DI-57).
 - **The host meaning on a run**: The call tree `denoteRows` reads a program over the stores and
   the host rows (`src/Effect4/Laws/Program/DenoteRows.lean`).
   Its fragment is `StraightRows`, which admits `catchIf` (`src/Effect4/Laws/Program/FragmentRows.lean`).
@@ -1688,7 +1696,7 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
 
 #### 4. Required Properties and Obligations
 
-- **Checked disk-image recovery (seams ST2, R13)**: Recovery starts at the empty store and uses shared node admission.
+- **Checked disk-image recovery (seams ST2, R13)**: Recovery starts at the empty store and uses shared node value admission.
   `restore_roots` states checked empty-store restoration retains the exact root table, including legacy generations.
   `restore_closed` states checked empty-store restoration establishes node closure through shared admission.
   `restore_targets` states every restored root resolves to a durable resident of its fixed kind.
@@ -1705,7 +1713,7 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   (`run_eq_meaning` (`src/Effect4/Laws/Program/Agreement/Segment.lean`)).
 - **Loop agreement (`loop-agreement`)**: Replay agreement holds across straight loop steps
   (`loopAgreement_of_straight` (`src/Effect4/Laws/Program/LoopAgreement.lean`)).
-- **Reference machine simulation (`run-eq-ref`)**: Frame machine replay matches term reference replay at empty host table
+- **Reference machine simulation (`run-eq-ref`)**: Frame machine replay matches term reference replay at empty row table
   (`run_eq_ref` (`src/Effect4/Laws/Program/RuntimeR.lean`)).
 - **Straight composition agrees (`straight-composition-agreement`)**: Programs related by
   `StraightEq` run to equal exits and stores at their own sufficient budgets.
@@ -2083,16 +2091,15 @@ Each site is now cited by name and path, not by line.
 
 ## 4. Metatheoretical Bounds & Evidence Summary
 
-1. **Axiom Ceiling**: Every theorem the registry cites is checked by the producer at `[propext,
-   Quot.sound]`; the whole-library gate (`Test/Audit/AxiomGate.lean`) holds every declaration
-   there too, except the rendering and instrumentation modules it admits by name.
+1. **Axiom Ceiling**: The producer checks every theorem cited by the semantics registry at `[propext, Quot.sound]`.
+   The whole-library gate (`Test/Audit/AxiomGate.lean`) holds every declaration there too, except the rendering and instrumentation declarations it admits by name.
 2. **First-Order Data Discipline**: Stored `Eff` syntax is first-order data: its bind continuation
    is another program tree with positional inputs (`src/Effect4/Program/Eff.lean`). `RProgram` is the proof-side
    semantic carrier `Effects.Program RSig ExitV`, whose visible operation nodes carry Lean function
    continuations (`vis : Answer op → Program sig A`). Those functions belong to the semantic model
    and are not stored function values in `Eff` or `Val`.
 3. **Simulations vs. Equivalence**: Behavioral relationships are stated strictly as equal-observation
-   theorems over specified fragments (`Straight`, `Looped`, empty host table `M7Fragment`), never
+   theorems over specified fragments (`Straight`, `Looped`, empty row table `M7Fragment`), never
    as unqualified "equivalence".
 4. **Literature Tracking**: Every textbook chapter and academic paper citation is audited against
    vendored copies in `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-semantics/citations-audit.md`.
