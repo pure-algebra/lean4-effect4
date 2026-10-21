@@ -22,10 +22,11 @@ with no IO. The command line, which reads the options and the script's file, is 
   state with its reactor, at the execution budget (`Run.runWith`). The state after it is the next
   request's. A refused build is the build's located refusal, as `check` prints it, and the state
   does not change.
-- **A request's line** (`lineOf`), by the mode: the result as one value tree in JSON (`resultVal`,
-  `valueText`), which the lowered native run prints too; the exit encoded at the built program's
-  exit type by the type-directed codec, Effect's own `Schema.Exit` encoding (`typedJson`); or a
-  readable line: the request, that exit, and the host's state as its value tree's JSON.
+- **A request's line** (`lineOf`), by the mode: a readable line, the default: the request, its exit
+  encoded at the built program's exit type by the type-directed codec, Effect's own `Schema.Exit`
+  encoding (`typedJson`), and the host's state as its value tree's JSON; the request and that exit
+  alone; or the result as one value tree in JSON (`resultVal`, `valueText`), which the lowered
+  native run prints too.
 - **A script from JSON** (`scriptOf`): an array of objects `{"entry": …, "args": […]}`, its text
   read by the profile's reader (`NatJson.parse`, `Compiler.readJson`). An argument is a string, a
   natural, a Boolean, or `null` for the unit, as a result's value tree prints each literal. No
@@ -115,13 +116,13 @@ def requestText (r : Request) : String := s!"{r.entry}({", ".intercalate (r.args
 
 /-- **How `run` writes a request's line.** -/
 inductive Mode where
-  /-- the result as one value tree in JSON (`resultVal`) -/
-  | json
+  /-- the request, its exit encoded at its own type (`typedJson`), and the host's state after it as
+  its value tree's JSON (`valueText`): the default -/
+  | text
   /-- the request, then its exit encoded at its own type (`typedJson`) -/
   | typed
-  /-- the request, its exit encoded at its own type (`typedJson`), and the host's state after it as
-  its value tree's JSON (`valueText`) -/
-  | text
+  /-- the result as one value tree in JSON (`resultVal`), as the lowered native run prints it -/
+  | json
   deriving DecidableEq, Repr
 
 /-- **A request's line**, after its run: by the mode, from the request, the built program, the
@@ -213,10 +214,10 @@ def scriptOf : NatJson → Except String (List Request)
     (Request.ofJson t).mapError (s!"the request {i}: " ++ ·)
   | _ => .error "a script is a JSON array of requests"
 
-/-- **The options of `run`**: how a line is written, the script's file, and the execution budget,
-the fuel that every row of a run is played at (`Api.Budget.fuel`). -/
+/-- **The options of `run`**: how a line is written, readable by default, the script's file, and
+the execution budget, the fuel that every row of a run is played at (`Api.Budget.fuel`). -/
 structure RunOptions where
-  mode : Mode := .json
+  mode : Mode := .text
   script : Option String := none
   budget : Api.Budget := {}
 
@@ -232,8 +233,7 @@ def RunOptions.read : List String → RunOptions → Except String RunOptions
     | some fuel => RunOptions.read rest { o with budget := { o.budget with fuel } }
     | none => .error s!"--budget {n} is no natural number"
   | [a], _ =>
-    .error (if a == "--script" || a == "--budget" then s!"{a} takes a value"
-      else s!"{a} is no option of run")
-  | a :: _, _ => .error s!"{a} is no option of run"
+    .error (if a == "--script" || a == "--budget" then s!"{a} takes a value" else s!"{a} is no option")
+  | a :: _, _ => .error s!"{a} is no option"
 
 end Compiler

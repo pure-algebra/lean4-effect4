@@ -27,7 +27,7 @@ test("the row signatures are Lean's, one line per selectable row, and cover the 
 })
 
 test("the receiver of a selected member is the object type the compiler parsed", () => {
-  expect(receiverOfSubject(repo, 'Adapter.SqlHandle["unsafe"]')).toBe("Adapter.SqlHandle")
+  expect(receiverOfSubject(repo, 'SqlAdapter.SqlHandle["unsafe"]')).toBe("SqlAdapter.SqlHandle")
   expect(receiverOfSubject(repo, 'Adapter.KvHandle["get"]')).toBe("Adapter.KvHandle")
   expect(receiverOfSubject(repo, "typeof Adapter.Host.acquire")).toBeUndefined()
 }, 60_000)

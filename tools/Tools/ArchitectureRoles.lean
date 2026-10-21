@@ -244,7 +244,7 @@ def accepted : List Accepted := [
   ⟨"tools/Drivers", "Test.Codegen.ServicesPrint", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
   ⟨"tools/Drivers", "Test.Api.HostList", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
   ⟨"tools/Drivers", "Test.Codegen.SchemaGenerationContract", "the corpus and codec producers read their programs from the batteries (C1, 2026-10-20)"⟩,
-  ⟨"tools/Compiler/Exe.lean", "Test.Dogfood.Scenario.Todo", "the dogfood to-do is a group of `lake exe effect4` (the entry point's second slice, 2026-10-20)"⟩
+  ⟨"tools/Compiler/Groups.lean", "Test.Dogfood.Scenario.Todo", "the dogfood to-do, with its host and script, is a group of `lake exe effect4` (the entry point's second slice and the user-side pass, 2026-10-20)"⟩
 ]
 
 /-- May a module in `a` import a module in `b`? Inside a Lean column, only the same height

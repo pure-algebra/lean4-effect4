@@ -10,7 +10,9 @@
  * Part of the truth claim (`Test/contracts/faces.contract.md` §4): the doc comment on each
  * export is the table mapping it to its Lean definition — there is no separate notes file.
  *
- * Depends on `effect` (`Option`) only.
+ * Imports `effect` only. The SQL package's adapter is `sql.ts`, the one file of the prelude that
+ * imports `@effect/sql-sqlite-bun`; this file does not import it, so a printed module reaches it
+ * only by importing `Sql` for a SQL row.
  *
  * Behaviours held:
  *  - one error, one representation: every package row whose Lean row type has the DB-15 pair
@@ -35,10 +37,8 @@
  *    `Ref.modify(ref, takeAndBump)` called the total shape and misbehaved on rc.112 (finding
  *    F3). The names are gone with T5, which closes the finding.
  */
-import { Cause, Deferred, Effect, Exit, Option, Ref, Scope } from "effect"
+import { Cause, Deferred, Effect, Exit, Option, Ref } from "effect"
 import { KeyValueStore } from "effect/unstable/persistence"
-import * as Reactivity from "effect/unstable/reactivity/Reactivity"
-import { SqliteClient } from "@effect/sql-sqlite-bun"
 
 // ---- the atoms (generated) --------------------------------------------------------
 //
@@ -213,10 +213,10 @@ export const L = {
 // ---- the canonical package tables (host rows step 6, 2026-09-09) -----------------------
 //
 // `Program/Packages/SqliteBun.lean` and `KeyValueStoreMemory.lean` say what below is the
-// package's and what is the harness's plumbing. The packages execute; this file only opens
-// the scope the sqlite client's own finalizer runs on, decodes DB-15's JSON-text parameters
-// before the package binds them, crosses the answers as the rows' types spell them, and
-// posts every call to the tape.
+// package's and what is the harness's plumbing. The packages execute; this file crosses the
+// answers as the rows' types spell them and posts every call to the tape. The SQL package's
+// adapter, with the scope it mints and the JSON-text parameters it decodes, stands in `sql.ts`,
+// so a folder whose modules have no SQL row needs no SQL package (`Compiler.Prelude.closure`).
 
 // `strings` is an atom and is generated with the rest; it is also the parameter list of a
 // host row, JSON texts (DB-15).
@@ -379,41 +379,9 @@ export interface TapeCall { readonly op: string; readonly request: ReadonlyArray
 // the generated modules that import the copy beside them must see the same sink.
 export const tape: { sink: ((call: TapeCall) => void) | null } =
   ((globalThis as Record<string, unknown>)["~effect4/tape"] ??= { sink: null }) as { sink: ((call: TapeCall) => void) | null }
-const recorded = <A, E, R>(op: string, request: ReadonlyArray<unknown>, effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
+/** A package call, posted to the tape on its exit; the SQL adapter (`sql.ts`) posts through it too. */
+export const recorded = <A, E, R>(op: string, request: ReadonlyArray<unknown>, effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
   Effect.onExit(effect, (exit) => Effect.sync(() => { tape.sink?.({ op, request, exit }) }))
-
-/** A row set crossing as `list (list (prod string string))`: one `(column, cell)` pair per
- * column in the driver's order, every cell JSON text (DB-15). */
-const rowsToWire = (rows: ReadonlyArray<unknown>): ReadonlyArray<ReadonlyArray<readonly [string, string]>> =>
-  rows.map((row) => Object.entries(row as Record<string, unknown>).map(([column, cell]) => [column, JSON.stringify(cell === undefined ? null : cell)] as const))
-
-/** The SQL client handle: the package's client and the scope the prelude minted for it. The
- * one method the table spells, `unsafe`, is the package's own (`sql.unsafe(text, params)`,
- * a `Statement`, the effect that runs it) with each JSON-text parameter decoded before it
- * binds (DB-15: `"7"` binds a number, `"\"x\""` a string) and the rows crossed as pairs. */
-export class SqlHandle {
-  readonly ["~effect4/ExternalHandle"] = "SqlClient.SqlClient"
-  constructor(readonly scope: Scope.Closeable, readonly client: SqliteClient.SqliteClient) {}
-  unsafe(text: string, params: ReadonlyArray<string>) {
-    return Effect.mapError(recorded("unsafe", [this, text, params],
-      Effect.map(this.client.unsafe(text, params.map((p) => JSON.parse(p) as unknown)), rowsToWire)), toPair)
-  }
-}
-export const Sql = {
-  /** `SqliteClient.make({ filename, disableWAL: true })` under a scope the prelude mints, so the
-   * package's own release (a finalizer it registers on that scope) runs at `Sql.close`.
-   * Not projected: the row is typed `error := .never` because `make` is typed `never`, and a
-   * file that cannot be opened is a defect `new Database` throws, which no tape replays. */
-  open: (filename: string) => recorded("Sql.open", [filename], Effect.gen(function* () {
-    const scope = yield* Scope.make()
-    const client = yield* SqliteClient.make({ filename, disableWAL: true }).pipe(
-      Effect.provideService(Scope.Scope, scope),
-      Effect.provide(Reactivity.layer),
-    )
-    return new SqlHandle(scope, client)
-  })),
-  close: (handle: SqlHandle) => recorded("Sql.close", [handle], Scope.close(handle.scope, Exit.void)),
-}
 
 /** The key-value store handle over the store `KeyValueStore.layerMemory` builds: the four
  * method rows are the store's own; `get`'s `string | undefined` crosses as the row's
