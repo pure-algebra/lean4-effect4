@@ -30,7 +30,7 @@ def depth (d : Document) : Nat :=
 /-- One child per part, with a paragraph at the leaf: the reader's minimal depth control. -/
 def nested : Nat → Block
   | 0 => .para []
-  | n + 1 => .part "p" "part" [nested n]
+  | n + 1 => .part ("p" ++ toString n) "part" [nested n]
 
 def nestedDocument (n : Nat) : Document := { title := "depth", body := [nested n] }
 
@@ -57,6 +57,9 @@ def constructors : Document where
 -- Finite evaluation: 63 parts and their paragraph consume exactly the 64 reader steps.
 #guard depth (nestedDocument 63) == maxDepth
 #guard (Document.ofJson (Document.json (nestedDocument 63))).toBool
+
+-- Control: the document check admits the deeper writer image; only the reader bound refuses it.
+#guard (nestedDocument 64).check.toBool
 
 -- Control: one further part exceeds the bound; the writer still emits its JSON.
 #guard depth (nestedDocument 64) == maxDepth + 1
