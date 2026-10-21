@@ -42,6 +42,7 @@ theorem restore_save (l : Live) :
     (l.run.journal.map .wire), ?_, ?_⟩
   · unfold restore save
     dsimp only [ne_eq, not_true_eq_false, ↓reduceIte]
+    unfold Object.open Object.ofBuilt
     rw [Api.Built.ofProgram_of_admitted _ _ l.run.built.admitted]
     rfl
   · rw [Live.feedAll_wire]

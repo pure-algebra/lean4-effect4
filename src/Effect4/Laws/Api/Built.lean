@@ -37,9 +37,7 @@ theorem ofSketch_error_iff (app : SigApp) (s : Sketch) (why : AdmitRefusal) :
 /-- Helper of built-admission-exact; consumer: LiveRecord.restore_save. -/
 theorem ofProgram_of_admitted (app : SigApp) (program : NativeEff)
     (admitted : AdmittedProgram program app) :
-    ofProgram app program = .ok {
-      app, program, admitted
-      rowNames := app.rows.zipIdx.map fun (row, index) => (row.spelling, index) } := by
+    ofProgram app program = .ok { app, program, admitted } := by
   unfold ofProgram
   rw [admitProgram_eq_ok admitted]
 

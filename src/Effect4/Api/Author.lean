@@ -44,14 +44,12 @@ deriving DecidableEq
 
 namespace Author.Internal
 
-/-- Check already elaborated syntax against an application (its rows and its named types), and
-retain its row-name metadata. This is the final admission step shared by initial authoring and
-rebuilding edited syntax; row names label the table for callers and do not alter admission. -/
-def finishBuild (program : Program) (app : SigApp)
-    (rowNames : List (String × Nat)) : Except BuildRefusal Built :=
+/-- Check elaborated syntax at its application. Initial authoring and rebuilding share this
+final admission step. Row spellings are derived from the application. -/
+def finishBuild (program : Program) (app : SigApp) : Except BuildRefusal Built :=
   match admitProgram program app with
   | .ok admitted =>
-    .ok { app, program, admitted, rowNames }
+    .ok { app, program, admitted }
   | .error (.illTyped refusal) => .error (.typing refusal)
   | .error why => .error (.admission why)
 
@@ -77,7 +75,7 @@ def build (m : Module NativeOp) : Except BuildRefusal Built :=
     let table := m.table
     match disagreeingService m table with
     | some refusal => .error refusal
-    | none => Internal.finishBuild program { rows := table, types := m.types } m.rowNames
+    | none => Internal.finishBuild program { rows := table, types := m.types }
 
 /-- A program with no declarations of its own: the module whose only field is its main. -/
 def program (src : Src NativeOp) : Except BuildRefusal Built := build { main := src }
@@ -92,7 +90,7 @@ its existing location. This does not require or imply the old type or behavior, 
 relocate variables or layer references. Structural editing failures remain the caller's
 separate `Option` result before this operation is called. -/
 def rebuild (b : Built) (candidate : Program) : Except BuildRefusal Built :=
-  Author.Internal.finishBuild candidate b.app b.rowNames
+  Author.Internal.finishBuild candidate b.app
 
 /-- The certified type of the built program. -/
 def ty (b : Built) : EffTy := b.typed.ty

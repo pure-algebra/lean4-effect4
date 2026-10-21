@@ -7,8 +7,8 @@ import Effect4.Program.Sketch
 
 Everything a run needs of a program, packed once: the application (`SigApp`: the row table and
 the named types), the program whose host calls are positions in that table, the admission
-certificate (typing and the execution checks, `Program/Admission.lean`) at that application, and
-the names the rows were declared under (for blame, printing and the reactor). `Author.build` produces one;
+certificate (typing and the execution checks, `Program/Admission.lean`) at that application.
+The row spellings are a projection of its signature, for blame, printing and the reactor. `Author.build` produces one;
 `Run.open` consumes one and cannot refuse it, because the certificate already carries full admission. A built program at declared services is the Σ_app slice's
 step 3.
 -/
@@ -19,17 +19,17 @@ namespace Effect4.Api
 
 open Effect4.Program (RowTable SigApp AdmittedProgram CallInstance NativeOp externalRow)
 
-/-- A built program: its application, the program, the certificate, and the row names in table
-order. -/
+/-- A built program: its application, the program and its admission certificate. -/
 structure Built where
   /-- The rows and the named types the program is admitted at (decisions row 406 (2)). -/
   app : SigApp
   program : Program
   admitted : AdmittedProgram program app
-  /-- The spelling each row was declared under, with its position in the table. -/
-  rowNames : List (String × Nat) := []
 
 namespace Built
+
+/-- The signature's row spellings, with their positions in the table. -/
+def rowNames (b : Built) : List (String × Nat) := b.app.rowNames
 
 /-- The built program's row table. -/
 abbrev table (b : Built) : RowTable := b.app.rows
@@ -40,9 +40,7 @@ def ofProgram (app : Program.SigApp) (program : Program) :
     Except Program.AdmitRefusal Built :=
   match Program.admitProgram program app with
   | .error why => .error why
-  | .ok admitted => .ok {
-      app, program, admitted
-      rowNames := app.rows.zipIdx.map fun (row, index) => (row.spelling, index) }
+  | .ok admitted => .ok { app, program, admitted }
 
 /-- **Admit a sketch** at the application extended by its hole table (`SigApp.withHoles`): each
 hole is a host row that the run's driver answers, so a program with holes still runs. A sketch

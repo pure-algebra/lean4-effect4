@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Api.Author
+import Effect4.Laws.Api.AuthorBuild
 import Effect4.Laws.Program.CheckedTyping
 import Effect4.Laws.Program.Signature
 
@@ -194,9 +195,8 @@ theorem build_rows_resolve {Op : Type} (m : Module Op) (names : RowNames)
 /-- A built program's table is the module's own, and its row names are the module's. -/
 theorem build_table {m : Module NativeOp} {b : Api.Built} (h : Api.Author.build m = .ok b) :
     b.table = m.table ∧ b.rowNames = m.rowNames := by
-  unfold Api.Author.build Api.Author.Internal.finishBuild at h
-  unfold Api.Built.table
-  aesop
+  obtain ⟨_, table, names, _⟩ := Api.Author.build_retains h
+  exact ⟨table, names⟩
 
 /-- A built program's table is lawful: the certificate's signature is (`admitSig_ok_iff`), and
 `build_table_lawful` is what lets an author know it before the build. -/
@@ -229,8 +229,7 @@ host setup. This reuses completeness of the existing admission procedure. -/
 theorem rebuild_admitted (before : Api.Built) (candidate : Api.Program)
     (admitted : AdmittedProgram candidate before.app) :
     before.rebuild candidate = .ok
-      { app := before.app, program := candidate, admitted := admitted,
-        rowNames := before.rowNames } := by
+      { app := before.app, program := candidate, admitted := admitted } := by
   have accepted := admitProgram_eq_ok admitted
   unfold Api.Built.rebuild Api.Author.Internal.finishBuild
   split <;> aesop
