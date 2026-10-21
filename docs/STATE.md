@@ -84,7 +84,7 @@ and a document are each a state reached by its journal. The dictionary
   The printer's service check is formation and naming.
   The sequence is `research/2026-10-20-program-host-runtime.md` §14.5.
 - `Object.session` writes a service's lifetime as the object's main program, data to data, and `Built.session` admits it (row 441).
-  It provides each required key once, initializes once, keeps definition positions, and appends request and reply rows.
+  It provides nothing: the signature's services are the host's at every target. It initializes once, keeps definition positions, and appends request and reply rows.
   The driver, the engine and the file loader remain later slices; the per-request runner and the OCaml to-do lane retire with them.
   The landing is `research/2026-10-21-session-landing/README.md`; its review is `research/2026-10-21-session-review/README.md`.
 

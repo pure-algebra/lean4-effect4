@@ -7,12 +7,14 @@ import Effect4.Program.Authoring.Named
 `Object.session` is data to data. It selects a service of the object, derives the protocol rows,
 writes the lifetime as the object's new main program, and appends the rows. The block's
 declarations, bodies, module layers, named types and service declarations are the object's own,
-in place. The lifetime provides every key the initializer and the methods require with the
-unit, initializes once, then receives, dispatches and replies until the input ends.
+in place. The lifetime initializes once, then receives, dispatches and replies until the input
+ends. It provides nothing: the services it requires are the signature's, which the host
+supplies at every target (the repository layer on Effect, the rows' answers on the machine).
 
 `Built.session` is that construction followed by program admission at the new signature, with
-the requirement row required closed. Definitions and rows are invoked by position throughout,
-so no name is resolved after the service view read it.
+the requirement row closed modulo the signature: every key left is one the signature types
+(`SigApp.serviceTy`). Definitions and rows are invoked by position throughout, so no name is
+resolved after the service view read it.
 
 This is a checked protocol adaptation. It adds no program syntax, host implementation or reply
 checker: the session protocol admits a host's replies at their call instances, as for any row.
@@ -24,7 +26,8 @@ namespace Effect4.Api
 open Effect4.Program Effect4.Program.Authoring
 
 /-- Why a selected service has no session. Each owner keeps its path and reason. Selection
-names the missing service; `requirements` locates the keys left open at the new main program. -/
+names the missing service; `requirements` locates, at the new main program, the required keys
+that the signature does not type, which no host could supply. -/
 inductive SessionRefusal where
   | service (why : PrintRefusal)
   | missingService (name : String)
@@ -59,11 +62,6 @@ def rows (decls : List DefDecl) (service : Service) (state : Ty) :
   return (Row.host "Session.next" .unit (.option (sumTy (ports.map (·.1))))).row ::
     ports.map (·.2)
 
-/-- The keys the lifetime provides: those the initializer and the methods require, each once. -/
-def keysOf (decls : List DefDecl) (init : DefDecl) (service : Service) : List Effect4.ServiceKey :=
-  (init.requires ++
-    (service.methods.filterMap fun (_, position, _) => decls[position]?).flatMap (·.requires)).eraseDups
-
 /-- Invoke the definition at a position. No name is resolved. -/
 def invokeAt (position : Nat) (args : List TermSrc) : Src NativeOp :=
   perform (.call position) (Authoring.requestOf args)
@@ -80,26 +78,29 @@ def dispatch (state : TermSrc) : List ((String × Nat × Nat) × Nat) → TermSr
           fun answer => andThen (perform (.external reply) answer) (succeed (bool true)))
       (fun residual => dispatch state rest residual)
 
-/-- The lifetime: provide each key with the unit, initialize once, then receive from
-`Session.next` at position `next`, dispatch, and reply, until no request comes. The reply rows
-follow `next` in method order, so method `k` replies at `next + 1 + k`. Program admission checks
-each unit provision against the key's declared carrier. -/
-def main (keys : List Effect4.ServiceKey) (init next : Nat)
-    (methods : List (String × Nat × Nat)) : Src NativeOp :=
-  keys.foldr (fun key body => provideService key unit body)
-    (bindWith (invokeAt init []) fun state =>
-      loopWith (bool true) (fun cursor => cursor)
-        (fun _ => bindWith (perform (.external next) unit) fun request =>
-          selectOptionWith request (succeed (bool false))
-            (fun payload =>
-              dispatch state (methods.zipIdx.map fun (m, k) => (m, next + 1 + k)) payload))
-        (fun _ answer => answer) (fun _ => unit))
+/-- The lifetime: initialize once, then receive from `Session.next` at position `next`,
+dispatch, and reply, until no request comes. The reply rows follow `next` in method order, so
+method `k` replies at `next + 1 + k`. The initializer's requirements are the lifetime's: the
+host's services, left for the host. -/
+def main (init next : Nat) (methods : List (String × Nat × Nat)) : Src NativeOp :=
+  bindWith (invokeAt init []) fun state =>
+    loopWith (bool true) (fun cursor => cursor)
+      (fun _ => bindWith (perform (.external next) unit) fun request =>
+        selectOptionWith request (succeed (bool false))
+          (fun payload =>
+            dispatch state (methods.zipIdx.map fun (m, k) => (m, next + 1 + k)) payload))
+      (fun _ answer => answer) (fun _ => unit)
 
-/-- Admit a session object at its signature, then require its requirement row closed. -/
+/-- The required keys the signature does not type: the ones no host could supply. -/
+def foreign (built : Built) : List Effect4.ServiceKey :=
+  built.requires.filter fun key => (built.app.serviceTy key).isNone
+
+/-- Admit a session object at its signature, then require its requirement row closed modulo the
+signature: every key left is one the signature types, so the host supplies it. -/
 def finish (object : Object) : Except SessionRefusal Built := do
   let built ← object.open.mapError .admission
-  if built.requires.isEmpty then return built
-  else throw (.requirements [1] built.requires)
+  if (foreign built).isEmpty then return built
+  else throw (.requirements [1] (foreign built))
 
 end ServiceSession
 
@@ -113,14 +114,14 @@ def _root_.Effect4.Program.Object.session (o : Object) (name : String) :
   let some (decls, bodies, _, layers) := o.program.block? | throw (.missingService name)
   let some init := decls[service.init]? | throw (.service (.service name))
   let appended ← (ServiceSession.rows decls service init.answer).mapError .service
-  let program ← (ServiceSession.main (ServiceSession.keysOf decls init service) service.init
-    o.app.rows.length service.methods {} [1]).mapError .scope
+  let program ← (ServiceSession.main service.init o.app.rows.length service.methods {} [1]).mapError
+    .scope
   return { app := { o.app with rows := o.app.rows ++ appended }
            program := .defs decls bodies program layers }
 
 /-- **A service's lifetime, admitted**: the session object of the service, opened at its new
-signature, with no requirement left open. The source's definitions and rows keep their
-positions. The constructor performs no host work and claims no termination. -/
+signature, every requirement left a key the signature types. The source's definitions and rows
+keep their positions. The constructor performs no host work and claims no termination. -/
 def Built.session (b : Built) (service : String) : Except SessionRefusal Built :=
   (Object.session (Object.ofBuilt b) service).bind ServiceSession.finish
 

@@ -1626,7 +1626,7 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   Neither property establishes native package integrity, host reconnection, repeated effects, or progress.
 
 - **Checked service sessions (`service-session-checked`, `service-session-retains`)**: `Object.session` writes a service's lifetime as the object's main program, data to data; `Api.Built.session` admits it.
-  Success requires the session object, full program admission, and an empty requirement row.
+  Success requires the session object, full program admission, and a requirement row closed modulo the signature: every key left is one the signature types.
   It retains declarations, bodies, module layers, named types, and service declarations.
   It appends rows and replaces the main program.
   `Built.session_ok_iff` and `Built.session_retains` state these properties in `src/Effect4/Laws/Api/Session.lean`.

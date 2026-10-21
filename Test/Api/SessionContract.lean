@@ -60,15 +60,17 @@ open Test.Api.SessionFixtures
 #guard sessionObject ⟨{}, unitProgram⟩ "Absent" = .error (.missingService "Absent")
 
 -- Controls: source admission permits these declarations; session construction keeps each owner.
--- A key a method requires is provided as the initializer's are (`ServiceSession.keysOf`).
+-- A required key stays the host's: the session provides nothing, and admission refuses a read of a
+-- key the signature does not type, so `foreign` is empty on every admitted lifetime.
 #guard [parameterized, remaining, nonunit, incomingHandle, outgoingHandle, unusedParameterized,
   twoArguments].all (fun o => o.open.isOk && o.services.isOk)
 #guard sessionObject parameterized "Simple" =
   .error (.admission (.illTyped ⟨[1, 1, 0, 1, 1, 0, 0, 0], .outsideDomain "method"⟩))
-#guard sessionObject nonunit "Simple" =
-  .error (.admission (.illTyped ⟨[1], .valueNotSubtype natKey .unit .nat⟩))
+#guard (sessionObject nonunit "Simple").bind (fun o => o.open.mapError .admission |>.map (·.requires)) =
+  .ok [natKey]
 #guard (sessionObject remaining "Simple").bind (fun o => o.open.mapError .admission |>.map (·.requires)) =
-  .ok []
+  .ok [unitKey]
+#guard foreignRemaining.open.isOk = false
 #guard sessionObject incomingHandle "Simple" =
   .error (.admission (.signature (.row 0 (.internalHandle "answer"))))
 #guard (sessionObject outgoingHandle "Simple").map (fun o => o.app.rows.map (·.request)) =
@@ -121,9 +123,9 @@ open Test.Api.SessionFixtures
       | _ => none)) ==
   some (some (.failure (.fail (.tag 13))), [.list [.str "m", .unit]], [], [])
 
--- Law reader: the checked lifetime of the concrete Example fixture has closed requirements.
+-- Law reader: the checked lifetime of the concrete Example fixture requires only typed keys.
 example (before after : Built) (_source : exampleBuilt = some before)
-    (built : before.session "Example" = .ok after) : after.requires = [] := by
+    (built : before.session "Example" = .ok after) : Effect4.Api.ServiceSession.foreign after = [] := by
   obtain ⟨_, _, _, closed⟩ := (Built.session_ok_iff before "Example" after).mp built
   exact closed
 

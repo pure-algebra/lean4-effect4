@@ -122,6 +122,10 @@ def incomingHandle : Object :=
       role := .serviceMethod "Simple" "m" 1 }
 def outgoingHandle : Object :=
   oneMethod { methodDecl with answer := .refOf .nat } (.perform .refMake (.lit (.nat 0)))
+/-- A read of a key the signature does not type: source admission refuses it. -/
+def foreignKey : ServiceKey := ⟨⟨30⟩, ⟨99⟩⟩
+def foreignRemaining : Object :=
+  oneMethod { methodDecl with requires := [foreignKey] } (.service foreignKey)
 def named (name : String) : Object :=
   oneMethod { methodDecl with role := .serviceMethod "Simple" name 0 }
 

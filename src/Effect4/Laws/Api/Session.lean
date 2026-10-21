@@ -7,7 +7,7 @@ import Effect4.Laws.Auto.Semantics
 # Checked service-session construction
 
 Placement: host-session-protocol, compatibility, R6 and R13.
-`service-session-checked` states exact construction, admission and closed requirements.
+`service-session-checked` states exact construction, admission and the requirement row closed modulo the signature.
 `service-session-retains` states the retained block and signature fields.
 Consumers are the public constructor, positional callers and the permanent session battery.
 The replaced main program need not keep its behaviour. No progress, physical I/O or arbitrary
@@ -30,19 +30,19 @@ theorem ServiceSession.finish_admission_error_iff (object : Object) (why : Admit
         Except.error refusal = (Except.error why : Except AdmitRefusal Built)
     aesop
   | ok built =>
-    change (if built.requires.isEmpty then Except.ok built
-      else .error (SessionRefusal.requirements [1] built.requires)) =
+    change (if (ServiceSession.foreign built).isEmpty then Except.ok built
+      else .error (SessionRefusal.requirements [1] (ServiceSession.foreign built))) =
         .error (SessionRefusal.admission why) ↔
         Except.ok built = (Except.error why : Except AdmitRefusal Built)
     split <;> aesop
 
 /-- service-session-checked: construction succeeds exactly when the session object of the
-source opens as the result and that result has no remaining service requirements. -/
+source opens as the result and every requirement left is a key the signature types. -/
 @[semantics "host-session-protocol" (requirement := R6)]
 theorem Built.session_ok_iff (before : Built) (name : String) (after : Built) :
     before.session name = .ok after ↔
       ∃ object, Object.session (Object.ofBuilt before) name = .ok object ∧
-        object.open = .ok after ∧ after.requires = [] := by
+        object.open = .ok after ∧ ServiceSession.foreign after = [] := by
   change (Object.session (Object.ofBuilt before) name >>= ServiceSession.finish) = .ok after ↔ _
   rw [Effect4.Laws.Auto.bind_eq_ok]
   constructor
@@ -53,14 +53,14 @@ theorem Built.session_ok_iff (before : Built) (name : String) (after : Built) :
     split at hr
     · have same := Effect4.Laws.Auto.pure_eq_ok.mp hr
       subst built
-      exact ⟨object, hc, opened, List.isEmpty_iff.mp ‹after.requires.isEmpty = true›⟩
+      exact ⟨object, hc, opened, List.isEmpty_iff.mp ‹(ServiceSession.foreign after).isEmpty = true›⟩
     · cases hr
   · rintro ⟨object, hc, ho, hr⟩
     refine ⟨object, hc, ?_⟩
     unfold ServiceSession.finish
     rw [ho]
-    change (if after.requires.isEmpty then Except.ok after
-      else .error (SessionRefusal.requirements [1] after.requires)) = .ok after
+    change (if (ServiceSession.foreign after).isEmpty then Except.ok after
+      else .error (SessionRefusal.requirements [1] (ServiceSession.foreign after))) = .ok after
     aesop
 
 /-- service-session-retains: successful construction replaces the main program, retains the
