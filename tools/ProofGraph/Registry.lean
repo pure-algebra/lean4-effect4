@@ -159,7 +159,9 @@ def registry : Registry where
     `Test.Dogfood.Bank,
     -- the tool laws of the checked summaries: the flow's connector, which imports the summary
     -- law (claims dependency-summary-exact and view-reachability-summary-exact; seat FC)
-    `Tools.View.FlowReach]
+    `Tools.View.FlowReach,
+    -- The named incidence laws of the row-first graph view (row 443).
+    `Tools.View.LayerGraph]
   acceptance := [`Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers,
     `Test.Dogfood.P3WorkerQueue, `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService]
   concepts := [
@@ -788,6 +790,15 @@ def registry : Registry where
       pointer := .witness `Effect4.Program.check_closed },
 
     -- 7. initial-algebras-folds
+    { id := "document-json-fold-retraction", concept := "initial-algebras-folds", role := .compatibility
+      title := "G6: the unrestricted JSON retraction is proved in Lean; evidence within the semantic axiom ceiling remains open (owner ruling, view-graph slice)"
+      pointer := .absent "Tools.Document.Json.Document.ofJson_json proves the unrestricted equation. Its existing Lean.Json carrier reaches Classical.choice, so neither the semantic ceiling [propext, Quot.sound] nor the proof-plan gate admits it. The theorem remains in tools/Tools/Document/Json.lean; the trust policy is unchanged." },
+    { id := "layer-graph-glue", concept := "initial-algebras-folds", role := .compatibility
+      title := "G1: the named incidence observation of provide is the overlay of its operands, for every layer and atom algebra; no boundary hiding or execution claim (view-graph slice, row 443)"
+      pointer := .witness `Tools.View.LayerGraph.hypergraph_provide },
+    { id := "layer-graph-merge", concept := "initial-algebras-folds", role := .compatibility
+      title := "G2: swapping merge operands keeps the named incidence edge-set model, for every layer and atom algebra; not positional syntax, construction order, or last-wins evaluation (view-graph slice, row 443)"
+      pointer := .witness `Tools.View.LayerGraph.hypergraph_merge_comm },
     { id := "hom-eq-cata-eff", concept := "initial-algebras-folds", role := .fundamentalProperty
       title := "Pointwise equality of algebra homomorphisms with cata_eff"
       pointer := .witness `Effect4.Program.hom_eq_cata_eff

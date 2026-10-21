@@ -1,0 +1,10 @@
+i	spelling	namespace	request	answer
+0	TodoRepo.insert	TodoRepo	string	{ readonly done: boolean; readonly id: number; readonly title: string }
+1	TodoRepo.all	TodoRepo	void	ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>
+2	TodoRepo.setDone	TodoRepo	readonly [number, boolean]	Option.Option<{ readonly done: boolean; readonly id: number; readonly title: string }>
+3	TodoRepo.delete	TodoRepo	number	boolean
+4	Session.next	Session	void	Option.Option<readonly ["add", string] | readonly ["list", void] | readonly ["remove", number] | readonly ["complete", number]>
+5	Session.reply_add	Session	Exit.Exit<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly ["SqlError", string] | readonly ["EmptyTitle", "a title is required"]>	void
+6	Session.reply_list	Session	Exit.Exit<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly ["SqlError", string]>	void
+7	Session.reply_complete	Session	Exit.Exit<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number }>	void
+8	Session.reply_remove	Session	Exit.Exit<void, readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number }>	void
