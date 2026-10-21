@@ -485,6 +485,41 @@ after M2. That slice deletes `EmitTodo.lean` and the to-do's `Print.lean`.
   the manifest is one query. And the docstring of `Effect4.Program.rc112` still names
   `Compiler.Prelude.closure`; its fix waits for the next core rebuild.
 
+- **Slice 4b landed** 2026-10-20 (`758d029897`, to-do `737df8b`): the native target lowers named declarations through the existing LCNF producer.
+  The native example now builds freshly; its eleven matching results are finite host evidence, not a lowering correctness theorem.
+  Bases: library `c0e5a27dc`, to-do `ce4e5c7`.
+  `Compiler.Lowered` names imports, roots and a closure bound beside the host; the project's entry stays one call.
+  `Gen.projectArgvs` joins that recipe with the library's type owners through the existing v3 reader.
+  The project runs `lake exe lcnfgen` in the library checkout; the backend stays outside the application's executable.
+  `Compiler.Inputs` shares the existing source readers without copying them.
+  `Compiler.Native` stages generation, then uses the shared manifest and writer.
+  The manifest keeps the compiler invocation in `command` and records the subprocess in `loweringCommand`, with `loweringDirectory`.
+  It reads OCaml 5.1.1 and Zarith 1.14 from the switch, and records the library commit as the producer's version.
+  `--check` compiles the staged module with warning 55 fatal; it neither links nor runs a program.
+  Missing roots and invalid module names return usage errors before publication.
+  Deleted: the to-do's copied lowering command, header parsing and stale clock dependency.
+  Library cost: 416 lines added, 126 deleted; 106 added lines move the existing input readers into their shared module.
+  The net growth implements the new target, its provenance and controls; it introduces no program representation, judgment or theorem.
+  To-do cost: 833 lines added, 806 deleted, plus the 5,713-byte canonical artifact; handwritten files add 27 lines and delete eleven.
+  Regeneration also picks up the exact integer representation already landed in the library.
+  Compared with the old command under the current generator, the body removes one local `located` declaration.
+  It qualifies 141 type uses and ten uses of each field through `Located`; every other body byte agrees.
+  `lake build Compiler.Exe OCaml5.Tools.LcnfGen Test.Codegen.CompilerEmit Conform.Effect4.CompilerControls` passes through the required runner.
+  `make batteries-touched BASE=c0e5a27dc` builds one battery.
+  `#axiom_audit`: 72 declarations within `[propext, Quot.sound]`, none modulo planned goals.
+  The separate tool audit records 93 of 815 declarations reaching `Classical.choice` through toolchain operations; it adds no library exemption.
+  `#closure_audit`: 5,926 declarations; none binds a table before a returned closure.
+  `python3 scripts/generate.py --only lcnf` passes; all other committed generated artifacts remain unchanged.
+  `make check-ocaml`, `make check-ts` and `make check-sweep` pass.
+  In the to-do, `lake exe todo emit --target ocaml --out ocaml` twice writes seven identical files.
+  `opam exec --switch=effect4 -- dune build --root ocaml ./todo_native.exe`, with the library's install path, passes.
+  Its native output equals `lake exe todo run --json` on eleven lines.
+  `lake exe todo emit --out ts` and tsgo 7.0.0-dev.20260629.1 pass; Bun equals Lean's text run on eleven lines.
+  The library's `lake exe effect4 emit --group todo --target ocaml --out DIR` also passes.
+  Evidence: `/private/tmp/codex-handoff-review/c2-4b-ocaml/` holds commands, outputs, hashes and the checked comparison with the old command.
+  No proof obligation changes status; full compiler correctness remains open.
+  Proposed: record the target and its manifest fields, then continue M8 in the agreed order.
+
 ## 9. The prior art, each against our semantics
 
 The owner asked for care: what each project does, what of it accords with our semantics, where
