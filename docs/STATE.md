@@ -24,7 +24,7 @@ and a document are each a state reached by its journal. The dictionary
 - **Lean authoring.** Import `Effect4.Author`, or `Effect4` for everything (row 332). Declare a
   host's rows with `eff_rows` and write programs with `eff do`. The checker types a program, or
   refuses at a located place. A project's executable calls `Compiler.main` over its
-  application: `check`, `emit --target ts`, `describe` and `run` (rows 425, 429, 430). The worked
+  application: `check`, `emit --target ts|ocaml`, `describe`, `inspect` and `run` (rows 425, 429, 430, 435, 438). The worked
   example is the to-do, a user's project outside the tree; the in-tree one is
   `Test/Dogfood/Scenario/Todo/`. Today a service key and a typed host are still written by hand
   (item 9 of the order below).
@@ -76,6 +76,7 @@ and a document are each a state reached by its journal. The dictionary
   `inspect`, the manifest's inputs with the module closure's address, and the SQL adapter by the
   module's imports.
 - The Rocq comparison lane now extracts the generated development (row 436). The six hand copies and their evaluator adapter retire.
+- The compiler emits OCaml from declared roots (row 438). The external to-do now builds freshly through that command.
 
 ## Next, in order
 
@@ -86,7 +87,7 @@ Done on 2026-10-20: the to-do as a user's project (`research/2026-10-19-todo-as-
 M1, M2, M3, C1 and the compiler's entry point in three slices
 (`research/2026-10-20-compiler-entry/README.md` §7). M4 landed in both halves (rows 431 and 433). Naturals and integers are exact in OCaml, and the
 Rocq comparison lane's producer is in the tree. The user-side pass (row 432), value linkage (row 434) and the entry point's fourth slice,
-part a (row 435), landed. Item 4c also landed (row 436). Next: the entry point's OCaml target (E2), then M8 as amended. The
+parts a and b (rows 435, 438), landed. Item 4c also landed (row 436). Next: M8 as amended. The
 handoff of 2026-10-20 (`research/2026-10-20-handoff-codex/README.md`) names the heads, the
 order, the rules and the three briefs.
 
@@ -104,8 +105,8 @@ order, the rules and the three briefs.
 10. A public-name manifest for Lean.
 11. M10, carriers as rows, one machine, then the run layer over it.
 
-A fresh native build of the external to-do fails against the exact integer representation.
-The next compiler slice regenerates its output and removes its stale clock dependency.
+The external to-do uses the compiler for both targets. Its fresh native and TypeScript runs match Lean on the example script.
+The checks remain finite host evidence; they establish no general compiler correctness theorem.
 
 Deferred (`coherence.md` §9.2): the host protocol and the cross-runtime test, the store and the
 log, the carrier packages, and the exchange.
