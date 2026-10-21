@@ -120,36 +120,55 @@ private def readEdge (j : Json) : Except String (String × String) := do
   | [a, b] => return (← str "edge" a, ← str "edge" b)
   | _ => throw "edge: not a pair"
 
-/-- How deep parts nest in a document the reader takes: a heading stops at the sixth level, so a
-deeper nesting is a malformed document, refused. -/
-def maxDepth : Nat := 64
+/-- Read one block after its nested body has already been read. -/
+private def readObject (nested : Except String (List Block)) (j : Json) : Except String Block := do
+  let kind ← str "block kind" (← field "block" "kind" (← entries "block" j))
+  let fs ← fields s!"block {kind}" (match kind with
+    | "para" => ["kind", "line"] | "fields" => ["kind", "rows"] | "items" => ["kind", "lines"]
+    | "code" => ["kind", "language", "body"] | "table" => ["kind", "headers", "rows"]
+    | "graph" => ["kind", "key", "caption", "nodes", "edges"]
+    | "part" => ["kind", "key", "title", "body"] | _ => ["kind"]) j
+  let get (k : String) := field s!"block {kind}" k fs
+  match kind with
+  | "para" => return .para (← readLine (← get "line"))
+  | "fields" => return .fields (← (← arr "rows" (← get "rows")).mapM readRow)
+  | "items" => return .items (← (← arr "lines" (← get "lines")).mapM readLine)
+  | "code" => return .code (← str "language" (← get "language")) (← str "body" (← get "body"))
+  | "table" =>
+    return .table (← (← arr "headers" (← get "headers")).mapM (str "header"))
+      (← (← arr "rows" (← get "rows")).mapM readCells)
+  | "graph" =>
+    return .graph (← str "key" (← get "key")) (← str "caption" (← get "caption"))
+      (← (← arr "nodes" (← get "nodes")).mapM readNode) (← (← arr "edges" (← get "edges")).mapM readEdge)
+  | "part" =>
+    return .part (← str "key" (← get "key")) (← str "title" (← get "title"))
+      (← do
+        let _ ← arr "body" (← get "body")
+        nested)
+  | k => throw s!"block: no kind {k}"
 
-/-- A block, by its `kind`; a part's blocks are read on a fuel of the nesting left (`maxDepth`). -/
-def readBlock : Nat → Json → Except String Block
-  | 0, _ => .error s!"block: parts nested deeper than {maxDepth}"
-  | fuel + 1, j => do
-    let kind ← str "block kind" (← field "block" "kind" (← entries "block" j))
-    let fs ← fields s!"block {kind}" (match kind with
-      | "para" => ["kind", "line"] | "fields" => ["kind", "rows"] | "items" => ["kind", "lines"]
-      | "code" => ["kind", "language", "body"] | "table" => ["kind", "headers", "rows"]
-      | "graph" => ["kind", "key", "caption", "nodes", "edges"]
-      | "part" => ["kind", "key", "title", "body"] | _ => ["kind"]) j
-    let get (k : String) := field s!"block {kind}" k fs
-    match kind with
-    | "para" => return .para (← readLine (← get "line"))
-    | "fields" => return .fields (← (← arr "rows" (← get "rows")).mapM readRow)
-    | "items" => return .items (← (← arr "lines" (← get "lines")).mapM readLine)
-    | "code" => return .code (← str "language" (← get "language")) (← str "body" (← get "body"))
-    | "table" =>
-      return .table (← (← arr "headers" (← get "headers")).mapM (str "header"))
-        (← (← arr "rows" (← get "rows")).mapM readCells)
-    | "graph" =>
-      return .graph (← str "key" (← get "key")) (← str "caption" (← get "caption"))
-        (← (← arr "nodes" (← get "nodes")).mapM readNode) (← (← arr "edges" (← get "edges")).mapM readEdge)
-    | "part" =>
-      return .part (← str "key" (← get "key")) (← str "title" (← get "title"))
-        (← (← arr "body" (← get "body")).mapM (readBlock fuel))
-    | k => throw s!"block: no kind {k}"
+mutual
+  /-- The structural JSON fold reads a block and, at an array, its list of blocks.
+  Only a part consumes the result read from its `body` field. There is no depth bound. -/
+  private def readValue : Json → Except String Block × Except String (List Block)
+    | .null | .bool _ | .num _ | .str _ =>
+      (.error "block: not an object", .error "body: not an array")
+    | .arr values => (.error "block: not an object", (readValues values.toList).mapM id)
+    | .obj fs =>
+      (readObject (((readFields fs.inner.inner).lookup "body").getD (.error "block: no field body")) (.obj fs),
+        .error "body: not an array")
+  private def readValues : List Json → List (Except String Block)
+    | [] => []
+    | head :: tail => (readValue head).1 :: readValues tail
+  private def readFields : Std.DTreeMap.Internal.Impl String (fun _ => Json) →
+      List (String × Except String (List Block))
+    | .leaf => []
+    | .inner _ key value left right =>
+      readFields left ++ [(key, (readValue value).2)] ++ readFields right
+end
+
+/-- Read a block by the structural fold of its finite JSON value. -/
+def readBlock (j : Json) : Except String Block := (readValue j).1
 
 /-- **The document read from its JSON**, in the format `format` alone. -/
 def Document.ofJson (j : Json) : Except String Document := do
@@ -159,12 +178,137 @@ def Document.ofJson (j : Json) : Except String Document := do
   let body ← arr "body" (← field "document" "body" fs)
   return { title := ← str "title" (← field "document" "title" fs)
            producer := ← (← arr "producer" (← field "document" "producer" fs)).mapM (str "producer")
-           body := ← body.mapM (readBlock maxDepth) }
+           body := ← body.mapM readBlock }
 
 /-- The finite check of the reader on one text: the document read writes the same JSON back. -/
 def Document.reads (j : Json) : Except String Document := do
   let d ← Document.ofJson j
   unless (Document.json d).compress == j.compress do throw "document: the read does not write back the same JSON"
   return d
+
+/-- Step of `document-json-fold-retraction`, consumed by `Document.ofJson_json`. -/
+private theorem readInline_inline (value : Inline) : readInline (inline value) = .ok value := by
+  cases value <;> rfl
+
+/-- Step of `document-json-fold-retraction`: a list lifts its element retraction. -/
+private theorem mapM_retraction {α β : Type} (write : α → β) (read : β → Except String α)
+    (law : ∀ x, read (write x) = .ok x) (xs : List α) :
+    (xs.map write).mapM read = .ok xs := by
+  induction xs with
+  | nil => rfl
+  | cons head tail ih =>
+    simp only [List.map_cons, List.mapM_cons, law, ih]
+    rfl
+
+/-- Step of `document-json-fold-retraction`, consumed by its block cases. -/
+private theorem readLine_line (value : Line) : readLine (line value) = .ok value := by
+  change (value.map inline).mapM readInline = .ok value
+  exact mapM_retraction inline readInline readInline_inline value
+
+/-- Step of `document-json-fold-retraction`, consumed by its fields case. -/
+private theorem readRow_row (value : String × Line) :
+    readRow (Json.mkObj [("label", value.1), ("line", line value.2)]) = .ok value := by
+  cases value with
+  | mk label value =>
+    change (do let read ← readLine (line value); pure (label, read)) = .ok (label, value)
+    rw [readLine_line]
+    rfl
+
+/-- Step of `document-json-fold-retraction`, consumed by its table case. -/
+private theorem readCells_cells (value : List Line) :
+    readCells (.arr (value.map line).toArray) = .ok value := by
+  change (value.map line).mapM readLine = .ok value
+  exact mapM_retraction line readLine readLine_line value
+
+/-- Step of `document-json-fold-retraction`, consumed by its graph case. -/
+private theorem readNode_node (n : GraphNode) :
+    readNode (Json.mkObj (([("key", n.key), ("label", n.label), ("status", n.status),
+      ("detail", n.detail)] : List (String × Json)) ++
+      (n.ref.map fun r => [("ref", Lean.Json.str r)]).getD [])) = .ok n := by
+  cases n with
+  | mk key label status detail ref => cases ref <;> rfl
+
+/-- Step of `document-json-fold-retraction`, consumed by its graph case. -/
+private theorem readEdge_edge (value : String × String) :
+    readEdge (.arr #[value.1, value.2]) = .ok value := by
+  cases value
+  rfl
+
+/-- Step of `document-json-fold-retraction`: the structural array branch is the list map. -/
+private theorem readValues_eq (values : List Json) : readValues values = values.map readBlock := by
+  induction values with
+  | nil => rfl
+  | cons head tail ih =>
+    change (readValue head).1 :: readValues tail = (readValue head).1 :: tail.map readBlock
+    rw [ih]
+
+mutual
+  /-- Step of `document-json-fold-retraction`, consumed by `readBlocks_fold`. -/
+  private theorem readBlock_fold (block : Block) : readBlock (block.fold algebra) = .ok block := by
+    cases block with
+    | para value =>
+      change (do let read ← readLine (line value); pure (Block.para read)) = .ok (Block.para value)
+      rw [readLine_line]
+      rfl
+    | fields rows =>
+      change (do
+        let read ← (rows.map fun (value : String × Line) => Json.mkObj [("label", value.1), ("line", line value.2)]).mapM readRow
+        pure (Block.fields read)) = .ok (Block.fields rows)
+      rw [mapM_retraction _ _ readRow_row]
+      rfl
+    | items lines =>
+      change (do let read ← (lines.map line).mapM readLine; pure (Block.items read)) = .ok (Block.items lines)
+      rw [mapM_retraction _ _ readLine_line]
+      rfl
+    | code language body => rfl
+    | table headers rows =>
+      change (do
+        let hs ← (headers.map Lean.Json.str).mapM (str "header")
+        let rs ← (rows.map fun (row : List Line) => Lean.Json.arr (row.map line).toArray).mapM readCells
+        pure (Block.table hs rs)) = .ok (Block.table headers rows)
+      rw [mapM_retraction Lean.Json.str (str "header") (fun _ => rfl), mapM_retraction _ _ readCells_cells]
+      rfl
+    | graph key caption nodes edges =>
+      change (do
+        let ns ← (nodes.map fun (n : GraphNode) => Json.mkObj (([("key", n.key), ("label", n.label),
+          ("status", n.status), ("detail", n.detail)] : List (String × Json)) ++
+          (n.ref.map fun r => [("ref", Lean.Json.str r)]).getD [])).mapM readNode
+        let es ← (edges.map fun (value : String × String) => Lean.Json.arr #[value.1, value.2]).mapM readEdge
+        pure (Block.graph key caption ns es)) = .ok (Block.graph key caption nodes edges)
+      rw [mapM_retraction _ _ readNode_node, mapM_retraction _ _ readEdge_edge]
+      rfl
+    | part key title body =>
+      change (do
+        let bs ← (readValues (Block.foldList algebra body)).mapM id
+        pure (Block.part key title bs)) = .ok (Block.part key title body)
+      rw [readValues_eq, List.mapM_map]
+      change (do let bs ← (Block.foldList algebra body).mapM readBlock
+                 pure (Block.part key title bs)) = .ok (Block.part key title body)
+      rw [readBlocks_fold body]
+      rfl
+  /-- Step of `document-json-fold-retraction`, consumed by `Document.ofJson_json`. -/
+  private theorem readBlocks_fold (blocks : List Block) :
+      (Block.foldList algebra blocks).mapM readBlock = .ok blocks := by
+    cases blocks with
+    | nil => rfl
+    | cons head tail =>
+      rw [Block.foldList, List.mapM_cons, readBlock_fold head, readBlocks_fold tail]
+      rfl
+end
+
+/-- G6: the structural JSON reader retracts the document fold at every finite depth.
+Placement: concept `initial-algebras-folds`, claim `document-json-fold-retraction`.
+Consumer: graph inspection and the site's document reader. This states equality of document
+values; it makes no claim about external JSON parsers or drawing layout. -/
+theorem Document.ofJson_json (document : Document) :
+    Document.ofJson (Document.json document) = .ok document := by
+  cases document with
+  | mk title producer body =>
+    change (do
+      let ps ← (producer.map Lean.Json.str).mapM (str "producer")
+      let bs ← (Block.foldList algebra body).mapM readBlock
+      pure (Document.mk title ps bs)) = .ok (Document.mk title producer body)
+    rw [mapM_retraction Lean.Json.str (str "producer") (fun _ => rfl), readBlocks_fold]
+    rfl
 
 end Tools.Document.Json
