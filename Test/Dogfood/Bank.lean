@@ -117,8 +117,7 @@ def start : Repo := (2, [(1, "milk", false)])
 /-- A program built over the to-do's table, run by the reference model from `start`: the run,
 and the model's state after it. -/
 def runOf (p : NativeEff) : Option (Run × Repo) :=
-  (Api.Author.Internal.finishBuild p application.table
-    application.declarations.rowNames).toOption.map fun b =>
+  (Api.Author.Internal.finishBuild p application.table).toOption.map fun b =>
       Run.runWith b repository start application.name
 
 /-- A run's exit, and the number of host answers that it applied. -/

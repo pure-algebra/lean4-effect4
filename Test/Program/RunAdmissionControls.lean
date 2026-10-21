@@ -1,6 +1,7 @@
 import Effect4.Laws.Api.Built
 import Effect4.Laws.Api.LiveRecord
 import Effect4.Run.View
+import Effect4.Tool.ToolDerived
 
 /-! Finite S4 admission and run controls. The restored-run theorem keeps its full statement.
 The tests claim no native translation theorem or host progress. -/
@@ -53,12 +54,24 @@ def liveHole : Sketch :=
 -- Unused metadata adds no admission rule of its own.
 #guard (Api.Built.ofSketch {} { program := .succeed (.lit (.nat 1)), holes := [ask] }).isOk
 
--- The record retains stored names, empty session names, and both budgets.
+-- The record restores derived row names, empty session names, and both budgets.
 def restored : Option Live :=
   (Api.Built.ofSketch app sketch).toOption.bind fun built =>
-    let live := Live.open { built with rowNames := [("stored", 9)] } "" budget
+    let live := Live.open built "" budget
     (LiveRecord.save live).restore.toOption
 #guard restored.map (·.run.id) = some ""
-#guard restored.map (·.run.built.rowNames) = some [("stored", 9)]
+#guard restored.map (·.run.built.rowNames) = some [("ask", 0)]
 #guard restored.map (·.run.budget) = some budget
+-- The strict decoder refuses the old eight-field record layout.
+#guard restored.map (fun live =>
+  let oldLayout : Store.Val := .ctor 0 [
+    Store.Canonical.toVal LiveRecord.currentVersion,
+    Store.Canonical.toVal live.run.built.app,
+    Store.Canonical.toVal live.run.built.program,
+    Store.Canonical.toVal live.run.id,
+    Store.Canonical.toVal live.run.profile,
+    Store.Canonical.toVal live.run.budget,
+    Store.Canonical.toVal live.run.journal,
+    Store.Canonical.toVal live.run.built.rowNames]
+  (Store.Canonical.decode (α := LiveRecord) oldLayout.encode).isNone) = some true
 end Test.Program.RunAdmissionControls

@@ -37,7 +37,7 @@ def pairApp : SigApp := ({} : SigApp).withHoles pairSketch.holes
 
 def pairLive : Option Live :=
   match admitProgram pairSketch.program pairApp with
-  | .ok admitted => some (Live.open ⟨pairApp, pairSketch.program, admitted, [("h", 0)]⟩ "multi")
+  | .ok admitted => some (Live.open ⟨pairApp, pairSketch.program, admitted⟩ "multi")
   | .error _ => none
 
 def started : Option Live := pairLive.map fun l => (l.feed .start).1
@@ -71,7 +71,7 @@ def afterFirst : Option Live := started.bind fun l => firstKey.map fun k =>
   let r := LiveRecord.save l
   match Store.Canonical.decode (α := LiveRecord) (Store.Canonical.encode r) with
   | some r' => r'.version == r.version && r'.session == r.session && r'.journal == r.journal &&
-      r'.rowNames == r.rowNames
+      decide (r'.object = r.object)
   | none => false) = some true
 
 -- Control 3: a record with an unknown format version is refused by `restore`.

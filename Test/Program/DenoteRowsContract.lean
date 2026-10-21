@@ -91,7 +91,7 @@ example (tape : ReplyTape) :
 #guard (built? (Test.Dogfood.Scenario.Routing.request "secret" 2 "2")).map
     (fun b => StraightRows b.table b.program) = some true
 -- control (the table's domain): the checker refuses a position outside the table
-#guard ((Effect4.Api.Author.Internal.finishBuild (call 3 (num 1)) [wait] []).toOption).isNone
+#guard ((Effect4.Api.Author.Internal.finishBuild (call 3 (num 1)) [wait]).toOption).isNone
 
 /-! ## Slice H2: an appended table -/
 

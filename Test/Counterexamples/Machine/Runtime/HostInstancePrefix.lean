@@ -30,7 +30,7 @@ def admitted : Api.AdmittedProgram program (.ofTable table) where
   signature := by decide +kernel
   columnsType := by decide +kernel
 
-def built : Api.Built := ⟨table, program, admitted, []⟩
+def built : Api.Built := ⟨table, program, admitted⟩
 def initial : Run := Run.open built "instance-prefix" ⟨100, 100⟩
 def waiting : Run := initial.control Api.evaluate
 def answered : Run := waiting.answer ⟨Api.root, 0⟩ (.ofExit (.success (.nat 17)))

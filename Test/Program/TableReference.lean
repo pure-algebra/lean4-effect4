@@ -60,7 +60,7 @@ def reply (v : Nat) : List Move := answer (.row "H.wait") (ok (.nat v))
 
 def raw (program : NativeEff) (table : RowTable) (moves : List Move)
     (budget : Effect4.Api.Budget := {}) : Option (Bool × Bool × Bool × Bool) :=
-  ((Effect4.Api.Author.Internal.finishBuild program table []).toOption).map fun b =>
+  ((Effect4.Api.Author.Internal.finishBuild program table).toOption).map fun b =>
     sides (play (Run.open b "raw" budget) moves)
 
 /-- Three calls in sequence: each request is the reply before it. -/

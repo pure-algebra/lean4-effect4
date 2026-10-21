@@ -26,7 +26,7 @@ def run (p : Api.Program) (table : RowTable) (exits : List ExitV) (budget : Api.
     Option Effect4.Run :=
   match Api.admitProgram p (.ofTable table) with
   | .ok admitted =>
-    some (Effect4.Run.runWith ⟨table, p, admitted, []⟩
+    some (Effect4.Run.runWith ⟨table, p, admitted⟩
       (Effect4.Run.Reactor.ofHost table (Denote.tapeHost table)) exits "list" budget).1
   | .error _ => none
 

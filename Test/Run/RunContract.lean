@@ -39,8 +39,7 @@ def echo : Run.Reactor Unit := fun _ request st => some (.ofExit (.success reque
 def twice : Api.Built :=
   { app := Test.Api.HostSessionContract.table
     program := Test.Api.HostSessionContract.program
-    admitted := Test.Api.HostSessionContract.admitted
-    rowNames := [("Host.wait", 0)] }
+    admitted := Test.Api.HostSessionContract.admitted }
 
 -- finite evaluation: the call map lists the program's two host calls, each at its address, by
 -- the spelling of the row it calls (`Api.Built.calls`, dogfood friction F10)
@@ -108,8 +107,7 @@ def pairAdmitted : Api.AdmittedProgram pairProgram ⟨Test.Api.HostSessionContra
 def pairUp : Api.Built :=
   { app := Test.Api.HostSessionContract.table
     program := pairProgram
-    admitted := pairAdmitted
-    rowNames := [("Host.wait", 0)] }
+    admitted := pairAdmitted }
 
 def forked : Run := (Run.runWith pairUp echo () (id := "multi")).1
 

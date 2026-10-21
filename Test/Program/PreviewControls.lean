@@ -46,7 +46,7 @@ def liveFirst : Option Live :=
   match admitProgram programFirst appFirst with
   | .error _ => none
   | .ok admitted =>
-    some ((Live.open ⟨appFirst, programFirst, admitted, [("L.first", 0)]⟩ "first").feedAll
+    some ((Live.open ⟨appFirst, programFirst, admitted⟩ "first").feedAll
       [.start, .receive (.row "L.first") (.ofExit some1), .apply (.row "L.first"), .flush])
 
 #guard (liveFirst.bind fun l => l.run.exit) = some some1
@@ -83,7 +83,7 @@ def liveHandle : Option Live :=
   match admitProgram handleProg handleApp with
   | .error _ => none
   | .ok admitted =>
-    some ((Live.open ⟨handleApp, handleProg, admitted, [("resource", 0)]⟩ "handles").feedAll
+    some ((Live.open ⟨handleApp, handleProg, admitted⟩ "handles").feedAll
       [.start, .receive (.row "resource") (.ofExit allocReply), .apply (.row "resource"), .flush])
 
 #guard (liveHandle.bind fun l => l.run.exit) = some (.success (Value.external 0))
@@ -150,7 +150,7 @@ def liveHoleExit : Option ExitV :=
   match Preview.admit holeApp holeSketch.program with
   | .error _ => none
   | .ok admitted =>
-    let l := (Live.open ⟨holeApp, holeSketch.program, admitted, [("hole", 0)]⟩ "agree").feedAll
+    let l := (Live.open ⟨holeApp, holeSketch.program, admitted⟩ "agree").feedAll
       [.start, .receive (.row "hole") (.ofExit rightReply), .apply (.row "hole"), .flush]
     l.run.exit
 

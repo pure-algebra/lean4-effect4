@@ -56,7 +56,7 @@ def named : SigApp := { types := [("Todo", .nat)] }
 
 -- A named type is refused by `Built.print` too, through the built program's certificate.
 #guard match admitProgram one named with
-  | .ok admitted => match (⟨named, one, admitted, []⟩ : Api.Built).print with
+  | .ok admitted => match (⟨named, one, admitted⟩ : Api.Built).print with
     | .error (.declarations 0 1) => true
     | _ => false
   | .error _ => false

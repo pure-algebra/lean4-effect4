@@ -45,8 +45,8 @@ def startRefuses : Bool :=
 /-- Restoration repeats program admission and checks its own record version. -/
 def restoreRefuses : Bool :=
   let record : LiveRecord :=
-    ⟨1, {}, malformed, "seams-s0", "test", budget, [], []⟩
-  !record.restore.isOk && !{ record with program, version := 2 }.restore.isOk
+    ⟨1, ⟨{}, malformed⟩, "seams-s0", "test", budget, []⟩
+  !record.restore.isOk && !{ record with object := ⟨{}, program⟩, version := 2 }.restore.isOk
 
 #guard checkRoundTrip
 #guard startRestore
