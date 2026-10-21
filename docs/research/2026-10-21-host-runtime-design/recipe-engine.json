@@ -1,0 +1,71 @@
+{
+ "format": "effect4-lcnf-roots-v3",
+ "facade": {
+  "module": "Project"
+ },
+ "artifacts": [
+  {
+   "out": "engine_gen.ml",
+   "import": [
+    "Effect4.Run.LiveRecord"
+   ],
+   "cap": 4000,
+   "linkage": [
+    "Effect4.Program.Object.open",
+    "Effect4.Live.open",
+    "Effect4.Live.feed",
+    "Effect4.Run.drive",
+    "Effect4.Run.observe",
+    "Effect4.LiveRecord.save",
+    "Effect4.LiveRecord.restore"
+   ],
+   "open": {
+    "module": "Eff_types",
+    "artifact": "ocaml/eff/eff_types.ml"
+   }
+  },
+  {
+   "out": "todo_host_gen.ml",
+   "import": [
+    "Effect4.Run.LiveRecord",
+    "Test.Dogfood.Scenario.Todo.Typed"
+   ],
+   "cap": 4000,
+   "linkage": [
+    "Test.Dogfood.Scenario.Todo.Typed.Host.reactor"
+   ],
+   "open": {
+    "module": "Eff_types",
+    "artifact": "ocaml/eff/eff_types.ml"
+   },
+   "uses": [
+    {
+     "module": "Engine_gen",
+     "artifact": "engine_gen.ml"
+    }
+   ]
+  },
+  {
+   "out": "todo_model_gen.ml",
+   "import": [
+    "Effect4.Run.LiveRecord",
+    "Test.Dogfood.Scenario.Todo.Typed"
+   ],
+   "cap": 4000,
+   "linkage": [
+    "Test.Dogfood.Scenario.Todo.Typed.Host.reactor",
+    "Test.Dogfood.Scenario.Todo.Typed.model"
+   ],
+   "open": {
+    "module": "Eff_types",
+    "artifact": "ocaml/eff/eff_types.ml"
+   },
+   "uses": [
+    {
+     "module": "Engine_gen",
+     "artifact": "engine_gen.ml"
+    }
+   ]
+  }
+ ]
+}

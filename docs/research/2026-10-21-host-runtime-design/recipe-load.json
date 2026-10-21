@@ -1,0 +1,5 @@
+{"format":"effect4-lcnf-roots-v3","facade":{"module":"Project"},"artifacts":[
+ {"out":"load_gen.ml","import":["Effect4.Api.Object"],"cap":4000,
+  "linkage":["Effect4.Program.Object.load","Effect4.Program.Object.bytes"],
+  "open":{"module":"Eff_types","artifact":"ocaml/eff/eff_types.ml"}}
+]}
