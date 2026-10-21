@@ -381,6 +381,35 @@ First, before item 1: the to-do as a user's project, outside the library
   development the declared fact cites, and the six hand files go. Left for the coordinator:
   `docs/ARCHITECTURE.md` still names `clock/`, and `src/Effect4/Laws/Run/Tree.lean` calls
   `BudgetDefs.v` history.
+- **4c landed** 2026-10-20 (`d5b4130e7`, base `840e2279f`): the lane checks generated tree control with a shared evaluator and runner.
+  This finite comparison establishes neither those shared operations nor the LCNF lowering's correctness.
+  `rocq/LaneExtract.v` extracts `Tree.ofProgram` from the generated `rocq/Skeleton.v`.
+  `ocaml/gen/roots.json` exports all 23 evaluator operations through the comparison consumer, `Rocq_gen`.
+  The adapter in `ocaml/engine/test/rocq/test_rocq.ml` copies tree constructors and maps their continuations.
+  Both trees run through `Closure_gen`, the internal type owner. The installed facade remains unchanged.
+  The observation remains host calls and replies, cell answers and the stop. It excludes stores and host state.
+  Deleted: the six hand Rocq files, 2,824 lines, and `lane_eval.ml`, 53 lines.
+  Hand Rocq falls from 3,910 lines to 1,064. The commit adds 2,240 lines and deletes 5,064 across 34 files.
+  Seven obsolete API linkage roots go. `scripts/check-export-classes.py` checks a remaining linkage root and refuses the retired store helper.
+  R2 now checks caught failure and context read. R5 detects a changed budget and a changed evaluator.
+  The lane passes 13 checks. R3 compares 7 requests, with 0 differences.
+  R4 retains 51 selected programs, 36 typed, with 0 differences under either host.
+  Median executable time over five runs is 0.0289 seconds before and 0.0378 seconds after, on this machine.
+  The eight retained Rocq files compile. `Assumptions.v` still prints exactly 25 evaluator parameters: 23 operations and 2 types.
+  No declared fact becomes a planned goal. Both Lean modules change comments alone.
+  `ofProgram_approx` remains declared from `Approx.ofProgram_approx` in `rocq/SkeletonApprox.v`.
+  `ofProgram_eq_denoteRowsB` remains an open planned goal. Adequacy and divergence remain unproved for the generated development.
+  `python3 /private/tmp/seams-lean-one.py` wraps each Lean command below.
+  `lake build Effect4.Run.Tree Effect4.Run.Kit Effect4.Run Effect4.Laws.Run.Tree Effect4.Laws.Api.Preview Effect4.Laws ProofGraph.AxiomAudit ProofGraph.Plan ProofGraph.ClosureAudit` passes.
+  `make batteries-touched BASE=840e2279f` reports no battery reached.
+  `#axiom_audit Effect4.Run.Tree Effect4.Laws.Run.Tree`: 343 declarations within `[propext, Quot.sound]`, 3 modulo planned goals, 2 planned goals.
+  `#closure_audit Effect4.Run.Tree`: 291 declarations, none binding a table before a returned closure.
+  `#plan_status` confirms the declared monotonicity, the open equality, and the same three dependents modulo monotonicity.
+  `make gen-rocq`, `make gen-rocq-lane`, and `python3 scripts/generate.py --only lcnf` reproduce their outputs.
+  Other generated families remain unchanged. `make check-ocaml` passes every lane.
+  `make check-sweep` passes, including the full Test build and the module, library-root and axiom gates.
+  The full build runs because the owner clarifies that its cost warrants judgment, not a prohibition.
+  Proposed: record 4c in the decisions register. Retire `InRocq` and widen R4 to every corpus program in the named follow-up.
 - **4b landed** 2026-10-20 (`79fd87bfa`): a Lean declaration is lowered into one artifact. The
   recipe names the artifacts an artifact uses (`uses`), read through `OCaml5.Lcnf.Export`, and
   the api artifact uses `eff_image`. Its walk stops at every declaration that `eff_image`'s walk
