@@ -47,8 +47,8 @@ Row 373 rules two parts of that promise for the first share (2026-10-13):
 
 ## 2. How host answers flow today
 
-A deployment's reactor reads its external client as a partial comodel of the row signature (`Reactor`, `src/Effect4/Run/Basic.lean`).
-A gate's reactor replays a prescribed trace.
+A deployment's session client supplies a partial comodel of the row signature (`Reactor`, `src/Effect4/Run/Basic.lean`).
+This gate's queue replays a prescribed request trace. Its repository reactor executes the repository model.
 `Reactor.tensor` combines reactors on product state; disjoint supported rows give the comodel tensor equations (`src/Effect4/Run/Runner.lean`).
 Overlapping supported rows use the left answer.
 `Reactor.queue` represents a reply-blind client of the session rows, with the remaining requests as state.

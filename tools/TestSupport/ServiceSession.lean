@@ -32,13 +32,13 @@ def emit (out : System.FilePath) : IO Unit := do
     [.named [{ imported := "Session", localName := "Session", typeOnly := false }]
       "./session-host.ts" false] }
   IO.FS.writeFile (out / "session.ts") (Tools.Code.moduleText Tools.Code.Ts.width file)
-  let some (run, state) := Test.Api.SessionFixtures.exampleRun
+  let some (run, _) := Test.Api.SessionFixtures.exampleRun
     | throw (IO.userError "service session: Lean execution unavailable")
   let some exit := run.exit
     | throw (IO.userError "service session: Lean execution has no final exit")
   let requests ← Test.Api.SessionFixtures.exampleRequests.mapM
     (encoded (.prod (.lit "check") .nat))
-  let replies ← state.1.2.mapM fun (_, reply) => encoded (.exitOf .nat .nat) reply
+  let replies ← (Test.Api.SessionFixtures.replies run).mapM fun (_, reply) => encoded (.exitOf .nat .nat) reply
   let final ← encoded (.exitOf .unit .never) (reifyExitVal exit)
   IO.FS.writeFile (out / "session-expected.json") (Compiler.jsonText (.obj
     [("requests", .arr requests), ("replies", .arr replies), ("exit", final)]) ++ "\n")

@@ -102,7 +102,7 @@ states exactly what was proved or requested.
 | --- | --- | --- |
 | Claim identity, concept, role, title and evidence pointer | `Tools.Semantics.registry` | Authored assignments identifying a theoretical question and its selected evidence. |
 | Theorem statement, universes, module and axioms | Loaded Lean environment | A `witness` is checked as a theorem of its own printed proposition under the semantic axiom ceiling `[propext, Quot.sound]`. |
-| Obligation proposition and checked/wanted evidence | Existing `ProofGraph` ledger | A `goal` is a declared question. Its checked witness or wanted hole must match that question, including binders and universes. Selected goals do not establish coverage of an entire ledger scope. |
+| Obligation proposition and checked/wanted evidence | Existing `ProofGraph` ledger | A `goal` is a declared question. Its checked witness or wanted declaration must match that question, including binders and universes. Selected goals do not establish coverage of an entire ledger scope. |
 | Refutation and contest associations | Registry links to `Test/Counterexamples/REGISTER.md` | Checks the referenced row and witness theorem. Read the row's attacked statement and revision alongside the printed evidence. |
 | Applicability | Decisions register, referenced by `Cut` | A cut limits the question's domain. It does not prove, refute or discharge the question. |
 | Declaration placement | Explicit concept tag, then semantics registry module default | Each eligible declaration has one primary home; inherited placement is provisional. |
@@ -812,11 +812,13 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   It serves R12 and establishes no total writing, raw JSON text identity or native parser correctness.
 - **Stored byte reading (`cas-node-read-exact`)**: every successful `Node.read` returns an exactly encoded node.
   The pointer is `Node.read_exact` (`src/Effect4/Store/Domain/NodeRead.lean`), with compatibility role.
-  This law establishes no codec value admission, hashing, capacity, or persistence property.
+  This law does not establish admission of node values into the store graph.
+  It establishes no hashing, capacity or persistence property.
 - **Typed stored reading (`cas-get-exact`)**: a successful `Cas.get` names the carrier's exact resident node.
   The pointer is `Cas.get_exact` (`src/Effect4/Store/Domain/Cas.lean`), with compatibility role.
   Version, kind, per-value specification, and canonical payload checks retain the genesis exception.
-  The replay parameter stays explicit; this law establishes no atomicity or codec value admission property for an arbitrary interpreter.
+  The replay parameter stays explicit.
+  The law establishes no atomicity or admission of node values into a store for an arbitrary interpreter.
 - **Content handles (`cas-admission-handles`)**: every successful node insertion passes the kind's handle rule before edges and residency.
   The pointer is `putNode_ok_handleFree` (`src/Effect4/Store/Domain/Store.lean`), with preservation role.
   `Store.Sound.handles` and accepted words carry this rule; no host persistence or progress claim follows.
@@ -1618,7 +1620,8 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
 
   The tensor equations act on separate state components.
   They realize the comodel tensor for disjoint supported rows; overlapping supports give the left answer priority.
-  `Reactor` is partial over erased values, so its interpretation uses `StateT σ Option` and requires reply admission.
+  `Reactor` is partial over erased values, so its exit-answer interpretation uses `StateT σ Option`.
+  The checked `Run` separately admits each answer.
   These equations establish no host progress, session/client agreement theorem, or state-monad interpretation of every `Eff` constructor.
   The to-do agreement on replies and final repository is finite evidence in `Test/Api/SessionContract.lean`.
 - **Open part: a general client as a reactor**: No definition, proof pointer or planned goal exists for this property.
