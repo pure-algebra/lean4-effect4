@@ -1,4 +1,5 @@
 import Compiler.Json
+import Effect4.Api.Object
 import Effect4.Program.Authoring.ApplicationService
 import Effect4.Api.Author
 import Effect4.Api.RefusalsDerived
@@ -69,9 +70,7 @@ def checkProgram (program : NativeEff) (app : SigApp := {}) : Except CheckRefusa
 holds it: the answer, the error and the keys required, the rows, the services' keys with their
 names, and the definitions' declarations. -/
 def certificate (b : Api.Built) : NatJson :=
-  .obj [("answer", tree b.ty.answer), ("error", tree b.ty.error), ("requires", tree b.requires),
-    ("rows", tree b.table), ("services", tree (nativeSignature b.table).keyNames),
-    ("declarations", tree b.program.defsOf)]
+  tree b.certificate
 
 /-- A column's text: the request, then its type (`Tools.Code.effTyText`). -/
 def columnText (request answer error : Ty) (requires : List ServiceKey) : String :=

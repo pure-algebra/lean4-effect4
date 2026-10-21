@@ -651,7 +651,7 @@ def here : Elaborated := elaborated%
 -- its signature context, one line a row.
 #guard match check Test.Dogfood.Scenario.Todo.application with
   | .ok b =>
-    match reading "todo" b .rows with
+    match reading b .rows with
     | .ok r => jsonText r.json == jsonText (tree b.table) && (r.text.splitOn "\n").length == 4
     | .error _ => false
   | .error _ => false
@@ -659,7 +659,7 @@ def here : Elaborated := elaborated%
 -- `types` is the address table: its first line is the root, at the program's type.
 #guard match check Test.Dogfood.Scenario.Todo.application with
   | .ok b =>
-    match reading "todo" b .types with
+    match reading b .types with
     | .ok r => (r.text.splitOn "\n").head? == some ("[] " ++ Tools.Code.effTyText b.ty)
     | .error _ => false
   | .error _ => false
@@ -668,7 +668,7 @@ def here : Elaborated := elaborated%
 -- its indented text reads back to the same tree.
 #guard match check Test.Dogfood.Scenario.Todo.application with
   | .ok b =>
-    match reading "todo" b .graph with
+    match reading b .graph with
     | .ok r => (jsonText r.json).toUTF8.data.toList ++ [10] == (programJson b.program).data.toList &&
         (match NatJson.parse (NatJson.codes r.text) with
           | .ok t => jsonText t == jsonText r.json
@@ -679,7 +679,7 @@ def here : Elaborated := elaborated%
 -- `surface` is the service's four methods, as its Schemas state them.
 #guard match check Test.Dogfood.Scenario.Todo.application with
   | .ok b =>
-    match reading "todo" b .surface with
+    match reading b .surface with
     | .ok r => (r.text.splitOn "\n").map (fun l => (l.splitOn "(").headD "") ==
         ["TodoApp.add", "TodoApp.list", "TodoApp.complete", "TodoApp.remove"]
     | .error _ => false
@@ -688,9 +688,9 @@ def here : Elaborated := elaborated%
 -- control: a program with no service has an empty surface, and the manifest is `describe`'s, no
 -- reading.
 #guard match checkProgram first.2 with
-  | .ok b => (match reading "p42" b .surface with
+  | .ok b => (match reading b .surface with
       | .ok r => r.text == "" && jsonText r.json == "[]"
-      | .error _ => false) && (reading "p42" b .manifest).toOption.isNone
+      | .error _ => false) && (reading b .manifest).toOption.isNone
   | .error _ => false
 
 -- The reader of `inspect`'s options: `--what` names a reading, `--json` the form, and what is left

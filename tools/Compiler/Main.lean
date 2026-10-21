@@ -11,24 +11,27 @@ import Compiler.Elaborated
 by static import, as decision E1 asks: the value of a declaration loaded by name cannot be
 evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
 
-    check [--json]
+    check [--json] [--out FILE.obj]
+    open FILE.obj
     emit [--target ts|ocaml] [--check] [--out DIR] [--emit=module,surface,canonical,certificate,manifest]
     describe [--target ts|ocaml] [--out DIR] [--emit=…] [--pretty]
     inspect --what types|rows|surface|graph|manifest [--json] [the options of describe]
     run [--text | --typed | --json] [--script FILE] [--budget N]
 
+- `open FILE.obj` reads and admits a saved object, then prints its certificate as JSON.
+  It needs no group, application source, prelude or host.
 - `check` builds the application's service module (`Compiler.check`) and prints its certificate:
   as text, each service's key with the Lean names that declare it, or as one line of JSON under
   `--json`. A refusal is one located refusal, printed the same two ways.
+  `--out FILE.obj` writes the admitted object; a refusal leaves that file unchanged.
 - `emit` writes the checked emission into one folder (`Compiler.emitTs`), by default
   `.lake/effect4/<name>/<target>/`. `--emit` selects the kinds; the default is all of them.
   `--target ts` is the default. `--target ocaml` lowers the named roots through `lcnfgen`.
   `--check` compiles the native module, and never runs it.
 - `describe` prints the manifest that `emit` with the same options would write, and writes
   nothing: as one line, or indented under `--pretty` (`prettyText`).
-- `inspect` prints one reading of the built program (`Compiler.Inspect`): one query of the tool
-  protocol, the surface, or the manifest that `describe` prints. As text, or as one line of JSON
-  under `--json`.
+- `inspect` prints the object's address table, rows, graph, surface, or emission manifest (`Compiler.Inspect`).
+  It prints text, or one line of JSON under `--json`.
 - `run` runs each request of a script on the Lean machine over the application's host, and prints
   one line a request (`Compiler.Run`): a readable line (`--text`, the default), the exit encoded at
   its own type (`--typed`), or the result's value tree as JSON (`--json`). The host and the default
@@ -58,7 +61,8 @@ open Effect4 Effect4.Program Effect4.Program.Authoring
 
 /-- A command's options, in words. -/
 def usageOf : String → String
-  | "check" => "check [--json]"
+  | "check" => "check [--json] [--out FILE.obj]"
+  | "open" => "open FILE.obj"
   | "emit" => "emit [--target ts|ocaml] [--check] [--out DIR] [--emit=KIND,…]"
   | "describe" => "describe [--target ts|ocaml] [--out DIR] [--emit=KIND,…] [--pretty]"
   | "inspect" => "inspect --what " ++ "|".intercalate (What.all.map What.name) ++
@@ -73,7 +77,7 @@ def kindsText : String :=
 
 /-- The command line, in words. -/
 def usage : String :=
-  "usage: " ++ " | ".intercalate (["check", "emit", "describe", "inspect", "run"].map usageOf) ++
+  "usage: " ++ " | ".intercalate (["check", "open", "emit", "describe", "inspect", "run"].map usageOf) ++
     "; " ++ kindsText
 
 /-- **A usage error**: the command, why, and the command's options (`usageOf`); exit code `2`. -/
@@ -81,6 +85,37 @@ def usageError (command why : String) : IO UInt32 := do
   let kinds := if ["emit", "describe", "inspect"].contains command then s!"; {kindsText}" else ""
   IO.eprintln s!"{command}: {why}; usage: {usageOf command}{kinds}"
   return 2
+
+/-- The certificate's presentation and optional single-object output file. -/
+structure CheckOptions where
+  json : Bool := false
+  out : Option String := none
+  deriving DecidableEq
+
+/-- Parse check options before checking or writing any program. -/
+def CheckOptions.read : List String → CheckOptions → Except String CheckOptions
+  | [], o => .ok o
+  | "--json" :: rest, o => CheckOptions.read rest { o with json := true }
+  | "--out" :: file :: rest, o =>
+    if file.startsWith "--" then .error "--out needs a file"
+    else if o.out.isSome then .error "--out names one file only"
+    else CheckOptions.read rest { o with out := some file }
+  | ["--out"], _ => .error "--out needs a file"
+  | arg :: _, _ => .error s!"{arg} is no option"
+
+/-- Load a saved object without an application, then print its generated certificate. -/
+def openCommand (args : List String) : IO UInt32 := do
+  let file ← match args with
+    | [file] =>
+      if file.startsWith "--" then return (← usageError "open" "name one object file")
+      else pure file
+    | _ => return (← usageError "open" "name one object file")
+  try
+    let bytes ← IO.FS.readBinFile file
+    match Object.load bytes.data.toList with
+    | .ok b => IO.println (jsonText (certificate b)); return 0
+    | .error why => IO.eprintln ("open: " ++ jsonText (tree why)); return 1
+  catch error => IO.eprintln s!"open: {file}: {error}"; return 1
 
 /-- The options of `emit` and `describe`: the target, the output folder, the kinds, and whether
 `describe` indents the manifest. -/
@@ -147,9 +182,21 @@ def printRefusal (source : Source) (name : String) (why : CheckRefusal) (json : 
 /-- `check`: the certificate, or the refusal. Over a group, each program's, under its name; the
 command refuses when one program refuses. The text names the declarations of each service's key
 (`Elaborated.namesOf`). -/
-def checkCommand (source : Source) (elaborated : Elaborated) (json : Bool) : IO UInt32 := do
+def checkCommand (source : Source) (elaborated : Elaborated) (json : Bool)
+    (out : Option String := none) : IO UInt32 := do
+  if out.isSome then
+    match source with
+    | .programs _ programs _ =>
+      unless programs.length == 1 do
+        return (← usageError "check" "--out needs exactly one program")
+    | .application .. => pure ()
   let mut refused := false
   for (name, built) in builtOf source do
+    if let some file := out then
+      if let .ok b := built then
+        try
+          IO.FS.writeBinFile file ⟨(Object.ofBuilt b).bytes.toArray⟩
+        catch error => IO.eprintln s!"check: {file}: {error}"; return 1
     match built, source with
     | .error why, _ => refused := true; printRefusal source name why json
     | .ok b, .application app _ _ _ =>
@@ -346,7 +393,7 @@ def inspectCommand (source : Source) (elaborated : Elaborated) (args rest : List
       match built with
       | .error why => failed := true; printRefusal source name why json
       | .ok b =>
-        match reading name b what, source, json with
+        match reading b what, source, json with
         | .error why, _, _ => failed := true; IO.eprintln s!"inspect: {name}: {why}"
         | .ok r, .application .., true => IO.println (jsonText r.json)
         | .ok r, .application .., false => IO.println r.text
@@ -354,14 +401,16 @@ def inspectCommand (source : Source) (elaborated : Elaborated) (args rest : List
         | .ok r, .programs .., false => IO.println s!"{name}:\n{r.text}"
     return if failed then 1 else 0
 
-/-- **The command line over a source**: `check`, `emit`, `describe`, `inspect` or `run`. `args` are
+/-- **The command line over a source**: `check`, `open`, `emit`, `describe`, `inspect` or `run`. `args` are
 the arguments as given, which a header and the manifest record; `rest` are the ones the command
 reads. -/
 def run (source : Source) (elaborated : Elaborated) (args rest : List String) : IO UInt32 :=
   match rest with
-  | ["check"] => checkCommand source elaborated false
-  | ["check", "--json"] => checkCommand source elaborated true
-  | "check" :: options => usageError "check" s!"{" ".intercalate options} is no option"
+  | "check" :: options =>
+    match CheckOptions.read options {} with
+    | .ok o => checkCommand source elaborated o.json o.out
+    | .error why => usageError "check" why
+  | "open" :: options => openCommand options
   | "emit" :: options => emitCommand source elaborated .write args options
   | "describe" :: options => emitCommand source elaborated .describe (asEmit args) options
   | "inspect" :: options => inspectCommand source elaborated args options
@@ -385,10 +434,11 @@ def takeGroup : List String → Option String × List String
   | a :: rest => match takeGroup rest with
     | (group, others) => (group, a :: others)
 
-/-- **The compiler over named sources** (`lake exe effect4`): `main`'s command line, with
-`--group NAME` choosing the source of that name. -/
+/-- **The compiler over named sources** (`lake exe effect4`): `main`'s command line.
+`open` needs no source; other commands use the source that `--group NAME` chooses. -/
 def mainOver (groups : List Source) (args : List String)
     (elaborated : Elaborated := by exact elaborated%) : IO UInt32 := do
+  if let "open" :: options := args then return (← openCommand options)
   let names := ", ".intercalate (groups.map (·.name))
   match takeGroup args with
   | (some name, rest) =>

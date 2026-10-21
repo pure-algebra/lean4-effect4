@@ -1,30 +1,26 @@
 import Compiler.Check
 import Compiler.Json
-import Effect4.Tool.Serve
 import Effect4.Tool.CheckDerived
 import Effect4.Codegen.Surface
 
 /-!
-# Compiler.Inspect — a built program read through the tool protocol's queries
+# Compiler.Inspect — a built program read from its object
 
-`inspect --what W` (`docs/research/2026-10-20-compiler-entry/README.md`, §5) prints one reading of
-a built program. A reading is one query of the tool protocol (`Effect4.Tool`): the program is opened
-as the tool's document at its application (`Tool.serve`, the action `open`), the query is asked
-of that document, and its answer is printed. No reading walks the program itself.
+`inspect --what W` reads a built program's object directly, without opening a tool document.
+No reading walks the program itself.
 
-| `--what` | The query | What it prints |
-| --- | --- | --- |
-| `types` | `table`: each address with its typing environment and the checker's answer there | each address that holds a program, with its type, or the refusal the checker locates there |
-| `rows` | `doc` at the root: the inspection's signature context (`SigData.allRows`) | each row the program may perform, with its request, answer, error and keys |
-| `graph` | `doc` at the root: the inspection's sub-program, the whole program | the program's tree, in its public JSON (the tagged print, `<name>.eff.json`'s tree) |
-| `surface` | none: the printer's own reading of the program's services (`Program.servicesOf`, `entriesOf`, `entrySchemas`) | each data service's methods, as the emitted surface's Schemas state them: the arguments, the answer and the error |
-| `manifest` | none: `describe` (`Compiler.Main`) | the manifest that `emit` with the same options writes |
+| `--what` | What it prints |
+| --- | --- |
+| `types` | `Object.table`: each program address with its type or located refusal |
+| `rows` | The application's rows, with their request, answer, error and keys |
+| `graph` | The program's public JSON, as the emitted program file prints it |
+| `surface` | The surface's existing reading of the program's data services |
+| `manifest` | The emission manifest, handled by `Compiler.Main` |
 
-The tool protocol has no query for the surface, so `surface` reads it as the printer of the surface
-does, through the same three functions. The text is for a reader; `--json` prints the same reading
-as one line, through each carrier's public JSON (`Compiler.tree`).
+The text is for a reader; `--json` prints the same reading through each carrier's public JSON.
+The table's generated codec comes from `Effect4.Tool.CheckDerived`; no tool query runs here.
 
-What it does not establish: anything the query does not. A reading states the checker's answers
+What it does not establish: a run or target execution. A reading states the checker's answers
 and the program's data; it runs nothing, and tsgo checks nothing here.
 -/
 
@@ -33,7 +29,7 @@ namespace Compiler
 open Effect4 Effect4.Program Effect4.Store
 open Effect4.Machine.Env (Requirement)
 
-/-- **What `inspect` reads**: one query of the tool protocol, the surface, or the manifest. -/
+/-- What `inspect` reads: the object, the surface, or the emission manifest. -/
 inductive What where
   | types
   | rows
@@ -61,19 +57,10 @@ structure Reading where
   text : String
   json : NatJson
 
-/-- **The tool's state with a built program open**: the action `open`, under `name`, of the program
-at its application, with no hole (`Tool.serve`). -/
-def opened (name : String) (b : Api.Built) : Tool.State :=
-  (Tool.serve Check.Oracle.uncached Tool.empty (.act (.open_ name b.app ⟨b.program, []⟩))).value.1
-
-/-- **One query's answer** about a built program: the query served at the program's document. -/
-def ask (name : String) (b : Api.Built) (q : Tool.Query) : Except Tool.Refusal Tool.Answer :=
-  (Tool.serve Check.Oracle.uncached (opened name b) (.ask q)).value.2.result
-
 /-- An address as the view spells it: `[1 1 0]`. -/
 def pathText (p : List Nat) : String := "[" ++ " ".intercalate (p.map toString) ++ "]"
 
-/-- **`types`**, from the answer of `table`: each entry with a checker's answer, its address and its
+/-- **`types`**, from the object's address table: each entry with a checker's answer, its address and its
 type, or the refusal located where the checker places it. The JSON is the entries' public JSON. -/
 def typesReading (entries : List Table.Entry) : Reading :=
   { text := "\n".intercalate (entries.filterMap fun e => e.result.map fun r =>
@@ -82,15 +69,14 @@ def typesReading (entries : List Table.Entry) : Reading :=
         | .error why => s!"refused at {pathText why.path}: {why.reason.head}")
     json := tree entries }
 
-/-- **`rows`**, from the inspection at the root: the rows of its signature context, the
-application's and then the holes' (`SigData.allRows`), each with its columns as `check` prints
+/-- **`rows`**, from the application's rows, each with its columns as `check` prints
 them (`columnText`). The JSON is the rows' public JSON. -/
-def rowsReading (context : SigData) : Reading :=
-  { text := "\n".intercalate (context.allRows.map fun r =>
+def rowsReading (rows : RowTable) : Reading :=
+  { text := "\n".intercalate (rows.map fun r =>
       r.spelling ++ columnText r.request r.answer r.error r.requires)
-    json := tree context.allRows }
+    json := tree rows }
 
-/-- **`graph`**, from the inspection at the root: the program there, in its public JSON, laid out
+/-- **`graph`**, from the object's program, in its public JSON, laid out
 for a reader (`prettyText`). -/
 def graphReading (program : NativeEff) : Reading :=
   let t := tree program
@@ -113,22 +99,11 @@ def surfaceReading (program : NativeEff) : Reading :=
         .obj [("method", .str e.method), ("input", tree (Ty.tuple e.args)),
           ("answer", tree e.definition.answer), ("error", tree e.definition.error)]))]) }
 
-/-- **A built program's reading**, under the document name `name`: the one query `what` names,
-asked through the tool protocol, or the surface; or why the tool answers none. The manifest is
-`describe`'s, so it is no reading here. -/
-def reading (name : String) (b : Api.Built) : What → Except String Reading
-  | .types =>
-    match ask name b .table with
-    | .ok (.table entries) => .ok (typesReading entries)
-    | _ => .error "the tool answers no address table"
-  | .rows =>
-    match ask name b (.doc (some [])) with
-    | .ok (.doc { inspection := some i, .. }) => .ok (rowsReading i.context)
-    | _ => .error "the tool answers no inspection at the root"
-  | .graph =>
-    match ask name b (.doc (some [])) with
-    | .ok (.doc { inspection := some i, .. }) => .ok (graphReading i.expected)
-    | _ => .error "the tool answers no inspection at the root"
+/-- A built program's readings from its object. The manifest belongs to emission. -/
+def reading (b : Api.Built) : What → Except String Reading
+  | .types => .ok (typesReading (Object.ofBuilt b).table)
+  | .rows => .ok (rowsReading b.app.rows)
+  | .graph => .ok (graphReading b.program)
   | .surface => .ok (surfaceReading b.program)
   | .manifest => .error "the manifest is describe's"
 
