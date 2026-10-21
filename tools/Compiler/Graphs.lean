@@ -193,12 +193,13 @@ private def nodeAlgebra (program : Eff NativeOp) :
     EffAlgebra NativeOp (fun _ => List Nat → List NodeRow) :=
   EffAlgebra.ofLayer fun fam ctor args p =>
     let children := args.filterMap fun | .child _ f => some f | _ => none
-    let names := args.filterMap fun
-      | .op (.call k) => some (.call k)
-      | .op (.external i) => some (.row i)
-      | .key key => some (.key key)
-      | .path q => some (.ref q)
-      | _ => none
+    let names := args.flatMap fun
+      | .op (.call k) => [.call k]
+      | .op (.external i) => [.row i]
+      | .key key => [.key key]
+      | .keys keys => keys.elems.map .key
+      | .path q => [.ref q]
+      | _ => []
     { address := p, scope := scopeAt program p, sort := fam, ctor, names } ::
       children.zipIdx.flatMap (fun (f, i) => f (p ++ [i]))
 
@@ -402,6 +403,37 @@ def layers (r : Relations) (opens : Bool := false) : Block :=
   figure "layers" (if rs.isEmpty then "This program has no stored layer constructors."
     else "Stored layer constructor positions and reference targets; this picture states no merge commutativity.") ns es
 
+/-- **The layer term's wiring**, the hypergraph form of the note's §2.3: a layer constructor that
+provides a service (`succeed`, `effect`) is a box keyed by its address, with an edge to the wire
+of its key; a service key is a wire keyed by its name; a read of a key inside a box (`service`,
+`context`) plugs the key's wire into the box. So two providers of one key are two boxes on one
+pill, where last-wins applies (`Context.mergeAll`, `Layer.ts:1600`), and two readers of one key
+meet on its wire. A read outside every layer box is the program's own requirement and is not
+drawn. The figure states no evaluation order. -/
+def wiring (r : Relations) : Block :=
+  let boxes := r.nodes.filter fun n => n.sort == .layer && (n.ctor == "succeed" || n.ctor == "effect")
+  let keysOf (n : NodeRow) : List ServiceKey := n.names.filterMap fun | .key k => some k | _ => none
+  let boxKey (n : NodeRow) : String := "box:" ++ address n.address
+  let wireKey (k : ServiceKey) : String := "wire:" ++ keyText k
+  let provides := boxes.flatMap fun n => (keysOf n).map fun k => (boxKey n, wireKey k)
+  let reads := r.nodes.flatMap fun n =>
+    if n.ctor == "service" || n.ctor == "context" then
+      let enclosing := boxes.filter fun b => b.address.length < n.address.length && b.address.isPrefixOf n.address
+      match enclosing with
+      | [] => []
+      | first :: rest =>
+        let box := rest.foldl (fun acc b => if b.address.length > acc.address.length then b else acc) first
+        (keysOf n).map fun k => (wireKey k, boxKey box)
+    else []
+  let keys := ((boxes.flatMap keysOf) ++ (r.nodes.filter fun n => n.ctor == "service" || n.ctor == "context").flatMap keysOf).eraseDups
+  let wires := keys.filter (fun k => (provides ++ reads).any fun (a, b) => a == wireKey k || b == wireKey k)
+  let ns := boxes.map (fun n =>
+      { key := boxKey n, label := n.glyph.2 ++ " " ++ " ".intercalate ((keysOf n).map keyText),
+        status := "layer " ++ n.glyph.1, detail := address n.address }) ++
+    wires.map (fun k => { key := wireKey k, label := keyText k, status := "wire " ++ (glyph .eff "service").1, form := .wire })
+  figure "wiring" (if boxes.isEmpty then "This program's layer term provides no service."
+    else "The layer term's wiring: a providing constructor is a box keyed by its address, a service key a wire keyed by its name; a read inside a box plugs its wire in. No evaluation order is claimed.") ns (provides ++ reads)
+
 /-- Each mapping row names an entity or dependency present in the same relations. -/
 def mapping (r : Relations) : Block :=
   .table ["ours", "Effect TypeScript", "algebra"]
@@ -425,8 +457,8 @@ def document (b : Api.Built) (what : String) : Tools.Document.Document :=
   let opens := what == "relations"
   let figures := if what == "boundary" then [boundary r, boxes r]
     else if what == "calls" then [calls r]
-    else if what == "layers" then [layers r]
-    else [boundary r opens, boxes r opens, calls r opens, layers r opens]
+    else if what == "layers" then [layers r, wiring r]
+    else [boundary r opens, boxes r opens, calls r opens, layers r opens, wiring r]
   let tables := if what == "relations" then
     [Block.part "relation-nodes" "Nodes" [nodesTable r], .part "relation-defs" "Definitions" [defsTable r],
      .part "relation-rows" "Rows" [rowsTable r], .part "relation-calls" "Calls" [callsTable r]] else []

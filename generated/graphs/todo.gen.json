@@ -43,7 +43,7 @@
        [{"text": "action"}],
        [{"text": "⌕"}],
        [{"text": "read"}],
-       [{"text": ""}],
+       [{"text": "key 30:6"}],
        [{"text": "context"}]],
       [[{"text": "0.1"}],
        [{"code": "defs"}, {"text": " "}, {"text": "definitions"}],
@@ -1094,4 +1094,6 @@
     ["main", "row:8"]],
    "caption": "Calls from definitions and main to definitions and host rows."},
   {"line": [{"text": "This program has no stored layer constructors."}],
+   "kind": "para"},
+  {"line": [{"text": "This program's layer term provides no service."}],
    "kind": "para"}]}

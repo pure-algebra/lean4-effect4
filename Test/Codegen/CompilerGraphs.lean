@@ -37,6 +37,15 @@ def referencedCall : Object :=
       (.provideLayer (.ref [2, 0]) false (.service natKey))
       (.cons (.effect natKey (.perform (.external 0) (.lit .unit))) .nil) }
 
+/-- Two providers of one key, and two readers of it: the clash and the shared wire of the layer
+term's wiring. The keys share the service code of `unitKey`, so each body's answer is its key's. -/
+def twoProviders : Object :=
+  let app : ServiceKey := ⟨⟨31⟩, ⟨6⟩⟩
+  let app2 : ServiceKey := ⟨⟨32⟩, ⟨6⟩⟩
+  { app := {}, program := .defs [] .nil unitProgram
+      (.cons (.effect unitKey unitProgram) (.cons (.succeed unitKey .unit)
+        (.cons (.effect app (.service unitKey)) (.cons (.effect app2 (.service unitKey)) .nil)))) }
+
 /-- An empty declaration block still places its main at child one. -/
 def emptyBlock : Object := { app := {}, program := .defs [] .nil unitProgram .nil }
 
@@ -203,6 +212,25 @@ def recursive : Object :=
       panel.laid.regions.toList.any (fun r => r.key == Tools.View.Program.bracket d.body ++ "/region" && r.name == d.name)) &&
     panel.laid.boxesApart && panel.laid.edgesDescend
   | none => false
+
+-- Finite evaluation (the wiring, §2.3): two providers of one key are two boxes into one pill, and
+-- two readers of it are two boxes out of that pill; a box is keyed by its address, a wire by its name.
+#guard match twoProviders.open with
+  | .error _ => false
+  | .ok b => match wiring (Compiler.Graphs.read b) with
+    | .graph _ _ ns es =>
+      (document b "layers").check.isOk &&
+      (ns.filter (·.form == .wire)).map (·.key) == ["wire:k30_6", "wire:k31_6", "wire:k32_6"] &&
+      (ns.filter (·.form == .box)).length == 4 &&
+      (es.filter (·.2 == "wire:k30_6")).length == 2 && (es.filter (·.1 == "wire:k30_6")).length == 2 &&
+      es.contains ("box:2.0", "wire:k30_6") && es.contains ("box:2.1.0", "wire:k30_6") &&
+      es.contains ("wire:k30_6", "box:2.1.1.0") && es.contains ("wire:k30_6", "box:2.1.1.1.0")
+    | _ => false
+
+-- Control: the to-do stores no layer constructor, so its wiring is the empty figure, stated in words.
+#guard todoSession.any fun b => match wiring (Compiler.Graphs.read b) with
+  | .graph _ _ [] [] => true
+  | _ => false
 
 -- Control: a program with no block has one flow, and a rigid move keeps every key.
 #guard match emptyBlock.open, ({ app := {}, program := unitProgram } : Object).open with

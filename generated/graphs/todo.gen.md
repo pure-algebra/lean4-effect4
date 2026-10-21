@@ -12,7 +12,7 @@ Node addresses name stored syntax. Call addresses name the checked expansion; or
 |  | `block` block | eff | ❏ | define |  | defs |
 | 0 | `defs` definitions | effs | · | cons |  | cons |
 | 0.0 | `def:0` [TodoAppContext](#calls:node:def:0) | eff | ⌕ | read |  | withFiber |
-| 0.0.0 | `def:0` [TodoAppContext](#calls:node:def:0) | action | ⌕ | read |  | context |
+| 0.0.0 | `def:0` [TodoAppContext](#calls:node:def:0) | action | ⌕ | read | key 30:6 | context |
 | 0.1 | `defs` definitions | effs | · | cons |  | cons |
 | 0.1.0 | `def:1` [TodoApp_add](#calls:node:def:1) | eff | ⌜ ⌟ | provide |  | provideContext |
 | 0.1.0.0 | `def:1` [TodoApp_add](#calls:node:def:1) | eff | ─▶ | bind |  | bind |
@@ -203,4 +203,6 @@ flowchart TB
 ```
 
 This program has no stored layer constructors.
+
+This program's layer term provides no service.
 

@@ -16,6 +16,8 @@ calls to a typed SVG tree on `lean4-whatwg`'s kit (`Tools.View.SvgOut`). No scri
 * A node is anchored: its group carries the `id` that `anchor` gives its key, so a relation row's
   link (`Compiler.Graphs`) lands on its mark. The HTML fold qualifies the id by the figure's key,
   because one page may draw one entity in several figures and the site's check wants each id once.
+* A node's text is set in the data face, which the cell grid measures. The name and label faces are
+  proportional and unmeasured here (`PaintBounds.textUnmeasured`), so a name set in them is cut.
 * The picture is drawn in the base look; the page's looks file recolours it by class
   (`Tools.View.Tokens.rules`), so a figure follows the reader's light or dark scheme.
 * Below the picture, the figure in words: each node, its status and the nodes it points to.

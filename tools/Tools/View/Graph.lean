@@ -339,10 +339,20 @@ namespace Laid
 /-- The placed item with key `k`. -/
 def find (l : Laid) (k : Key) : Option Placed := l.placed.find? (·.key == k)
 
-/-- The painted bounds of a box at its current growth, in logical pixels. -/
+/-- The rows a node's painted form takes of its allocation: a wire is one row, the middle one, a
+pill on the line of its name; a box or a port takes the whole allocation. -/
+def formRows (p : Placed) : Int :=
+  match p.node with
+  | some n => match n.form with
+    | .wire => 1
+    | _ => BOXROWS
+  | none => BOXROWS
+
+/-- The painted bounds of a box at its current growth, in logical pixels: its form's rows,
+centred in its allocation, so an edge meets the painted form. -/
 def boxBounds (p : Placed) : Rect :=
   let w := p.w * p.grow / 1000
-  let h := ROWH * BOXROWS * p.grow / 1000
+  let h := ROWH * formRows p * p.grow / 1000
   let x := p.x + (p.w - w) / 2
   let y := p.y + (ROWH * BOXROWS - h) / 2
   ⟨x, y, x + w, y + h⟩
@@ -374,11 +384,14 @@ def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) (textStyle : Grap
       [⟨p.key, .shape .ground 1000 [Grow.roundRect (m x) (m y) (m w') (m h') r]⟩] ++
         (if n.lit then [⟨p.key, .shape .rule L.band [Grow.roundRect (m x) (m y) (m w') (m h') r]⟩] else []) ++
         [⟨p.key, .shape .ink 1000 (Grow.ring (m x) (m y) (m w') (m h') r (m L.strokes.frame))⟩]
-  surface ++ post ++
-    (if 1000 ≤ p.grow then
+  -- a wire's name stands on its one row; the pill is its mark, so it carries no status line
+  let text : List (Keyed Call) := match n.form with
+    | .wire => GraphText.row textStyle.first p.key (dx + p.x + CELL) (dy + p.y + (h - ROWH) / 2) (p.w - 2 * CELL) n.line1
+    | _ =>
       GraphText.row textStyle.first p.key (dx + p.x + CELL) (dy + p.y) (p.w - 2 * CELL) n.line1 ++
-        GraphText.row textStyle.second p.key (dx + p.x + CELL) (dy + p.y + ROWH) (p.w - 2 * CELL) n.line2 ++
-        [⟨p.key, .hit (dx + p.x) (dy + p.y) p.w h⟩]
+        GraphText.row textStyle.second p.key (dx + p.x + CELL) (dy + p.y + ROWH) (p.w - 2 * CELL) n.line2
+  surface ++ post ++
+    (if 1000 ≤ p.grow then text ++ [⟨p.key, .hit (dx + p.x) (dy + p.y) p.w h⟩]
     else [])
 
 /-- A point of a route, in the graph's own logical pixels. -/
