@@ -17,7 +17,7 @@ fact as a planned goal, and the plan status prints its citation.
   is the functor's parameter, and its assumptions are that parameter's operations alone.
 * **Lean's tree, where Lean has one** (`ofProgram_eq_denoteRowsB`): at `Budget.v`'s fragment
   (`Plain`), the tree is `denoteRowsB`'s, node for node. It is a planned goal: the hand
-  transcription proves it of itself (`BudgetDefs.denoteBD_same`, history), and no proof over
+  transcription proves it of itself (`BudgetDefs.denoteBD_same`, `rocq/BudgetDefs.v`), and no proof over
   Lean's code states it yet.
 * **Adequacy stays Rocq's.** Lean has no interaction-tree meaning to state it against, so Lean
   states only its budget form, which it proves (`settles_of_ends`).
@@ -101,7 +101,7 @@ def Plain (program : NativeEff) : Bool :=
     | .perform .refMake _ | .perform .refGet _ | .perform .refSet _ | .perform (.external _) _ => true
     | _ => false
 
-/-- **The hand Rocq tree's fragment** (`denoteW` of `BudgetDefs.v`, history): the arms whose tree
+/-- **The hand Rocq tree's fragment** (`denoteW` of `rocq/BudgetDefs.v`): the arms whose tree
 is this module's: `Plain`'s, the definition block, a call, a parameter's run and an invocation.
 No theorem takes it. It picks the programs of the comparison lane, which checks it
 (`ocaml/engine/test/rocq/test_rocq.ml`, R4): with Lean's evaluator in place of Rocq's, the two
@@ -113,7 +113,7 @@ context, merged (`Eval.provide`) from the empty one (`Eval.root`). On a program 
 refuses, a cell operation whose request is no cell is an event in Rocq's tree and a bad shape
 here (`Eval.cellOp`). The arms beyond (`exit`, the cause handlers, `onExit`, `failCause`, the other
 cell operations, the generator's statements and the context) are Lean's alone until the Rocq
-tree is generated from this module (`docs/research/2026-10-16-itrees/generated/Skeleton.v`). -/
+tree is generated from this module (`rocq/Skeleton.v`). -/
 def InRocq (program : NativeEff) : Bool :=
   foldMap_eff true (· && ·) program fun
     | .succeed _ | .fail _ | .sync _ | .suspend _ | .bind _ _ | .select _ _ _ _ => true
@@ -157,7 +157,7 @@ theorem probe_stable {σ : Type} (table : RowTable) (host : Host σ) (state : σ
 /-- **A run that finishes or waits at a budget is the run at every larger one.** This is all
 Lean states of adequacy: Lean has no interaction-tree meaning to state adequacy against, so the
 statement that every end of the meaning's run is found at some budget stays Rocq's
-(`BudgetDefs.adequacyD`, of the hand transcription). -/
+(`BudgetDefs.adequacyD`, of the hand transcription in `rocq/BudgetDefs.v`). -/
 theorem settles_of_ends {σ : Type} (table : RowTable) (host : Host σ) (state : σ)
     (program : NativeEff) (k : Nat)
     (h : (probe table k host state program).stop.isCut = false) :

@@ -66,7 +66,8 @@ and a document are each a state reached by its journal. The dictionary
 - The owner's order of the evening (row 430): the user side first; the consolidation chain
   continues as one background seat at a time.
 - M4's first half merged (row 431). E6 stopped at the Rocq comparison lane, whose runner is an
-  extraction with no producer in the tree. The producer comes into the tree, then E6 lands.
+  extraction with no producer in the tree. The producer came into the tree, and E6 landed (row
+  433): the clock's lowering and the saturating naturals are gone, and the engine allocates less.
 - The user-side pass landed (row 432): the SQL adapter reached only by SQL rows, the manifest
   naming every package, and `run` readable by default. The to-do's README was walked top to
   bottom in one shell.
@@ -78,16 +79,16 @@ and compiled as its semantics says. Each move deletes what it replaces.
 
 Done on 2026-10-20: the to-do as a user's project (`research/2026-10-19-todo-as-a-user/receipt.md`),
 M1, M2, M3, C1 and the compiler's entry point in three slices
-(`research/2026-10-20-compiler-entry/README.md` §7). M4's first half is merged (row 431), and the user-side pass landed (row 432). Running: E6
-with the Rocq lane's producer in the tree. Next: 4b; the entry point's next slice (`--target
-ocaml`, `inspect`, the module closure in the manifest); then M8 as amended.
+(`research/2026-10-20-compiler-entry/README.md` §7). M4 landed in both halves (rows 431 and 433). Naturals and integers are exact in OCaml, and the
+Rocq comparison lane's producer is in the tree. The user-side pass landed (row 432). Next: 4b and the
+entry point's next slice in parallel; then 4c; then M8 as amended.
 
 1. M1, one located refusal: landed.
 2. M2, one profile judgment at ingress: landed.
 3. M3, one program codec, lowered: landed.
-4. M4, one type spelling, then E6: the first half landed; E6 runs behind the Rocq lane's
-   producer (row 431).
+4. M4, one type spelling, then E6: landed (rows 431, 433).
 4b. Value linkage between artifacts: a Lean declaration is lowered into one artifact (§9.3).
+4c. The comparison lane over the generated `rocq/Skeleton.v`; the study's six hand files retire.
 5. M8, one observation, one check, the kit's commands as queries (row 414 (3); amended, row 428).
 6. M9, the typing rule as two tables, in three stages.
 7. M7's rest: the old readers go, then a fold for `Shape`.
