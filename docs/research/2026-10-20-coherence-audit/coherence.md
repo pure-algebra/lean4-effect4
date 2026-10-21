@@ -204,6 +204,7 @@ First, before item 1: the to-do as a user's project, outside the library
 | 3 | **M3, one program codec, lowered** | `OCaml5.Eff.wireModule`, `ocaml/eff/eff_wire.ml` (1,267 generated lines), the 89 `.bin` goldens | M |
 | 4 | **M4, one type spelling, then E6**: `Nat` and `Int` exact in OCaml | `OCaml5.Lcnf.ClockFlow` (605 lines), the clock rows, the saturating `Lcnf_nat` bodies; the bound's five spellings into one owner, `Option Nat`, `none` for the native profile (owner, 2026-10-20) | M |
 | 4b | **Value linkage between artifacts** (§9.3): an artifact imports another artifact's lowered roots instead of walking them, so a Lean declaration is lowered into one artifact | the copies: 894 of `api_engine.ml`'s 900 nodes and 107 of `eff_image.ml`'s 115 are `closure_gen.ml`'s | S to M |
+| 4c | **The comparison lane over the generated `rocq/Skeleton.v`** (row 433): the lane extracts the development the declared facts cite, and the six hand Rocq files of the 2026-10-16 study retire | `rocq/{Denote,Run,Judgments,Budget,BudgetDefs,Api}.v` (2,794 hand lines), the exception in `rocq/README.md` | M |
 | 5 | **M8, one observation, one check, the kit's commands as queries** (was item 6; row 414 (3); A6, with R2's A7.1; amended by §9.3 and row 428: the observation in two layers, the machine half a function of `Api.Machine`; the check is the certificate spine in the admission order on both faces, over the full `SigApp`; `explore` is the Tool's `preview` query; `run` lowers `Run.atBudget`; `Run.Tree.level` and `statements` are named as unfoldings) | `Api.check`, `Api.explain`, `Run.Kit.check`, `Run.Kit.admit` and `Run.Preview.admit` as separate entries; `Run.observe`, `Run.work`, `machineViewOf`; `Kit_serve`'s execution; `Kit.explore`'s missing refusal of an unsupported program (owner, 2026-10-20) | M |
 | 6 | **M9, the typing rule as two tables**, in three stages (amended by §9.3: an answer at every sort; `afterRet` and the signature as inherited attributes; the layer references a named pre-pass; the root definition block the same evaluator; the lemma that a refusal's site resolves, at stage 3) | most of `Annotate.lean` and of `annotate_eq_table`'s induction; then `EditSession`; the checker's three term arms' address fields, into located arms (M1's proposal; owner, 2026-10-20) | L |
 | 7 | **M7's rest: the old readers go, then a fold for `Shape`** (the first step landed 2026-10-19, `a2cfa8de5`; amended by §9.3: `NatJson` gains `DecidableEq`; `Tools.JsonBridge`, `WireText`, `Catalogue`, four batteries and two registry pointers move; the genesis digest stays byte-identical; the three other hand recursions on `Shape` fold too) | `readIn` and its siblings, `Agrees` and the binary64 families; the hand triples of `src/Effect4/Tool/Methods.lean` | M |
@@ -390,7 +391,8 @@ First, before item 1: the to-do as a user's project, outside the library
   from §4 of the audit and from §9.3 here, and lands no shape that §9.3 amends unamended.
 - **After `run`** (the owner, 2026-10-20, evening; row 430): the user side first. That is the to-do end
   to end, a user's README and the rough edges the seats listed. The chain continues as one background
-  seat at a time, 4b first.
+  seat at a time, 4b first. E6 landed the same night (`bb7862fa0`, merged `ef3c1c89b`), so M4 is
+  complete; 4c follows 4b.
 
 ```mermaid
 flowchart LR
