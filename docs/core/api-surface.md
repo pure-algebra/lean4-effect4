@@ -56,9 +56,9 @@ The host continues through existing call-instance reply admission.
 
 `Reactor.tensor` combines two host states and gives the left answer priority.
 For disjoint supported rows, each reactor changes only its own state component.
-`Reactor.queue requests` answers the session's request and reply rows.
-Its `requests` argument does not initialize state: pass the initial list separately to `Run.runWith`.
-The remaining list is the queue's state; replies remain observable through the run's journal.
+`Reactor.queue` answers the session's request and reply rows; its state is the remaining requests, supplied to `Run.runWith`.
+`next` reads the pending request and keeps it; a reply consumes it; a reply with no pending request is declined.
+Replies remain observable through the run's journal.
 The equations have compatibility role under `queue-reactor`, serving R6 and R13.
 They establish no client/session agreement theorem or host progress.
 

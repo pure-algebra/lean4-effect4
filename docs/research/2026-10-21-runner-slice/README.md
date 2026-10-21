@@ -152,8 +152,8 @@ A reply-blind client's remaining calls form a list:
 C_q = m₁(a₁, λ_. m₂(a₂, λ_. … return ⋆))
 q   = [(m₁,a₁), (m₂,a₂), …]
 queue:
-  next    (⋆, q) = (head? q, tail q)
-  reply_m (e, q) = (⋆, q)
+  next    (⋆, q)         =  (head? q, q)
+  reply_m (e, r :: q)    =  (⋆, q)
 ```
 
 The queue advances at `next`; the general equations advance at `reply`.
@@ -212,10 +212,10 @@ def Reactor.tensor {α β : Type} (r : Reactor α) (s : Reactor β) : Reactor (�
 /-- The queue: the reply-blind client as a reactor of the session rows. `next` answers the head
 of the remaining requests, or none; a reply row answers the unit and keeps the queue. Rows are
 known by their spellings `Session.next` and `Session.reply_`; no other row is answered. -/
-def Reactor.queue (requests : List Val) : Reactor (List Val)
+def Reactor.queue : Reactor (List Val)
 ```
 
-`queue` answers `Session.next` with `.ofExit (.success (.some r))` and the rest, or with `.ofExit (.success .none)` and `[]`. It answers a row whose spelling starts with `Session.reply_` with `.ofExit (.success .unit)` and the queue unchanged. It answers any other row with `none`.
+`queue` answers `Session.next` with `.ofExit (.success (.some r))` and the queue unchanged, or with `.ofExit (.success .none)` and `[]`. It answers a row whose spelling starts with `Session.reply_` with `.ofExit (.success .unit)` and the queue's tail, or declines when the queue is empty. It answers any other row with `none`.
 The spellings are the ones `Object.session` writes. Read them from one definition beside `ServiceSession.rows`, used by the constructor and the queue both, never from two string literals.
 No `String` traversal may reach `Classical.choice` in a definition the engine lowers. The initial prefix probe uses `String.startsWith`. The landing uses the byte-list prefix operation after the axiom gate rejects that probe.
 
@@ -461,7 +461,7 @@ Semantics report generation remains paused under decisions row 418 (6).
 
 General client-as-reactor agreement remains open, under the protocol conditions in §5.
 No hosted stage, driver object, generated client or target execution claim lands.
-A future removal of the unused queue argument requires an API change.
+A future removal of the unused queue argument requires an API change. (Done in the coordinator's review, §7.)
 
 Proposed decisions row 442:
 
@@ -471,3 +471,12 @@ Proposed decisions row 442:
 > Read fixture replies from the checked run journal.
 > Keep general client-as-reactor agreement open under the session's request/reply ordering.
 > Add no driver, generated client or hosted stage.
+
+## 7. The coordinator's review, after the landing
+
+The landing is right, and Codex's receipt names the two things left over. Both are landed on the integration branch after the fast-forward.
+
+1. **The queue's argument goes.** `Reactor.queue : Reactor (List Val)`; the state is the run's, as every reactor's is. The brief's signature was the coordinator's error.
+2. **The queue advances on the reply, not on `next`.** The brief's §2.5 wrote `next` as head and tail, which the general equations of the same section contradict. An unanswered call stays pending until its reply feeds the continuation. The queue is now their image on a reply-blind client. `next` reads the head and keeps it, the reply consumes it, and a reply with no pending call is declined. The journal of the to-do's lifetime is unchanged, so the agreements and the seven replies stand. A repeated `next` now repeats its request, as the general client does, and the phase difference Codex's receipt had to carry is gone.
+
+The authority documents and the dictionary say the same. Codex's broad wording repairs in `docs/core/semantics.md` and `docs/core/host-boundary.md` are wording only and stand.

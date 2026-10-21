@@ -18,27 +18,27 @@ namespace Effect4.Run
 open Effect4.Program Effect4.Machine
 open Effect4.Api.HostSession (Answer)
 
-/-- queue-reactor: consume the current request on next, and retain the queue on replies. -/
+/-- queue-reactor: `next` answers the pending request and keeps it; a reply consumes it. -/
 @[semantics "host-session-protocol" (requirement := R6)]
-theorem Reactor.queue_spec (requests : List Val) :
+theorem Reactor.queue_spec :
     (∀ row sent pending, row.spelling = Api.ServiceSession.nextName →
-      Reactor.queue requests row sent pending =
-        some (.ofExit (.success (pending.head?.elim .none (fun value => .some value))), pending.tail)) ∧
-    (∀ row sent pending, Api.ServiceSession.isReplyRow row = true →
-      Reactor.queue requests row sent pending = some (.ofExit (.success .unit), pending)) := by
+      Reactor.queue row sent pending =
+        some (.ofExit (.success (pending.head?.elim .none (fun value => .some value))), pending)) ∧
+    (∀ row sent request rest, Api.ServiceSession.isReplyRow row = true →
+      Reactor.queue row sent (request :: rest) = some (.ofExit (.success .unit), rest)) := by
   constructor
   · intro row sent pending h
-    rw [Reactor.queue, h]
-    rfl
-  · intro row sent pending h
     unfold Reactor.queue
-    split
-    · next same =>
-        have name : row.spelling = Api.ServiceSession.nextName := beq_iff_eq.mp same
-        unfold Api.ServiceSession.isReplyRow at h
-        rw [name] at h
-        contradiction
-    · rfl
+    rw [h]
+    rfl
+  · intro row sent request rest h
+    have notNext : ¬ (row.spelling == Api.ServiceSession.nextName) = true := fun same => by
+      have name : row.spelling = Api.ServiceSession.nextName := beq_iff_eq.mp same
+      unfold Api.ServiceSession.isReplyRow at h
+      rw [name] at h
+      contradiction
+    unfold Reactor.queue
+    rw [if_neg notNext, if_pos h]
 
 /-- Helper of queue-reactor, read on the to-do session rows: a left answer retains right state. -/
 @[semantics "host-session-protocol" (requirement := R13)]

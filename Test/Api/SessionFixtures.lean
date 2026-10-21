@@ -43,7 +43,7 @@ def stocked : Repo := (2, [(1, "milk", false)])
 /-- One whole to-do lifetime with a recorded repository. -/
 def runTodo (built : Built) (requests : List Val) (initial : Repo) :
     Run × (List Val × (Repo × List String)) :=
-  Run.runWith built (Run.Reactor.tensor (Run.Reactor.queue requests) recordedRepository) (requests, (initial, []))
+  Run.runWith built (Run.Reactor.tensor Run.Reactor.queue recordedRepository) (requests, (initial, []))
     "session-contract" {} 512
 
 def todoRun : Option (Run × (List Val × (Repo × List String))) :=
@@ -184,7 +184,7 @@ def exampleExpected : List Val :=
   [reifyExitVal (.failure (.fail (.tag 0))), success (.nat 7), success (.nat 9)]
 def noHost : Run.Reactor Unit := fun _ _ _ => none
 def runExample (built : Built) (requests : List Val) : Run × (List Val × Unit) :=
-  Run.runWith built (Run.Reactor.tensor (Run.Reactor.queue requests) noHost)
+  Run.runWith built (Run.Reactor.tensor Run.Reactor.queue noHost)
     (requests, ()) "session-example" {} 128
 def exampleRun : Option (Run × (List Val × Unit)) :=
   exampleSession.map fun b => runExample b exampleRequests

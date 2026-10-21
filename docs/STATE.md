@@ -88,7 +88,7 @@ and a document are each a state reached by its journal. The dictionary
   The driver, the engine and the file loader remain later slices; the per-request runner and the OCaml to-do lane retire with them.
   The landing is `research/2026-10-21-session-landing/README.md`; its review is `research/2026-10-21-session-review/README.md`.
 
-- `Reactor.tensor` combines host states, and `Reactor.queue` answers session rows; `queue-reactor` states their equations (R6 and R13).
+- `Reactor.tensor` combines host states, and `Reactor.queue` answers session rows as the reply-blind client; `queue-reactor` states their equations (row 442).
 
 ## Next, in order
 

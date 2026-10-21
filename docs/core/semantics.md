@@ -1609,13 +1609,14 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   `Reactor.tensor_left` and `Reactor.tensor_right` are helpers of this claim in the same file.
   Their definitions are `Reactor.queue` and `Reactor.tensor` in `src/Effect4/Run/Runner.lean`.
   `ServiceSession.nextName`, `replyPrefix` and `isReplyRow` own the row spellings in `src/Effect4/Api/Session.lean`.
-  The queue reads its current list from reactor state; its `requests` argument initializes nothing.
+  The queue's state is the remaining requests, supplied to the run; `next` reads the pending request and keeps it, and a reply consumes it.
 
   ```text
-  queue requests next v q    = some (success (head? q), tail q)
-  queue requests reply_m v q = some (success unit, q)
-  tensor r s row v (a,b)     = some (answer,(a',b))     if r row v a = some (answer,a')
-  tensor r s row v (a,b)     = map (answer,b') ↦ (answer,(a,b')) (s row v b)  if r row v a = none
+  queue next v q              = some (success (head? q), q)
+  queue reply_m v (r :: q)    = some (success unit, q)
+  queue reply_m v []          = none
+  tensor r s row v (a,b)      = some (answer,(a',b))     if r row v a = some (answer,a')
+  tensor r s row v (a,b)      = map (answer,b') ↦ (answer,(a,b')) (s row v b)  if r row v a = none
   ```
 
   The tensor equations act on separate state components.
@@ -1638,9 +1639,8 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   ```
 
   The equations cover legal alternating requests and matching replies; they define no response to a mismatched reply.
-  The general client advances on reply, while the queue advances on next.
-  Repeating next therefore distinguishes them: the general client repeats its request, while the queue consumes another item.
-  A future simulation must relate these states under the generated protocol, not assert unrestricted reactor equality.
+  The queue is their image on a client whose continuations ignore replies. Its state is the remaining calls; `next` keeps the pending one, and the reply consumes it.
+  What stays open is the client that branches on replies, whose state is a program, not a list.
   Its definition needs the machine to step a client one method call at a time.
   `docs/research/2026-10-21-runner-slice/README.md` §2.5 records the design; no hosted stage lands here.
 

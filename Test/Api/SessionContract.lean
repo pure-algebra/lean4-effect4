@@ -139,48 +139,48 @@ open Test.Api.SessionFixtures
   some (none, [.progressed, .bound, .refused .envelope, .refused .noCall],
     ["Session.next"], [], (1, []))
 
--- Control: the queue reads its current state, even when its construction argument differs.
-#guard todoSession.map (fun b =>
-  b.app.rows[4]?.bind fun row => Run.Reactor.queue [] row .unit todoRequests) =
-  some (some (.ofExit (.success (.some (.list [.str "add", .str "milk"]))), todoRequests.tail))
-
--- Control: repeated next calls consume requests without waiting for a reply.
--- The general client equations retain the pending call until its reply.
+-- Control: `next` reads the pending request and keeps it; the reply consumes it. So a repeated
+-- `next` repeats its request, as the general client equations say of an unanswered call.
 #guard todoSession.map (fun b => b.app.rows[4]?.bind fun row => do
-  let (_, remaining) ← Run.Reactor.queue todoRequests row .unit todoRequests
-  Run.Reactor.queue todoRequests row .unit remaining) =
-  some (some (.ofExit (.success (.some (.list [.str "add", .str "café 日本 🙂"]))),
-    todoRequests.drop 2))
+  let (_, remaining) ← Run.Reactor.queue row .unit todoRequests
+  Run.Reactor.queue row .unit remaining) =
+  some (some (.ofExit (.success (.some (.list [.str "add", .str "milk"]))), todoRequests))
+#guard todoSession.map (fun b => b.app.rows[5]?.bind fun row =>
+  Run.Reactor.queue row .unit todoRequests) =
+  some (some (.ofExit (.success .unit), todoRequests.tail))
+-- Control: a reply with no pending call is declined, a live frontier, not an answer.
+#guard todoSession.map (fun b => b.app.rows[5]?.map fun row => Run.Reactor.queue row .unit []) =
+  some (some none)
 
 -- Control: overlapping reactors choose the left answer; disjointness is a separate premise.
 #guard todoSession.map (fun b => b.app.rows[4]?.bind fun row =>
-  Run.Reactor.tensor (Run.Reactor.queue []) (Run.Reactor.queue []) row .unit
+  Run.Reactor.tensor Run.Reactor.queue Run.Reactor.queue row .unit
     (todoRequests, twoLists)) =
   some (some (.ofExit (.success (.some (.list [.str "add", .str "milk"]))),
-    (todoRequests.tail, twoLists)))
+    (todoRequests, twoLists)))
 
 -- Control: a reply prefix names the protocol even without a selected service method.
-#guard Run.Reactor.queue []
+#guard Run.Reactor.queue
     (Effect4.Program.Authoring.Row.host (Effect4.Api.ServiceSession.replyPrefix ++ "absent") .unit .unit).row .unit
-    todoRequests = some (.ofExit (.success .unit), todoRequests)
+    todoRequests = some (.ofExit (.success .unit), todoRequests.tail)
 
--- Law reader: the queue answers next without changing the recorded repository.
+-- Law reader: the queue answers next without changing the recorded repository, or its own list.
 example (row : Row) (state : Test.Dogfood.Scenario.Todo.Repo × List String)
     (atNext : row.spelling = Effect4.Api.ServiceSession.nextName) :
-    Run.Reactor.tensor (Run.Reactor.queue todoRequests) recordedRepository row .unit
+    Run.Reactor.tensor Run.Reactor.queue recordedRepository row .unit
       (todoRequests, state) =
       some (.ofExit (.success (.some (.list [.str "add", .str "milk"]))),
-        (todoRequests.tail, state)) :=
-  Run.Reactor.tensor_left (Run.Reactor.queue todoRequests) recordedRepository row .unit
-    todoRequests state _ _ ((Run.Reactor.queue_spec todoRequests).1 row .unit todoRequests atNext)
+        (todoRequests, state)) :=
+  Run.Reactor.tensor_left Run.Reactor.queue recordedRepository row .unit
+    todoRequests state _ _ (Run.Reactor.queue_spec.1 row .unit todoRequests atNext)
 
 -- Law reader: the repository handles its list row while the queue stays unchanged.
 example (remaining : List Val) (state : Test.Dogfood.Scenario.Todo.Repo × List String) :
-    Run.Reactor.tensor (Run.Reactor.queue todoRequests) recordedRepository
+    Run.Reactor.tensor Run.Reactor.queue recordedRepository
       Test.Dogfood.Scenario.Todo.TodoRepo.row.all.row .unit (remaining, state) =
       (recordedRepository Test.Dogfood.Scenario.Todo.TodoRepo.row.all.row .unit state).map
         (fun (answer, next) => (answer, (remaining, next))) :=
-  Run.Reactor.tensor_right (Run.Reactor.queue todoRequests) recordedRepository
+  Run.Reactor.tensor_right Run.Reactor.queue recordedRepository
     Test.Dogfood.Scenario.Todo.TodoRepo.row.all.row .unit remaining state rfl
 
 -- Law reader: the checked lifetime of the concrete Example fixture requires only typed keys.

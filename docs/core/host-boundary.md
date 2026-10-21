@@ -52,7 +52,7 @@ This gate's queue replays a prescribed request trace. Its repository reactor exe
 `Reactor.tensor` combines reactors on product state; disjoint supported rows give the comodel tensor equations (`src/Effect4/Run/Runner.lean`).
 Overlapping supported rows use the left answer.
 `Reactor.queue` represents a reply-blind client of the session rows, with the remaining requests as state.
-The caller supplies that state separately; the queue's `requests` argument initializes nothing.
+The caller supplies that state to the run; `next` reads the pending request, and the reply consumes it.
 No driver or client is generated.
 General client unfolding remains open in `semantics.md`, concept 9.
 
