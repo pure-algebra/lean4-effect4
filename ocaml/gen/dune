@@ -8,7 +8,9 @@
 ; engine/test/ lanes, todo, ctors, modeled and rocq).
 ;
 ; The one compiled closure (D1): every node the api artifact's roots reach, lowered and compiled
-; once. A package-private library of effect4_gen (`package`, no `public_name`): it installs with
+; once. The nodes of the program codec are eff_image's: the closure links them by that module
+; (`uses`, 4b) and lowers none of them. A package-private library of effect4_gen (`package`, no
+; `public_name`): it installs with
 ; effect4_gen, which links it, but an installed client names none of its modules
 ; (engine/test/install, the red_closure_* controls). Inside this project the test lanes'
 ; unit engine/test/lanes/lanes_gen.ml includes it, so the records Api_gen seals are concrete

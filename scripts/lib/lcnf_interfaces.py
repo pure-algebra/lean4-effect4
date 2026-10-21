@@ -15,6 +15,9 @@ L7 An artifact that names a `closure` unit stages it first. Its `out` unit is a 
    so the facade's types are the closure's declarations and its sealed packages are abstract.
    An artifact's `tests` unit includes the closure and is staged after the facade, and its
    consumers' facades after it.
+L8 An artifact that a later one uses (the recipe's `uses`) exports its own roots and every
+   binding its users link: the `links` of each staged unit's interface data, by the used unit's
+   module. A user compiles against that interface, and the used implementation is unchanged.
 The interface and regeneration controls exercise these properties.
 """
 from pathlib import Path
@@ -66,6 +69,13 @@ def generate(root, recipe_path, out, checking, run, install):
         flags = [flag for path in includes for flag in ['-I', str(path)]]
         compiler = ['opam', 'exec', '--switch=effect4', '--', 'ocamlopt',
                     '-bin-annot', '-w', '@55', *flags]
+        # What later artifacts link in each artifact they use (L8), read off every staged unit's
+        # interface data, by the used unit's module, each name once.
+        links = {}
+        for data in sorted(stage.rglob('*.interface.json')):
+            for unit, names in json.loads(data.read_text()).get('links', {}).items():
+                kept = links.setdefault(unit, [])
+                kept += [name for name in names if name not in kept]
         def infer(source, prelude, reachable):
             # No .mli exists beside the copy until inference has finished.
             implementation = fresh / source.name
@@ -74,13 +84,17 @@ def generate(root, recipe_path, out, checking, run, install):
             shutil.copyfile(source, implementation)
             run([*compiler, '-c', str(implementation), '-o', str(compiled)])
             metadata = json.loads(Path(str(source) + '.interface.json').read_text())
+            # A used unit exports its own roots and what its users link (L8).
+            module = source.stem[:1].upper() + source.stem[1:]
+            roots = metadata['roots'] + [name for name in links.get(module, [])
+                                         if name not in metadata['roots']]
             # A facade over a closure reads the closure's typed tree, staged before it (L7).
             typed_tree = (fresh / Path(metadata['from']).name).with_suffix('.cmt') \
                 if metadata.get('from') else implementation.with_suffix('.cmt')
             run(['opam', 'exec', '--switch=effect4', '--',
                  str(root / 'ocaml/_build/default/gen/interface/main.exe'),
                  str(typed_tree), str(interface),
-                 ','.join(metadata['roots']), ','.join(metadata['abstract']), prelude,
+                 ','.join(roots), ','.join(metadata['abstract']), prelude,
                  *(['reachable'] if reachable else [])])
             implementation.with_suffix('.cmi').unlink()
             run([*compiler, '-c', str(interface), '-o', str(interface.with_suffix('.cmi'))])

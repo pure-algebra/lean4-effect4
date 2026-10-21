@@ -17,7 +17,9 @@ a node only when all five agree.
 
 `OCaml5.Lcnf.Gen` makes each recipe artifact by one walk of its own roots and then all its
 consumers' roots (`Export`'s consumers, the walk's phases), so the consumers share every node
-they reach, and its five parts agree by construction. The walk may be compiled in two scopes
+they reach, and its five parts agree by construction. A walk that uses another artifact links
+that artifact's nodes and lowers none of them (`Export`'s uses), so the two manifests hold no
+declaration in common, and the generator's report prints their comparison. The walk may be compiled in two scopes
 (`Gen`'s `--closure` and `--tests`): the closure unit and a tests unit that includes it, with one
 naming of every type. The manifest's first line states the shared parts (`identityLine`), with
 the closure unit as the type owner, and its `unit` column says which unit compiles each row. `compareUnits` reads two manifests and

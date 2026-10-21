@@ -21,7 +21,7 @@ Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 | `eff_types.ml` | **generated** (the LCNF route, `make gen-lcnf`) | the program types, one OCaml variant, record or abbreviation per Lean family, spelled as the generated engines spell them; both engines open it |
 | `eff_ctors.ml` | **generated** | `ctor_index_*` / `wire_tag_*` / `ctor_name_*` / `ctor_names_*` per family |
 | `eff_layout.ml` | **generated** | the wire families and their fields, as data |
-| `eff_image.ml` | **generated** (the LCNF route, `make gen-lcnf`) | Lean's exact embedding of a program, of each node sort, of a row table and of a program type (`Effect4.Run.Kit.programToVal`, `programOfVal`, …), lowered |
+| `eff_image.ml` | **generated** (the LCNF route, `make gen-lcnf`) | Lean's exact embedding of a program, of each node sort, of a row table and of a program type (`Effect4.Run.Kit.programToVal`, `programOfVal`, …), lowered. The api artifact uses it (`uses`, 4b): its interface also exports the bindings `effect4_gen` links, which no other artifact lowers |
 | `eff_codec.ml` | hand | a program's canonical bytes (`Wire.encodeProgram`, `Wire.decodeProgram`): `eff_image.ml` composed with the framing kernel; it decides nothing of its own |
 | `eff_subterm.ml` | **generated** | the node sorts of `Effect4.Program.Node`, each constructor's children as (value argument index, child sort), the one-step `child`, and one witness per constructor with pairwise different children |
 | `eff_native.ml` | **generated** | the native alphabet as data: atom names and const-generic metadata, the op values `all_ops` (`NativeOp.spelled`, one per spelling key; a read-modify-write row stands once, at its face), `scope_key`, the scope and context types; typing remains in Lean |

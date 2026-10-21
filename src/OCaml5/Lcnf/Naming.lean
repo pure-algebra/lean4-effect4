@@ -46,6 +46,7 @@ path a client writes for a public declaration, read off the Lean name before LCN
 | constructor `Task.resume` | `<TypeShort>_<ctor>` | `Task_resume` |
 | type at its owner `Effect4.Program.Eff` (`TypeNames.modules`) | a module by the short name; the type is `t` | `Eff.t` |
 | its constructor `Eff.succeed`, its field `Row.typeArgs` | the Lean name, capitalised; a field as above | `Eff.Succeed`, `Row.type_args` |
+| type of a used artifact `Effect4.Store.Image` (`TypeNames.units`), its field `toVal` | the names that artifact gives them, qualified by its module | `Eff_image.image`, `Eff_image.to_val` |
 | placeholder type `Prim` | `Placeholder_<type>` | `Placeholder_prim` |
 | global `Effect4.Machine.Dispatcher.insert._redArg` | drop `._redArg`, private prefix, `Effect4.[Machine.]`; `._at_.` → `at`; components joined by `_` | `dispatcher_insert` |
 | global `List.mapTR.loop._at_.Effect4.Machine.Dispatcher.drain.spec_0` | same | `list_map_tr_loop_at_dispatcher_drain_spec_0` |
@@ -110,11 +111,23 @@ rendered, so a declaration, an annotation and a constructor never disagree about
   `Effect4.Machine.Outcome`, say — would otherwise be spelled the same.
 * `modules`: the types declared at their owner (`ocaml/eff/eff_types.ml`, the program types),
   each its own OCaml module: the type is `M.t`, a constructor `M.C` and a field `M.f`, by the
-  Lean names. Every artifact that opens the owner spells them so. -/
+  Lean names. Every artifact that opens the owner spells them so.
+* `units`: the types an artifact this one uses declares (`OCaml5.Lcnf.Gen`'s `--use`), each with
+  that artifact's module. The type, its constructors and its fields keep the names that artifact
+  gives them, qualified by its module (`Eff_image.image`, `Eff_image.to_val`), so a value this
+  artifact builds and a binding it links have one type. -/
 structure TypeNames where
   renamed : Std.HashMap Name String := {}
   modules : Std.HashMap Name String := {}
+  units : Std.HashMap Name String := {}
 deriving Inhabited
+
+/-- A name of a type's family, qualified by the module of the used artifact that declares the type
+(`TypeNames.units`); unqualified for any other type. -/
+def inUnit (tn : TypeNames) (typeConst : Name) (s : String) : String :=
+  match tn.units[typeConst]? with
+  | some u => u ++ "." ++ s
+  | none => s
 
 /-- The full-path OCaml name a colliding type constant falls back to. -/
 def fullTypeName (n : Name) : String := reserveType (snake ("_".intercalate (components n)))
@@ -135,11 +148,11 @@ def moduleName (n : Name) : String := capital (shortName n)
 def fullModuleName (n : Name) : String := capital (fullTypeName n)
 
 /-- The OCaml type name of a Lean type constant under the decided names: `M.t` for a type at its
-owner, else its flat name. -/
+owner, else its flat name, qualified by its module for a type of a used artifact. -/
 def typeNameIn (tn : TypeNames) (n : Name) : String :=
   match tn.modules[n]? with
   | some m => m ++ ".t"
-  | none => tn.renamed.getD n (typeName n)
+  | none => inUnit tn n (tn.renamed.getD n (typeName n))
 
 /-- The name a declaration states: `t` inside its module for a type at its owner, else the flat
 name its uses spell. -/
@@ -149,12 +162,12 @@ def declTypeNameIn (tn : TypeNames) (n : Name) : String :=
 /-- The OCaml field name of a Lean structure field. -/
 def fieldName (s : String) : String := snake s
 
-/-- A field of a structure under the decided names: `M.f` for a type at its owner, so a use never
-depends on the label being in scope. -/
+/-- A field of a structure under the decided names: `M.f` for a type at its owner and `U.f` for a
+type of a used artifact, so a use never depends on the label being in scope. -/
 def fieldNameIn (tn : TypeNames) (typeConst : Name) (s : String) : String :=
   match tn.modules[typeConst]? with
   | some m => m ++ "." ++ fieldName s
-  | none => fieldName s
+  | none => inUnit tn typeConst (fieldName s)
 
 /-- The OCaml constructor name of a Lean constructor: the type's short name, verbatim and
 capitalised, then `_`, then the constructor's own name verbatim. -/
@@ -167,12 +180,13 @@ def ownedCtor (ctor : String) : String := capital ctor
 
 /-- `ctorName` under the decided names: `M.C` for a type at its owner (`Eff.Succeed`); a renamed
 type's constructors are prefixed by the renamed type's own OCaml name, so two types that shared
-a short name no longer share their constructor names either. -/
+a short name no longer share their constructor names either; a type of a used artifact's are
+qualified by its module. -/
 def ctorNameIn (tn : TypeNames) (typeConst : Name) (ctor : String) : String :=
   match tn.modules[typeConst]?, tn.renamed[typeConst]? with
   | some m, _ => m ++ "." ++ ownedCtor ctor
-  | none, none => ctorName typeConst ctor
-  | none, some t => capital t ++ "_" ++ ctor
+  | none, none => inUnit tn typeConst (ctorName typeConst ctor)
+  | none, some t => inUnit tn typeConst (capital t ++ "_" ++ ctor)
 
 /-- The name a declaration states for a constructor: `C` inside its module for a type at its
 owner, else the flat name its uses spell. -/
@@ -246,6 +260,16 @@ private def ownerNames : TypeNames := { modules := ({} : Std.HashMap Name String
 #guard ctorNameIn ownerNames `Effect4.Machine.Task "resume" == "Task_resume"
 #guard ctorNameIn { renamed := ({} : Std.HashMap Name String).insert `Effect4.Row "effect4_row" } `Effect4.Row "x"
   == "Effect4_row_x"
+-- a type of a used artifact keeps that artifact's names, qualified by its module; the same type
+-- in a run that uses no artifact is its own, unqualified
+private def usedNames : TypeNames :=
+  { units := ({} : Std.HashMap Name String).insert `Effect4.Store.Image "Eff_image",
+    renamed := ({} : Std.HashMap Name String).insert `Effect4.Row "effect4_row" }
+#guard typeNameIn usedNames `Effect4.Store.Image == "Eff_image.image"
+#guard fieldNameIn usedNames `Effect4.Store.Image "toVal" == "Eff_image.to_val"
+#guard ctorNameIn usedNames `Effect4.Store.Image "mk" == "Eff_image.Image_mk"
+#guard typeNameIn usedNames `Effect4.Row == "effect4_row" && typeNameIn {} `Effect4.Store.Image == "image"
+#guard fieldNameIn {} `Effect4.Store.Image "toVal" == "to_val"
 #guard fullModuleName `Effect4.Row == "Effect4_row" && moduleName `Effect4.Program.Row == "Row"
 #guard globalName `Effect4.Machine.Dispatcher.insert._redArg == "dispatcher_insert"
 #guard globalName `Effect4.Machine.RunMachine.fiber?._redArg == "run_machine_fiber_opt"

@@ -460,6 +460,43 @@ run_cmd liftTermElabM do
     unless found == expected do
       throwError "name fixtures: {root} binds {found}, expected {expected}"
 
+/-! ### Linkage: a declaration another artifact lowers (4b)
+
+`OCaml5.Lcnf.Gen`'s `--use` hands the translator the declarations another artifact lowers
+(`TCtx.links`). The walk stops at one and records it, and its caller writes that artifact's
+binding by its module. A qualified name is no free reference, so the binder of `globalCap` that
+takes the generated name of `applyTo` keeps that name. The red control is the same walk with no
+link: `applyTo` is lowered here, and the binder is named again. -/
+
+run_cmd liftTermElabM do
+  let applyTo := ``LoweringNames.applyTo
+  let target := Lcnf.globalName applyTo
+  let links : Std.HashMap Name OCaml5.Lcnf.Link :=
+    ({} : Std.HashMap Name OCaml5.Lcnf.Link).insert applyTo { unit := "Used", name := target }
+  let roots := #[``LoweringNames.etaOk, ``LoweringNames.globalCap]
+  let linked ← Lcnf.translateClosure roots 60 {} {} #[] links
+  let alone ← Lcnf.translateClosure roots
+  let lowered (c : OCaml5.Lcnf.Closure) : List Name := c.decls.toList.map (·.leanName)
+  let body (c : OCaml5.Lcnf.Closure) (root : Name) : String :=
+    ((c.decls.find? (·.leanName == root)).map fun d => Ml.renderExpr 0 d.bind.body).getD ""
+  let params (c : OCaml5.Lcnf.Closure) (root : Name) : List String :=
+    ((c.decls.find? (·.leanName == root)).map fun d => d.bind.params.map (·.1)).getD []
+  let names (s : String) (n : String) : Bool := (s.splitOn n).length > 1
+  unless lowered linked == roots.toList && linked.linked == #[applyTo] do
+    throwError "linkage: the walk lowered {lowered linked} and linked {linked.linked}"
+  unless names (body linked ``LoweringNames.etaOk) ("Used." ++ target)
+      && names (body linked ``LoweringNames.globalCap) ("Used." ++ target) do
+    throwError "linkage: the callers do not write Used.{target}"
+  unless params linked ``LoweringNames.globalCap == [target, "y"] do
+    throwError "linkage: globalCap binds {params linked ``LoweringNames.globalCap}"
+  unless (Lcnf.hygieneProblems linked.decls).isEmpty do
+    throwError "linkage: the hygiene check refuses {Lcnf.hygieneProblems linked.decls}"
+  -- red: no link, so the callee is lowered here and the binder that took its name is renamed
+  unless (lowered alone).contains applyTo && alone.linked.isEmpty
+      && !names (body alone ``LoweringNames.etaOk) "Used."
+      && params alone ``LoweringNames.globalCap == [target ++ "_1", "y"] do
+    throwError "linkage, red: without the link the walk lowered {lowered alone}"
+
 /-! ### Names: the check refuses what captured
 
 Three bindings as the route wrote them before the table was data, and one that hides a name its

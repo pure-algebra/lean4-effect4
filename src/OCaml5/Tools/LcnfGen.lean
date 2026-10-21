@@ -29,7 +29,10 @@ later phase of its one walk, its interface exports them, and the run writes the 
 facade at `<out>` (`OCaml5.Lcnf.Gen`). `--closure <path>` compiles the walk's own nodes at
 `<path>` and makes `--out` a facade over it, whose interface keeps the exported roots and seals
 the packages; `--tests <path>` compiles the nodes only the consumers reach in a unit that includes
-the closure, and the consumers' interfaces are that unit's.
+the closure, and the consumers' interfaces are that unit's. `--use <out> <roots>`, repeatable,
+names an artifact this one uses: the run walks those roots as that artifact does, and links each
+declaration of that walk by the artifact's module instead of lowering it again
+(`OCaml5.Lcnf.Gen`, uses).
 
 With `--identity <manifest> …` it reads closure manifests and prints, for each pair, how many
 declarations both hold, how many of them are one node, and which part of the identity makes the

@@ -68,6 +68,12 @@ datatypes), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
 * **The `_redArg` fold.** `reduceArity` splits `f` into a wrapper and `f._redArg`; the twin is
   translated under `f`'s OCaml name and the wrapper is not emitted, so the output has one
   function per Lean definition — *tested* (every target of `Fibers.lean`).
+* **A declaration a used artifact lowers is linked, never lowered again.** A call to a declaration
+  of `TCtx.links` is that artifact's binding, written by its module
+  (`Eff_image.run_kit_program_to_val`), and the walk stops there (`Closure.linked`), as at a
+  builtin — *by construction*; *checked* by `OCaml5.Lcnf.Gen`, which refuses a declaration that a
+  run lowers and a used artifact lowers too, and by `ocamlopt`, which compiles the call against
+  the used artifact's interface.
 
 ## The rules
 
@@ -93,6 +99,7 @@ datatypes), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
 | `LetValue.const C.mk ◾… fields` (structure ctor) | `({ f₁ = …; … } : (_,…) t)`, erased fields dropped |
 | `LetValue.const C.c ◾… args` (inductive ctor) | `C_c (args)`; `List`/`Option`/`Prod`/`Bool`/`Except` natively |
 | `LetValue.const g args`, `g` in the builtin table | the table's form: `Nat.decEq` → `Z.equal`, `Nat.decLt` → `Z.lt`, `Nat.sub` → `Lcnf_nat.sub`, `List.appendTR` → `@`, `List.reverse` → `List.rev`, `List.reverseAux` → `List.rev_append`, `List.instDecidableEqNil` → `= []`, `Array.mkEmpty` → `[]`, `Array.toList` → identity, `List.foldl._at_.Array.appendList.spec_0` → `@`, … (`builtin?`) |
+| `LetValue.const g args`, `g` lowered by a used artifact (`TCtx.links`) | `U.g' args`, that artifact's binding by its module; `g` is linked, not enqueued |
 | `LetValue.const g args`, other | `g' args` with `g' = globalName g`; `g` enqueued for translation |
 | `g._redArg` | translated under `globalName g`; the wrapper `g` is skipped |
 | `Decl.value = extern` | a hole |
@@ -212,6 +219,19 @@ structure St where
   declarations, hand functions of the prelude, the names of builtin forms. A binder that took
   one of them would capture the reference, so `translateDecl` names the binders again. -/
   freeRefs : Array String := #[]
+  /-- The declarations of a used artifact this body calls (`TCtx.links`), in order of first call:
+  written by that artifact's module, never called here, so the walk never translates them. -/
+  links : Array Name := #[]
+
+/-- A declaration another artifact lowers, as an artifact that uses it writes it: that
+artifact's module and the binding's OCaml name there (`Eff_image`, `run_kit_program_to_val`). -/
+structure Link where
+  unit : String
+  name : String
+deriving Inhabited, BEq, Repr
+
+/-- The binding's path: `Eff_image.run_kit_program_to_val`. -/
+def Link.path (l : Link) : String := l.unit ++ "." ++ l.name
 
 /-- What a translation reads: the environment constructors are looked up in, and the decided
 OCaml names of the type constants whose short name is claimed twice (`TypeNames`). Both halves
@@ -222,6 +242,10 @@ structure TCtx where
   tn : TypeNames := {}
   /-- The `Extract Constant` table (`OCaml5.Lcnf.Externs`). -/
   ex : Externs := {}
+  /-- The declarations the artifacts this one uses lower (`OCaml5.Lcnf.Gen`'s `--use`), by Lean
+  name, the wrapper and its twin alike: a call to one is that artifact's binding (`Link.path`).
+  Empty for a run that uses no artifact. -/
+  links : Std.HashMap Name Link := {}
 
 /-- The translation monad: the context above, the state above. -/
 abbrev TM := ReaderT TCtx (StateM St)
@@ -289,6 +313,10 @@ def todo (msg : String) : TM Unit :=
 
 def noteCall (n : Name) : TM Unit :=
   modify fun s => { s with calls := if s.calls.contains n then s.calls else s.calls.push n }
+
+/-- A call to a declaration a used artifact lowers: linked, not called (`St.links`). -/
+def noteLink (n : Name) : TM Unit :=
+  modify fun s => { s with links := if s.links.contains n then s.links else s.links.push n }
 
 def noteReal (n : Name) : TM Unit :=
   modify fun s => { s with realTypes := if s.realTypes.contains n then s.realTypes else s.realTypes.push n }
@@ -739,9 +767,17 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
         let as ← args.toList.filterMapM (argAsList s!"{declName}: builtin {n}")
         return (← applyBuiltin b as, none)
       | none =>
-        noteCall n
-        noteFree [globalName n]
-        let g := Ml.Expr.var (globalName n)
+        -- A declaration a used artifact lowers is that artifact's binding, written by its module
+        -- (`TCtx.links`): linked, not called, so the walk never lowers it here. A qualified name
+        -- is no free reference: no binder can hide it.
+        let g ← match (← read).links[n]? with
+          | some l => do
+            noteLink n
+            pure (Ml.Expr.var l.path)
+          | none => do
+            noteCall n
+            noteFree [globalName n]
+            pure (Ml.Expr.var (globalName n))
         -- A wrapper is called under its twin's name, so the call passes the twin exactly the
         -- parameters the wrapper kept. When the reference is *unsaturated* — mono LCNF passes
         -- `Effect4.Machine.finExit` itself as an argument of type `FinName → Exit → Exit`, and
@@ -982,9 +1018,11 @@ instance : Inhabited Translated :=
   ⟨{ leanName := .anonymous, userName := .anonymous, ocamlName := "_", bind := default,
      callees := #[], signature := "", recursive := false }⟩
 
-/-- Translate one mono decl under an OCaml name. -/
+/-- Translate one mono decl under an OCaml name. A call to a declaration of `links` is the used
+artifact's binding (`TCtx.links`). -/
 def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (ocamlName : String)
-    (tn : TypeNames := {}) (ex : Externs := {}) : Translated × St :=
+    (tn : TypeNames := {}) (ex : Externs := {}) (links : Std.HashMap Name Link := {}) :
+    Translated × St :=
   let act (reserved : List String) : TM Translated := do
     -- reserve the names the forms leave free, the eta binders, and what an earlier pass asked for
     modify fun s =>
@@ -1046,7 +1084,7 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
   -- names the binders around them. The free names do not depend on how a binder is spelled, so
   -- one more pass settles it.
   let run (seeds : Std.HashMap FVarId String) (reserved : List String) : Translated × St :=
-    Id.run ((act reserved { env := env, tn := tn, ex := ex }).run { localSeeds := seeds })
+    Id.run ((act reserved { env := env, tn := tn, ex := ex, links := links }).run { localSeeds := seeds })
   let captured (st : St) : Array String := st.binders.filter st.freeRefs.contains
   Id.run do
     let mut seeds : Std.HashMap FVarId String := {}
@@ -1092,6 +1130,9 @@ structure Closure where
   declaration. The declarations before the first start are those the artifact's own roots reach,
   since the walk closes over them before any later group begins. -/
   phaseStarts : Array Nat := #[]
+  /-- The declarations of a used artifact the walk reached (`TCtx.links`): a root it starts from
+  and a callee a translated declaration links, each once. None is translated here. -/
+  linked : Array Name := #[]
 
 /-- Every refusal of the closure: the translation's. -/
 def Closure.problems (c : Closure) : Array String := c.todos
@@ -1123,7 +1164,8 @@ private def Closure.absorb (c : Closure) (t : Translated) (st : St) : Closure :=
     usedCargs := st.usedCargs.foldl pushNew c.usedCargs,
     wantedCargs := st.wantedCargs.foldl (fun a w => if a.contains w then a else a.push w) c.wantedCargs,
     toLists := c.toLists ++ st.toLists,
-    todos := c.todos ++ st.todos }
+    todos := c.todos ++ st.todos,
+    linked := st.links.foldl pushNew c.linked }
 
 /-- Collect the translated closure and its original mono dependency graph. Intermediate
 carrier-inference rounds stay private; only the final checked closure is returned publicly.
@@ -1133,9 +1175,15 @@ phase is done: one walk, one set of translated declarations, and a declaration t
 translated once, in the earlier phase. So an artifact's consumers (`OCaml5.Lcnf.Export`) share a
 node, and the first consumer's declarations come in the order its own walk gives them. The index
 where each phase begins is `Closure.phaseStarts`: the declarations before the first are exactly
-those `roots` reach, which no later phase walks again. -/
+those `roots` reach, which no later phase walks again.
+
+A declaration of `links` is lowered by an artifact this one uses: the walk stops there, as at a
+builtin, and records it (`Closure.linked`), so nothing under it is walked unless another path
+reaches it. The declarations a used artifact lowers are closed under their calls, so no such path
+leads back into them. -/
 private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
-    (ex : Externs := {}) (phases : Array (Array Name) := #[]) : CoreM Closure := do
+    (ex : Externs := {}) (phases : Array (Array Name) := #[])
+    (links : Std.HashMap Name Link := {}) : CoreM Closure := do
   let env ← getEnv
   let mono := persistedMonoIndex env
   let mut c : Closure := {}
@@ -1155,6 +1203,9 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
     if ex.hasFn n then continue
     if (builtin? n).isSome then continue
     if env.find? n matches some (.ctorInfo _) then continue
+    if links.contains n then
+      c := { c with linked := pushNew c.linked n }
+      continue
     if c.decls.size ≥ cap then
       c := { c with frontier := pushNew c.frontier n }
       continue
@@ -1177,7 +1228,7 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
       userName := stripRedArg n
       if userName != n then
         done := done.insert userName
-    let (t, st) := translateDecl env d userName (globalName userName) tn ex
+    let (t, st) := translateDecl env d userName (globalName userName) tn ex links
     c := c.absorb t st
     for callee in st.calls do
       unless done.contains callee do
@@ -1189,10 +1240,12 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
   return c
 
 /-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
-declarations, then each later root group of `phases` (`collectClosure`). -/
+declarations, then each later root group of `phases` (`collectClosure`). A declaration of
+`links` is linked, not translated. -/
 def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
-    (ex : Externs := {}) (phases : Array (Array Name) := #[]) : CoreM Closure :=
-  collectClosure roots cap tn ex phases
+    (ex : Externs := {}) (phases : Array (Array Name) := #[])
+    (links : Std.HashMap Name Link := {}) : CoreM Closure :=
+  collectClosure roots cap tn ex phases links
 
 /-- `translateClosure`, with the carrier parameters inferred. A carrier that has no `to_list`
 operation can only be passed on as itself, so a generated callee that is handed one takes it as
@@ -1202,11 +1255,12 @@ its parameter is a carrier only once its row exists, and only then hands it on. 
 the closure, the table with the inferred rows added, and the inferred rows as the table would
 spell them. A wrong inference is an `ocamlopt` type error, as a wrong hand row is. -/
 def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
-    (ex : Externs := {}) (phases : Array (Array Name) := #[]) :
+    (ex : Externs := {}) (phases : Array (Array Name) := #[])
+    (links : Std.HashMap Name Link := {}) :
     CoreM (Closure × Externs × Array String) := do
   let mut ex := ex
   let mut inferred : Array String := #[]
-  let mut closure ← collectClosure roots cap tn ex phases
+  let mut closure ← collectClosure roots cap tn ex phases links
   for _ in [:64] do
     if closure.wantedCargs.isEmpty then break
     for (g, i, c) in closure.wantedCargs do
@@ -1215,7 +1269,7 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
       unless prev.any (fun row => row.1 == CargParam.pos i) do
         ex := { ex with cargs := ex.cargs.insert key (prev ++ [(CargParam.pos i, [c])]) }
         inferred := inferred.push s!"carg {key} {i} {c}"
-    closure ← collectClosure roots cap tn ex phases
+    closure ← collectClosure roots cap tn ex phases links
   unless closure.wantedCargs.isEmpty do
     throwError "carrier parameters still unsettled after 64 rounds: {closure.wantedCargs}"
   return (closure, ex, inferred)
@@ -1223,17 +1277,19 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
 /-- The closure translated again under other type names (`tn`), with its settled carrier table.
 The walk and the carrier inference read no type name, so their results stay: each declaration is
 translated again, in the walk's order, and nothing is walked again. The generator's renaming pass
-took a whole walk with its inference (LC-4). -/
-def retranslate (c : Closure) (tn : TypeNames) (ex : Externs) : CoreM Closure := do
+took a whole walk with its inference (LC-4). The links are the walk's, so the roots it linked stay
+linked. -/
+def retranslate (c : Closure) (tn : TypeNames) (ex : Externs)
+    (links : Std.HashMap Name Link := {}) : CoreM Closure := do
   let env ← getEnv
   let mono := persistedMonoIndex env
   let mut out : Closure :=
     { frontier := c.frontier, missing := c.missing, wrapperRefs := c.wrapperRefs,
-      phaseStarts := c.phaseStarts }
+      phaseStarts := c.phaseStarts, linked := c.linked }
   for t in c.decls do
     let some d := mono.findIn? env t.leanName
       | throwError "retranslate: no mono declaration for {t.leanName}"
-    let (t', st) := translateDecl env d t.userName t.ocamlName tn ex
+    let (t', st) := translateDecl env d t.userName t.ocamlName tn ex links
     out := out.absorb t' st
   unless out.wantedCargs.isEmpty do
     throwError "retranslate: carrier parameters the settled table does not state: {out.wantedCargs}"
