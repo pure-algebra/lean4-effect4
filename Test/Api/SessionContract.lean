@@ -60,13 +60,15 @@ open Test.Api.SessionFixtures
 #guard sessionObject ⟨{}, unitProgram⟩ "Absent" = .error (.missingService "Absent")
 
 -- Controls: source admission permits these declarations; session construction keeps each owner.
+-- A key a method requires is provided as the initializer's are (`ServiceSession.keysOf`).
 #guard [parameterized, remaining, nonunit, incomingHandle, outgoingHandle, unusedParameterized,
   twoArguments].all (fun o => o.open.isOk && o.services.isOk)
 #guard sessionObject parameterized "Simple" =
   .error (.admission (.illTyped ⟨[1, 1, 0, 1, 1, 0, 0, 0], .outsideDomain "method"⟩))
 #guard sessionObject nonunit "Simple" =
   .error (.admission (.illTyped ⟨[1], .valueNotSubtype natKey .unit .nat⟩))
-#guard sessionObject remaining "Simple" = .error (.requirements [1] [unitKey])
+#guard (sessionObject remaining "Simple").bind (fun o => o.open.mapError .admission |>.map (·.requires)) =
+  .ok []
 #guard sessionObject incomingHandle "Simple" =
   .error (.admission (.signature (.row 0 (.internalHandle "answer"))))
 #guard (sessionObject outgoingHandle "Simple").map (fun o => o.app.rows.map (·.request)) =
@@ -129,7 +131,7 @@ example (before after : Built) (_source : exampleBuilt = some before)
 example (before : Built)
     (_source : (todoBuilt.bind fun b =>
       (withRow (Object.ofBuilt b) "Session.next").open.toOption) = some before) (candidate : Object)
-    (_made : Effect4.Api.ServiceSession.candidate before "TodoApp" = .ok candidate)
+    (_made : Object.session (Object.ofBuilt before) "TodoApp" = .ok candidate)
     (why : AdmitRefusal) (refused : candidate.open = .error why) :
     Effect4.Api.ServiceSession.finish candidate = .error (.admission why) :=
   (Effect4.Api.ServiceSession.finish_admission_error_iff candidate why).mpr refused

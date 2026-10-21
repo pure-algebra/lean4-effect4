@@ -36,14 +36,14 @@ theorem ServiceSession.finish_admission_error_iff (object : Object) (why : Admit
         Except.ok built = (Except.error why : Except AdmitRefusal Built)
     split <;> aesop
 
-/-- service-session-checked: construction succeeds exactly when its candidate opens as the
-result and that result has no remaining service requirements. -/
+/-- service-session-checked: construction succeeds exactly when the session object of the
+source opens as the result and that result has no remaining service requirements. -/
 @[semantics "host-session-protocol" (requirement := R6)]
 theorem Built.session_ok_iff (before : Built) (name : String) (after : Built) :
     before.session name = .ok after ↔
-      ∃ object, ServiceSession.candidate before name = .ok object ∧
+      ∃ object, Object.session (Object.ofBuilt before) name = .ok object ∧
         object.open = .ok after ∧ after.requires = [] := by
-  change (ServiceSession.candidate before name >>= ServiceSession.finish) = .ok after ↔ _
+  change (Object.session (Object.ofBuilt before) name >>= ServiceSession.finish) = .ok after ↔ _
   rw [Effect4.Laws.Auto.bind_eq_ok]
   constructor
   · rintro ⟨object, hc, hf⟩
@@ -74,7 +74,7 @@ theorem Built.session_retains {before after : Built} {name : String}
       after.app = { before.app with rows := before.table ++ appended } := by
   obtain ⟨object, hc, ho, _⟩ := (Built.session_ok_iff before name after).mp h
   have retained := Object.ofBuilt_of_open ho
-  unfold ServiceSession.candidate at hc
+  unfold Object.session at hc
   obtain ⟨services, _, hc⟩ := Effect4.Laws.Auto.bind_eq_ok.mp hc
   split at hc
   next service selected =>

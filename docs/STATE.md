@@ -83,10 +83,10 @@ and a document are each a state reached by its journal. The dictionary
 - The object's load is a composite of two exact embeddings, and the row-name projection is gone (row 440).
   The printer's service check is formation and naming.
   The sequence is `research/2026-10-20-program-host-runtime.md` §14.5.
-- `Built.session` constructs an admitted lifetime from an admitted service block.
-  It initializes once, keeps definition positions, appends request and reply rows, and refuses remaining requirements.
-  The engine, file loader, and driver remain later slices.
-  The contract and checks are in `research/2026-10-21-session-landing/README.md`.
+- `Object.session` writes a service's lifetime as the object's main program, data to data, and `Built.session` admits it (row 441).
+  It provides each required key once, initializes once, keeps definition positions, and appends request and reply rows.
+  The driver, the engine and the file loader remain later slices; the per-request runner and the OCaml to-do lane retire with them.
+  The landing is `research/2026-10-21-session-landing/README.md`; its review is `research/2026-10-21-session-review/README.md`.
 
 ## Next, in order
 
