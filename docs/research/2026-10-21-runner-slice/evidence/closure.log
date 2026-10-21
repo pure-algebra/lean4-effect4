@@ -1,0 +1,5 @@
+New runner modules in lowering import closure: []
+ocaml/gen/closure-api_engine.tsv: 903 declarations; changed-family hits: []
+ocaml/gen/closure-api_gen.tsv: 3212 declarations; changed-family hits: []
+ocaml/gen/closure-eff_image.tsv: 115 declarations; changed-family hits: []
+PASS: no changed executable declaration reaches an existing native artifact.

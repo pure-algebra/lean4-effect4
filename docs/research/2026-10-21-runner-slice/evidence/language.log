@@ -1,0 +1,1 @@
+PASS check-language: no finding in docs/core/controlled-english.md, docs/core/semantics.md, docs/core/host-boundary.md, docs/core/api-surface.md, docs/STATE.md, docs/research/2026-10-21-runner-slice/README.md; the other documents carry 1770 finding(s) (report: python3 scripts/check-language.py)
