@@ -1,0 +1,4 @@
+../../../../../../tmp/effect4-session-target-review-20261021/session.ts(21,40): error TS2339: Property 'next' does not exist on type 'Service<"Session", { readonly read: () => Effect<number, never, never>; }>'.
+../../../../../../tmp/effect4-session-target-review-20261021/session.ts(21,67): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Option<unknown>'.
+../../../../../../tmp/effect4-session-target-review-20261021/session.ts(21,212): error TS2339: Property 'reply_read' does not exist on type 'Service<"Session", { readonly read: () => Effect<number, never, never>; }>'.
+../../../../../../tmp/effect4-session-target-review-20261021/session.ts(23,7): error TS2322: Type 'unknown' is not assignable to type 'boolean'.

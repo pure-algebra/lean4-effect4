@@ -1,0 +1,112 @@
+PASS tsgo: shared result 457648a01415
+Build completed successfully (292 jobs).
+lake env lean -M4096 --run tools/Tools/RowTypes.lean generated/row-types.tsv
+wrote generated/row-types.tsv
+node ts/eff/node_modules/@typescript/native-preview/bin/tsgo --noEmit -p tools/target/tsconfig.json
+bun test tools/target
+bun test v1.4.2 (744846f84)
+
+tools/target/profile.test.ts:
+(pass) the row signatures are Lean's, one line per selectable row, and cover the selection [1.14ms]
+(pass) the receiver of a selected member is the object type the compiler parsed [567.85ms]
+(pass) requirements: full keys have bounded identities and only the exact scope key is special [0.52ms]
+(pass) requirements: distinct keys keep distinct identities when their carriers coincide [0.03ms]
+(pass) requirements: unknown and absent carriers retain the key identity [0.03ms]
+(pass) requirements: malformed carrier metadata is rejected [0.08ms]
+(pass) the hand-selection lane binds the same full requirement identity as the corpus lane (DI-93) [0.86ms]
+(pass) handle targets are bound by declaration, and structured types preserve nesting [0.80ms]
+(pass) selected IDs cannot vanish with absent metadata and unexpected inventory is refused [181.72ms]
+
+tools/target/prelude.test.ts:
+(pass) every case of the prelude's self-test table holds, and every atom of the profile has one [1.49ms]
+(pass) the self-test's controls: a wrong answer and an atom with no case are each refused by name [0.64ms]
+(pass) Boolean tag tests retain the host error bound and work as ordinary data [359.61ms]
+(pass) option defaults preserve nested payloads, unit, and object identity [0.04ms]
+
+tools/target/oracle.test.ts:
+(pass) synthetic assignments compare all three independent Effect columns [281.09ms]
+(pass) program errors may be strictly contained while other contracts stay exact [552.95ms]
+(pass) program containment cannot accept unresolved error bounds or failed extraction [285.83ms]
+(pass) request, receiver, optional and rest parameters are independently compared [285.78ms]
+(pass) unresolved types, absent metadata and unsupported signatures are refusals [291.62ms]
+(pass) all diagnostics count and repeated reports are stable [548.49ms]
+(pass) non-Effect and never subjects cannot agree through never-valued extraction helpers [277.96ms]
+(pass) one compiler: no second checker is constructed anywhere in the tree (row 57) [45.95ms]
+(pass) E4-CATCH-CE-001: an explicit absent fallback selects the data-first overload [269.46ms]
+
+tools/target/assignability.test.ts:
+(pass) the four verdicts follow the direction of the disagreement, not the pair's name [0.45ms]
+(pass) the two readings of a direction are reported, never conflated [0.02ms]
+(pass) the vectors are read exactly, and the table keeps every column [0.32ms]
+
+tools/target/rows.test.ts:
+(pass) a template atom agrees at its probes, and a wrong template or instantiation does not [299.55ms]
+
+tools/target/cli.test.ts:
+(pass) real command positive exits 0 [325.35ms]
+(pass) real command negative exits 1 [324.39ms]
+(pass) real command refuses missing query input with exit 2 [51.11ms]
+(pass) declarative query input refuses malformed controls [0.33ms]
+
+ 30 pass
+ 0 fail
+ 269 expect() calls
+Ran 30 tests across 6 files. [5.10s]
+bun tools/target/cli.ts --repo .
+target conformance [effect@4.0.0-rc.112/adapter]: PASS; 104 expected, 104 attempted, 104 resolved, 0 mismatching, 0 refused
+report: /Users/pooks/.codex/worktrees/program-domain/lean4-effect4/.lake/target/report.json
+wrote 742 pairs to .lake/target/ty-vectors.tsv
+bun tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv
+assignability: 742 pairs; agree 708, cut 10, incomplete 24
+assignability: red control (refOf covariant): 10 pair(s) move, 10 caught by the differential
+PASS assignability: no pair the order accepts is refused by the target
+PASS target: recorded c7b1b9b8cf11 (17.904s)
+lake build Drivers.Corpus
+✔ [713/758] Built Effect4.Author (1.5s)
+✔ [715/758] Built Effect4.Api.RefusalsDerived (4.5s)
+✔ [717/758] Built Effect4.Tool.CheckDerived (1.6s)
+✔ [719/758] Built Effect4.Api.RunnerDerived (2.8s)
+✔ [721/758] Built Effect4.Api.RunnerBytes (1.3s)
+✔ [723/758] Built Effect4.Run.LiveRecord (1.4s)
+✔ [725/758] Built Effect4.Run.Kit (1.4s)
+✔ [727/758] Built Effect4.Emit (1.2s)
+✔ [729/758] Built Effect4.Run.Preview (1.2s)
+✔ [731/758] Built Effect4.Tool.Protocol (1.7s)
+✔ [733/758] Built Effect4.Tool.WireTypes (1.3s)
+✔ [735/758] Built Effect4.Tool.Actions (1.3s)
+✔ [737/758] Built Effect4.Tool.Replay (1.2s)
+✔ [739/758] Built Effect4.Tool.Queries (1.3s)
+✔ [741/758] Built Effect4.Tool.Serve (1.1s)
+✔ [743/758] Built Effect4.Tool.ToolDerived (6.6s)
+✔ [745/758] Built Effect4.Tool.Wire (1.4s)
+✔ [747/758] Built Effect4.Tool.Workspace (1.6s)
+✔ [749/758] Built Effect4.Tool.Methods (2.4s)
+✔ [751/758] Built Effect4.Tool.Exchange (1.4s)
+✔ [753/758] Built Effect4.Tool.Native (1.2s)
+✔ [755/758] Built Effect4 (1.5s)
+✔ [758/770] Built Effect4:shared (580ms)
+✔ [762/770] Built Compiler.Prelude (586ms)
+✔ [765/770] Built Drivers.StyleSyntax (855ms)
+✔ [766/770] Built Test.Program.Gen (1.3s)
+✔ [767/770] Built Drivers.Styles (691ms)
+✔ [768/770] Built Compiler.Check (1.4s)
+✔ [769/770] Built Compiler.Emit (1.5s)
+✔ [770/770] Built Drivers.Corpus (1.3s)
+Build completed successfully (770 jobs).
+rm -rf .lake/corpus && mkdir -p .lake/corpus
+lake env lean -DwarningAsError=true -M4096 $(python3 scripts/lean-imports.py --dynlibs tools/Drivers/Corpus.lean) --run tools/Drivers/Corpus.lean .lake/corpus 400 4
+kept 408 (readable 385) refused 0 (dir .lake/corpus, depth 4, generated 400, wire corpus 8)
+{ printf '# GENERATED by make corpus (tools/Drivers/Corpus.lean over Test/Program/Gen.lean and the wire corpus); do not edit\n# name\twellTyped\treadable\tchars\treason\tpath\tcodes\n'; cat .lake/corpus/index.tsv; } > generated/corpus-index.tsv
+PASS ts-reader: shared result 9172da2ab8f4
+PASS tsdiag: shared result bd04a8baabef
+PASS ingest-smoke: shared result 4c1cf632a381
+✔ [763/768] Built Test.Dogfood.P2HandlerLayers.Data (1.4s)
+✔ [764/768] Built Test.Dogfood.Scenario.Data (1.5s)
+✔ [765/768] Built Test.Dogfood.Scenario.Todo.Data (1.3s)
+✔ [766/768] Built Test.Dogfood.Scenario.Todo.CachedProgram (1.2s)
+✔ [767/768] Built Test.Api.SessionFixtures (1.3s)
+✔ [768/768] Built TestSupport.ServiceSession (1.3s)
+Build completed successfully (768 jobs).
+python3 scripts/check-service-identity.py
+PASS service identity: checked API emissions, inferred requirements, two TS2375 controls, four runtime outcomes, service session agrees with Lean
+PASS service-identity: recorded 88b3152c916b (9.540s)

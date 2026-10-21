@@ -150,7 +150,7 @@ Host replies retain call-instance admission. Target support, transport support, 
 
 ## Verification record
 
-The base is `33e55d96e`. The final code head and changed paths are recorded beside this receipt.
+The base is `33e55d96e`. [The code head](code-head.txt) and [changed paths](changed-files.txt) record the implementation commit.
 The retained build, audit, generator, and execution logs supply the measured results.
 The first core-build attempt records two namespace ambiguities; the corrected build passes.
 
