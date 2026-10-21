@@ -397,3 +397,242 @@ in flight; item 9 is slice 3; E is the narrow part of M8, which keeps its owner;
 6. A required service with a non-unit carrier: refuse the session program (§4 B).
    Recommended: yes, until a ruling on provision.
 7. S-2, the generated host interface public, for the data profile. Recommended: yes.
+
+## 13. The to-do, before and after
+
+Measured at the external to-do `737df8b` (the library `2de30da7e`), after `lake exe todo emit
+--out ts` and `emit --target ocaml --out ocaml`. Counts by `wc -l`.
+
+### 13.1 What is generated today
+
+| File | Lines | What it is | Where it belongs under program, host, runtime |
+| --- | --- | --- | --- |
+| `ts/todo.gen.ts` | 93 | the service block printed: `RepoKey` (the host rows as a `Context.Service`), `Repo` (call helpers), `TodoAppContext`, `TodoApp_add` … `TodoApp_remove`, `TodoApp`, `TodoAppLayer`, and `main = Effect.succeed(undefined)` | program, with the host interface inside it |
+| `ts/todo.surface.gen.ts` | 30 | `TodoAppSchemas` (each method's input, answer, error as Schemas) and `TodoAppLive` (the decoding layer) | program: the method interface |
+| `ts/prelude/*.ts` | 847 | the prelude's import closure, copied: `prelude.ts` 406, `prelude-atoms.gen.ts` 333, `control.ts` 57, `records.ts` 47, `tuples.ts` 4; the module uses six names of it (`eq, fst, ifCase, optionCase, pair, snd`) | runtime: the TypeScript half of the native route's atoms |
+| `ts/todo.eff`, `ts/todo.eff.json` | 5,713 B, 1 | the block's canonical bytes and their tagged print; the roles `serviceInit` and `serviceMethod` are in them | program |
+| `ts/certificate.json` | 1 | `answer: unit, error: never, requires: []`, the four rows, the services' key names, the five declarations | program: a certificate of the placeholder main |
+| `ts/manifest.json` | 1 | `program {module, declaration "main", address}`, the certificate again, the profile, eleven artifacts with SHA-256, `inputs` (the toolchain, the library commit, 265 modules with digests, the packages, tsgo), nine checks, the command | program and build record, mixed |
+| `ts/run.ts` (hand) | 85 | the repository over a store, the eleven requests again, the exit codec, a JSON canonicalizer that re-implements Lean's key order, and a loop that provides the layer per request | host, driver and runtime glue, by hand |
+| `ts/package.json`, `ts/tsconfig.json` (hand) | 13, 16 | the pins and the compiler options | package |
+| `ocaml/todo_gen.ml` | 6,413 | lowered from six host roots: the repository and its four functions, the store, and `programOf`, which drags `Todo.app`, `Compiler.Request.moduleOf?` and the authoring elaborator `elaborateModule` (376 declarations in `closure-todo_gen.tsv`) into the user's binary | host, plus the compiler's own elaborator |
+| `ocaml/lowering.json`, `ocaml/closure-todo_gen.tsv` | 1, 376 | the recipe naming the host roots; the lowering's closure census | build-tool internals, published as artifacts of kind `recipe` and `closure` |
+| `ocaml/todo.eff`, `.eff.json`, `certificate.json` | — | as for `ts` | program; written and read by nothing on this target |
+| `ocaml/manifest.json` | 1 | as for `ts`, plus `loweringCommand` and `loweringDirectory`, both absolute paths of one machine (`/Users/pooks/Dev/lean4-effect4`) | build record, not portable |
+| `ocaml/todo_native.ml`, `dune`, `dune-project` (hand) | 31, 12, 1 | `Kit.app ~rows:Todo_gen.todo_host_rows`, then per request `Todo_gen.todo_host_program_of`, `Kit.check`, `Kit.run` | driver, by hand |
+| `Todo/Host.lean` (hand) | 124 | the store and four functions (host); `repository` (host); `storeVal` (view); `script` (driver); `rows`, `programOf`, `resultVal` (program plumbing for the native run); `lowered` (the recipe) | five concerns in one file |
+
+### 13.2 What is hacky and loose, with the evidence
+
+1. **The native binary rebuilds programs from authoring source.** `todo_gen.ml` lowers
+   `programOf`, so each request elaborates `Todo.app`'s entry at its arguments through
+   `elaborateModule`, natively, at run time. The emitted `todo.eff` sits beside it, read by
+   nothing. 6,413 lines, of which the host is about 150.
+2. **The host is inside the program artifact.** `lowering.json`'s `linkage` names six host
+   roots. A change to `Todo.Host.insert` changes `todo_gen.ml`'s digest in the program manifest.
+3. **The manifest is not portable.** `loweringDirectory` and `loweringCommand` carry absolute
+   paths of the machine that emitted them.
+4. **The certificate certifies a placeholder.** `main = Effect.succeed(undefined)`, so
+   `certificate.answer` is `unit`, the header says `type void` and `covered: outside the straight
+   fragment`. The methods' types are only in `declarations`. The certificate is then copied whole
+   into the manifest.
+5. **The program's inputs include the compiler and the host.** `inputs.modules` lists 265
+   modules, `Compiler.Check`, `Compiler.Code.Doc` and `Todo.Host` among them, so `inputs.address`
+   moves when the host or the compiler's own source moves, although the program's bytes do not.
+6. **Runtime code is copied into the program folder.** 847 lines of prelude for six names, with
+   a self-test table and a SQL adapter's sibling, as artifacts of kind `prelude` with digests in
+   the program's manifest.
+7. **The host interface lives in the program module, so the host imports the program.**
+   `run.ts` writes `typeof RepoKey.Service` from `./todo.gen.ts`: the dependency points from the
+   host to the program file, the direction the proposal forbids.
+8. **Three copies of the script, two codecs, two lifetimes.** The eleven requests are in
+   `Todo/Host.lean`, `run.ts` and the lowered `todo_host_script`. `run.ts` hand-writes an exit
+   codec and a `canon` that re-implements Lean's key order. It provides the layer inside each
+   request, where the Lean `run` never runs the block at all (§4 B): neither runs the service's
+   lifetime.
+9. **The service state is tuple plumbing.** `TodoApp_add(a0: readonly [Context.Context<"Repo">,
+   string])` with `fst(a0)` and `snd(a0)`: a context value packed as the first component of every
+   method's request, visible in the printed text and in the bytes (`request: prod (contextOf …)
+   string`).
+10. **`Todo/Host.lean` is five things.** Host, view, driver script, program plumbing and the
+    lowering recipe, in one file the user is told to write.
+11. **The kit's application is the host's.** `Kit.app ~rows:Todo_gen.todo_host_rows` takes the
+    rows from the lowered host instead of from the program's bytes, and `types = []`.
+
+### 13.3 The same to-do in the new form
+
+The user writes three Lean files and, per target, one host file.
+
+```text
+effect4-todo/
+  Todo/App.lean          77 lines, unchanged: the data, the rows, the four operations, the application
+  Todo/Host.lean         ~55 lines: the store, four functions, `repository : Repo.Host Store`, `storeVal`
+  Todo/Script.lean       ~15 lines: the eleven requests, as data
+  Main.lean              2 lines: `Compiler.main Todo.app args (hosted := …) (script := Todo.script)`
+  ts/repository.ts       ~30 lines: the store and four methods against `host.d.ts`  (hand, the TS host)
+  ocaml/table.ml         ~40 lines: a module of the generated signature          (hand, a second native host)
+```
+
+`Todo/Host.lean` after slice 3:
+
+```lean
+structure Store where next : Nat := 1; items : List Item := []; capacity : Nat := 3
+
+def insert (title : String) (s : Store) : Except SqlError Item × Store := …   -- the four, as today
+def all … def setDone … def delete …
+
+/-- The repository: a value of the record `eff_rows` generated for `Repo`. -/
+def repository : Repo.Host Store := { insert, all, setDone, delete }
+
+def storeVal (s : Store) : Val := …
+```
+
+`lake exe todo emit --out out` writes the object, target-independent:
+
+```text
+out/
+  todo.obj             the object's canonical bytes: version 1, app {rows, services, types}, the block, rowNames, argNames
+  todo.obj.json        its tagged print, readable
+  manifest.json        a carrier: object {address}, program {address}, profile, artifacts, derivation, checks
+```
+
+`lake exe todo emit --target ts --out out/ts` writes the bundle:
+
+```text
+out/ts/
+  todo.gen.ts          the service block printed; imports { Repo } from "./host"; imports eq, fst, … from "@effect4/prelude"
+  todo.surface.gen.ts  as today
+  todo.session.gen.ts  the session program: main = provide Repo's unit key; init once; loop on Session.next; reply
+  host.d.ts            the host interface, types only, from hostBindings
+  todo.obj             the object
+  manifest.json        the carrier; requires: ["./host", "./driver", "@effect4/prelude@<pin>", "effect@4.0.0-rc.112"]
+```
+
+`host.d.ts`, generated from the rows (the text `hostBindings` already computes):
+
+```ts
+import type { Context, Effect, Option } from "effect"
+export type Todo = { readonly done: boolean; readonly id: number; readonly title: string }
+export type SqlError = readonly ["SqlError", string]
+export declare const RepoKey: Context.Service<"Repo", {
+  readonly insert: (a0: string) => Effect.Effect<Todo, SqlError, never>
+  readonly all: () => Effect.Effect<ReadonlyArray<Todo>, SqlError, never>
+  readonly setDone: (a0: readonly [number, boolean]) => Effect.Effect<Option.Option<Todo>, SqlError, never>
+  readonly delete: (a0: number) => Effect.Effect<boolean, SqlError, never>
+}>
+export declare const Repo: typeof RepoKey & { insert: …; all: …; setDone: …; delete: … }
+```
+
+`todo.session.gen.ts`, the session program printed (the layout is the printer's; this is its
+shape):
+
+```ts
+import { Effect } from "effect"
+import { Repo } from "./host"
+import { Session } from "./driver"
+import { TodoAppContext, TodoApp_add, TodoApp_list, TodoApp_complete, TodoApp_remove } from "./todo.gen.ts"
+
+export const main: Effect.Effect<void, never, "Repo" | "Session"> =
+  Effect.flatMap(TodoAppContext(), (state) =>
+    Effect.whileLoop({                                   // iterate: the cursor is the state
+      while: … ,                                          // Session.next answered some request
+      body: () => Effect.flatMap(Session.next(), (request) =>
+        tagCase(request,
+          { add:      (args) => Effect.flatMap(Effect.exit(TodoApp_add(pair(state, args.title))), Session.reply_add),
+            list:     ()     => Effect.flatMap(Effect.exit(TodoApp_list(state)),                  Session.reply_list),
+            complete: (args) => Effect.flatMap(Effect.exit(TodoApp_complete(pair(state, args.id))), Session.reply_complete),
+            remove:   (args) => Effect.flatMap(Effect.exit(TodoApp_remove(pair(state, args.id))),   Session.reply_remove) })),
+      step: () => undefined }))
+```
+
+`lake exe todo assemble --target ts --host ts/repository.ts --out pkg/ts` writes the package:
+
+```text
+pkg/ts/
+  (the bundle, copied)
+  host.ts              the user's repository.ts, checked against host.d.ts
+  driver.ts            generated: Session as a Layer over the script's eleven requests; prints each reply
+                       at its method's exit Schema (from the surface) beside the host's state
+  main.ts              generated: Effect.runPromise(main.pipe(Effect.provide(hostLayer), Effect.provide(driverLayer)))
+  package.json         generated: effect 4.0.0-rc.112, @effect4/prelude <pin>, tsgo 7.0.0-dev.20260629.1
+  tsconfig.json        generated
+  package.json.manifest  the package record: bundle manifest digest, host.ts digest, the pins, the driver's script digest,
+                       the commands run (tsgo --noEmit, bun main.ts) and their exit codes
+```
+
+`ts/repository.ts`, the user's host, is the first forty lines of today's `run.ts` and nothing
+else:
+
+```ts
+import { Effect, Layer, Option } from "effect"
+import { RepoKey, type Todo } from "./host"
+const store = { next: 1, items: [] as ReadonlyArray<Todo>, capacity: 3 }
+export const hostLayer = Layer.succeed(RepoKey, {
+  insert: title => …, all: () => …, setDone: ([id, done]) => …, delete: id => …
+})
+```
+
+`lake exe todo emit --target ocaml --out out/ocaml` writes:
+
+```text
+out/ocaml/
+  todo.obj             the object
+  todo_host.mli        the generated signature: module type REPO = sig type t  val insert : string -> t -> (todo, sql_error) result * t … end
+  todo_types.ml        the rows' carriers as OCaml types (todo, sql_error), by the staged images
+  manifest.json
+```
+
+`lake exe todo assemble --target ocaml --host Todo/Host.lean --out pkg/ocaml` writes:
+
+```text
+pkg/ocaml/
+  todo.obj
+  todo_host_gen.ml     lowered from Todo.Host.repository alone: the store, the four functions, the record (about 400 lines)
+  script.ml            the eleven requests as data
+  main.ml              generated, below
+  dune, dune-project   generated
+  package.json.manifest  the package record, as for ts; lcnfgen's command recorded with relative paths and the library's commit
+```
+
+`main.ml`, generated:
+
+```ocaml
+let () =
+  let object_ = Kit.object_of_bytes (In_channel.with_open_bin "todo.obj" In_channel.input_all) in
+  let app = Kit.app_of_object object_ in                 (* rows, services and types from the bytes; M8's narrow part *)
+  let program = Kit.session object_ in                   (* the same session program Lean runs *)
+  let host = Todo_host_gen.reactor Todo_host_gen.repository in
+  let script = Script.reactor Script.requests in         (* answers Session.next, records Session.reply_* *)
+  let report = Kit.run app (Kit.Reactor.first [ script; host ]) (Script.start, Todo_host_gen.initial) program in
+  Script.print_lines report.state
+```
+
+`--host ocaml/table.ml` instead lowers nothing: the plan copies the module, which must have type
+`REPO`, and `main.ml` names it.
+
+`lake exe todo run` is the Lean reference: `runWith (session object) (Reactor.first [script,
+Repo.reactor repository]) (…)`, printing the same lines from the script reactor's state.
+
+### 13.4 What the new form removes, counted at today's files
+
+| Gone | Lines or bytes | Replaced by |
+| --- | --- | --- |
+| `todo_gen.ml`'s elaborator, `Todo.app`, `moduleOf?`, `programOf`, `script`, `resultVal`, `rows` | about 6,000 of 6,413 | `todo.obj` read by `Kit.object_of_bytes`; `todo_host_gen.ml` holds the host alone |
+| `ts/prelude/` in the program folder | 847 | the package `@effect4/prelude`, pinned by assembly |
+| `run.ts`'s script, codec, canonicalizer and loop | 55 of 85 | `driver.ts`, generated from the script and the surface |
+| `todo_native.ml`, `dune`, `dune-project`, `package.json`, `tsconfig.json` by hand | 73 | generated by `assemble` |
+| `Todo/Host.lean`'s `programOf`, `resultVal`, `rows`, `lowered`, `script` | about 45 of 124 | the object's service view; `Todo/Script.lean`; nothing |
+| `lowering.json`, `closure-todo_gen.tsv` as program artifacts | 377 | the package record names the lowering's inputs and command |
+| the certificate copied into the manifest; `loweringDirectory` | — | one carrier, relative paths |
+| `inputs.modules` with the compiler's and the host's modules | 265 entries | the build key names the application's closure; the host's closure is the assemble key's |
+
+What stays hand-written: the application, the host's functions in Lean, one host file per
+target, and the script. Everything that is a function of the object is generated from it, and
+nothing generated from the object mentions a host implementation, a path, or the compiler's
+sources.
+
+One more decision for §12:
+
+8. The prelude becomes a pinned package (`@effect4/prelude`), the runtime's TypeScript half,
+   supplied by assembly, instead of a copied folder in the bundle. Recommended: yes; the bundle's
+   key then names the pin, not 847 lines of bytes.
