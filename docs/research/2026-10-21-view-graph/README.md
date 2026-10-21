@@ -2,7 +2,7 @@
 
 Status: a design note and a brief. It rules nothing. The evidence words are those of `docs/core/controlled-english.md` §3.8.
 The prove-out is `probe-view.lean`, run with `lake env lean` against the built tree on 2026-10-21.
-Its outputs are in `out/`: one Markdown file, one JSON file, and a TSV and an SVG for each figure. `out/figures.jpg` is the page as the browser drew it.
+Its outputs are in `out/`: one Markdown file, one JSON file, and a TSV and an SVG for each figure. `out/figures.jpg` is the page as the browser drew it. `probe-rows.lean` reads the same object as four relations, `out/relation-*.gen.tsv` (§2.6).
 The literature is under `sources/`, with its index in `sources/README.md`.
 
 ## 1. The one thing to know
@@ -56,6 +56,30 @@ Then every layer combinator is overlay.
 
 The box form of G∂, the first drawing, is the hypergraph with each wire contracted to an edge. Contraction is a graph operation on the data, so the two drawings are one value read two ways.
 
+### 2.6 The rows come first
+
+The owner reviewed the four drawings on 2026-10-21, by voice. Every node looks the same, a box with text. A row and a definition cannot be told apart, and the mapping to the algebra is not visible. A tabular form was asked for, with the location of each thing. The location is itself the graph.
+
+The location is the address. `Node.addresses` (`src/Effect4/Program/Typing/Table.lean`) lists every node of a program by its path, and `Node.at_` (`src/Effect4/Program/Refs.lean`) reads the node there. The one-layer view (`view_eff`, `view_layer`, `src/Effect4/Program/LayerView.lean`) gives the node's constructor and its arguments. The glyph table (`Tools.View.Glyph.table`, `tools/Tools/View/Glyph.lean`) gives each constructor its mark and its word.
+
+`probe-rows.lean` reads the session object of the to-do as four relations, in `out/relation-*.gen.tsv`.
+
+| Relation | One row is | Columns | On the to-do |
+| --- | --- | --- | --- |
+| nodes | a node of the program term | address, the definition or main it lies in, sort, mark and word, what it names | 70 |
+| defs | a definition of the block | k, name, role, the address of its body | 5 |
+| rows | a row of a host | i, spelling, namespace, request type, answer type | 9 |
+| calls | a call instance of the call table | address, the definition it lies in, the sort of its target, the target, the target's address | 14 |
+
+The graphs of §2.2 are queries over these relations, and no second carrier is needed.
+
+- The term tree is the prefix order of `nodes.address`.
+- The inside, G∘, is `calls` joined to `defs` and `rows` on the target.
+- The boundary, G∂, is `calls` grouped by the service of its definition and the namespace of its row.
+- The layer term, Gλ, is the rows of `nodes` whose sort is `layer`, under the prefix order.
+
+So the slice writes the relations first and the drawings as folds of them. A drawing carries the mark of each node's constructor from the glyph table, not a box with text. The status word of a `GraphNode` names the sort. That is the change the review asks for, and it is a change to the derivation, not to the drawer.
+
 ### 2.4 The laws, placed
 
 Each law below is placed before it is worked (`AGENTS.md`, Trust). The concept is concept 7 of `docs/core/semantics.md`, `initial-algebras-folds`, where the algebraic graph's laws already sit. The consumer is the `inspect` command of §5 and the site's figures.
@@ -94,7 +118,7 @@ The owner asked to see the representations the literature gives and then choose.
 | D2 the layer term as a term graph | Hasegawa 1997 for sharing; Mokhov 2017 for the expression | the syntax of a composition, `fresh` and `ref` included | the wires | `cata_layer` |
 | S string diagram with ports | Selinger 2010; Joyal–Street 1991 | the order of ports on a box; the identity of a wire through a box | nothing the others show, at a layout cost | `Tools.View.GraphAttachment` has port attachments; not proved out |
 
-The recommendation is a proposal, not a ruling. D3 is the semantic form, because composition is overlay there and the laws are the algebraic graph's. D1 is its contraction, for reading. D2 is the syntax. S waits for the handler slice, where ports carry meaning.
+The recommendation is a proposal, not a ruling. The rows of §2.6 come first, and every drawing is a query over them. D3 is the semantic form, because composition is overlay there and the laws are the algebraic graph's. D1 is its contraction, for reading. D2 is the syntax. S waits for the handler slice, where ports carry meaning. A drawing marks each node by its constructor's glyph, so a row, a definition and a wire read apart.
 
 ## 4. The reuse pass
 
@@ -116,9 +140,9 @@ Nothing new is drawn. `probe-view.lean` is 150 lines, and its three readers are 
 
 Base: `e16ea6ed4` or later on `refactor/phase1-phase3`. One seat, one branch. Commits by explicit paths after a narrow build.
 
-1. **The folds.** A module `tools/Compiler/Graphs.lean` with `boundary : Api.Built → Block`, `calls : Api.Built → Block` and `layers : Api.Built → List Block`, each a `Block.graph`.
+1. **The relations, then the folds.** A module `tools/Compiler/Graphs.lean` with the four relations of §2.6 as `Block.table`s read from a `Built`. Over them, `boundary : Api.Built → Block`, `calls : Api.Built → Block` and `layers : Api.Built → List Block` as queries. Each is a `Block.graph` whose nodes carry their sort and mark.
    `boundary` reads the call table as §2.2 says, in the hypergraph form, with the box form as its contraction (G3). `layers` folds each layer term of the block with `cata_layer` (Gλ). Every node list is in Kahn's order (G5). No `partial`, no hand match over `LayerTerm`.
-2. **The command.** `inspect --what boundary | calls | layers` beside the existing `graph`, with `--form md | json | svg`. Markdown and JSON are the document folds. SVG is `Figure.picture` through `SvgOut.fileText`, one file a figure. The JSON is the one the site reads (`effect4-document/1`).
+2. **The command.** `inspect --what relations | boundary | calls | layers` beside the existing `graph`, with `--form md | json | svg | tsv`. Markdown and JSON are the document folds. SVG is `Figure.picture` through `SvgOut.fileText`, one file a figure. The JSON is the one the site reads (`effect4-document/1`).
 3. **The table.** The mapping table of `out/todo.gen.md` becomes a `Block.table` the command writes with the figures. Its rows are read from the same data. One row stands for a host, a block or a main, and one row for a combinator the layers use.
 4. **The laws.** G1 and G2 as theorems in `tools/Tools/View/` beside `AlgGraph.lean`, placed under concept 7. G3, G4 and G5 as finite checks in a battery under `Test/`, reachable from `Test/All.lean` at the anchor the coordinator names. Each line is a reader, a control or a finite evaluation. G6 as a theorem if `Tools.Document.Json` admits it in a day. Else a finite check and a planned goal with its claim.
 5. **The generated group.** `generated/graphs/todo.gen.md` and `todo.gen.json` for the dogfood to-do, written by `python3 scripts/generate.py --only graphs` through the command. `docs/GENERATED.md` lists the group with its producer, its inputs and the check that a rerun changes no byte.

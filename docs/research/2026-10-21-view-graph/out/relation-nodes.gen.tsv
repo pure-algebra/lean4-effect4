@@ -1,0 +1,71 @@
+address	in	sort	mark	names
+	block	eff	❏ define	
+0	defs	effs	· cons	
+0.0	TodoAppContext	eff	⌕ read	
+0.0.0	TodoAppContext	action	⌕ read	
+0.1	defs	effs	· cons	
+0.1.0	TodoApp_add	eff	⌜ ⌟ provide	
+0.1.0.0	TodoApp_add	eff	─▶ bind	
+0.1.0.0.0	TodoApp_add	eff	─● succeed	
+0.1.0.0.1	TodoApp_add	eff	⑂ select	
+0.1.0.0.1.0	TodoApp_add	eff	× fail	
+0.1.0.0.1.1	TodoApp_add	eff	!? perform	row TodoRepo.insert
+0.1.1	defs	effs	· cons	
+0.1.1.0	TodoApp_list	eff	⌜ ⌟ provide	
+0.1.1.0.0	TodoApp_list	eff	!? perform	row TodoRepo.all
+0.1.1.1	defs	effs	· cons	
+0.1.1.1.0	TodoApp_complete	eff	⌜ ⌟ provide	
+0.1.1.1.0.0	TodoApp_complete	eff	─▶ bind	
+0.1.1.1.0.0.0	TodoApp_complete	eff	─● succeed	
+0.1.1.1.0.0.1	TodoApp_complete	eff	─▶ bind	
+0.1.1.1.0.0.1.0	TodoApp_complete	eff	!? perform	row TodoRepo.setDone
+0.1.1.1.0.0.1.1	TodoApp_complete	eff	⑂ select	
+0.1.1.1.0.0.1.1.0	TodoApp_complete	eff	× fail	
+0.1.1.1.0.0.1.1.1	TodoApp_complete	eff	─● succeed	
+0.1.1.1.1	defs	effs	· cons	
+0.1.1.1.1.0	TodoApp_remove	eff	⌜ ⌟ provide	
+0.1.1.1.1.0.0	TodoApp_remove	eff	─▶ bind	
+0.1.1.1.1.0.0.0	TodoApp_remove	eff	─● succeed	
+0.1.1.1.1.0.0.1	TodoApp_remove	eff	─▶ bind	
+0.1.1.1.1.0.0.1.0	TodoApp_remove	eff	!? perform	row TodoRepo.delete
+0.1.1.1.1.0.0.1.1	TodoApp_remove	eff	⑂ select	
+0.1.1.1.1.0.0.1.1.0	TodoApp_remove	eff	─● succeed	
+0.1.1.1.1.0.0.1.1.1	TodoApp_remove	eff	× fail	
+0.1.1.1.1.1	defs	effs	· nil	
+1	main	eff	─▶ bind	
+1.0	main	eff	!? perform	call TodoAppContext
+1.1	main	eff	↺ iterate	
+1.1.0	main	eff	─▶ bind	
+1.1.0.0	main	eff	!? perform	row Session.next
+1.1.0.1	main	eff	⑂ select	
+1.1.0.1.0	main	eff	─● succeed	
+1.1.0.1.1	main	eff	⑂ select	
+1.1.0.1.1.0	main	eff	─▶ bind	
+1.1.0.1.1.0.0	main	eff	‖ exit	
+1.1.0.1.1.0.0.0	main	eff	!? perform	call TodoApp_add
+1.1.0.1.1.0.1	main	eff	─▶ bind	
+1.1.0.1.1.0.1.0	main	eff	!? perform	row Session.reply_add
+1.1.0.1.1.0.1.1	main	eff	─● succeed	
+1.1.0.1.1.1	main	eff	⑂ select	
+1.1.0.1.1.1.0	main	eff	─▶ bind	
+1.1.0.1.1.1.0.0	main	eff	‖ exit	
+1.1.0.1.1.1.0.0.0	main	eff	!? perform	call TodoApp_list
+1.1.0.1.1.1.0.1	main	eff	─▶ bind	
+1.1.0.1.1.1.0.1.0	main	eff	!? perform	row Session.reply_list
+1.1.0.1.1.1.0.1.1	main	eff	─● succeed	
+1.1.0.1.1.1.1	main	eff	⑂ select	
+1.1.0.1.1.1.1.0	main	eff	─▶ bind	
+1.1.0.1.1.1.1.0.0	main	eff	‖ exit	
+1.1.0.1.1.1.1.0.0.0	main	eff	!? perform	call TodoApp_complete
+1.1.0.1.1.1.1.0.1	main	eff	─▶ bind	
+1.1.0.1.1.1.1.0.1.0	main	eff	!? perform	row Session.reply_complete
+1.1.0.1.1.1.1.0.1.1	main	eff	─● succeed	
+1.1.0.1.1.1.1.1	main	eff	⑂ select	
+1.1.0.1.1.1.1.1.0	main	eff	─▶ bind	
+1.1.0.1.1.1.1.1.0.0	main	eff	‖ exit	
+1.1.0.1.1.1.1.1.0.0.0	main	eff	!? perform	call TodoApp_remove
+1.1.0.1.1.1.1.1.0.1	main	eff	─▶ bind	
+1.1.0.1.1.1.1.1.0.1.0	main	eff	!? perform	row Session.reply_remove
+1.1.0.1.1.1.1.1.0.1.1	main	eff	─● succeed	
+1.1.0.1.1.1.1.1.1	main	eff	─● succeed	
+2	layers	layers	· nil	

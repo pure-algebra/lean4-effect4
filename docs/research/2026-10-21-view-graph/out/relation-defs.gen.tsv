@@ -1,0 +1,6 @@
+k	name	role	body
+0	TodoAppContext	init of TodoApp	0.0
+1	TodoApp_add	method add of TodoApp	0.1.0
+2	TodoApp_list	method list of TodoApp	0.1.1.0
+3	TodoApp_complete	method complete of TodoApp	0.1.1.1.0
+4	TodoApp_remove	method remove of TodoApp	0.1.1.1.1.0
