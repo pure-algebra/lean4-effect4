@@ -1,0 +1,9 @@
+ran clean: probe-closure.lean
+ran clean: probe-names.lean
+ran clean: probe-certificate.lean
+ran clean: probe-reading.lean
+ran clean: probe-object.lean
+ran clean: probe-service.lean
+ran clean: probe-record.lean
+ran clean: probe-inspect.lean
+#axiom_audit: 381 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals

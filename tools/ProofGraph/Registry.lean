@@ -1304,6 +1304,21 @@ def registry : Registry where
     { id := "cas-resident-injective", concept := "exact-codecs", role := .compatibility
       title := "Two nodes resident at their own equal addresses in one store are equal; both lookup premises remain; no hash injectivity or host persistence claim (seams K0, R13)"
       pointer := .witness `Effect4.Store.address_inj_resident },
+    { id := "object-exact", concept := "exact-codecs", role := .compatibility
+      title := "Reopening a built program recovers it; R13; no host execution or persistence claim"
+      pointer := .witness `Effect4.Program.Object.open_ofBuilt },
+    { id := "object-bytes-exact", concept := "exact-codecs", role := .compatibility
+      title := "Accepted object bytes are exactly its store node bytes and have a well-formed value; R13; no migration claim"
+      pointer := .witness `Effect4.Program.Object.read_exact },
+    { id := "object-load-exact", concept := "exact-codecs", role := .compatibility
+      title := "Saving and loading a built program recovers it when its encoded value is well formed; R13; no host persistence claim"
+      pointer := .witness `Effect4.Program.Object.load_bytes },
+    { id := "service-view-printed", concept := "exact-codecs", role := .compatibility
+      title := "TypeScript service success implies domain service success; R8; no target compiler or host observation claim"
+      pointer := .witness `Effect4.Program.serviceFaultIn_anyName },
+    { id := "service-view", concept := "exact-codecs", role := .adequacy
+      title := "Domain service success provides readable service entries; R8; no target compiler or host observation claim"
+      pointer := .witness `Effect4.Program.entriesOf_isSome },
     { id := "program-digest-exact", concept := "exact-codecs", role := .compatibility
       title := "A program files in the store under kind program (Content (Eff NativeOp), generated), so two programs with one address are equal or a digest collision (address_eq_or_collision at programs); nothing of a piece's key, which moves with its depth (the MCP note's ruling 3)"
       pointer := .witness `Effect4.Store.address_eq_or_collision },

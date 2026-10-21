@@ -812,6 +812,17 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 (`decode_iff`, `src/Effect4/Laws/Schema/Codec.lean`; `ofSchema_exact`, `src/Effect4/Schema/Bridge.lean`).
 
 #### 4. Required Properties and Obligations
+- **Program objects (`object-exact`, `object-bytes-exact`, `object-load-exact`, row 439)**: an object holds its signature and program.
+  `Object.open_ofBuilt`, `Object.read_exact` and `Object.load_bytes` state the laws in `src/Effect4/Laws/Api/Object.lean`.
+  They serve R13 with compatibility role. Byte retraction requires the encoded value's `Val.WF`.
+  Admission, exact node reading and hashing retain their existing owners.
+  Equal references imply equal objects or an exhibited collision, without a hash injectivity assumption.
+  These laws establish no cross-layout migration, host execution or persistence property.
+- **Service-role reading (`service-view-printed`, `service-view`, row 439)**: one profiled check separates role formation from target naming.
+  `Program.serviceFaultIn_anyName` and `Program.entriesOf_isSome` state the properties in `src/Effect4/Laws/Codegen/Services.lean`.
+  Their roles are compatibility and adequacy, respectively. They serve R8's service reading and printer compatibility.
+  TypeScript success implies domain success. Domain success gives readable service entries.
+  Neither property establishes target compilation or host behavior.
 - **The tool wire's JSON profile (`codec-profile-retains-value`, seams S3b)**: a successful guarded JSON write
   reads back as the original canonical value. `Tool.CodecProfile.write_read` states it in
   `src/Effect4/Laws/Tool/CodecProfile.lean`. The profile refuses an option whose item can print null.
