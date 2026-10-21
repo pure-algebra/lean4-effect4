@@ -51,8 +51,12 @@ def text (l : Line) : String := String.join (l.map fun
 
 private def column (r : List Line) (i : Nat) : String := text (r[i]?.getD [])
 
-/-- A scope cell keeps its position separately from its display name. -/
-private def scopeCell (key label : String) : Line := [.code key, .text " ", .text label]
+/-- A scope cell keeps its position separately from its display name, and links the row to the
+node of that key in the figures (`#node:` is the drawn node's key). -/
+private def scopeCell (key label : String) : Line := [.code key, .text " ", .link ("#node:" ++ key) label]
+
+/-- A target cell: the node's key, then its name linked to the drawn node. The query reads the key. -/
+private def targetCell (key name : String) : Line := [.code key, .text " ", .link ("#node:" ++ key) name]
 private def scopeKey (l : Line) : String :=
   match l with
   | .code key :: _ => key
@@ -128,9 +132,11 @@ def read (b : Api.Built) : Relations :=
       ((Api.HostSession.callTable b.program b.app).filterMap fun (p, c) =>
         match c.op with
         | .call k => (decls[k]?).map fun d =>
-          [cell (address p), scope program p, cell "def", cell d.name, cell (address (Authoring.bodyPath k)), cell (address (origin program p))]
+          [cell (address p), scope program p, cell "def", targetCell ("def:" ++ toString k) d.name,
+           cell (address (Authoring.bodyPath k)), cell (address (origin program p))]
         | .external i => (b.app.rows[i]?).map fun r =>
-          [cell (address p), scope program p, cell "row", cell r.spelling, cell (toString i), cell (address (origin program p))]
+          [cell (address p), scope program p, cell "row", targetCell ("row:" ++ toString i) r.spelling,
+           cell (toString i), cell (address (origin program p))]
         | _ => none) }
 
 private def service (r : List Line) : Option String :=
@@ -152,9 +158,11 @@ private def owner (r : Relations) (key : String) : String :=
   | some s => serviceKey s
   | none => key
 
-private def target (r : Relations) (call : List Line) : Option String :=
-  if column call 2 == "row" then some ("row:" ++ column call 4)
-  else ((records r.defs).find? (column · 3 == column call 4)).map definitionKey
+/-- A call's target node, by the key its target cell holds: a position, never a display name. -/
+private def target (_ : Relations) (call : List Line) : Option String :=
+  match (call[3]? : Option Line) with
+  | some (.code key :: _) => some key
+  | _ => none
 
 private def source (call : List Line) : String := scopeKey (call[1]?.getD [])
 
@@ -191,7 +199,7 @@ private def moduleNodes (r : Relations) : List GraphNode :=
 /-- Definition and host-row calls, joined by positions, never by display names. -/
 def calls (r : Relations) : Block :=
   let ns := mainNode r :: definitionNodes r ++ moduleNodes r ++ (records r.rows).map fun row =>
-    { key := rowKey row, label := column row 1, status := "row " ++ (glyph .eff "perform").1 }
+    { key := rowKey row, label := column row 1, status := "row " ++ (glyph .eff "perform").1, form := .port }
   let es := (records r.calls).filterMap fun call => (target r call).map (source call, ·)
   figure "calls" "Calls from definitions and main to definitions and host rows." ns es
 
@@ -219,7 +227,7 @@ def boundary (r : Relations) : Block :=
   let boxes := boundaryNodes r
   let wires := providers.map fun key =>
     { key := "wire:" ++ key, label := (boxes.find? (·.key == key)).map (·.label) |>.getD key
-      status := "wire " ++ (glyph .eff "service").1 }
+      status := "wire " ++ (glyph .eff "service").1, form := .wire }
   let es := providers.map (fun key => (key, "wire:" ++ key)) ++ ds.map (fun (a, b) => ("wire:" ++ a, b))
   figure "boundary" "Boundary incidence: shared service wires join providers to consumers; no execution order is claimed." (boxes ++ wires) es
 

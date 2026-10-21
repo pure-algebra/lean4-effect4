@@ -31,8 +31,9 @@ def constructors : Document where
     .code "lean" "example : True := True.intro",
     .table ["first", "second"] [[[.text "one"], [.code "two"]]],
     .graph "graph" "caption"
-      [⟨"a", "A", "eff", "bind", some "part"⟩, ⟨"b", "B", "layer", "merge", none⟩]
-      [("a", "b")],
+      [⟨"a", "A", "eff", "bind", some "part", .box⟩, ⟨"b", "B", "layer", "merge", none, .wire⟩,
+       ⟨"c", "C", "row", "", none, .port⟩]
+      [("a", "b"), ("b", "c")],
     .part "part" "nested" [.para []]]
 
 -- Reader: the unrestricted retraction at every document constructor.

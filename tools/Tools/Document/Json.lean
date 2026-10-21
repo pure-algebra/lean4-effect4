@@ -53,7 +53,7 @@ def algebra : Algebra Json where
     ("rows", .arr (rs.map fun r => Json.arr (r.map line).toArray).toArray)]
   graph k c ns es := Json.mkObj [("kind", "graph"), ("key", k), ("caption", c),
     ("nodes", .arr (ns.map fun n => Json.mkObj (([("key", n.key), ("label", n.label), ("status", n.status),
-      ("detail", n.detail)] : List (String × Json)) ++ (n.ref.map fun r => [("ref", Json.str r)]).getD [])).toArray),
+      ("detail", n.detail), ("form", n.form.word)] : List (String × Json)) ++ (n.ref.map fun r => [("ref", Json.str r)]).getD [])).toArray),
     ("edges", .arr (es.map fun (a, b) => Json.arr #[a, b]).toArray)]
   part k t body := Json.mkObj [("kind", "part"), ("key", k), ("title", t), ("body", .arr body.toArray)]
 
@@ -109,11 +109,16 @@ private def readRow (r : Json) : Except String (String × Line) := do
 
 private def readCells (r : Json) : Except String (List Line) := do (← arr "row" r).mapM readLine
 
+private def readForm (w : String) : Except String Form :=
+  match Form.ofWord w with
+  | some f => .ok f
+  | none => .error s!"node form {w}: not a form"
+
 private def readNode (j : Json) : Except String GraphNode := do
-  let fs ← fields "node" ["key", "label", "status", "detail", "ref"] j
+  let fs ← fields "node" ["key", "label", "status", "detail", "ref", "form"] j
   let s (k : String) := do str s!"node {k}" (← field "node" k fs)
   return { key := ← s "key", label := ← s "label", status := ← s "status", detail := ← s "detail"
-           ref := ← (fs.lookup "ref").mapM (str "node ref") }
+           ref := ← (fs.lookup "ref").mapM (str "node ref"), form := ← readForm (← s "form") }
 
 private def readEdge (j : Json) : Except String (String × String) := do
   match ← arr "edge" j with
@@ -226,10 +231,10 @@ private theorem readCells_cells (value : List Line) :
 /-- Step of `document-json-fold-retraction`, consumed by its graph case. -/
 private theorem readNode_node (n : GraphNode) :
     readNode (Json.mkObj (([("key", n.key), ("label", n.label), ("status", n.status),
-      ("detail", n.detail)] : List (String × Json)) ++
+      ("detail", n.detail), ("form", n.form.word)] : List (String × Json)) ++
       (n.ref.map fun r => [("ref", Lean.Json.str r)]).getD [])) = .ok n := by
   cases n with
-  | mk key label status detail ref => cases ref <;> rfl
+  | mk key label status detail ref form => cases ref <;> cases form <;> rfl
 
 /-- Step of `document-json-fold-retraction`, consumed by its graph case. -/
 private theorem readEdge_edge (value : String × String) :
@@ -274,7 +279,7 @@ mutual
     | graph key caption nodes edges =>
       change (do
         let ns ← (nodes.map fun (n : GraphNode) => Json.mkObj (([("key", n.key), ("label", n.label),
-          ("status", n.status), ("detail", n.detail)] : List (String × Json)) ++
+          ("status", n.status), ("detail", n.detail), ("form", n.form.word)] : List (String × Json)) ++
           (n.ref.map fun r => [("ref", Lean.Json.str r)]).getD [])).mapM readNode
         let es ← (edges.map fun (value : String × String) => Lean.Json.arr #[value.1, value.2]).mapM readEdge
         pure (Block.graph key caption ns es)) = .ok (Block.graph key caption nodes edges)

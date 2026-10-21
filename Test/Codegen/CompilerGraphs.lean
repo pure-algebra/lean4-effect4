@@ -44,6 +44,19 @@ def recursive : Object :=
   { app := {}, program := .defs [{ name := "loop", request := .unit, answer := .unit }]
       (.cons (.perform (.call 0) (.lit .unit)) .nil) unitProgram .nil }
 
+-- Finite evaluation (row 443, the forms): in the boundary a wire is a wire and a box a box; in the
+-- calls figure a row is a port. A row's target cell holds its node's key, so no name is joined.
+#guard todoSession.any fun b =>
+  let r := Compiler.Graphs.read b
+  (match boundary r, calls r with
+   | .graph _ _ bs _, .graph _ _ cs _ =>
+     bs.all (fun n => (n.form == .wire) == n.key.startsWith "wire:") &&
+     cs.all (fun n => (n.form == .port) == n.key.startsWith "row:")
+   | _, _ => false) &&
+  (records r.calls).all fun call => match (call[3]? : Option Tools.Document.Line) with
+    | some (.code key :: _) => key.startsWith "def:" || key.startsWith "row:"
+    | _ => false
+
 -- Finite evaluation: the four to-do relations keep the probe's measured rows.
 #guard todoSession.any fun b =>
   let r := Compiler.Graphs.read b
@@ -106,7 +119,7 @@ def recursive : Object :=
 
 -- Reader: the existing rank law at the two positions of one forward edge.
 #check Graph.ranks_forward
-  { nodes := #[⟨"source", "source", "", false⟩, ⟨"target", "target", "", false⟩], edges := #[⟨"edge", 0, 1⟩] }
+  { nodes := #[⟨"source", "source", "", false, .box⟩, ⟨"target", "target", "", false, .box⟩], edges := #[⟨"edge", 0, 1⟩] }
   ⟨"edge", 0, 1⟩ (List.mem_singleton_self _) (by decide) (by decide)
 
 -- G5 control: the stable fallback retains a cycle; it cannot make the self-edge forward.

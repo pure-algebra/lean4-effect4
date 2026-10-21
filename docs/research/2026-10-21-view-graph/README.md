@@ -328,3 +328,25 @@ The extra batteries cover the named edge cases; they are not universal graph cor
 | Keep the existing semantic axiom ceiling | Record the completed JSON theorem and its unadmitted rendering dependency separately |
 
 The coordinator records these decisions. This branch does not edit `docs/core/decisions.md` or `lakefile.toml`.
+
+## 8. The forms: a row and a definition read apart
+
+The owner reviewed the landed figures on 2026-10-21, by voice. The nodes were still boxes with text. Nothing related a row of the tables to its mark in the graph.
+This slice gives a node a form, and it gives a row's cell the key of its node.
+
+**The form is data.** `Tools.Form` (`tools/Tools/Form.lean`) is the one vocabulary both the document and the drawing kit import. A box computes, a wire names, a port is a row of the host.
+`Tools.Document.GraphNode.form` holds it, `Tools.View.GNode.form` carries it to the layout's calls, and `Tools.Document.Figure.graphOf` passes it through.
+
+**Each fold draws its form.** The Markdown fold writes a box `[…]`, a wire as a stadium `([…])` and a port as a subroutine `[[…]]`, which GitHub draws.
+The JSON fold writes a `form` field and reads it back. `Form.ofWord_word` is the retraction of the word, and `readNode_node` takes the new case by `cases form`.
+The drawing kit draws a wire as a pill, its corners half its height whatever the look's radius. It draws a port as a box with the host's post at its left (`Call.vrule .host`). That post is the mark the page already uses for a decision of the host.
+
+**The row names its node.** A relation row's scope cell and target cell hold the node's key as code. They link its name to `#node:<key>`, the key the drawn node carries.
+The calls query reads the target's key from that cell, by position, so the name join the review found is gone.
+
+**Why this is the hypergraph's picture.** `probe-hyper.lean` showed that two providers of one tag collapse to one vertex when boxes are keyed by their tag, by `overlay_idem`.
+The forms draw that rule. A box is keyed by its position and drawn as a rectangle. A wire is keyed by its name and drawn as a pill. So a clash shows as two rectangles on one pill.
+
+Changed: `tools/Tools/Form.lean` (new), `tools/Tools/Document.lean`, `tools/Tools/Document/Json.lean`, `tools/Tools/View/Graph.lean`, `tools/Tools/Document/Figure.lean` and `tools/Compiler/Graphs.lean`. Also `Test/Tools/GraphJson.lean` (every form in the coverage document), `Test/Codegen/CompilerGraphs.lean` (the forms of the to-do's figures, the target keys by position) and `generated/graphs/`.
+
+Verified 2026-10-21. The touched modules and their consumers build. `landing/audit-core.lean` reports 125 declarations within the ceiling. `make batteries-touched BASE=c0830ac08` passes. `generated/graphs` is regenerated, and its page passes the strict language check.

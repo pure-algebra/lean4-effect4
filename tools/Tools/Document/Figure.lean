@@ -33,7 +33,8 @@ def graphOf (nodes : List GraphNode) (edges : List (String × String)) : Graph w
     key := "node:" ++ n.key
     line1 := n.label
     line2 := " · ".intercalate ([n.status, n.detail].filter (!·.isEmpty))
-    lit := n.status == "goal" } : GNode)).toArray
+    lit := n.status == "goal"
+    form := n.form } : GNode)).toArray
   edges := (edges.zipIdx.filterMap fun ((a, b), i) => do
     return ({ key := s!"edge:{i}", src := ← nodes.findIdx? (·.key == a), dst := ← nodes.findIdx? (·.key == b) } : GEdge)).toArray
 

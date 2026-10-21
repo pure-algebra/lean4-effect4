@@ -4,6 +4,7 @@ import Tools.View.Organic
 import Tools.View.ConnectorMemo
 import Tools.View.PaintBounds
 import Tools.View.GraphText
+import Tools.Form
 
 /-!
 # A graph: ranks, order, places, routes
@@ -39,12 +40,14 @@ their addresses. A different order gives other back edges, and the same forward 
 
 namespace Tools.View
 
-/-- A node: its key, two short lines of text, and whether it is lit. -/
+/-- A node: its key, two short lines of text, whether it is lit, and its form (`Tools.Form`): a
+box is a rectangle, a wire a pill, a port a rectangle with the host's post at its left. -/
 structure GNode where
   key : Key
   line1 : String
   line2 : String := ""
   lit : Bool := false
+  form : Form := .box
 deriving DecidableEq, Repr
 
 /-- An edge between two nodes, by their positions in the graph's order. -/
@@ -354,8 +357,14 @@ def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) (textStyle : Grap
   let h' := bounds.y1 - bounds.y0
   let x := dx + bounds.x0
   let y := dy + bounds.y0
-  let r : Int := L.strokes.radius
   let m (v : Int) : Int := 1000 * v
+  -- a wire's corners are half its height: a pill, whatever the look's radius
+  let r : Int := match n.form with
+    | .wire => m h' / 2
+    | _ => L.strokes.radius
+  let post : List (Keyed Call) := match n.form with
+    | .port => [⟨p.key, Call.vrule .host x y h' 3⟩]
+    | _ => []
   let surface : List (Keyed Call) :=
     if r = 0 then
       [⟨p.key, .fill .ground 1000 x y w' h'⟩] ++
@@ -365,7 +374,7 @@ def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) (textStyle : Grap
       [⟨p.key, .shape .ground 1000 [Grow.roundRect (m x) (m y) (m w') (m h') r]⟩] ++
         (if n.lit then [⟨p.key, .shape .rule L.band [Grow.roundRect (m x) (m y) (m w') (m h') r]⟩] else []) ++
         [⟨p.key, .shape .ink 1000 (Grow.ring (m x) (m y) (m w') (m h') r (m L.strokes.frame))⟩]
-  surface ++
+  surface ++ post ++
     (if 1000 ≤ p.grow then
       GraphText.row textStyle.first p.key (dx + p.x + CELL) (dy + p.y) (p.w - 2 * CELL) n.line1 ++
         GraphText.row textStyle.second p.key (dx + p.x + CELL) (dy + p.y + ROWH) (p.w - 2 * CELL) n.line2 ++

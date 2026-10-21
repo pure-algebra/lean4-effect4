@@ -1,4 +1,5 @@
 import Std.Data.HashSet
+import Tools.Form
 
 /-!
 # Tools.Document — a generated document as data, and its Markdown
@@ -40,13 +41,15 @@ inductive Inline where
 abbrev Line := List Inline
 
 /-- A node of a figure's graph: its key (unique in the figure), its label, its status word (empty for
-none), a detail drawn after the status, and the part it opens, by key. -/
+none), a detail drawn after the status, the part it opens, by key, and its form (`Tools.Form`): a
+box computes, a wire names, a port is a row of the host. -/
 structure GraphNode where
   key : String
   label : String
   status : String := ""
   detail : String := ""
   ref : Option String := none
+  form : Form := .box
   deriving Inhabited, BEq, Repr
 
 /-- A node as a line: a reference to the part it opens, shown as its label, or its label. -/
@@ -277,14 +280,20 @@ def markdownLine (l : Line) (inTable := false) : String :=
 private def row (cells : List String) : String := "| " ++ " | ".intercalate cells ++ " |\n"
 
 /-- A figure as a Mermaid flowchart, top to bottom, which GitHub draws: each node by its place,
-labelled with its label and its status and detail on a second line. -/
+labelled with its label and its status and detail on a second line, in the shape of its form: a box
+`[…]`, a wire as a stadium `([…])`, a port as a subroutine `[[…]]`. -/
 def mermaid (ns : List GraphNode) (es : List (String × String)) : String :=
   let id (k : String) : String := "n" ++ toString (ns.findIdx (·.key == k))
   let second (n : GraphNode) : String :=
     " · ".intercalate ([n.status, n.detail].filter (!·.isEmpty))
   let label (n : GraphNode) : String :=
     ((n.label ++ (if (second n).isEmpty then "" else "<br/>" ++ second n)).replace "\"" "#quot;")
-  "```mermaid\nflowchart TB\n" ++ String.join (ns.map fun n => s!"  {id n.key}[\"{label n}\"]\n") ++
+  let shaped (n : GraphNode) : String :=
+    match n.form with
+    | .box => s!"[\"{label n}\"]"
+    | .wire => s!"([\"{label n}\"])"
+    | .port => s!"[[\"{label n}\"]]"
+  "```mermaid\nflowchart TB\n" ++ String.join (ns.map fun n => s!"  {id n.key}{shaped n}\n") ++
     String.join (es.map fun (a, b) => s!"  {id a} --> {id b}\n") ++ "```\n\n"
 
 /-- The Markdown algebra. Its carrier takes the nesting depth, which fixes a part's heading
