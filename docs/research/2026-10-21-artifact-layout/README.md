@@ -16,7 +16,7 @@ Hosts are objects too, so they are generated like programs, and no driver, layer
 
 | Hand-written today | Where | Lines | Replaced by |
 | --- | --- | --- | --- |
-| the `Session` driver of the gate: a request array, `next`, `reply_check` | `scripts/check-service-identity.py` (`SESSION_HOST`) | 13 | a driver object: a service block over a request queue, printed as a layer (§4.2) |
+| the `Session` driver of the gate: a request array, `next`, `reply_check` | `scripts/check-service-identity.py` (`SESSION_HOST`) | 13 | nothing: a gate's reactor is a trace replayed by the queue (`docs/research/2026-10-21-runner-slice/README.md`); on Effect the client is user code |
 | the gate's harness: run the program, compare replies with Lean's JSON | `scripts/check-service-identity.py` (`SESSION_RUNTIME`, `RUNTIME`, `INFERENCE`) | 60 | the run's record: the target writes the journal, Lean replays and checks it (`journal_bound_call`), no harness |
 | the native hosts of the to-do | `ocaml/engine/test/todo/native_todo.ml`, `todo_core.ml` | 345 | the handler object lowered, with the engine slice |
 | the prelude's four hand files | `ts/prelude/control.ts`, `records.ts`, `tuples.ts`, `prelude.ts` | 514 | a package pin, as `effect` is: outside the project folder |
@@ -42,10 +42,8 @@ As a handler object it would print to every target; today it prints to none.
   host/                              the host's files: functions of the typing signature, and the handler objects
     interface.gen.json                 the rows with their columns, and the keys the signature types
     <ns>.handler.obj                   canonical: the service block that answers the rows of namespace <ns>
-    Session.driver.obj                 canonical: the driver, a handler of the session rows over a request queue
     ts/<name>.host.gen.ts              types only: the shapes a layer and a driver implement (tested, §7)
     ts/<ns>.handler.gen.ts             the layer printed from the handler object
-    ts/Session.driver.gen.ts           the driver printed from its object
     ocaml/<name>_host.mli              the lowered host record's type
     ocaml/<ns>_handler.ml              the lowered handler
   run/
@@ -72,7 +70,7 @@ The program's print imports the types; the host's prints provide them. The two r
 | | Now (`62ccdab0b`) | When every slice has landed |
 | --- | --- | --- |
 | `program/` | the object by `check --out`, apart from `emit`; the program bytes, the certificate and the readable print written under each target | the four target-free files once, then one folder a target |
-| `host/` | nothing: the service shapes sit inside `todo.gen.ts`; the driver and the harness are hand-written in the gate; the native hosts are hand-written OCaml | the interface, the type files, the handler and driver objects with their prints |
+| `host/` | nothing: the service shapes sit inside `todo.gen.ts`; the driver and the harness are hand-written in the gate; the native hosts are hand-written OCaml | the interface, the type files, the handler objects with their prints |
 | `run/` | `run` prints lines and keeps no record | one record a run, which the cross-language check replays |
 | the manifest | one a target, 74 KB, with the module closure of the inputs in it | one a folder; the inputs' closure as its own file named by digest |
 
@@ -114,8 +112,7 @@ The project folder is a view of that store, laid out for people; the manifest is
 `Object.session` reads a service and writes the program that calls rows: the service inside out.
 A handler object is the other direction: a service block whose methods have the rows' columns, so it answers those rows.
 Printed, it is the layer that provides the namespace (`TodoRepoLayer`). Lowered, it is the host record. On the machine, it is a reactor that runs the method's program for each request.
-The driver is a handler of the session rows. Its `next` pops a queue held in a Ref, and each `reply_m` appends to a Ref list. The queue's initial value is the script.
-So a driver is generated per script, as every other file is generated per object. The gate needs no harness: the run's record is the evidence, replayed by Lean.
+No driver is generated. A client of the service is user code, a program over its methods. The free monad's unfolding reads any client as a reactor of the session rows (`docs/research/2026-10-21-runner-slice/README.md` §2.5). A gate's reactor is a trace replayed: the queue. The gate needs no harness: the run's record is the evidence, replayed by Lean.
 
 The check that a handler fits an interface is the dual of the session's formation. Each method's request is the row's request, and its exit is the row's answer and error.
 A handler object carries no row of the namespace it implements, so the printer's collision refusal (`serviceNamesFault`) does not fire on it.
@@ -137,7 +134,7 @@ The determinism repair: no artifact carries the command; the manifest records th
 ## 5. What changes, in slices
 
 1. **The layout.** `Role`, `Form`, the path function and the manifest with role and form. `check --out` folds into `emit` as the object kind. The canonical program bytes go, since the object holds them. `.gen` goes on every generated file, with the determinism repair. The host type file comes from `hostBindings` and `rowServiceDecls`, which exist.
-2. **The driver object.** The session rows' handler over a Ref queue, generated from a script. Its print replaces the gate's hand-written driver. The gate compares the run's record by Lean replay, and its harness goes.
+2. **The queue in core.** The reply-blind client as a reactor of the session rows, with the tensor of two reactors (`docs/research/2026-10-21-runner-slice/README.md`). The gate's hand-written driver goes, and the gate compares the run's record by Lean replay.
 3. **The handler object.** The to-do's reference repository as a service block over a Ref list. Its print is the layer the TypeScript run provides. Its lowering replaces the hand-written native hosts with the engine slice.
 4. **The run record.** `run` writes `run/<id>.record`.
 5. **The prelude as a package.** Out of the project folder.
