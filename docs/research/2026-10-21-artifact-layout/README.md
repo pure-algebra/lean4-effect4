@@ -1,122 +1,160 @@
-# 2026-10-21 The emitted artifacts: a file layout that is the algebra's image
+# 2026-10-21 The project folder: every file the image of one map, nothing written by hand
 
-Status: a design note. It rules nothing; it proposes decisions row 442.
+Status: a design note after two modeling passes, for Codex to implement. It rules nothing; it proposes decisions row 442.
 The evidence words are those of `docs/core/controlled-english.md` §3.8.
-Every count below is read off the to-do's emission at `62ccdab0b` (`lake exe effect4 --group todo emit --target ts|ocaml`, `check --out`).
+Every count below is read off the to-do at `62ccdab0b`; every "tested" is a finite evaluation in the probes beside this note's text (§7).
 
 ## 1. The one thing to know
 
-A file is the image of one named map of the algebra, and its folder is that map's domain.
-A file that depends on the object alone is a program file.
-A file that depends on the typing signature alone is a host file.
-A file that depends on the object and a target is a target file.
-A file that depends on a run is a run file.
-The manifest is the digest map of the rest.
-So the folder separates host from program by construction, and the compiler's IO is one map: write the list.
+Lean is the only text an author writes. Every other file of a project folder is the image of one named map of the algebra. The folder is laid out by who the file is for and what it is.
+Two roles: the program's files and the host's files.
+Three forms: a canonical object, a print for one target, a record of one run.
+One index: the manifest, which is the folder's recognizer.
+Hosts are objects too, so they are generated like programs, and no driver, layer or harness is written by hand.
 
-## 2. What the emission writes today
+## 2. What is written by hand today, and what replaces it
 
-| Path | Map | Domain | Size |
+| Hand-written today | Where | Lines | Replaced by |
 | --- | --- | --- | --- |
-| `todo.obj` (by `check --out`, outside `emit`) | `Object.bytes` | the object | 7,894 bytes |
-| `ts/todo.gen.ts` | `Typed.emit`, the print fold | the object and the target | 5,034 bytes |
-| `ts/todo.surface.gen.ts` | `ModuleEmission.surface` | the object and the target | 2,968 bytes |
-| `ts/prelude/` (5 files) | `Prelude.closureOf` | the target | 51,333 bytes |
-| `ts/todo.eff`, `ocaml/todo.eff` | `Api.bytesOf program` | the program | 5,713 bytes, twice |
-| `ts/todo.eff.json`, `ocaml/todo.eff.json` | `programJson` | the program | 5,213 bytes, twice |
-| `ts/certificate.json`, `ocaml/certificate.json` | `Built.certificate` | the object | 4,589 bytes, twice |
-| `ocaml/todo_gen.ml` | the LCNF lowering | the object and the target | 1,697,753 bytes |
-| `ocaml/lowering.json`, `ocaml/closure-todo_gen.tsv` | the lowering's recipe and closure | the object and the target | 326,919 bytes |
-| `ts/manifest.json`, `ocaml/manifest.json` | `manifest` | the files written, the inputs | 73,870 and 72,784 bytes |
+| the `Session` driver of the gate: a request array, `next`, `reply_check` | `scripts/check-service-identity.py` (`SESSION_HOST`) | 13 | a driver object: a service block over a request queue, printed as a layer (§4.2) |
+| the gate's harness: run the program, compare replies with Lean's JSON | `scripts/check-service-identity.py` (`SESSION_RUNTIME`, `RUNTIME`, `INFERENCE`) | 60 | the run's record: the target writes the journal, Lean replays and checks it (`journal_bound_call`), no harness |
+| the native hosts of the to-do | `ocaml/engine/test/todo/native_todo.ml`, `todo_core.ml` | 345 | the handler object lowered, with the engine slice |
+| the prelude's four hand files | `ts/prelude/control.ts`, `records.ts`, `tuples.ts`, `prelude.ts` | 514 | a package pin, as `effect` is: outside the project folder |
 
-Three things are wrong with it, by the rule of §1.
+The reference repository of the to-do (`Test.Dogfood.Scenario.Todo.repository`) is a Lean function, so it stands under the rule, and the lowering generates its OCaml.
+As a handler object it would print to every target; today it prints to none.
 
-1. The canonical artifact is outside the emission. `todo.obj` holds the program bytes and the typing signature; `todo.eff` holds the program bytes alone, and is written twice.
-2. Host and program share a file. `todo.gen.ts` holds the program's definitions and `todoSession`, and also `TodoRepoKey`, the service shape the host's layer implements. The `Session` namespace the driver implements is written by hand in the gate (`scripts/check-service-identity.py`).
-3. The folder is keyed by target first. A projection of the object (`certificate.json`) is written under each target, so a reader of the object must pick a target to find it.
-
-## 3. The layout, by the domain of each map
+## 3. The layout
 
 ```text
 <name>/
-  manifest.json                  the digest map: every file, its side, its kind, its SHA-256; the inputs; the checks
-  program/                       functions of the object
-    <name>.obj                     Object.bytes: the one canonical artifact
-    <name>.<service>.session.obj   Object.bytes ∘ Object.session: the lifetime of one service
-    certificate.json               Built.certificate: the type, the rows, the keys, the declarations
-    <name>.eff.json                the program's tagged print, for reading
-  host/                          functions of the typing signature alone
-    interface.json                 the rows with their columns, and the keys the signature types
-    ts/<name>.host.ts              the service shapes a layer implements, and the Session namespace a driver implements
-    ocaml/<name>_host.mli          the lowered host record's type
-  target/                        functions of the object and a target
-    ts/<name>.gen.ts               the program, importing ../../host/ts/<name>.host.ts
-    ts/<name>.surface.gen.ts       the data services' Schemas
-    ts/prelude/                    the prelude's import closure
-    ocaml/<name>_gen.ml            the lowered program
-    ocaml/lowering.json            the recipe
-    ocaml/closure.tsv              the closure
-  run/                           functions of a run
-    <id>.record                    LiveRecord.save: the object's reference, the session, the journal
+  effect4.gen.json                   the manifest, and the recognizer of a project folder
+  program/                           the application's files: functions of its object
+    <name>.obj                         Object.bytes, canonical
+    <name>.<service>.session.obj       Object.bytes ∘ Object.session, canonical: one service's lifetime
+    certificate.gen.json               Built.certificate
+    <name>.program.gen.json            the tagged print, for reading
+    ts/<name>.gen.ts                   the print fold; imports ../../host/ts/<name>.host.gen.ts
+    ts/<name>.surface.gen.ts           the data services' Schemas
+    ocaml/<name>_gen.ml                the lowering (an OCaml module name holds no dot)
+    ocaml/lowering.gen.json            the recipe
+    ocaml/closure.gen.tsv              the closure
+  host/                              the host's files: functions of the typing signature, and the handler objects
+    interface.gen.json                 the rows with their columns, and the keys the signature types
+    <ns>.handler.obj                   canonical: the service block that answers the rows of namespace <ns>
+    Session.driver.obj                 canonical: the driver, a handler of the session rows over a request queue
+    ts/<name>.host.gen.ts              types only: the shapes a layer and a driver implement (tested, §7)
+    ts/<ns>.handler.gen.ts             the layer printed from the handler object
+    ts/Session.driver.gen.ts           the driver printed from its object
+    ocaml/<name>_host.mli              the lowered host record's type
+    ocaml/<ns>_handler.ml              the lowered handler
+  run/
+    <id>.record                        LiveRecord.save, canonical: the object's reference, the session, the journal
 ```
 
-Nothing the host author writes is in it. Their layer and their driver live beside `host/ts/`, and import the host file.
-The host folder is the contract between the two authors: what the program needs, with no program in it.
+### 3.1 The names
 
-### 3.1 Now, and when every slice has landed
+- A canonical file is a store node and ends in its kind: `.obj`, `.record`. It reads back exactly (`Object.read_exact`), and it is the authority on what it holds.
+- Every other file is generated text and carries `.gen` before its extension. It is a print or a projection, read by a tool or a target, never the authority. An OCaml module keeps `_gen` and `_handler`, since its name holds no dot.
+- `effect4.gen.json` is the manifest. A folder with it is a project folder; a tool reads it first, then the file whose role, form and kind it needs.
+- `<name>` is the application's name; `<service>` a service of its block; `<ns>` a host namespace of its rows.
 
-| Side | Now (`62ccdab0b`) | When every slice has landed |
+### 3.2 Interfaces, types and implementations
+
+The host folder holds three sorts, kept apart by name.
+`interface.gen.json` is the target-free contract: the rows' columns and the typed keys, a projection of `SigApp`.
+`<name>.host.gen.ts` and `<name>_host.mli` are that contract as the target's types, with no value in them.
+A handler object is an implementation, canonical and target-free; its prints under `ts/` and `ocaml/` are its images.
+The program's print imports the types; the host's prints provide them. The two roles meet only at the types.
+
+### 3.3 Now, and when every slice has landed
+
+| | Now (`62ccdab0b`) | When every slice has landed |
 | --- | --- | --- |
-| `program/` | `<name>.obj` by `check --out`; `certificate.json` and `<name>.eff.json` under each target | the four files once; the session object when a service is selected |
-| `host/` | nothing: the shapes are inside `todo.gen.ts`, the `Session` namespace is hand-written in the gate, the OCaml host record is inside `todo_gen.ml` | `interface.json`, one host file a target, both read off `SigApp` |
-| `target/` | `ts/` and `ocaml/` folders at the root | the same files, under `target/`, with the program file importing the host file |
-| `run/` | `LiveRecord.save` exists; `run` prints lines and keeps no record | one record a run |
-| `manifest.json` | one a target, 74 KB, the inputs' module closure in it | one for the folder; the inputs' closure as its own file, named by digest |
+| `program/` | the object by `check --out`, apart from `emit`; the program bytes, the certificate and the readable print written under each target | the four target-free files once, then one folder a target |
+| `host/` | nothing: the service shapes sit inside `todo.gen.ts`; the driver and the harness are hand-written in the gate; the native hosts are hand-written OCaml | the interface, the type files, the handler and driver objects with their prints |
+| `run/` | `run` prints lines and keeps no record | one record a run, which the cross-language check replays |
+| the manifest | one a target, 74 KB, with the module closure of the inputs in it | one a folder; the inputs' closure as its own file named by digest |
 
-## 4. The file system as data, and the compiler's IO
+## 4. The model
 
-The emission is already pure: `Emission.artifacts : List Artifact`, with `Artifact = {path, kind, bytes}` (`tools/Compiler/Emit.lean`).
-This note adds the side, and states what the IO is.
+### 4.1 The folder as an indexed family
 
 ```lean
-inductive Side | program | host | target | run | manifest
+inductive Role | program | host | run
+inductive Form | object | print (target : Target) | record | index
+
 structure Artifact where
-  side : Side
-  kind : Kind
-  path : String        -- Kind.path side name: the layout of §3, as one function
+  role : Role
+  form : Form
+  kind : Kind          -- object, session, certificate, program, module, surface, recipe, closure, interface, types, handler, driver, record, manifest
+  path : String        -- Artifact.path role form kind name: §3 as one function
   bytes : ByteArray
 
-/-- The file system, as the compiler sees it: a finite map from path to bytes. -/
-abbrev FS := List (String × ByteArray)
+/-- What each role's files are functions of. -/
+def Domain : Role → Type
+  | .program => Object
+  | .host    => SigApp × List Object      -- the signature, and the handler objects that fit it
+  | .run     => Live
 
-/-- The one IO: write each artifact at its path. -/
+/-- The layout: one pure function a role. -/
+def layout : (r : Role) → Domain r → List Artifact
+
+/-- The file system as the compiler sees it, and its one IO. -/
+abbrev FS := List (String × ByteArray)
 def write : List Artifact → FS → FS
 ```
 
-The laws the layout must satisfy, each a finite check on the to-do until a theorem states it:
+The compilation is one composite with the write last: `write ∘ layout ∘ session ∘ open ∘ read`.
+This is the shape of a content-addressed build, as in Nix's derivations and Bazel's actions. A pure function takes the inputs to an output set, and the index names each output by its digest.
+The project folder is a view of that store, laid out for people; the manifest is the store's index.
 
-| Law | Statement | Owner |
+### 4.2 Hosts are objects: the handler, dual to the session
+
+`Object.session` reads a service and writes the program that calls rows: the service inside out.
+A handler object is the other direction: a service block whose methods have the rows' columns, so it answers those rows.
+Printed, it is the layer that provides the namespace (`TodoRepoLayer`). Lowered, it is the host record. On the machine, it is a reactor that runs the method's program for each request.
+The driver is a handler of the session rows. Its `next` pops a queue held in a Ref, and each `reply_m` appends to a Ref list. The queue's initial value is the script.
+So a driver is generated per script, as every other file is generated per object. The gate needs no harness: the run's record is the evidence, replayed by Lean.
+
+The check that a handler fits an interface is the dual of the session's formation. Each method's request is the row's request, and its exit is the row's answer and error.
+A handler object carries no row of the namespace it implements, so the printer's collision refusal (`serviceNamesFault`) does not fire on it.
+
+What this does not yet have: the reactor made from a handler object on the Lean machine (a hosted stage), and the fit check. Both are the engine slice's and the driver slice's.
+
+### 4.3 The laws
+
+| Law | Statement | Today |
 | --- | --- | --- |
-| determinism | `layout o` is a function: the same object gives the same bytes, so the manifest's digests are the object's | `Emission` is pure today |
+| determinism | an artifact's bytes depend on the object, the target and the pins, never on the output path or the clock | **fails, tested**: `todo.gen.ts`, `todo.surface.gen.ts` and the manifest differ between two emissions, since the header and the manifest hold the `--out` path |
 | exact read-back | `Object.read (bytes at program/<name>.obj) = ok o` | `Object.read_exact` |
-| separation | two objects with the same typing signature have the same `host/` files | the host files are `SigApp → Bytes` |
-| the manifest | the manifest maps each path to the SHA-256 of the bytes written at it | `Artifact.json` today |
+| separation | two objects with one typing signature have equal host files | tested: the to-do and the cached to-do have one `SigApp` and different programs; the host files are functions of the signature |
+| the index | the manifest maps each path to the SHA-256 of the bytes at it, with its role, form and kind | `Artifact.json` today, without role and form |
 | closure | `write (layout o) fs` differs from `fs` only at the layout's paths | `write` as a map |
 
-The compilation is then one composite, with the IO at the end: `write ∘ layout ∘ session ∘ open ∘ read`.
-Each arrow is a map of the algebra, and the file system is the carrier the last one writes into.
-A tool that reads a folder reads the manifest first, then the file its kind names.
+The determinism repair: no artifact carries the command; the manifest records the command without its `--out` argument.
 
-## 5. What this changes, in slices
+## 5. What changes, in slices
 
-1. **The side and the layout function.** `Kind` gains `object`, `session`, `interface` and `record`; `canonical` goes, since the object holds the program bytes; `Kind.side` and `Kind.path` place each file. `check --out` folds into `emit` as the object kind. One manifest a folder.
-2. **The host file.** The printer's `rowServiceDecls` and `hostBindings` already compute the service shapes and the host namespaces. They move from the program's file to `host/ts/<name>.host.ts`, and the program's file imports it. The gate's hand-written `Session` object then implements a printed type.
-3. **The OCaml host type.** The lowered host record's type moves to `host/ocaml/<name>_host.mli`.
-4. **The run record.** `run` writes `run/<id>.record` beside its lines, through `LiveRecord.save`.
+1. **The layout.** `Role`, `Form`, the path function and the manifest with role and form. `check --out` folds into `emit` as the object kind. The canonical program bytes go, since the object holds them. `.gen` goes on every generated file, with the determinism repair. The host type file comes from `hostBindings` and `rowServiceDecls`, which exist.
+2. **The driver object.** The session rows' handler over a Ref queue, generated from a script. Its print replaces the gate's hand-written driver. The gate compares the run's record by Lean replay, and its harness goes.
+3. **The handler object.** The to-do's reference repository as a service block over a Ref list. Its print is the layer the TypeScript run provides. Its lowering replaces the hand-written native hosts with the engine slice.
+4. **The run record.** `run` writes `run/<id>.record`.
+5. **The prelude as a package.** Out of the project folder.
 
-Slice 1 is the cut this note is about. Slices 2 to 4 follow the driver and engine slices, which produce the files they place.
+Slice 1 is the cut; it moves files. Slices 2 and 3 are where the hand-written host code goes. Slices 4 and 5 follow.
 
 ## 6. What this note does not establish
 
-The layout is read off the to-do's emission alone. No file was moved, and no law above is proved: each is a finite check to write when the slice lands.
-The manifest's inputs and checks keep their meaning (`Compiler.Emit`, decision E3). Host progress and the stage law stay outside Lean.
+No file has moved, and no law of §4.3 is proved; each is a finite check to land with its slice.
+The handler's reactor on the Lean machine is a design, not a probe.
+The manifest's inputs and checks keep their meaning (`Compiler.Emit`, decision E3).
+
+## 7. The probes
+
+| Probe | States | Result |
+| --- | --- | --- |
+| two emissions of the to-do, compared byte for byte | the artifacts are a function of the object and the target | fails: three files differ by the `--out` path alone |
+| `hostBindings` on the session object | the `Session` host type, `{ next: () => Effect<Option<…>>, reply_add: (Exit<…>) => Effect<void>, … }`, is a function of the signature | tested; `TypeScript.Render.type` prints it |
+| `rowServiceDecls` on the session object | `TodoRepoKey` and `TodoRepo` are functions of the signature | tested |
+| the to-do and the cached to-do | one `SigApp`, two programs | tested |
