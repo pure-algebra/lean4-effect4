@@ -81,7 +81,7 @@ def prelude : List (String × ByteArray) :=
   [("prelude.ts", "export * from \"./a.ts\"\n".toUTF8), ("a.ts", "export const a = 1\n".toUTF8)]
 
 /-- What `emit --target ts` asks for a module's name, with the kinds given. -/
-def specOf (name : String) (kinds : List Kind := Kind.selectable) : Spec :=
+def specOf (name : String) (kinds : List Compiler.Kind := Compiler.Kind.selectable) : Spec :=
   { name, command := ["emit", "--target", "ts"], kinds, prelude, inputs }
 
 /-- A prelude folder shaped as the library's (`ts/prelude/`): its root imports `effect` and
@@ -703,6 +703,52 @@ def here : Elaborated := elaborated%
   (readInspect ["--what", "bogus"] none false []).toOption.isNone &&
   inspectAsEmit ["inspect", "--group", "todo", "--what", "manifest", "--json", "--out", "o"] ==
     ["emit", "--group", "todo", "--out", "o"]
+
+/-! ## Relation document forms -/
+
+-- reader: every document form and graph selection has its command spelling.
+#guard InspectDocument.Form.all.all (fun f => InspectDocument.Form.parse f.name == some f) &&
+  [What.relations, .boundary, .calls, .layers].all What.isDocument &&
+  !What.graph.isDocument
+
+-- controls: unknown forms, conflicting forms, missing values and duplicate destinations refuse.
+#guard (InspectOptions.read ["--form", "png"] {}).toOption.isNone &&
+  (InspectOptions.read ["--form", "md"] { form := .json, explicitForm := true }).toOption.isNone &&
+  (InspectOptions.read ["--form"] {}).toOption.isNone &&
+  (InspectOptions.read ["--out"] {}).toOption.isNone &&
+  (InspectOptions.read ["--session"] {}).toOption.isNone &&
+  (InspectOptions.read ["--out", "one", "--out", "two"] {}).toOption.isNone &&
+  (InspectOptions.read ["--session", "one", "--session", "two"] {}).toOption.isNone &&
+  (InspectOptions.read ["--out", "--form", "json"] {}).toOption.isNone
+
+-- reader: the session adapter uses the same checked constructor as direct library use.
+#guard match check Test.Dogfood.Scenario.Todo.application with
+  | .ok b => (inspectBuilt b (some "TodoApp")).toOption.isSome &&
+      (inspectBuilt b (some "unknown-service")).toOption.isNone
+  | .error _ => false
+
+-- finite evaluation: TSV projects JSON cells, preserving a tab, newline and literal backslash.
+#guard (InspectDocument.table (Tools.Document.Json.algebra.table ["column"]
+    [[[.text "one\ttwo\nthree\\four"]]])).toOption ==
+  some "column\none\\ttwo\\nthree\\\\four\n"
+
+-- finite evaluation: the part key names its relation file; the JSON table remains the source.
+#guard match InspectDocument.files .tsv "todo"
+    { title := "rows", body := [.part "relation-nodes" "Nodes"
+      [.table ["address"] [[[.code "0.0"]]]]] } with
+  | .ok files => files == [("todo.relation-nodes.gen.tsv", "address\n0.0\n")]
+  | .error _ => false
+
+-- controls: refuse path syntax and malformed graph edges before rendering any artifact.
+#guard !(InspectDocument.files .md "../todo" { title := "none", body := [] }).toOption.isSome &&
+  !(InspectDocument.files .svg "todo"
+    { title := "bad", body := [.graph "bad" "bad" [] [("missing", "missing")]] }).toOption.isSome
+
+-- finite evaluation: SVG uses the existing figure output, one artifact for the graph key.
+#guard match InspectDocument.files .svg "todo"
+    { title := "one", body := [.graph "boundary" "Boundary" [{ key := "main", label := "main" }] []] } with
+  | .ok [(name, bytes)] => name == "todo.boundary.gen.svg" && (bytes.splitOn "<svg").length > 1
+  | _ => false
 
 /-! ## The defaults -/
 

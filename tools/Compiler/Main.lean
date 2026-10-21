@@ -1,6 +1,8 @@
 import Compiler.Native
 import Compiler.Run
 import Compiler.Inspect
+import Compiler.InspectDocument
+import Effect4.Api.Session
 import Compiler.Elaborated
 
 /-!
@@ -16,6 +18,7 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
     emit [--target ts|ocaml] [--check] [--out DIR] [--emit=module,surface,canonical,certificate,manifest]
     describe [--target ts|ocaml] [--out DIR] [--emit=…] [--pretty]
     inspect --what types|rows|surface|graph|manifest [--json] [the options of describe]
+    inspect --what relations|boundary|calls|layers [--form md|json|svg|tsv] [--session SERVICE] [--out DIR]
     run [--text | --typed | --json] [--script FILE] [--budget N]
 
 - `open FILE.obj` reads and admits a saved object, then prints its certificate as JSON.
@@ -32,6 +35,8 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
   nothing: as one line, or indented under `--pretty` (`prettyText`).
 - `inspect` prints the object's address table, rows, graph, surface, or emission manifest (`Compiler.Inspect`).
   It prints text, or one line of JSON under `--json`.
+  The relation readings print Markdown or JSON, or write SVG and TSV files under `--out DIR`.
+  `--session SERVICE` reads the session object made by `Built.session`.
 - `run` runs each request of a script on the Lean machine over the application's host, and prints
   one line a request (`Compiler.Run`): a readable line (`--text`, the default), the exit encoded at
   its own type (`--typed`), or the result's value tree as JSON (`--json`). The host and the default
@@ -66,7 +71,8 @@ def usageOf : String → String
   | "emit" => "emit [--target ts|ocaml] [--check] [--out DIR] [--emit=KIND,…]"
   | "describe" => "describe [--target ts|ocaml] [--out DIR] [--emit=KIND,…] [--pretty]"
   | "inspect" => "inspect --what " ++ "|".intercalate (What.all.map What.name) ++
-      " [--json] [--target ts|ocaml] [--out DIR] [--emit=KIND,…]"
+      " [--json] [--form md|json|svg|tsv] [--session SERVICE] [--out DIR]" ++
+      " [--target ts|ocaml] [--emit=KIND,…]"
   | "run" => "run [--text | --typed | --json] [--script FILE] [--budget N]"
   | _ => ""
 
@@ -376,6 +382,74 @@ def inspectAsEmit : List String → List String
   | "inspect" :: rest => "emit" :: withoutReading rest
   | a :: rest => a :: inspectAsEmit rest
 
+/-- The document forms and an optional session object, derived by the public session constructor. -/
+structure InspectOptions where
+  form : InspectDocument.Form := .md
+  explicitForm : Bool := false
+  out : Option String := none
+  session : Option String := none
+  deriving BEq, Repr
+
+/-- Read document options before constructing a session or writing any artifact. -/
+def InspectOptions.read : List String → InspectOptions → Except String InspectOptions
+  | [], o => .ok o
+  | "--form" :: word :: rest, o =>
+    if o.explicitForm then .error "choose one form with --form or --json"
+    else match InspectDocument.Form.parse word with
+      | some form => InspectOptions.read rest { o with form, explicitForm := true }
+      | none => .error s!"--form {word} names no form; choose md, json, svg or tsv"
+  | "--out" :: dir :: rest, o =>
+    if dir.startsWith "--" || dir.isEmpty then .error "--out needs a directory"
+    else if o.out.isSome then .error "--out names one directory only"
+    else InspectOptions.read rest { o with out := some dir }
+  | "--session" :: service :: rest, o =>
+    if service.startsWith "--" || service.isEmpty then .error "--session needs a service name"
+    else if o.session.isSome then .error "--session names one service only"
+    else InspectOptions.read rest { o with session := some service }
+  | ["--form"], _ => .error "--form needs md, json, svg or tsv"
+  | ["--out"], _ => .error "--out needs a directory"
+  | ["--session"], _ => .error "--session needs a service name"
+  | word :: _, _ => .error s!"{word} is no document option"
+
+/-- The selected inspection object. Session construction keeps its existing located refusal. -/
+def inspectBuilt (b : Api.Built) (service : Option String) : Except String Api.Built :=
+  match service with
+  | none => .ok b
+  | some service => (b.session service).mapError fun why => jsonText (tree why)
+
+/-- Render every document before writing. SVG and TSV require a folder for their separate files. -/
+def inspectDocuments (source : Source) (what : What) (json : Bool) (left : List String) : IO UInt32 := do
+  let o ← match InspectOptions.read left
+      { form := if json then .json else .md, explicitForm := json } with
+    | .ok o => pure o
+    | .error why => return (← usageError "inspect" why)
+  if o.out.isNone && (o.form == .svg || o.form == .tsv) then
+    return (← usageError "inspect" s!"--form {o.form.name} needs --out DIR")
+  let mut outputs : List (String × String) := []
+  let mut failed := false
+  for (name, result) in builtOf source do
+    match result with
+    | .error why => failed := true; printRefusal source name why (o.form == .json)
+    | .ok original =>
+      let rendered := do
+        let b ← inspectBuilt original o.session
+        InspectDocument.files o.form name (Graphs.document b what.name)
+      match rendered with
+      | .error why => failed := true; IO.eprintln s!"inspect: {name}: {why}"
+      | .ok files => outputs := outputs ++ files
+  if failed then return 1
+  unless (outputs.map Prod.fst).eraseDups.length == outputs.length do
+    return (← usageError "inspect" "programs repeat an output file name")
+  try
+    match o.out with
+    | none => for (_, content) in outputs do (← IO.getStdout).putStr content
+    | some directory =>
+      IO.FS.createDirAll directory
+      for (name, content) in outputs do
+        IO.FS.writeFile (System.FilePath.mk directory / name) content
+    return 0
+  catch error => IO.eprintln s!"inspect: {error}"; return 1
+
 /-- **`inspect`**: the reading that `--what` names (`Compiler.Inspect`), of the application's built
 program or of each program of a group, under its name; as text, or under `--json` as one line.
 `--what manifest` prints what `describe` prints, indented as text. A program that the build refuses
@@ -386,6 +460,7 @@ def inspectCommand (source : Source) (elaborated : Elaborated) (args rest : List
   | .error why => usageError "inspect" why
   | .ok (.manifest, json, left) => emitCommand source elaborated (.inspect json) (inspectAsEmit args) left
   | .ok (what, json, left) =>
+    if what.isDocument then return (← inspectDocuments source what json left)
     unless left.isEmpty do
       return (← usageError "inspect" s!"{" ".intercalate left} is no option of --what {what.name}")
     let mut failed := false

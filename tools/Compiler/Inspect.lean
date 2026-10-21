@@ -2,12 +2,13 @@ import Compiler.Check
 import Compiler.Json
 import Effect4.Tool.CheckDerived
 import Effect4.Codegen.Surface
+import Compiler.Graphs
 
 /-!
 # Compiler.Inspect — a built program read from its object
 
 `inspect --what W` reads a built program's object directly, without opening a tool document.
-No reading walks the program itself.
+The relation readings use the program node table and the checked call table (`Compiler.Graphs`).
 
 | `--what` | What it prints |
 | --- | --- |
@@ -16,6 +17,8 @@ No reading walks the program itself.
 | `graph` | The program's public JSON, as the emitted program file prints it |
 | `surface` | The surface's existing reading of the program's data services |
 | `manifest` | The emission manifest, handled by `Compiler.Main` |
+| `relations` | The four relations, mapping table and their graph queries |
+| `boundary`, `calls`, `layers` | The selected graph queries and mapping table |
 
 The text is for a reader; `--json` prints the same reading through each carrier's public JSON.
 The table's generated codec comes from `Effect4.Tool.CheckDerived`; no tool query runs here.
@@ -36,10 +39,14 @@ inductive What where
   | surface
   | graph
   | manifest
+  | relations
+  | boundary
+  | calls
+  | layers
   deriving DecidableEq, Repr
 
 /-- Every reading, in the order the usage names them. -/
-def What.all : List What := [.types, .rows, .surface, .graph, .manifest]
+def What.all : List What := [.types, .rows, .surface, .graph, .manifest, .relations, .boundary, .calls, .layers]
 
 /-- A reading's name, as `--what` spells it. -/
 def What.name : What → String
@@ -48,9 +55,18 @@ def What.name : What → String
   | .surface => "surface"
   | .graph => "graph"
   | .manifest => "manifest"
+  | .relations => "relations"
+  | .boundary => "boundary"
+  | .calls => "calls"
+  | .layers => "layers"
 
 /-- The reading `--what` names; `none` for a word that names none. -/
 def What.parse (word : String) : Option What := What.all.find? (·.name == word)
+
+/-- Whether a reading is a document derived from the program relations. -/
+def What.isDocument : What → Bool
+  | .relations | .boundary | .calls | .layers => true
+  | _ => false
 
 /-- **A reading**: its text for a reader, and the same reading as a JSON tree. -/
 structure Reading where
@@ -106,5 +122,6 @@ def reading (b : Api.Built) : What → Except String Reading
   | .graph => .ok (graphReading b.program)
   | .surface => .ok (surfaceReading b.program)
   | .manifest => .error "the manifest is describe's"
+  | .relations | .boundary | .calls | .layers => .error "this reading uses the document forms"
 
 end Compiler

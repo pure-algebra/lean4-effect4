@@ -37,7 +37,8 @@ def run(args, capture=False):
         args = [*args[:3], '-DwarningAsError=true', *args[3:]]
     print('+ ' + shlex.join(args), flush=True)
     return subprocess.run(['timeout', TIMEOUT, *args], check=True,
-                          stdout=subprocess.PIPE if capture else None, text=True).stdout
+                          stdout=subprocess.PIPE if capture else None, text=True,
+                          env={**os.environ, 'LEAN_NUM_THREADS': '3'}).stdout
 
 
 def install(source, destination, checking):
@@ -283,6 +284,33 @@ def store_rocq(out, checking):
     install(temp / 'StoreCode.v', ROOT / 'rocq/StoreCode.v', checking)
 
 
+def graphs(out, checking):
+    """Project the to-do session through the inspection command, then compare or install.
+
+    The same command writes the document forms and each TSV relation. No Python graph or
+    table derivation participates. Check mode refuses destinations that alias committed files.
+    """
+    names = ['todo.gen.md', 'todo.gen.json'] + [
+        f'relation-{relation}.gen.tsv' for relation in ['nodes', 'defs', 'rows', 'calls']]
+    temp = out / 'generated/graphs'
+    if checking:
+        published = {(ROOT / 'generated/graphs' / name).resolve() for name in names}
+        paths = names + ['todo.' + name for name in names if name.startswith('relation-')]
+        for name in paths:
+            if (temp / name).resolve() in published:
+                raise ValueError(f'generated/graphs/{name}: check output aliases repository destination')
+    temp.mkdir(parents=True, exist_ok=True)
+    run(['lake', 'build', 'effect4'])
+    for form in ['md', 'json', 'tsv']:
+        run(['lake', 'exe', 'effect4', 'inspect', '--group', 'todo', '--session', 'TodoApp',
+             '--what', 'relations', '--form', form, '--out', str(temp)])
+    for name in names:
+        source = temp / (('todo.' + name) if name.startswith('relation-') else name)
+        install(source, ROOT / 'generated/graphs' / name, checking)
+        if checking and source.name != name:
+            (temp / name).write_bytes(source.read_bytes())
+
+
 def generate(families, output):
     checking = output is not None
     with tempfile.TemporaryDirectory(prefix='effect4-generate-') as scratch:
@@ -335,6 +363,8 @@ def generate(families, output):
             store_rocq(out, checking)
         if 'fixtures' in families:
             fixtures(out, checking)
+        if 'graphs' in families:
+            graphs(out, checking)
         if 'readme' in families:
             # A host producer, not a Lean one: it reads profile/forms/taxonomy `.gen.ts` and
             # writes `ts/eff/ingest/README.md` in place. Its own `--check` is the drift form,
@@ -347,7 +377,7 @@ def generate(families, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--only', choices=ALL + ['lcnf', 'fixtures', 'store-rocq'])
+    parser.add_argument('--only', choices=ALL + ['lcnf', 'fixtures', 'store-rocq', 'graphs'])
     parser.add_argument('--all', action='store_true',
                         help='every family of the named order: ' + ', '.join(ALL))
     parser.add_argument('--output-dir')

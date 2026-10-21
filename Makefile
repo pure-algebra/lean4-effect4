@@ -330,11 +330,21 @@ $(GEN)/fixtures: $(CHK)/gen-fixtures.key
 	@$(FIXTURE_KEY)
 	@mkdir -p $(GEN) && touch $@
 
+# The four program relations and their graph queries, through the public inspect command.
+GRAPH_OUT := generated/graphs/todo.gen.md generated/graphs/todo.gen.json \
+  generated/graphs/relation-nodes.gen.tsv generated/graphs/relation-defs.gen.tsv \
+  generated/graphs/relation-rows.gen.tsv generated/graphs/relation-calls.gen.tsv
+$(GRAPH_OUT):
+GRAPH_SOURCES := $(shell $(PY) scripts/lean-imports.py --closure tools/Compiler/Exe.lean)
+$(GEN)/graphs: $(GEN)/derived $(GRAPH_SOURCES) $(GRAPH_OUT) scripts/generate.py lean-toolchain lake-manifest.json
+	$(PY) scripts/generate.py --only graphs
+	@mkdir -p $(GEN) && touch $@
+
 # The groups generate.py can regenerate into a temporary directory (no host runtime).
-HERMETIC_GROUPS := variances derived eff wire cas ts readme fixtures
+HERMETIC_GROUPS := variances derived eff wire cas ts readme fixtures graphs
 # `gen`'s order, which is the producers' order above; lcnf is named here, between derived
 # and eff, and nowhere in HERMETIC_GROUPS.
-GEN_GROUPS := variances derived lcnf eff wire cas ts readme host-protocol census fixtures
+GEN_GROUPS := variances derived lcnf eff wire cas ts readme host-protocol census fixtures graphs
 
 .PHONY: gen gen-hermetic $(addprefix gen-,$(GEN_GROUPS)) clean-gen
 gen: $(addprefix $(GEN)/,$(GEN_GROUPS)) ## regenerate every stale generated group, in order
@@ -348,7 +358,7 @@ clean-gen: ## forget the generation markers (the next `make gen` re-cuts everyth
 	rm -rf $(GEN)
 
 # Every committed path a generator writes. The drift check diffs exactly these.
-GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.lean \
+GENERATED_PATHS := $(GRAPH_OUT) $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.lean \
   ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens \
   $(LCNF_OUT) \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/names.gen.ts ts/eff/forms.gen.ts \
@@ -762,7 +772,7 @@ help: ## this list
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo
 	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
-	@echo '                     host-protocol, census, fixtures'
+	@echo '                     host-protocol, census, fixtures, graphs'
 
 clean: ## lake clean (drops the build, the generation and check markers)
 	$(LAKE) clean
