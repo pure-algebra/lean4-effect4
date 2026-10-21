@@ -374,6 +374,58 @@ after M2. That slice deletes `EmitTodo.lean` and the to-do's `Print.lean`.
   commit, and a second emit writes the same bytes. Proposed: a decisions row for the slice.
   Proposed too: the manifest's `inputs` name every package that the emitted folder imports. And
   the prelude's SQL import moves to a file that only a program with a SQL row reaches.
+- **The user-side pass landed** 2026-10-20 (`1cd5a8dc0`, to-do `30f53ac`): a user's walk through the
+  to-do's README, its four known items and its rough edges. The prelude's SQL import stands in
+  `ts/prelude/sql.ts`, the SQLite package's adapter, which `prelude.ts` does not import. The truth
+  lane imports `Sql` from it (`hostImports`), and five truth modules moved one import line each. The
+  target lane binds the three adapter rows there (`SqlAdapter`). So `Compiler.Prelude.closure`
+  copies no file that imports `@effect/sql-sqlite-bun`, and a folder with no SQL row needs no SQL
+  package. Reproduced: `lake exe effect4 emit --group corpus` writes 38 files, and tsgo 7 checks
+  them with only `effect` and tsgo installed. Bun loads its eight modules too. The red control puts
+  the base's `prelude.ts` in that folder: tsgo refuses it (TS2307), and Bun does too. The manifest's
+  `inputs` names each package that the folder's files import, read off their bare specifiers
+  (`Prelude.packages`), with its pin in `ts/eff/package.json`, then tsgo's pin. The corpus and the
+  to-do name `effect` alone. The docstring of `Inputs` says that the Lean module closure is still
+  absent. `Compiler.Groups` holds the tree's groups, the dogfood to-do with its reference repository
+  and the host lane's script. So `lake exe effect4 run --group todo` prints seven lines, and
+  `--group corpus` refuses `run`, saying why. In the to-do, `ts/run.ts` writes each exit at its own
+  type, and `ts/lean-lines.ts` is deleted. `lake exe todo run --text` equals
+  `bun --no-install ts/run.ts` on the eleven lines, and `run --json` equals the native run. The
+  README reads top to bottom: install, build, check, emit, run and compare. The brief kept
+  `@effect/sql-sqlite-bun` in the to-do, since its run would use SQLite. Its run uses an in-memory
+  store, so the to-do drops the package. Without it, tsgo checks `ts/` and Bun runs the eleven
+  requests; with the base's prelude, both refuse, reproduced. Fixed rough edges, each in under
+  thirty lines: `run` printed value trees by default, and the readable line is the default now.
+  `emit` counted the prelude's five files as modules, and it counts each kind now. A usage error
+  printed every command's options, and spoke of "this slice" for a missing `--target`. It now names
+  its command, why, and that command's options. `check --bogus` named no option, and a missing
+  `--script` file printed Lean's error code. The README's tsgo and native steps changed the shell's
+  folder, so the next step failed. Every command now runs from the project's root. The README named
+  no prerequisite and no build of the library's OCaml packages, and its Install section names both.
+  `ocaml/todo_native.ml` named `lake exe todo --json`, which is no command, and names `run --json`
+  now. The closure audit imported `Compiler.Main`, so it missed `Compiler.Groups`, and it imports
+  the groups now. Listed, not fixed: a fresh clone fetches the library's Git packages anew, and
+  `lakefile.toml` says GitHub may lack whatwg's commit. The README could seed `.lake/packages` from
+  the library's checkout. A fresh clone's first `lake build` is not measured here. The OCaml
+  lowering's command reads its opened types from its own output, until E2. `describe` prints its
+  manifest as one line, and a `--pretty` would serve a reader. `--target ts` is required although ts
+  is the one target. `check` prints the key as `k30_6`, and naming `Todo.repoKey` beside it would
+  help. `src/Effect4/Program/Profile.lean`, the E6 seat's file, still names `prelude.ts` for `Sql`
+  and `SqlHandle`. An application with a SQL row needs the compiler to import `Sql` and to copy the
+  closure of the module's imports. The library deleted 197 lines and added 386, 90 of them in its
+  two new files. The to-do deleted 203 and added 125. `make batteries-touched BASE=90e2ba992`: two
+  batteries, `Test.Audit.ClosureAudit` and `Test.Codegen.CompilerEmit`, built. `#axiom_audit`: the
+  battery's 58 declarations are within `[propext, Quot.sound]`, none modulo a planned goal, and so
+  are the four of `Compiler.Groups`. The compiler's modules reach `Classical.choice` in 62 of 580
+  declarations, against 56 of 566 at slice 3. Each enters through the toolchain's string, path and
+  name functions. The package scan and the generic closure enter through `String.splitOn`,
+  `String.startsWith` and `String.fromUTF8?`. `#closure_audit`: none of the compiler's 1,213
+  declarations binds a table before a returned closure. Gates: `make check-ts` passes on all six
+  lanes. The target lane resolves 104 of 104, and the corpus keeps 408, 385 readable, 0 refused.
+  `make check-docs`, `check-language`, `check-census`, `check-schema-pins`, `check-tools` and
+  `check-gen` pass, and no committed file changed. `check-roots` was not run: it is
+  `lake build Test`. `make check-ocaml` is not owed, since nothing under `ocaml/` or `src/OCaml5`
+  changed.
 
 ## 9. The prior art, each against our semantics
 
