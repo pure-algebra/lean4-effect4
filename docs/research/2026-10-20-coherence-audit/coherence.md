@@ -381,6 +381,42 @@ First, before item 1: the to-do as a user's project, outside the library
   development the declared fact cites, and the six hand files go. Left for the coordinator:
   `docs/ARCHITECTURE.md` still names `clock/`, and `src/Effect4/Laws/Run/Tree.lean` calls
   `BudgetDefs.v` history.
+- **4b landed** 2026-10-20 (`79fd87bfa`): a Lean declaration is lowered into one artifact. The
+  recipe names the artifacts an artifact uses (`uses`), read through `OCaml5.Lcnf.Export`, and
+  the api artifact uses `eff_image`. Its walk stops at every declaration that `eff_image`'s walk
+  lowers, and writes `Eff_image`'s binding there (`TCtx.links`). Of the 36 bindings the closure
+  links, 33 are no root of `eff_image`, so a stop at the used roots alone would keep copies.
+  Other codecs and decidable equalities of the closure call them directly. So `eff_image.mli`
+  exports the 36 bindings, and `eff_image.ml` is byte for byte unchanged. `eff_image`'s own type,
+  `Effect4.Store.Image`, is spelled through its module (`TypeNames.units`). So a value the closure
+  builds and a binding it links have one type. Four roots of the api artifact are `eff_image`'s,
+  and the closure binds each by name: the three codec roots and the to-do lane's `Image.equiv`.
+  The api run refuses a declaration lowered in both artifacts. Its report prints the count:
+  `lowered twice, by the manifests: Eff_image and Closure_gen: 0 in both`. Measured by
+  `lake exe lcnfgen --identity` too: the two manifests hold 107 declarations both at `ef3c1c89b`,
+  and none now. The api closure lowers 3,211 declarations, against 3,318, and `closure_gen.ml`
+  has 66,676 lines, against 70,821. Hand lines grew by 565 and generated lines fell by 4,208
+  (`git diff --numstat`). Regenerated: lcnf. Besides `closure_gen.ml`, its manifest and
+  `api_gen.ml`'s header, these changed: `eff_image.mli`, and the interfaces of the closure, its
+  facade, the lanes' unit and the to-do lane. Each of the four drops its `image` declaration, and
+  all but the facade's spell `Eff_image.image`. `api_gen.mli` keeps every public name and type. The
+  headers of the lanes' unit and its four facades carry the new command. Unchanged: `eff_image.ml`
+  and its manifest, `api_engine.ml`, the public facade and `public-names.tsv`. The plan refuses a
+  use of a later artifact and a use across two profiles, which names the shared root with its two
+  classes. It also refuses an artifact that its user cannot walk as it walks itself. Red
+  controls: the plan's refusals, and the translator without the link, which lowers `applyTo`
+  again (`Conform.Effect4.CompilerControls`). Without the link the user does not compile
+  (`check-lcnf-interfaces.py`), and an unlinked node stays hidden (`check-export-classes.py`). A
+  staged manifest that lists one of the api closure's declarations makes the api run refuse,
+  reproduced once. `make batteries-touched BASE=ef3c1c89b`: 2 batteries, built. `#axiom_audit`:
+  their 2 declarations are within `[propext, Quot.sound]`, and none is modulo a planned goal.
+  Outside the gate, 168 of the 1,319 declarations of the seven touched tool modules reach
+  `Classical.choice` through string operations. `#closure_audit` passes over `OCaml5` (5,073
+  declarations) and `Conform.Effect4` (150). Gates, on the merge with `36f8da729`: `check-ocaml`,
+  each lane, and `check-sweep` pass. Proposed: a decisions row for 4b. `Eff_image` now exports 33
+  generated names that no public path names, as `Api_gen` and `Eff_types` do. Proposed too: §9.3's
+  sentence on the artifacts reads "lowered declarations" for "lowered roots". `api_engine`'s shared
+  declarations, 888 with `Closure_gen` and 9 with `Eff_image`, differ in profile and stay with M10.
 
 - **The order from here** (the owner, 2026-10-20): the entry point's first slice, then M3, then C1's
   moves under E4. Then M4 with E6, then `run`, then M8. Seats alternate between the chain and the
