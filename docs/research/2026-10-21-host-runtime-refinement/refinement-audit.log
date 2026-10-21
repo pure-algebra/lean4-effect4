@@ -1,0 +1,5 @@
+Build completed successfully (532 jobs).
+ran clean: probe-guard.lean
+ran clean: probe-session.lean
+ran clean: probe-transcript.lean
+#axiom_audit: 35 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals

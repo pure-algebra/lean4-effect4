@@ -1,0 +1,6 @@
+Engine_gen: 1619 declarations; profile flat; catalogue 15404410146269837016
+Closure_gen: 3212 declarations; profile flat; catalogue 15404410146269837016
+Todo_gen: 1369 declarations; profile flat; catalogue 15404410146269837016
+Engine_gen and Closure_gen: 1608 in both, 0 of them one node; 1608 differ in type owner
+Engine_gen and Todo_gen: 1343 in both, 0 of them one node; 1343 differ in type owner
+Closure_gen and Todo_gen: 1357 in both, 0 of them one node; 1357 differ in type owner

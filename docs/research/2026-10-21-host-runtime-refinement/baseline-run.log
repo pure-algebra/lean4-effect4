@@ -1,0 +1,7 @@
+add("milk") {"_tag":"Success","value":{"done":false,"id":1,"title":"milk"}}
+add("café 日本 🙂") {"_tag":"Success","value":{"done":false,"id":2,"title":"café 日本 🙂"}}
+list() {"_tag":"Success","value":[{"done":false,"id":1,"title":"milk"},{"done":false,"id":2,"title":"café 日本 🙂"}]}
+complete(1) {"_tag":"Success","value":{"done":true,"id":1,"title":"milk"}}
+list() {"_tag":"Success","value":[{"done":true,"id":1,"title":"milk"},{"done":false,"id":2,"title":"café 日本 🙂"}]}
+remove(1) {"_tag":"Success","value":null}
+list() {"_tag":"Success","value":[{"done":false,"id":2,"title":"café 日本 🙂"}]}

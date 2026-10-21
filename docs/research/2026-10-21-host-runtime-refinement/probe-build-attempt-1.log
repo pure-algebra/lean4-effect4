@@ -1,0 +1,14 @@
+Build completed successfully (532 jobs).
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-guard.lean:32:7: error: Type mismatch
+  Option.map
+      (fun b =>
+        let u := Run.runWith b validHost 0 "review" { } 16;
+        let g := Run.runWith b (validHost.guardRows b.app.types) 0 "review" { } 16;
+        (u.fst.exit, u.snd, g.fst.exit, g.snd))
+      checked =
+    some (some (Exit.success (Val.nat 1).some), 1, none, 0)
+has type
+  Prop
+but is expected to have type
+  Bool
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-guard.lean:32:0: error: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors

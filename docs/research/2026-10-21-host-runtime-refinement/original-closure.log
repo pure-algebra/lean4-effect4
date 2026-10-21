@@ -1,0 +1,71 @@
+today: lowering.json roots:
+  "Test.Dogfood.Scenario.Todo.repository"
+  "Test.Dogfood.Scenario.Todo.HostLane.start"
+  "Test.Dogfood.Scenario.Todo.HostLane.script"
+  "Test.Dogfood.Scenario.Todo.Host.serveBuiltVal"
+  "Test.Dogfood.Scenario.Todo.Host.resultVal"
+today: todo_gen.ml 27496 lines, 1369 declarations, 14 under Test
+proposed: engine_gen.ml 31201 lines, 1619 declarations, 0 under Test
+proposed: todo_host_gen.ml 648 lines, 52 declarations, 9 under Test
+proposed: todo_model_gen.ml 795 lines, 63 declarations, 15 under Test
+today's declarations the engine lowers too: 1343
+today's declarations outside the engine, by namespace:
+    13 Test.Dogfood.Scenario
+     4 List.mapTR.loop
+     2 List.find?._at_
+     1 Test.Dogfood.P2HandlerLayers
+     1 List.filterTR.loop
+     1 List.any._at_
+     1 Effect4.Run.runWith
+     1 Effect4.Run.exit
+     1 Effect4.Rows.start
+     1 Effect4.Api.evaluate
+the engine's declarations in ocaml/gen/closure-api_gen.tsv, by compilation unit:
+  1597 Closure_gen
+    11 Lanes_gen
+the engine's declarations that only the test lanes' unit lowers today:
+  Effect4.Rows.answer
+  Effect4.Rows.control
+  Effect4.Rows.flush
+  Effect4.Rows.tape
+  Effect4.Run.drive._redArg
+  Effect4.Run.driveFrom._redArg
+  Effect4.Run.freshCall
+  List.any._at_.Effect4.Run.freshCall.spec_0
+  List.any._at_.Effect4.Run.freshCall.spec_1
+  List.find?._at_.Effect4.Run.freshCall.spec_2
+  List.mapTR.loop._at_.Effect4.Rows.tape.spec_0
+the engine's declarations not in ocaml/gen/closure-api_gen.tsv:
+  Effect4.Run.observe
+  Effect4.Store.Image.equiv._redArg
+  Effect4.Store.Image.equiv._redArg._lam_0
+  Effect4.Store.Image.equiv._redArg._lam_1
+  Effect4.Store.Val.beq
+  Effect4.Store.Val.beqList
+  Effect4.instDecidableLtServiceKey._aux_1
+  List.decidableBAll._redArg
+  List.hasDecEq._redArg
+  List.instDecidablePairwise._redArg
+  instDecidableEqList._redArg
+the object's node reader and writer alone: refused; closure: 1091 of --cap 4000 (2909 of headroom); manifest ./closure-load_gen.tsv
+  no translation: ByteArray.size: extern
+  no translation: ByteArray.copySlice: extern
+  no translation: UInt32.shiftRight: extern
+  no translation: UInt32.toNat: extern
+  no translation: UInt32.add: extern
+  no translation: UInt32.shiftLeft: extern
+  no translation: UInt32.lor: extern
+  no translation: ByteArray.get: extern
+  no translation: Array.set: extern
+  no translation: UInt32.xor: extern
+  no translation: UInt32.land: extern
+  no translation: UInt32.complement: extern
+  no translation: UInt32.ofNat: extern
+today's run of the to-do script (lake exe effect4 run --group todo --typed):
+  add("milk") {"_tag":"Success","value":{"done":false,"id":1,"title":"milk"}}
+  add("café 日本 🙂") {"_tag":"Success","value":{"done":false,"id":2,"title":"café 日本 🙂"}}
+  list() {"_tag":"Success","value":[{"done":false,"id":1,"title":"milk"},{"done":false,"id":2,"title":"café 日本 🙂"}]}
+  complete(1) {"_tag":"Success","value":{"done":true,"id":1,"title":"milk"}}
+  list() {"_tag":"Success","value":[{"done":true,"id":1,"title":"milk"},{"done":false,"id":2,"title":"café 日本 🙂"}]}
+  remove(1) {"_tag":"Success","value":null}
+  list() {"_tag":"Success","value":[{"done":false,"id":2,"title":"café 日本 🙂"}]}

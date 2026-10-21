@@ -1,0 +1,30 @@
+{
+  "format": "effect4-lcnf-roots-v3",
+  "facade": {
+    "module": "Project"
+  },
+  "artifacts": [
+    {
+      "out": "guarded_engine_gen.ml",
+      "import": [
+        "Effect4.Run.LiveRecord",
+        "Effect4.Laws.Api.HostDrive"
+      ],
+      "cap": 4000,
+      "linkage": [
+        "Effect4.Program.Object.open",
+        "Effect4.Live.open",
+        "Effect4.Live.feed",
+        "Effect4.Run.drive",
+        "Effect4.Run.observe",
+        "Effect4.LiveRecord.save",
+        "Effect4.LiveRecord.restore",
+        "Effect4.Run.Reactor.guardRows"
+      ],
+      "open": {
+        "module": "Eff_types",
+        "artifact": "ocaml/eff/eff_types.ml"
+      }
+    }
+  ]
+}

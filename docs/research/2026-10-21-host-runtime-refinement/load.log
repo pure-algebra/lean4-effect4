@@ -1,0 +1,27 @@
+imported #[Effect4.Api.Object] in 1002 ms
+== load_gen.ml
+closure: 1091 of --cap 4000 (2909 of headroom); manifest ./closure-load_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[_private.Init.Data.List.Impl.0.List.takeTR.go, Effect4.Program.LayerTerm.refSite, Effect4.Row.union._at_.Effect4.Machine.Env.Requirement.union.spec_0, Effect4.Row.normalize._at_.Effect4.Row.union._at_.Effect4.Machine.Env.Requirement.union.spec_0.spec_0, List.zipWith._at_.List.zip.spec_0, Effect4.Program.argTy, Effect4.Program.argsTy]
+todos (13):
+  ByteArray.size: extern
+  ByteArray.copySlice: extern
+  UInt32.shiftRight: extern
+  UInt32.toNat: extern
+  UInt32.add: extern
+  UInt32.shiftLeft: extern
+  UInt32.lor: extern
+  ByteArray.get: extern
+  Array.set: extern
+  UInt32.xor: extern
+  UInt32.land: extern
+  UInt32.complement: extern
+  UInt32.ofNat: extern
+types in full: #[Effect4.Program.Object.LoadRefusal, Effect4.Program.Object, Effect4.Store.Kind, Effect4.Store.Node, Effect4.Store.ReadRefusal, Effect4.Api.Built, Effect4.Store.Node.ReadRefusal, Effect4.Program.AdmitRefusal, Effect4.Program.SigApp, Effect4.Document, Effect4.Store.Tag.Code, Effect4.Program.Signature, Effect4.Store.ShapeDoc, Effect4.Store.Shape, Effect4.Representation, Effect4.Store.Image, Effect4.Program.SigRefusal, Effect4.Program.Formation.Site, Effect4.Program.TypeReason, Effect4.ElementOf, Effect4.UnionMode, Effect4.ReferenceEntry, Effect4.RepresentationAnnotation, Effect4.LiteralValue, Effect4.Program.FormationReason, Effect4.Program.BinderTerm, Effect4.Program.Node, Effect4.Json, Effect4.AnnotationKey, Effect4.PropertyKey, Effect4.PropertySignatureOf, Effect4.Optional, Effect4.Check, Effect4.AnnotationEntry, Effect4.EnumEntry, Effect4.IndexSignatureOf, Effect4.Program.RowReason, Effect4.Program.ServiceReason, Effect4.Program.DeclReason, Effect4.Program.FnShape, Effect4.Program.NativeAtom, Effect4.Program.NativeAtom.Spec, Effect4.Program.NativeAtom.AtomRow, Effect4.Program.GenTy, Effect4.Program.LayerTy, Effect4.CheckRepresentationAnnotationOf, Effect4.EnumValue, Effect4.Program.NativeAtom.Scheme, Effect4.Program.NativeAtom.CustomScheme, Effect4.Program.RefFault, Effect4.Program.TermTypingReason, Effect4.Program.CauseTypingReason, Effect4.Program.TermUse, Effect4.Program.RowTypingRefusal, Effect4.Program.TyAlgebra, Effect4.Program.ArgReader, Effect4.Program.EffFam, Effect4.Program.EffAlgebra, Effect4.Program.StmtTy, Effect4.Program.TermAlgebra, Effect4.Program.CauseTermAlgebra, Effect4.Program.Ty.Variance, Effect4.Program.Ty.LeafHead, Effect4.Program.FoldTypingReason, Effect4.Program.RecordTypingReason, Effect4.Program.TupleTypingReason]
+types as abbreviations: #[Effect4.Store.Digest, Effect4.Program.AdmittedProgram, Effect4.ReferenceKey, Effect4.GlobalSymbolKey, Effect4.Float64, Effect4.Program.TypedProgram]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(read_refusal, (Effect4.Store.ReadRefusal, Effect4.Store.Node.ReadRefusal)), (node, (Effect4.Store.Node, Effect4.Program.Node))]
+type-name collisions left unresolved: #[]
+uncaught exception: todos remaining in closure (fatal): #[ByteArray.size: extern, ByteArray.copySlice: extern, UInt32.shiftRight: extern, UInt32.toNat: extern, UInt32.add: extern, UInt32.shiftLeft: extern, UInt32.lor: extern, ByteArray.get: extern, Array.set: extern, UInt32.xor: extern, UInt32.land: extern, UInt32.complement: extern, UInt32.ofNat: extern]

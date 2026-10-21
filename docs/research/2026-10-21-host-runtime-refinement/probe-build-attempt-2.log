@@ -1,0 +1,31 @@
+Build completed successfully (532 jobs).
+ran clean: probe-guard.lean
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:28:71: error: unexpected token '('; expected '}'
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:31:0: error: cannot evaluate code because 'Refinement.Session.shadowedObject' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:35:0: error: cannot evaluate code because 'Refinement.Session.shadowedObject' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:44:0: error: cannot evaluate code because 'Refinement.Session.shadowedObject' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:45:0: error: cannot evaluate code because 'Refinement.Session.shadowedObject' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:89:50: error: unexpected identifier; expected '}'
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:89:8: error: don't know how to synthesize placeholder
+context:
+o : Object
+service : String
+ss : List Service
+s : Service
+initD : DefDecl
+ms : List Method
+keys : List ServiceKey := ⋯
+__r✝² : Unit
+rows : RowTable := ⋯
+decls : List DefDecl
+bodies : Effs NativeOp
+main✝ : Eff NativeOp
+layers : LayerTerms NativeOp
+main : Eff NativeOp
+⊢ Type
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:95:0: error: cannot evaluate code because 'Refinement.Session.checkedSession' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:96:0: error: cannot evaluate code because 'Refinement.Session.checkedSession' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:97:0: error: cannot evaluate code because 'Refinement.Session.checkedSession' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:98:0: error: cannot evaluate code because 'Refinement.Session.shadowedObject' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:101:0: error: cannot evaluate code because 'Refinement.Session.checkedSession' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/program-domain/lean4-effect4/docs/research/2026-10-21-host-runtime-refinement/probe-session.lean:103:0: error: cannot evaluate code because 'Refinement.Session.checkedSession' uses 'sorry' and/or contains errors

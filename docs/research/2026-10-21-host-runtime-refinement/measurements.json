@@ -1,0 +1,10 @@
+{
+  "engine_declarations": 1619,
+  "guarded_engine_declarations": 1621,
+  "guard_added": [
+    "Effect4.Run.Reactor.guardRows._redArg",
+    "Effect4.Run.answerAdmits"
+  ],
+  "guard_removed": [],
+  "guarded_generated_lines": 31231
+}
