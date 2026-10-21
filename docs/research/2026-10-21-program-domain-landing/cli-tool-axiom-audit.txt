@@ -1,0 +1,73 @@
+/private/tmp/program-object-cli-audit.lean:4:0: error: #axiom_audit: 27 of 376 declarations reach axioms outside [propext, Quot.sound]:
+  Compiler.check reaches [Classical.choice]
+  Compiler.certificateLines reaches [Classical.choice]
+  Compiler.serviceName reaches [Classical.choice]
+  Compiler.CheckRefusal.text reaches [Classical.choice]
+  Compiler.reading reaches [Classical.choice]
+  Compiler.graphReading reaches [Classical.choice]
+  Compiler.Options.read reaches [Classical.choice]
+  Compiler.CheckOptions.read._f reaches [Classical.choice]
+  Compiler.Options.read._f reaches [Classical.choice]
+  Compiler.readSpec reaches [Classical.choice]
+  Compiler.CheckOptions.read reaches [Classical.choice]
+  Compiler.printRefusal reaches [Classical.choice]
+  Compiler.checkCommand reaches [Classical.choice]
+  Compiler.run reaches [Classical.choice]
+  Compiler.inspectCommand reaches [Classical.choice]
+  Compiler.emissionOf reaches [Classical.choice]
+  Compiler.runCommand reaches [Classical.choice]
+  Compiler.Options.read._unsafe_rec reaches [Classical.choice]
+  Compiler.main reaches [Classical.choice]
+  Compiler.Options.read._sunfold reaches [Classical.choice]
+  Compiler.emitCommand reaches [Classical.choice]
+  Compiler.mainOver reaches [Classical.choice]
+  Compiler.openCommand reaches [Classical.choice]
+  Compiler.CheckOptions.read._unsafe_rec reaches [Classical.choice]
+  Compiler.CheckOptions.read._sunfold reaches [Classical.choice]
+  Compiler.runHosted reaches [Classical.choice]
+  Compiler.builtOf reaches [Classical.choice]
+10 of them stand under no other (the first 8 shown); each one's path to its axiom:
+  Compiler.certificateLines  (Compiler.Check)
+  → Tools.Code.headerBlock  (Compiler.Code.Module)
+  → String.length  (Init.Data.String.Length)
+  → ⋯ 7 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.serviceName  (Compiler.Check)
+  → String.capitalize  (Init.Data.String.Modify)
+  → ⋯ 8 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.CheckRefusal.text  (Compiler.Check)
+  → Compiler.jsonText  (Compiler.Json)
+  → String.fromUTF8!  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.graphReading  (Compiler.Inspect)
+  → Compiler.prettyText  (Compiler.Json)
+  → String.fromUTF8!  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.CheckOptions.read._f  (Compiler.Main)
+  → String.startsWith  (Init.Data.String.TakeDrop)
+  → ⋯ 9 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.Options.read._f  (Compiler.Main)
+  → String.Slice.toString  (Init.Data.String.Slice)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.readSpec  (Compiler.Main)
+  → Compiler.Prelude.folder  (Compiler.Prelude)
+  → System.FilePath.components  (Init.System.FilePath)
+  → ⋯ 3 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.Options.read._unsafe_rec  (Compiler.Main)
+  → String.Slice.toString  (Init.Data.String.Slice)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)

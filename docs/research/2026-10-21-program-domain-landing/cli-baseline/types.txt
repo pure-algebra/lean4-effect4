@@ -1,0 +1,27 @@
+[] void
+[0 0] Context.Context<"k30_6"> needs k30_6
+[0 1 0] { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] | readonly ["EmptyTitle", "a title is required"]
+[0 1 0 0] { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] | readonly ["EmptyTitle", "a title is required"] needs k30_6
+[0 1 0 0 0] string
+[0 1 0 0 1] { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] | readonly ["EmptyTitle", "a title is required"] needs k30_6
+[0 1 0 0 1 0] never ! readonly ["EmptyTitle", "a title is required"]
+[0 1 0 0 1 1] { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] needs k30_6
+[0 1 1 0] ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly ["SqlError", string]
+[0 1 1 0 0] ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly ["SqlError", string] needs k30_6
+[0 1 1 1 0] { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number }
+[0 1 1 1 0 0] { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number } needs k30_6
+[0 1 1 1 0 0 0] number
+[0 1 1 1 0 0 1] { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number } needs k30_6
+[0 1 1 1 0 0 1 0] Option.Option<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly ["SqlError", string] needs k30_6
+[0 1 1 1 0 0 1 1] { readonly done: boolean; readonly id: number; readonly title: string } ! { readonly _tag: "NotFound"; readonly id: number }
+[0 1 1 1 0 0 1 1 0] never ! { readonly _tag: "NotFound"; readonly id: number }
+[0 1 1 1 0 0 1 1 1] { readonly done: boolean; readonly id: number; readonly title: string }
+[0 1 1 1 1 0] void ! readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number }
+[0 1 1 1 1 0 0] void ! readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number } needs k30_6
+[0 1 1 1 1 0 0 0] number
+[0 1 1 1 1 0 0 1] void ! readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number } needs k30_6
+[0 1 1 1 1 0 0 1 0] boolean ! readonly ["SqlError", string] needs k30_6
+[0 1 1 1 1 0 0 1 1] void ! { readonly _tag: "NotFound"; readonly id: number }
+[0 1 1 1 1 0 0 1 1 0] void
+[0 1 1 1 1 0 0 1 1 1] never ! { readonly _tag: "NotFound"; readonly id: number }
+[1] void

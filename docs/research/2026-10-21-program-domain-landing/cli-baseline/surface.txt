@@ -1,0 +1,4 @@
+TodoApp.add(string) { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] | readonly ["EmptyTitle", "a title is required"]
+TodoApp.list() ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly ["SqlError", string]
+TodoApp.complete(number) { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number }
+TodoApp.remove(number) void ! readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number }

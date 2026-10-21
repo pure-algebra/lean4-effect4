@@ -1,0 +1,4 @@
+TodoRepo.insert(string) { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] needs k30_6
+TodoRepo.all(void) ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly ["SqlError", string] needs k30_6
+TodoRepo.setDone(readonly [number, boolean]) Option.Option<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly ["SqlError", string] needs k30_6
+TodoRepo.delete(number) boolean ! readonly ["SqlError", string] needs k30_6
