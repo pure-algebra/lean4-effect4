@@ -1,9 +1,9 @@
 # Program, host, runtime: the compilation boundary as data
 
-Status: the functional API refined against the tree at `2de30da7e` (2026-10-21), after Codex's
-revision of the first draft (its review of the discussion's Q1–Q10 is kept in §9). Evidence:
-source inspection; no new Lean proof and no execution comparison. The note proposes work and
-records no owner ruling. The register and the implementation are unchanged.
+The current direction is §14: program data first. Decisions row 439 records the adopted design.
+The [landing](2026-10-21-program-domain-landing/README.md) records its implementation and checks.
+Sections 1–13 retain earlier proposals against `2de30da7e`; they do not describe the landed object.
+Host lifetime, targets and assembly remain proposed work.
 
 ## 1. The change to make
 
@@ -703,13 +703,14 @@ Generated consumers reached by changed carriers must still be regenerated and ch
 A design seat composed the domain from the tree's owners and proved its laws in probes:
 `docs/research/2026-10-21-program-domain-design/README.md` (`a5127efcc`). Its findings amend
 §14.2: the object is `{ app : SigApp, program : Eff NativeOp }` and nothing else. The row names
-are a projection of the rows (proved at every producer of `Built`), the version is the store node's
-spec (a field cannot see a layout change, tested), and argument names have no consumer. `open` is
+become a projection of the rows. The landing removes the internal constructor's arbitrary-name argument.
+The store node's spec checks the layout digest, and argument names have no consumer. `open` is
 `Built.ofProgram`; the bytes are the store's node codec; the digest is `Store.address` and is
 called `ref`; the address table is `Check.run`'s verdict and is called `table`; the service view
 is the printer's fault check written once over a profile of names (`rfl` against `serviceFault`).
-Eight probes run clean under `-DwarningAsError=true`, 381 declarations within
-`[propext, Quot.sound]`. The slice lands by that note's §7, with its §8 recommendations.
+At the recorded base, eight probes compile under `-DwarningAsError=true`.
+The audit covers 381 declarations within `[propext, Quot.sound]`.
+The landing follows that note's §7 and §8 recommendations.
 
 ### 14.5 What comes after, in this order
 

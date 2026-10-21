@@ -1,6 +1,7 @@
 # Program data landing
 
 The object contains its language signature and its program. Every other reading has one existing owner.
+The [receipt](receipt.md) records the implementation, checks and compatibility boundary.
 
 ## Decisions
 

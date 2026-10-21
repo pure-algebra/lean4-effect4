@@ -1,13 +1,13 @@
 # 2026-10-21 The program domain, composed: a program over its signature Σ_app
 
-Status: a design note with its probes. It proposes and rules nothing. No file under `src/`,
-`tools/`, `Test/`, `ocaml/`, `ts/` or `docs/core/` changes. The evidence words are those of
-`docs/core/controlled-english.md` §3.8.
+Status: historical design evidence, reproduced at `40770f079d8d7594021691e0f0b1d39025b211e0` before implementation.
+Decisions row 439 adopts the recommendations. The [landing](../2026-10-21-program-domain-landing/README.md) records their current implementation.
+The probes target the previous record shapes. The current library laws and batteries replace them as implementation checks.
+The evidence words follow `docs/core/controlled-english.md` §3.8.
 
-Every probe in this folder runs clean with `lake env lean -DwarningAsError=true`. `audit.sh` runs
-them all, then audits their declarations with the gate's own walk (`#axiom_audit`,
-`tools/ProofGraph/AxiomAudit.lean`). The walk finds 381 declarations within `[propext,
-Quot.sound]`, none of them modulo a planned goal (`audit.out`).
+At that base, every probe compiles with `lake env lean -DwarningAsError=true`.
+`audit.sh` runs them and audits their declarations with `#axiom_audit` (`tools/ProofGraph/AxiomAudit.lean`).
+The [reproduced audit](../2026-10-21-program-domain-landing/baseline-audit.log) covers 381 declarations within `[propext, Quot.sound]`, with no planned goal underneath.
 
 **The one thing to know.** The object is a program with its signature, and nothing else:
 
