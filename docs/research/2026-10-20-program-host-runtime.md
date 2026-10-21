@@ -745,7 +745,20 @@ they are today, and the to-do's `ts/` and `ocaml/` folders are untouched.
 4. The two laws proved; `#axiom_audit` of the touched modules within `[propext, Quot.sound]`;
    `make batteries-touched` green; `check-ts` unchanged, since no emitted byte changes.
 
-### 14.4 What comes after, in this order
+### 14.4 The design, probed (2026-10-21)
+
+A design seat composed the domain from the tree's owners and proved its laws in probes:
+`docs/research/2026-10-21-program-domain-design/README.md` (`a5127efcc`). Its findings amend
+§14.2: the object is `{ app : SigApp, program : Eff NativeOp }` and nothing else. The row names
+are a projection of the rows (proved at every producer of `Built`), the version is the store node's
+spec (a field cannot see a layout change, tested), and argument names have no consumer. `open` is
+`Built.ofProgram`; the bytes are the store's node codec; the digest is `Store.address` and is
+called `ref`; the address table is `Check.run`'s verdict and is called `table`; the service view
+is the printer's fault check written once over a profile of names (`rfl` against `serviceFault`).
+Eight probes run clean under `-DwarningAsError=true`, 381 declarations within
+`[propext, Quot.sound]`. The slice lands by that note's §7, with its §8 recommendations.
+
+### 14.5 What comes after, in this order
 
 The domain next door is the target's print of the program (the TypeScript module, the
 read-back law), then the host interface derived from the rows, then the session program. Each is
