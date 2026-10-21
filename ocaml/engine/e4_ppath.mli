@@ -25,7 +25,8 @@
    Externs.lean `carrierSignatures`) verbatim; the ascription is checked in
    test/prop_point.ml, whose model is Lean's meaning: the list, walked on every `node`.
 
-   Depends on: the OCaml standard library only (List).
+   Depends on: Zarith (Z) and the OCaml standard library (List). A path's index is a Lean `Nat`,
+   Zarith's `Z.t` since M4.
 
    Representation: { rev : the path, LAST index first; node : the node at that path, or None
    when the path leaves the tree; base : the node the path is rooted at }.  `base` is carried
@@ -59,23 +60,23 @@ val root : 'n t -> 'n
 
 (** [snoc child p i] is the path [to_list p @ [i]], sharing [p]'s spine, with its node
     computed from [p]'s by one [child] (PP1, PP2). *)
-val snoc : ('n -> int -> 'n option) -> 'n t -> int -> 'n t
+val snoc : ('n -> Z.t -> 'n option) -> 'n t -> Z.t -> 'n t
 
 (** [snoc] folded over the list (PP5). *)
-val append : ('n -> int -> 'n option) -> 'n t -> int list -> 'n t
+val append : ('n -> Z.t -> 'n option) -> 'n t -> Z.t list -> 'n t
 
 (** The node this path addresses: [walk child (root p) (to_list p)], answered in O(1) from
     the carried node (PP3).  [child] is taken so that a carrier that holds only the list
     can walk. *)
-val node : ('n -> int -> 'n option) -> 'n t -> 'n option
+val node : ('n -> Z.t -> 'n option) -> 'n t -> 'n option
 
 (** Lean's `Node.at_`: [child] applied along the list, [None] as soon as one step fails. *)
-val walk : ('n -> int -> 'n option) -> 'n -> int list -> 'n option
+val walk : ('n -> Z.t -> 'n option) -> 'n -> Z.t list -> 'n option
 
 (** The Lean `Point.path` value.  One reversal, O(length); it is what the three observable
     sites (`FinName.memoEntry`, `SyncOp.memoBuild`, `SyncOp.memoGet` — all `LayerId`) are
     handed, so the memo keys and the layer bytes are unchanged. *)
-val to_list : 'n t -> int list
+val to_list : 'n t -> Z.t list
 
 (** The depth.  O(length): the spine is not counted, because nothing on the hot path asks. *)
-val length : 'n t -> int
+val length : 'n t -> Z.t

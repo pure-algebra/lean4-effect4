@@ -5,8 +5,8 @@ module G = Effect4_gen.Api_gen
 module E4_engine = Effect4_engine.E4_engine
 
 type program = NativeOp.t Eff.t
-type exit = (Val.t, Err.t, Defect.t, int, unit) Exit.t
-type completion = (Val.t, Err.t, Defect.t, int, unit) Eff_types.Completion.t
+type exit = (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t
+type completion = (Val.t, Err.t, Defect.t, Z.t, unit) Eff_types.Completion.t
 type app = G.sig_app
 
 let app ?(rows = []) ?(services = []) () : app = { G.rows; services; types = [] }
@@ -56,14 +56,14 @@ type reply_refusal =
 
 type stop =
   | Finished of exit
-  | Waiting of int * Val.t
-  | Refused of int * Val.t * exit * reply_refusal
+  | Waiting of Z.t * Val.t
+  | Refused of Z.t * Val.t * exit * reply_refusal
   | Unsupported of E4_engine.profile_refusal
   | Unsettled
   | Stopped of string
 
 type step = G.step =
-  | Step_called of int * Val.t * exit
+  | Step_called of Z.t * Val.t * exit
   | Step_celled of G.sync_op * Val.t
 
 type trace =
@@ -90,14 +90,21 @@ type 's report =
   ; agrees : bool option
   }
 
-let reply_fault (a : app) i ex = G.run_kit_reply_fault a i ex
+(* A row's position is a Lean natural, Zarith's `Z.t`; the table is a list the host indexes by
+   int, and a position past the host's int is past the table. *)
+let row_at (a : app) (i : Z.t) : Row.t option =
+  if Z.fits_int i then List.nth_opt a.G.rows (Z.to_int i) else None
+;;
+
+let reply_fault_at (a : app) (i : Z.t) ex = G.run_kit_reply_fault a i ex
+let reply_fault (a : app) i ex = reply_fault_at a (Z.of_int i) ex
 
 (* A row's position in the table, found by identity: both runners hand the reactor the table's
    own records (Kit_machine M3). *)
 let position (a : app) (row : Row.t) =
   let rec go i = function
     | [] -> None
-    | r :: rest -> if r == row then Some i else go (i + 1) rest
+    | r :: rest -> if r == row then Some (Z.of_int i) else go (i + 1) rest
   in
   go 0 a.G.rows
 ;;
@@ -110,7 +117,7 @@ let admitted (a : app) (r : 's reactor) : 's reactor =
   | Some (c, _) when Option.is_some (E4_engine.Fast.ingress c) -> None
   | Some (Completion.OfExit ex, _) as answer ->
     (match position a row with
-     | Some i when Option.is_some (reply_fault a i ex) -> None
+     | Some i when Option.is_some (reply_fault_at a i ex) -> None
      | _ -> answer)
   | answer -> answer
 ;;
@@ -119,11 +126,11 @@ let admitted (a : app) (r : 's reactor) : 's reactor =
    named with its refusal. A refused reply leaves the state as it was, so asking again gives the
    same reply. *)
 let waiting (a : app) (r : 's reactor) st i v =
-  match List.nth_opt a.G.rows i with
+  match row_at a i with
   | Some row ->
     (match r row v st with
      | Some ((Completion.OfExit ex as c), _) ->
-       (match E4_engine.Fast.ingress c, reply_fault a i ex with
+       (match E4_engine.Fast.ingress c, reply_fault_at a i ex with
         | Some why, _ -> Refused (i, v, ex, Ingress why)
         | None, Some f -> Refused (i, v, ex, Fault f)
         | None, None -> Waiting (i, v))
@@ -141,14 +148,16 @@ let tree_trace a r st (steps : step list) (stop : G.stop) =
   }
 ;;
 
+(* The machine's host face counts rows by int (E4_host); each is the row's natural here. *)
 let machine_trace a r (m : 's Kit_machine.run) =
-  { steps = List.map (fun (i, v, ex) -> Step_called (i, v, ex)) m.calls
+  { steps = List.map (fun (i, v, ex) -> Step_called (Z.of_int i, v, ex)) m.calls
   ; stop =
       (match m.stop with
        | Kit_machine.Finished ex -> Finished ex
-       | Kit_machine.Waiting (i, v) -> waiting a r m.state i v
+       | Kit_machine.Waiting (i, v) -> waiting a r m.state (Z.of_int i) v
        | Kit_machine.Refused (i, v) ->
-         (match List.nth_opt a.G.rows i with
+         let i = Z.of_int i in
+         (match row_at a i with
           | Some row ->
             (match r row v m.state with
              | Some (Completion.OfExit ex, _) -> Refused (i, v, ex, Engine)
@@ -164,7 +173,7 @@ let equal_exit (a : exit) (b : exit) =
   Eff_val.equal (G.run_kit_exit_to_val a) (G.run_kit_exit_to_val b)
 ;;
 
-let equal_call (i, v, a) (j, w, b) = Int.equal i j && Eff_val.equal v w && equal_exit a b
+let equal_call (i, v, a) (j, w, b) = Z.equal i j && Eff_val.equal v w && equal_exit a b
 
 (* Two traces agree when they make the same host calls and stop the same way; a refusal agrees
    with a refusal of the same call, whoever named its fault. *)
@@ -173,8 +182,8 @@ let agree (x : trace) (y : trace) =
   &&
   match x.stop, y.stop with
   | Finished a, Finished b -> equal_exit a b
-  | Waiting (i, v), Waiting (j, w) -> Int.equal i j && Eff_val.equal v w
-  | Refused (i, v, _, _), Refused (j, w, _, _) -> Int.equal i j && Eff_val.equal v w
+  | Waiting (i, v), Waiting (j, w) -> Z.equal i j && Eff_val.equal v w
+  | Refused (i, v, _, _), Refused (j, w, _, _) -> Z.equal i j && Eff_val.equal v w
   | _ -> false
 ;;
 
@@ -211,7 +220,9 @@ let run
              tree_trace a r o.state o.steps o.stop)
           (G.run_tree_frames rows k host st p)
       in
-      match G.run_tree_settle rows limit host st p with
+      (* The budget is a Lean natural; the host's limit is an int, and the settled budget is
+         at most it. *)
+      match G.run_tree_settle rows (Z.of_int limit) host st p with
       | Some (k, o) ->
         let trace = tree_trace a r o.state o.steps o.stop in
         let agrees =
@@ -220,19 +231,19 @@ let run
           else None
         in
         { by_tree = true
-        ; budget = Some k
+        ; budget = Some (Lcnf_nat.to_index_exn k)
         ; trace
         ; state = o.state
         ; frames = (if frames then traces k else [])
         ; agrees
         }
       | None ->
-        let o = G.run_tree_probe rows limit host st p in
+        let o = G.run_tree_probe rows (Z.of_int limit) host st p in
         { by_tree = true
         ; budget = None
         ; trace = tree_trace a r o.state o.steps o.stop
         ; state = o.state
-        ; frames = (if frames then traces limit else [])
+        ; frames = (if frames then traces (Z.of_int limit) else [])
         ; agrees = None
         })
     else (
@@ -246,8 +257,8 @@ let run
       })
 ;;
 
-let samples (a : app) t = G.run_kit_samples a.G.types 4 t
-let replies (a : app) i = G.run_kit_replies a i
+let samples (a : app) t = G.run_kit_samples a.G.types (Z.of_int 4) t
+let replies (a : app) i = G.run_kit_replies a (Z.of_int i)
 
 let explore (a : app) ~budget ~width p =
   match G.run_tree_outside_at p with
@@ -263,7 +274,7 @@ let explore (a : app) ~budget ~width p =
                  | G.Stop_cut -> Unsettled
                  | G.Stop_waiting (i, v) -> Waiting (i, v))
             })
-         (G.run_kit_explore a budget width p))
+         (G.run_kit_explore a (Z.of_int budget) (Z.of_int width) p))
 ;;
 
 let replays (a : app) p (t : trace) =
@@ -283,7 +294,7 @@ module Json = struct
   type t = G.nat_json =
     | NatJson_null
     | NatJson_bool of bool
-    | NatJson_nat of int
+    | NatJson_nat of Z.t
     | NatJson_numeral of string
     | NatJson_str of string
     | NatJson_arr of t list
@@ -308,14 +319,15 @@ module Json = struct
   (* The profile's tree of a yojson value whose literals are raw, for the MCP transport's
      arguments (kit_mcp.ml), which Lean's grammar read first: a number is a natural where its
      text is digits that fit the host's integers, else a numeral with its text, which Lean's
-     reader refuses at its place (Store/Domain/ShapeJson.lean). *)
+     reader refuses at its place (Store/Domain/ShapeJson.lean). The natural is Zarith's `Z.t`. *)
   let rec tree (v : Yojson.Raw.t) : t =
     match v with
     | `Null -> NatJson_null
     | `Bool b -> NatJson_bool b
     | `Intlit s ->
       (match int_of_string_opt s with
-       | Some n when n >= 0 && not (String.starts_with ~prefix:"-" s) -> NatJson_nat n
+       | Some n when n >= 0 && not (String.starts_with ~prefix:"-" s) ->
+         NatJson_nat (Z.of_int n)
        | _ -> NatJson_numeral s)
     | `Floatlit ("NaN" | "Infinity" | "-Infinity") ->
       raise (Not_json "NaN and Infinity are no JSON numbers")
@@ -334,16 +346,18 @@ module Json = struct
   ;;
 
   (* Lean's text grammar, lowered (src/Effect4/Store/Domain/JsonText.lean): the text's bytes,
-     each an int, read into the tree; a refusal is Lean's sentence, with its byte offset. *)
+     each a natural, read into the tree; a refusal is Lean's sentence, with its byte offset. *)
   let parse s =
-    match G.nat_json_parse (List.init (String.length s) (fun i -> Char.code s.[i])) with
+    match
+      G.nat_json_parse (List.init (String.length s) (fun i -> Z.of_int (Char.code s.[i])))
+    with
     | Ok t -> Ok t
     | Error why -> Error (G.nat_json_refusal_text why)
   ;;
 
   let render (t : t) =
     let b = Buffer.create 256 in
-    List.iter (fun c -> Buffer.add_char b (Char.chr c)) (G.nat_json_render t);
+    List.iter (fun c -> Buffer.add_char b (Char.chr (Z.to_int c))) (G.nat_json_render t);
     Buffer.contents b
   ;;
 
@@ -407,7 +421,7 @@ module Json = struct
   let row_fields (a : app) i =
     ("row", NatJson_nat i)
     ::
-    (match List.nth_opt a.G.rows i with
+    (match row_at a i with
      | Some (r : Row.t) -> [ "name", NatJson_str r.Row.name ]
      | None -> [])
   ;;
@@ -475,7 +489,7 @@ module Json = struct
   let report_json a (r : 's report) =
     NatJson_obj
       ((match r.budget with
-        | Some k -> [ "budget", NatJson_nat k ]
+        | Some k -> [ "budget", NatJson_nat (Z.of_int k) ]
         | None -> [])
        @ stop_json a r.trace.stop
        @ [ "via", NatJson_str (if r.by_tree then "tree" else "machine")
@@ -494,7 +508,7 @@ module Json = struct
                   (fun k t ->
                      match trace_json a t with
                      | NatJson_obj fields ->
-                       NatJson_obj (("budget", NatJson_nat k) :: fields)
+                       NatJson_obj (("budget", NatJson_nat (Z.of_int k)) :: fields)
                      | j -> j)
                   r.frames) )
          ])

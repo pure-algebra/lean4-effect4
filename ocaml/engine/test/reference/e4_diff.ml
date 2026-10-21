@@ -229,7 +229,7 @@ module Of (E : E4_engine.ENGINE) : SIDE with type t = E.t = struct
     | E4_engine.Finished -> "Finished"
     | E4_engine.Suspended f -> "Suspended " ^ show_frontier f
     | E4_engine.Refused r -> "Refused " ^ r
-    | E4_engine.Outside_profile r -> "Outside_profile " ^ E4_clock.refusal_text r
+    | E4_engine.Outside_profile r -> "Outside_profile " ^ Lcnf_crossing.refusal_text r
     | E4_engine.Delay f -> "Delay " ^ show_frontier f
   ;;
 
@@ -238,7 +238,7 @@ module Of (E : E4_engine.ENGINE) : SIDE with type t = E.t = struct
     (* A host refusal is not a comparable semantic observation. In particular two
        refused runs must never yield the empty divergence list of an agreement. *)
     (match ans with
-     | E4_engine.Outside_profile why -> raise (E4_clock.Profile_refusal why)
+     | E4_engine.Outside_profile why -> raise (Lcnf_crossing.Refused why)
      | _ -> ());
     let store = E.store_row t in
     { p1_outcome = E.outcome t

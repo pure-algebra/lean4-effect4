@@ -4,26 +4,40 @@
 open Eff_types
 include E4_engine_intf
 
-(* The refusal as a report spells it. *)
+(* The refusal as a report spells it. A below-bound reason names the negative integer's
+   magnitude (`ProfileReason.belowBound`, M4). *)
 let outside_text = function
   | Unsupported { Located.site; reason } ->
-    let path = "[" ^ String.concat "," (List.map string_of_int site) ^ "]" in
+    let path = "[" ^ String.concat "," (List.map Z.to_string site) ^ "]" in
     (match reason with
      | ProfileReason.AboveBound n ->
-       Printf.sprintf "the natural %d at %s is above the profile's bound" n path
+       Printf.sprintf
+         "the natural %s at %s is above the profile's bound"
+         (Z.to_string n)
+         path
      | ProfileReason.BelowBound n ->
-       Printf.sprintf "the integer -(%d+1) at %s is below the profile's bound" n path)
+       Printf.sprintf
+         "the integer -%s at %s is below the profile's bound"
+         (Z.to_string n)
+         path)
   | Not_a_value ->
     "the answer is no Lean value (a natural below zero, or a string not UTF-8)"
-  | Crossing why -> E4_clock.refusal_text why
+  | Crossing why -> Lcnf_crossing.refusal_text why
 ;;
+
+(* A machine natural the host reads as an int: a fiber id, a token, a row's position. Each
+   counts what a run allocated, so it is below max_int; past it the narrowing refuses at the
+   index crossing. *)
+let host_int (n : Z.t) : int = Lcnf_nat.to_index_exn n
+let show_nat = Z.to_string
+let show_nats xs = "[" ^ String.concat "," (List.map show_nat xs) ^ "]"
 
 (* ------------------------------------------------------------------------- the loop *)
 
 module Make (I : INSTANCE) = struct
   let () =
     if Sys.int_size <> 63
-    then E4_clock.refuse E4_clock.Index "a 63-bit integer host is required"
+    then Lcnf_crossing.refuse Lcnf_crossing.Index "a 63-bit integer host is required"
   ;;
 
   let name = I.name
@@ -37,34 +51,45 @@ module Make (I : INSTANCE) = struct
     ; fuel_ : int
     ; m : I.machine
     ; settled : bool (** the generated `settled` of the LAST step; true after a load *)
-    ; outside_profile : E4_clock.refusal option
+    ; outside_profile : Lcnf_crossing.refusal option
     }
 
   (* -- the tape ------------------------------------------------------------------- *)
 
-  let evaluate id : decision = I.RunDecision_evaluate id
+  (* The tape's host ids are ints, each the machine's natural exactly (`Z.of_int`). *)
+  let evaluate id : decision = I.RunDecision_evaluate (Z.of_int id)
   let flush : decision = I.RunDecision_flush
-  let fire id : decision = I.RunDecision_fire id
-  let yield_verdict id b : decision = I.RunDecision_yieldVerdict (id, b)
+  let fire id : decision = I.RunDecision_fire (Z.of_int id)
+  let yield_verdict id b : decision = I.RunDecision_yieldVerdict (Z.of_int id, b)
 
-  let answer_async fiber token (answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t)
+  let answer_async fiber token (answer : (Val.t, Err.t, Defect.t, Z.t, unit) Completion.t)
     : decision
     =
-    I.RunDecision_answerAsync (fiber, token, answer)
+    I.RunDecision_answerAsync (Z.of_int fiber, Z.of_int token, answer)
   ;;
 
   let answer_async_success fiber token n : decision =
-    answer_async fiber token (Completion.OfExit (Exit.Success (Val.Nat n)))
+    answer_async fiber token (Completion.OfExit (Exit.Success (Val.Nat (Z.of_int n))))
   ;;
 
   let answer_async_value fiber token (v : Val.t) : decision =
     answer_async fiber token (Completion.OfExit (Exit.Success v))
   ;;
 
-  let interrupt_from who target : decision = I.RunDecision_interruptFrom (who, [], target)
+  let interrupt_from who target : decision =
+    I.RunDecision_interruptFrom (Option.map Z.of_int who, [], Z.of_int target)
+  ;;
+
   let install_middleware : decision = I.RunDecision_installMiddleware
   let advance_exact millis : decision = I.RunDecision_advance millis
-  let advance millis : decision = advance_exact (E4_clock.of_nat millis)
+
+  (* A duration is a natural: a negative host integer is no Lean value, and the clock would
+     move backwards (the timer store's law), so it is refused before any decision exists. *)
+  let advance millis : decision =
+    if millis < 0
+    then invalid_arg "E4_engine.advance: a negative duration"
+    else advance_exact (Z.of_int millis)
+  ;;
 
   (* -- ingress -------------------------------------------------------------------- *)
 
@@ -78,7 +103,7 @@ module Make (I : INSTANCE) = struct
 
   (* EN9: the answer's value tree, Lean's (`answerTree`), is a Lean value, and Lean's profile
      support admits it. *)
-  let ingress (answer : (Val.t, Err.t, Defect.t, int, unit) Completion.t) : outside option
+  let ingress (answer : (Val.t, Err.t, Defect.t, Z.t, unit) Completion.t) : outside option
     =
     let tree = I.program_answer_tree answer in
     if not (Eff_val.valid tree)
@@ -96,7 +121,7 @@ module Make (I : INSTANCE) = struct
   let load_program ?(table = []) (p : program) ~(fuel : int) : t =
     { prepared = I.prepare table p
     ; fuel_ = fuel
-    ; m = I.load p ~fuel
+    ; m = I.load p ~fuel:(Z.of_int fuel)
     ; settled = true
     ; outside_profile = None
     }
@@ -112,9 +137,9 @@ module Make (I : INSTANCE) = struct
     match t.outside_profile with
     | Some _ -> t
     | None ->
-      (match I.step t.prepared ~fuel:t.fuel_ t.m d with
+      (match I.step t.prepared ~fuel:(Z.of_int t.fuel_) t.m d with
        | m, settled -> { t with m; settled }
-       | exception E4_clock.Profile_refusal why ->
+       | exception Lcnf_crossing.Refused why ->
          (* Generated transitions are pure. Keep the input machine when a numeric
            observation leaves the host profile, including a refusal mid-decision.
            This is a host boundary result, not a simulated transition. *)
@@ -195,7 +220,7 @@ module Make (I : INSTANCE) = struct
     match v with
     | Eff_types.Val.Unit -> "unit"
     | Eff_types.Val.Bool b -> string_of_bool b
-    | Eff_types.Val.Nat n -> string_of_int n
+    | Eff_types.Val.Nat n -> show_nat n
     | Eff_types.Val.Str s -> Printf.sprintf "%S" s
     | Eff_types.Val.Bytes bs ->
       "bytes[" ^ String.concat "," (List.map string_of_int bs) ^ "]"
@@ -204,19 +229,22 @@ module Make (I : INSTANCE) = struct
     | Eff_types.Val.None -> "none"
     | Eff_types.Val.Some x -> "some " ^ show_val x
     | Eff_types.Val.Ctor (i, args) ->
-      Printf.sprintf "ctor %d [%s]" i (String.concat ", " (List.map show_val args))
+      Printf.sprintf
+        "ctor %s [%s]"
+        (show_nat i)
+        (String.concat ", " (List.map show_val args))
     | Eff_types.Val.Ref (k, path) ->
       Printf.sprintf "ref %d/[%s]" k (String.concat "," (List.map string_of_int path))
-    | Eff_types.Val.Handle (k, n) -> Printf.sprintf "handle %d/%d" k n
-    (* the signed frame holds -(n+1); the binary64 frame its bits (below 2^62: the carrier) *)
-    | Eff_types.Val.NegInt n -> "-" ^ string_of_int (n + 1)
-    | Eff_types.Val.Float bits -> Printf.sprintf "float %016x" bits
+    | Eff_types.Val.Handle (k, n) -> Printf.sprintf "handle %d/%s" k (show_nat n)
+    (* the signed frame holds -(n+1); the binary64 frame its bits, a word below 2^64 *)
+    | Eff_types.Val.NegInt n -> "-" ^ show_nat (Z.succ n)
+    | Eff_types.Val.Float bits -> "float " ^ Z.format "%016x" bits
   ;;
 
   let show_err (e : Eff_types.Err.t) : string =
     match e with
     | Eff_types.Err.Boom -> "boom"
-    | Eff_types.Err.Tag t -> Printf.sprintf "tag %d" t
+    | Eff_types.Err.Tag t -> "tag " ^ show_nat t
     | Eff_types.Err.Tagged (tag, msg) -> Printf.sprintf "tagged %s: %s" tag msg
     | Eff_types.Err.Text msg -> Printf.sprintf "text %s" msg
     | Eff_types.Err.Payload p -> "payload " ^ show_val p
@@ -229,8 +257,8 @@ module Make (I : INSTANCE) = struct
     | Eff_types.Defect.BadName -> "badName"
     | Eff_types.Defect.MissingService key ->
       (* the engine holds no key names: the key's two numbers, as its runtime text *)
-      Printf.sprintf "missingService k%d_%d" key.name key.service
-    | Eff_types.Defect.User n -> Printf.sprintf "user %d" n
+      Printf.sprintf "missingService k%s_%s" (show_nat key.name) (show_nat key.service)
+    | Eff_types.Defect.User n -> "user " ^ show_nat n
     | Eff_types.Defect.Error e -> "error(" ^ show_err e ^ ")"
   ;;
 
@@ -247,7 +275,7 @@ module Make (I : INSTANCE) = struct
     | Eff_types.Reason.Die (d, a) -> "die(" ^ show_defect d ^ ")" ^ show_anns a
     | Eff_types.Reason.Interrupt (None, a) -> "interrupt(none)" ^ show_anns a
     | Eff_types.Reason.Interrupt (Some i, a) ->
-      Printf.sprintf "interrupt(%d)%s" i (show_anns a)
+      Printf.sprintf "interrupt(%s)%s" (show_nat i) (show_anns a)
   ;;
 
   let show_cause
@@ -286,26 +314,31 @@ module Make (I : INSTANCE) = struct
   let show_observer (o : I.observer) : string =
     match o with
     | I.Observer_resumeAwait (f, t, m) ->
-      Printf.sprintf "resumeAwait(%d,%d,%s)" f t (show_observer_mode m)
-    | I.Observer_untrackChild f -> Printf.sprintf "untrackChild(%d)" f
+      Printf.sprintf
+        "resumeAwait(%s,%s,%s)"
+        (show_nat f)
+        (show_nat t)
+        (show_observer_mode m)
+    | I.Observer_untrackChild f -> Printf.sprintf "untrackChild(%s)" (show_nat f)
     | I.Observer_dropScopeFinalizer (a, b) ->
-      Printf.sprintf "dropScopeFinalizer(%d,%d)" a b
-    | I.Observer_countdown (f, t) -> Printf.sprintf "countdown(%d,%d)" f t
-    | I.Observer_raceCallback n -> Printf.sprintf "raceCallback(%d)" n
-    | I.Observer_callback n -> Printf.sprintf "callback(%d)" n
+      Printf.sprintf "dropScopeFinalizer(%s,%s)" (show_nat a) (show_nat b)
+    | I.Observer_countdown (f, t) ->
+      Printf.sprintf "countdown(%s,%s)" (show_nat f) (show_nat t)
+    | I.Observer_raceCallback n -> Printf.sprintf "raceCallback(%s)" (show_nat n)
+    | I.Observer_callback n -> Printf.sprintf "callback(%s)" (show_nat n)
   ;;
 
   let show_parked (p : I.parked) : string =
     match p with
     | I.Parked_notParked -> "-"
-    | I.Parked_withGuard t -> Printf.sprintf "guard %d" t
+    | I.Parked_withGuard t -> "guard " ^ show_nat t
   ;;
 
   let show_stuck (s : I.stuck) : string =
     match s with
-    | I.Stuck_unknownFiber f -> Printf.sprintf "unknownFiber %d" f
-    | I.Stuck_unknownScope k -> Printf.sprintf "unknownScope %d" k
-    | I.Stuck_unknownRace r -> Printf.sprintf "unknownRace %d" r
+    | I.Stuck_unknownFiber f -> "unknownFiber " ^ show_nat f
+    | I.Stuck_unknownScope k -> "unknownScope " ^ show_nat k
+    | I.Stuck_unknownRace r -> "unknownRace " ^ show_nat r
   ;;
 
   let show_scope_mode (m : I.scope_mode) : string =
@@ -316,18 +349,18 @@ module Make (I : INSTANCE) = struct
 
   let show_ctx (c : I.ctx) : string =
     Printf.sprintf
-      "ctx(%s;%d;%b)"
+      "ctx(%s;%s;%b)"
       (String.concat
          ","
          (List.map
             (fun (sv : Eff_types.Val.t I.service) ->
                Printf.sprintf
-                 "%d:%d=%s"
-                 sv.I.key.ServiceKey.name
-                 sv.I.key.ServiceKey.service
+                 "%s:%s=%s"
+                 (show_nat sv.I.key.ServiceKey.name)
+                 (show_nat sv.I.key.ServiceKey.service)
                  (show_val sv.I.value))
             c.I.services))
-      c.I.max_ops_before_yield
+      (show_nat c.I.max_ops_before_yield)
       c.I.prevent_yield
   ;;
 
@@ -363,7 +396,7 @@ module Make (I : INSTANCE) = struct
     | I.Prim_onExit (q, _, b) -> Printf.sprintf "onExit(%s,<name>,%b)" (show_prim q) b
     | I.Prim_setInterruptible b -> Printf.sprintf "setInterruptible(%b)" b
     | I.Prim_whileLoop (_, v) -> "whileLoop(<name>," ^ show_val v ^ ")"
-    | I.Prim_yieldNowWith n -> Printf.sprintf "yieldNowWith(%d)" n
+    | I.Prim_yieldNowWith n -> Printf.sprintf "yieldNowWith(%s)" (show_nat n)
     | I.Prim_async (_, b, o) ->
       Printf.sprintf
         "async(<name>,%b,%s)"
@@ -417,48 +450,68 @@ module Make (I : INSTANCE) = struct
     : string
     =
     match t with
-    | I.Task_start f -> Printf.sprintf "start(%d)" f
-    | I.Task_resume (f, tok, k) -> Printf.sprintf "resume(%d,%d,%s)" f tok (show_prim k)
-    | I.Task_wake (key, due) -> Printf.sprintf "wake(%d,%d)" key.index due
+    | I.Task_start f -> Printf.sprintf "start(%s)" (show_nat f)
+    | I.Task_resume (f, tok, k) ->
+      Printf.sprintf "resume(%s,%s,%s)" (show_nat f) (show_nat tok) (show_prim k)
+    | I.Task_wake (key, due) ->
+      Printf.sprintf "wake(%s,%s)" (show_nat key.index) (show_nat due)
   ;;
 
-  let ids xs = "[" ^ String.concat "," (List.map string_of_int xs) ^ "]"
+  let ids = show_nats
 
   let show_event (e : I.event) : string =
     match e with
-    | I.RunEvent_forked (p, c, d) -> Printf.sprintf "forked(%d,%d,%b)" p c d
-    | I.RunEvent_started f -> Printf.sprintf "started(%d)" f
+    | I.RunEvent_forked (p, c, d) ->
+      Printf.sprintf "forked(%s,%s,%b)" (show_nat p) (show_nat c) d
+    | I.RunEvent_started f -> Printf.sprintf "started(%s)" (show_nat f)
     | I.RunEvent_scheduledTask (f, pr, t) ->
-      Printf.sprintf "scheduledTask(%d,%d,%s)" f pr (show_task t)
-    | I.RunEvent_ranTask (f, t) -> Printf.sprintf "ranTask(%d,%s)" f (show_task t)
-    | I.RunEvent_yieldInjected (f, n) -> Printf.sprintf "yieldInjected(%d,%d)" f n
-    | I.RunEvent_parkedOn (f, tok) -> Printf.sprintf "parkedOn(%d,%d)" f tok
+      Printf.sprintf "scheduledTask(%s,%s,%s)" (show_nat f) (show_nat pr) (show_task t)
+    | I.RunEvent_ranTask (f, t) ->
+      Printf.sprintf "ranTask(%s,%s)" (show_nat f) (show_task t)
+    | I.RunEvent_yieldInjected (f, n) ->
+      Printf.sprintf "yieldInjected(%s,%s)" (show_nat f) (show_nat n)
+    | I.RunEvent_parkedOn (f, tok) ->
+      Printf.sprintf "parkedOn(%s,%s)" (show_nat f) (show_nat tok)
     | I.RunEvent_resumedWith (f, tok, k) ->
-      Printf.sprintf "resumedWith(%d,%d,%s)" f tok (show_prim k)
+      Printf.sprintf "resumedWith(%s,%s,%s)" (show_nat f) (show_nat tok) (show_prim k)
     | I.RunEvent_interruptRecorded (who, target) ->
       Printf.sprintf
-        "interruptRecorded(%s,%d)"
+        "interruptRecorded(%s,%s)"
         (match who with
          | None -> "-"
-         | Some i -> string_of_int i)
-        target
-    | I.RunEvent_interruptDeferred f -> Printf.sprintf "interruptDeferred(%d)" f
+         | Some i -> show_nat i)
+        (show_nat target)
+    | I.RunEvent_interruptDeferred f ->
+      Printf.sprintf "interruptDeferred(%s)" (show_nat f)
     | I.RunEvent_childrenInterrupted (f, cs) ->
-      Printf.sprintf "childrenInterrupted(%d,%s)" f (ids cs)
+      Printf.sprintf "childrenInterrupted(%s,%s)" (show_nat f) (ids cs)
     | I.RunEvent_observerFired (f, o) ->
-      Printf.sprintf "observerFired(%d,%s)" f (show_observer o)
-    | I.RunEvent_frame (f, h) -> Printf.sprintf "frame(%d,%s)" f (show_frame_event h)
+      Printf.sprintf "observerFired(%s,%s)" (show_nat f) (show_observer o)
+    | I.RunEvent_frame (f, h) ->
+      Printf.sprintf "frame(%s,%s)" (show_nat f) (show_frame_event h)
     | I.RunEvent_finalizerProgram (f, _, x) ->
-      Printf.sprintf "finalizerProgram(%d,<name>,%s)" f (show_exit x)
+      Printf.sprintf "finalizerProgram(%s,<name>,%s)" (show_nat f) (show_exit x)
     | I.RunEvent_scopeLinked (m, a, b, f) ->
-      Printf.sprintf "scopeLinked(%s,%d,%d,%d)" (show_scope_mode m) a b f
-    | I.RunEvent_scopeClosedOnLink (k, f) -> Printf.sprintf "scopeClosedOnLink(%d,%d)" k f
-    | I.RunEvent_raceStarted (r, f, n) -> Printf.sprintf "raceStarted(%d,%d,%d)" r f n
-    | I.RunEvent_raceLaunched (r, f) -> Printf.sprintf "raceLaunched(%d,%d)" r f
-    | I.RunEvent_raceSettled (r, x) -> Printf.sprintf "raceSettled(%d,%s)" r (show_exit x)
-    | I.RunEvent_contextSet (f, c) -> Printf.sprintf "contextSet(%d,%s)" f (show_ctx c)
-    | I.RunEvent_callback (n, x) -> Printf.sprintf "callback(%d,%s)" n (show_exit x)
-    | I.RunEvent_exited (f, x) -> Printf.sprintf "exited(%d,%s)" f (show_exit x)
+      Printf.sprintf
+        "scopeLinked(%s,%s,%s,%s)"
+        (show_scope_mode m)
+        (show_nat a)
+        (show_nat b)
+        (show_nat f)
+    | I.RunEvent_scopeClosedOnLink (k, f) ->
+      Printf.sprintf "scopeClosedOnLink(%s,%s)" (show_nat k) (show_nat f)
+    | I.RunEvent_raceStarted (r, f, n) ->
+      Printf.sprintf "raceStarted(%s,%s,%s)" (show_nat r) (show_nat f) (show_nat n)
+    | I.RunEvent_raceLaunched (r, f) ->
+      Printf.sprintf "raceLaunched(%s,%s)" (show_nat r) (show_nat f)
+    | I.RunEvent_raceSettled (r, x) ->
+      Printf.sprintf "raceSettled(%s,%s)" (show_nat r) (show_exit x)
+    | I.RunEvent_contextSet (f, c) ->
+      Printf.sprintf "contextSet(%s,%s)" (show_nat f) (show_ctx c)
+    | I.RunEvent_callback (n, x) ->
+      Printf.sprintf "callback(%s,%s)" (show_nat n) (show_exit x)
+    | I.RunEvent_exited (f, x) ->
+      Printf.sprintf "exited(%s,%s)" (show_nat f) (show_exit x)
   ;;
 
   let show_outcome (o : I.outcome) : string =
@@ -470,9 +523,9 @@ module Make (I : INSTANCE) = struct
 
   let show_fiber (f : I.fiber) : string =
     Printf.sprintf
-      "id=%d run=%b park=%s exit=%s fin=%b pend=%s obs=[%s] kids=%s ops=%d/%d py=%b \
+      "id=%s run=%b park=%s exit=%s fin=%b pend=%s obs=[%s] kids=%s ops=%s/%s py=%b \
        yo=%s disp=%s armed=%b ctx=%s"
-      (I.f_id f)
+      (show_nat (I.f_id f))
       (I.f_running f)
       (show_parked (I.f_parked f))
       (show_exit_opt (I.f_exit f))
@@ -480,8 +533,8 @@ module Make (I : INSTANCE) = struct
       (ids (I.f_pending_tokens f))
       (String.concat "," (List.map show_observer (I.f_observers f)))
       (ids (I.f_children f))
-      (I.f_op_count f)
-      (I.f_max_ops f)
+      (show_nat (I.f_op_count f))
+      (show_nat (I.f_max_ops f))
       (I.f_prevent_yield f)
       (match I.f_yield_override f with
        | None -> "-"
@@ -489,7 +542,9 @@ module Make (I : INSTANCE) = struct
       ("["
        ^ String.concat
            ","
-           (List.map (fun (p, n) -> Printf.sprintf "%d:%d" p n) (I.f_dispatcher f))
+           (List.map
+              (fun (p, n) -> Printf.sprintf "%s:%d" (show_nat p) n)
+              (I.f_dispatcher f))
        ^ "]")
       (not (List.is_empty (I.f_dispatcher f)))
       (show_ctx (I.f_context f))
@@ -506,9 +561,9 @@ module Make (I : INSTANCE) = struct
           (fun (id, f) ->
              match I.f_parked f with
              | I.Parked_notParked -> None
-             | I.Parked_withGuard tok -> Some (id, tok))
+             | I.Parked_withGuard tok -> Some (host_int id, host_int tok))
           (I.fibers t.m)
-    ; armed = I.armed_of t.m
+    ; armed = List.map host_int (I.armed_of t.m)
     ; due = I.due_count t.m
     }
   ;;
@@ -530,7 +585,7 @@ module Make (I : INSTANCE) = struct
   (* Exactly `replayEval`'s verdict (api_engine.ml:11489-11507) read off the same state. *)
   let outcome (t : t) : string =
     match t.outside_profile with
-    | Some why -> "outside-profile " ^ E4_clock.refusal_text why
+    | Some why -> "outside-profile " ^ Lcnf_crossing.refusal_text why
     | None ->
       (match I.stuck_of t.m with
        | Some s -> "stuck " ^ show_stuck s
@@ -538,26 +593,34 @@ module Make (I : INSTANCE) = struct
   ;;
 
   let exits (t : t) : (int * string) list =
-    List.map (fun (id, x) -> id, show_exit x) (I.completed_exits t.m)
+    List.map (fun (id, x) -> host_int id, show_exit x) (I.completed_exits t.m)
   ;;
 
   let host_calls (t : t) : (int * int * int * Val.t) list =
     List.filter_map
       (fun (a : I.await) ->
          match a.op with
-         | NativeOp.External row -> Some (a.fiber, a.token, row, a.request)
+         | NativeOp.External row ->
+           Some (host_int a.fiber, host_int a.token, host_int row, a.request)
          | _ -> None)
       (I.program_awaits t.m)
   ;;
 
-  let root_exit_of (t : t) : (Val.t, Err.t, Defect.t, int, unit) Exit.t option =
-    match List.assoc_opt 0 (I.fibers t.m) with
+  (* The root fiber, id 0. *)
+  let root_fiber (t : t) : I.fiber option =
+    List.find_map
+      (fun (id, f) -> if Z.equal id Z.zero then Some f else None)
+      (I.fibers t.m)
+  ;;
+
+  let root_exit_of (t : t) : (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t option =
+    match root_fiber t with
     | None -> None
     | Some f -> I.f_exit f
   ;;
 
   let root_exit (t : t) : string option =
-    match List.assoc_opt 0 (I.fibers t.m) with
+    match root_fiber t with
     | None -> None
     | Some f ->
       (match I.f_exit f with
@@ -566,7 +629,7 @@ module Make (I : INSTANCE) = struct
   ;;
 
   let fiber_rows (t : t) : (int * string) list =
-    List.map (fun (id, f) -> id, show_fiber f) (I.fibers t.m)
+    List.map (fun (id, f) -> host_int id, show_fiber f) (I.fibers t.m)
   ;;
 
   let fiber_count (t : t) : int = I.fiber_count t.m
@@ -576,8 +639,8 @@ module Make (I : INSTANCE) = struct
 
   let store_row (t : t) : string =
     Printf.sprintf
-      "refs=[%s] cells=%d scopes=%d memo=%d paths=%s nextName=%d due=%d nextId=%d \
-       nextToken=%d races=%d mw=%b armed=%s"
+      "refs=[%s] cells=%d scopes=%d memo=%d paths=%s nextName=%s due=%d nextId=%s \
+       nextToken=%s races=%d mw=%b armed=%s"
       (String.concat "," (List.map show_val (I.refs t.m)))
       (I.cell_count t.m)
       (I.scope_count t.m)
@@ -588,8 +651,8 @@ module Make (I : INSTANCE) = struct
            (List.map
               (fun (id, ps) ->
                  Printf.sprintf
-                   "%d:%s"
-                   id
+                   "%s:%s"
+                   (show_nat id)
                    (String.concat
                       "|"
                       (List.map
@@ -602,17 +665,17 @@ module Make (I : INSTANCE) = struct
                          ps)))
               (I.memo_paths t.m))
        ^ "]")
-      (I.next_name t.m)
+      (show_nat (I.next_name t.m))
       (I.due_count t.m)
-      (I.next_id t.m)
-      (I.next_token t.m)
+      (show_nat (I.next_id t.m))
+      (show_nat (I.next_token t.m))
       (I.race_count t.m)
       (I.middleware t.m)
       (ids (I.armed_of t.m))
   ;;
 
   let api_run ?(table = []) (p : program) ~(fuel : int) : string =
-    let o, _ = I.run_api table p ~fuel in
+    let o, _ = I.run_api table p ~fuel:(Z.of_int fuel) in
     show_outcome o
   ;;
 end

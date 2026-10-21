@@ -41,11 +41,11 @@ type program = Eff_types.NativeOp.t Eff_types.Eff.t
 
 (** How a program, or a host call, ends: a success with a value or a failure with a cause. *)
 type exit =
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit) Eff_types.Exit.t
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit) Eff_types.Exit.t
 
 (** A host's answer to a call. *)
 type completion =
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit) Eff_types.Completion.t
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit) Eff_types.Completion.t
 
 (** An application: its host rows, its service declarations and its named types ([SigApp]). *)
 type app = Effect4_gen.Api_gen.sig_app
@@ -71,7 +71,7 @@ val check
   :  app
   -> program
   -> ( Eff_types.EffTy.t
-       , (int list, Effect4_gen.Api_gen.type_reason) Eff_types.Located.t )
+       , (Z.t list, Effect4_gen.Api_gen.type_reason) Eff_types.Located.t )
        result
 
 (** Program admission ([Program.admitProgram]) beyond typing: the application's own admission
@@ -127,9 +127,9 @@ type reply_refusal =
 
 type stop =
   | Finished of exit (** the program ended with this exit *)
-  | Waiting of int * Eff_types.Val.t
+  | Waiting of Z.t * Eff_types.Val.t
   (** the host has no reply for a call of this row with this request *)
-  | Refused of int * Eff_types.Val.t * exit * reply_refusal
+  | Refused of Z.t * Eff_types.Val.t * exit * reply_refusal
   (** the host's reply to this call is not applied, and why *)
   | Unsupported of Effect4_engine.E4_engine.profile_refusal
   (** the program states a natural literal outside the profile, at its node's address (B7):
@@ -140,7 +140,7 @@ type stop =
   (** the machine stopped otherwise: suspended on a timer, stuck, a raise *)
 
 type step = Effect4_gen.Api_gen.step =
-  | Step_called of int * Eff_types.Val.t * exit
+  | Step_called of Z.t * Eff_types.Val.t * exit
   (** a host call: its row, its request, its reply *)
   | Step_celled of Effect4_gen.Api_gen.sync_op * Eff_types.Val.t
   (** a cell operation and its value *)
@@ -153,7 +153,7 @@ type trace =
   }
 
 (** A trace's host calls, in order. *)
-val calls : trace -> (int * Eff_types.Val.t * exit) list
+val calls : trace -> (Z.t * Eff_types.Val.t * exit) list
 
 (** A trace's replies, in call order: a reply tape that replays it. *)
 val tape_of : trace -> exit list
@@ -200,7 +200,7 @@ val reply_fault : app -> int -> exit -> reply_fault option
 (** Every path of the program's call tree at the budget, its replies drawn from the rows' types,
     the first [width]; or, for a program the tree does not cover, the address of its first node
     outside it. *)
-val explore : app -> budget:int -> width:int -> program -> (trace list, int list) result
+val explore : app -> budget:int -> width:int -> program -> (trace list, Z.t list) result
 
 (** Whether the machine, under the trace's tape, makes the same calls and stops the same way;
     [None] for a trace the budget cut. *)
@@ -216,13 +216,14 @@ val replays : app -> program -> trace -> bool option
 val format_version : int
 
 module Json : sig
-  (** The profile's JSON tree ([Effect4.NatJson]): a number is a natural, and a number the tree
-      does not hold as one (a negative number, a fraction, a natural past the host's integers) is
-      a numeral with its text, which every reader refuses at its place. *)
+  (** The profile's JSON tree ([Effect4.NatJson]): a number is a natural, Zarith's [Z.t], and
+      a number the tree does not hold as one (a negative number, a fraction, a natural of more
+      digits than the text grammar reads) is a numeral with its text, which every reader refuses
+      at its place. *)
   type t = Effect4_gen.Api_gen.nat_json =
     | NatJson_null
     | NatJson_bool of bool
-    | NatJson_nat of int
+    | NatJson_nat of Z.t
     | NatJson_numeral of string
     | NatJson_str of string
     | NatJson_arr of t list
@@ -272,7 +273,7 @@ module Json : sig
   val value_json : Eff_types.Val.t -> t
   val ty_json : Eff_types.Ty.t -> t
   val eff_ty_json : Eff_types.EffTy.t -> t
-  val refusal_json : (int list, Effect4_gen.Api_gen.type_reason) Eff_types.Located.t -> t
+  val refusal_json : (Z.t list, Effect4_gen.Api_gen.type_reason) Eff_types.Located.t -> t
   val admit_json : Effect4_gen.Api_gen.admit_refusal -> t
 
   (** The checker's answer, then admission's: [{"status":"ok","type":…,"text":"Effect<A, E>"}],
@@ -282,7 +283,7 @@ module Json : sig
 
   (** How a run stopped, as an answer's fields: its "status" and what the status names. A reply
       refused at ingress names "fault": "outsideProfile" with its path ("at") and the number
-      ("aboveBound" or "belowBound"), or "fault": "notAValue"; a program refused at ingress is
+      ("aboveBound", or "belowBound" with a negative integer's magnitude), or "fault": "notAValue"; a program refused at ingress is
       "status": "refused" with its "profile" refusal. *)
   val stop_json : app -> stop -> (string * t) list
 

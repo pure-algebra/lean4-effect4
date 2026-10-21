@@ -1,4 +1,4 @@
-# identity: unit Eff_image; profile flat; catalogue 3342361506139103838
+# identity: unit Eff_image; profile flat; catalogue 15404410146269837016
 lean	ocaml	recursive	Code.let	Code.fun	Code.jp	Code.jmp	Code.cases	Code.return	Code.unreach	LetValue.lit	LetValue.erased	LetValue.proj	LetValue.const	LetValue.fvar	LitValue.nat	LitValue.str	LitValue.uint8	LitValue.uint16	LitValue.uint32	LitValue.uint64	LitValue.usize	Arg.erased	Arg.fvar	Arg.type	Alt.alt	Alt.default	DeclValue.code	DeclValue.extern	declHash	user	root	consumers	unit
 Effect4.Run.Kit.programToVal	run_kit_program_to_val	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	1	0	0	0	1	0	6373330119120458478	Effect4.Run.Kit.programToVal	true	Eff_image	Eff_image
 Effect4.Run.Kit.programOfVal	run_kit_program_of_val	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	3	0	0	0	1	0	6644824382686710212	Effect4.Run.Kit.programOfVal	true	Eff_image	Eff_image

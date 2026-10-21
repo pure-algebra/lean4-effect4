@@ -155,14 +155,14 @@ module type GEN = sig
 
   type key =
     { fiber : fiber_id
-    ; token : int
+    ; token : Z.t
     }
 
   type frontier_reason =
     | FrontierReason_commandFuel
     | FrontierReason_compileFuel of fiber_id
     | FrontierReason_awaitHost of key
-    | FrontierReason_awaitTimer of fiber_id * E4_clock.t
+    | FrontierReason_awaitTimer of fiber_id * Z.t
     | FrontierReason_awaitDecision
 
   type inspection =
@@ -171,15 +171,24 @@ module type GEN = sig
     ; reasons : frontier_reason list
     }
 
-  val api_replay : program -> int -> api_decision list -> Row.t list -> int -> inspection
+  val api_replay : program -> Z.t -> api_decision list -> Row.t list -> Z.t -> inspection
 end
 
-(* The one reading that must name a carrier: the timer store's waiters. *)
+(* The one reading that must name a carrier: the timer store's waiters, each a fiber and its
+   deadline, Lean naturals (Zarith's `Z.t`, M4). *)
 module type TIMERS = sig
   type machine
 
-  val timers : machine -> (int * E4_clock.t) list
+  val timers : machine -> (Z.t * Z.t) list
 end
+
+(* A clock step's decimal, as Lean's `ClockMillis.ofDecimal` reads it: `0`, or a nonzero digit
+   and digits. *)
+let canonical_decimal (s : string) : bool =
+  s <> ""
+  && String.for_all (fun c -> c >= '0' && c <= '9') s
+  && (String.equal s "0" || s.[0] <> '0')
+;;
 
 module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
   (* The table from its wire bytes. A row that is not exactly one row is refused, and so is a
@@ -215,20 +224,19 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
 
   let decision_of (ws : string list) : A.api_decision =
     match ws with
-    | [ "fire"; f ] -> A.RunDecision_fire (int_of_string f)
+    | [ "fire"; f ] -> A.RunDecision_fire (Z.of_string f)
     | [ "flush" ] -> A.RunDecision_flush
-    | [ "evaluate"; f ] -> A.RunDecision_evaluate (int_of_string f)
-    | [ "yield"; f; verdict ] ->
-      A.RunDecision_yieldVerdict (int_of_string f, verdict = "1")
+    | [ "evaluate"; f ] -> A.RunDecision_evaluate (Z.of_string f)
+    | [ "yield"; f; verdict ] -> A.RunDecision_yieldVerdict (Z.of_string f, verdict = "1")
     | [ "answer"; f; token; "ok"; hex ] ->
       A.RunDecision_answerAsync
-        ( int_of_string f
-        , int_of_string token
+        ( Z.of_string f
+        , Z.of_string token
         , Eff_types.Completion.OfExit (Eff_types.Exit.Success (val_of_hex hex)) )
     | [ "answer"; f; token; "failed"; tag; message ] ->
       A.RunDecision_answerAsync
-        ( int_of_string f
-        , int_of_string token
+        ( Z.of_string f
+        , Z.of_string token
         , Eff_types.Completion.OfExit
             (Eff_types.Exit.Failure
                [ Eff_types.Reason.Fail
@@ -236,12 +244,12 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
                ]) )
     | [ "interrupt"; who; target ] ->
       A.RunDecision_interruptFrom
-        ((if who = "-" then None else Some (int_of_string who)), [], int_of_string target)
+        ((if who = "-" then None else Some (Z.of_string who)), [], Z.of_string target)
     | [ "middleware" ] -> A.RunDecision_installMiddleware
     | [ "advance"; millis ] ->
-      (match E4_clock.of_decimal millis with
-       | Some t -> A.RunDecision_advance t
-       | None -> failwith "fixture: a clock step is not a canonical decimal")
+      if canonical_decimal millis
+      then A.RunDecision_advance (Z.of_string millis)
+      else failwith "fixture: a clock step is not a canonical decimal"
     | _ -> failwith ("fixture: unknown decision " ^ String.concat " " ws)
   ;;
 
@@ -263,7 +271,9 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
     let m = r.A.machine in
     let fibers = A.fibers m in
     let root =
-      match List.assoc_opt 0 fibers with
+      match
+        List.find_map (fun (id, f) -> if Z.equal id Z.zero then Some f else None) fibers
+      with
       | None -> "-"
       | Some f ->
         (match A.f_exit f with
@@ -276,29 +286,29 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
         (List.map
            (fun (a : A.await) ->
               Printf.sprintf
-                "%d.%d.%s.%s"
-                a.A.fiber
-                a.A.token
+                "%s.%s.%s.%s"
+                (Z.to_string a.A.fiber)
+                (Z.to_string a.A.token)
                 (match a.A.op with
-                 | Eff_types.NativeOp.External i -> string_of_int i
+                 | Eff_types.NativeOp.External i -> Z.to_string i
                  | _ -> "x")
                 (hex_of_val a.A.request))
            (A.program_awaits m))
     in
-    let queued = items (List.map string_of_int (A.armed_of m)) in
+    let queued = items (List.map Z.to_string (A.armed_of m)) in
     let runnable =
       items
         (List.filter_map
            (fun (id, f) ->
               if A.f_exit f = None && A.f_parked f = A.Parked_notParked
-              then Some (string_of_int id)
+              then Some (Z.to_string id)
               else None)
            fibers)
     in
     let timers =
       items
         (List.map
-           (fun (f, at) -> Printf.sprintf "%d@%s" f (E4_clock.to_decimal at))
+           (fun (f, at) -> Printf.sprintf "%s@%s" (Z.to_string f) (Z.to_string at))
            (T.timers m))
     in
     String.concat
@@ -332,7 +342,13 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
     List.init
       (List.length tape + 1)
       (fun count ->
-         view_of (A.api_replay program r.fuel (take count tape) table r.compile))
+         view_of
+           (A.api_replay
+              program
+              (Z.of_int r.fuel)
+              (take count tape)
+              table
+              (Z.of_int r.compile)))
   ;;
 
   (* The positions at which the engine's view is not the fixture's; `-1` for another length. *)
@@ -417,7 +433,13 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
              (match List.rev moving with
               | [] -> false
               | cut :: _ ->
-                view_of (A.api_replay program r.fuel (take cut tape) table r.compile)
+                view_of
+                  (A.api_replay
+                     program
+                     (Z.of_int r.fuel)
+                     (take cut tape)
+                     table
+                     (Z.of_int r.compile))
                 <> List.nth expected (List.length tape)));
          (* S4: the table and its red control, on a run with a host row. *)
          if r.rows <> []
@@ -446,9 +468,9 @@ module Fast =
     (struct
       type machine = Api_engine_inst.machine
 
-      let timers (m : machine) : (int * E4_clock.t) list =
+      let timers (m : machine) : (Z.t * Z.t) list =
         List.map
-          (fun (w : E4_clock.t Api_engine_inst.waiter) ->
+          (fun (w : Z.t Api_engine_inst.waiter) ->
              w.Api_engine_inst.fiber, w.Api_engine_inst.payload)
           (Api_engine_inst.stores_of m).Api_engine_inst.timers.Api_engine_inst.wake
             .Api_engine_inst.waiters

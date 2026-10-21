@@ -880,7 +880,7 @@ let case_bytes dir name =
 ;;
 
 (* The Val frames of Val.encode (src/Effect4/Store/Carrier/Val.lean), built from Eff_frame.framed alone. *)
-let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 let v_str s = Eff_frame.framed Eff_frame.tag_string s
 let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
 let v_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
@@ -923,14 +923,19 @@ let decode_move bytes =
     then Some (String.sub bytes start (ending - start), next)
     else None
   in
+  (* A natural of the kernel that this log holds as a host int. *)
+  let small n = if Z.fits_int n then Some (Z.to_int n) else None in
   let decode bytes pos limit =
     let* tag, start, ending, next = Eff_frame.read_ctor bytes pos limit in
     let* name, p1 = Eff_frame.decode_string bytes start ending in
+    let* tag = small tag in
     match tag with
     | 0 ->
       let* policy, p2 = Eff_frame.decode_nat bytes p1 ending in
       let* kind, p3 = Eff_frame.decode_nat bytes p2 ending in
       let* digest, p4 = read_bytes bytes p3 ending in
+      let* policy = small policy in
+      let* kind = small kind in
       let* policy = E4_control.root_policy_of_index policy in
       let* kind = E4_kind.of_byte kind in
       if p4 = ending && String.length digest = 32
@@ -945,15 +950,14 @@ let decode_move bytes =
       let* generation, p3 = Eff_frame.decode_nat bytes p2 ending in
       let* kind, p4 = Eff_frame.decode_nat bytes p3 ending in
       let* target, p5 = read_bytes bytes p4 ending in
+      let* kind = small kind in
       let* kind = E4_kind.of_byte kind in
       if p5 = ending && String.length digest = 32 && String.length target = 32
       then
         Some
           ( E4_control.Advance
               ( name
-              , { digest = E4_addr.Addr.of_digest digest
-                ; generation = Z.of_int generation
-                }
+              , { digest = E4_addr.Addr.of_digest digest; generation }
               , { kind; digest = E4_addr.Addr.of_digest target } )
           , next )
       else None

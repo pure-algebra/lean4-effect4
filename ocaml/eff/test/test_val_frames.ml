@@ -16,8 +16,9 @@
    V1  the two goldens are byte for byte what Eff_frame's emitters write for the tree the
        golden names, and the composed reader below reads them back to that tree;
    V2  the exactness rules of the two new arms: a payload with no kind byte (ref and handle),
-       a handle key with a leading zero digit, a handle key out of the int range, and a wrong
-       tag are refusals — never repairs (Val.lean:1169, 1176-1177);
+       a handle key with a leading zero digit and a wrong tag are refusals — never repairs
+       (Val.lean:1169, 1176-1177); a key past max_int is read exactly, a Lean natural being
+       Zarith's `Z.t` since M4;
    V3  no digits is the key 0, not a refusal — the encoder's rule, not a repair;
    V4  neither frame is a program frame: the program codec (Eff_codec) refuses both at the top
        level.
@@ -27,6 +28,7 @@
 
 let checks = ref 0
 let failures = ref 0
+let z = Z.of_int
 
 let check (name : string) (ok : bool) : unit =
   incr checks;
@@ -81,12 +83,12 @@ let hex (s : string) : string =
 (* ---- the subset of Store.Val the goldens use, as a tree ---- *)
 
 type v =
-  | Nat of int
+  | Nat of Z.t
   | Str of string
   | List of v list
-  | Ctor of int * v list
+  | Ctor of Z.t * v list
   | Ref of int * string
-  | Handle of int * int
+  | Handle of int * Z.t
 
 let rec emit (b : Eff_frame.writer) (t : v) : unit =
   match t with
@@ -175,8 +177,11 @@ let bytes_of (t : v) : string = Eff_frame.to_string emit t
      03 0000000000000006 456666656374
      0b 0000000000000021 02 00*32                                                        *)
 
-let tree_handle : v = Ctor (0, [ Handle (1, 3); List [ Handle (2, 4); Nat 9 ] ])
-let tree_ref : v = Ctor (0, [ Str "Effect"; Ref (2, String.make 32 '\000') ])
+let tree_handle : v =
+  Ctor (Z.zero, [ Handle (1, z 3); List [ Handle (2, z 4); Nat (z 9) ] ])
+;;
+
+let tree_ref : v = Ctor (Z.zero, [ Str "Effect"; Ref (2, String.make 32 '\000') ])
 
 let golden (name : string) (tree : v) (expected_len : int) : unit =
   let want = unhex (read_file (goldens ^ name ^ ".hex")) in
@@ -219,12 +224,15 @@ let () =
   let rt_h k n = exact decode_handle (to_string emit_handle (k, n)) = Some (k, n) in
   check
     "handle round trip at keys 0, 1, 255, 256, 2^32, max_int"
-    (rt_h 2 0
-     && rt_h 2 1
-     && rt_h 0 255
-     && rt_h 255 256
-     && rt_h 7 (1 lsl 32)
-     && rt_h 1 max_int);
+    (rt_h 2 (z 0)
+     && rt_h 2 (z 1)
+     && rt_h 0 (z 255)
+     && rt_h 255 (z 256)
+     && rt_h 7 (z (1 lsl 32))
+     && rt_h 1 (z max_int));
+  check
+    "handle round trip past max_int: max_int + 1 and 2^64"
+    (rt_h 1 (Z.succ (z max_int)) && rt_h 3 (Z.pow (z 2) 64));
   let rt_r k d = exact decode_ref (to_string emit_ref (k, d)) = Some (k, d) in
   check
     "ref round trip on an empty, a short and a 32-byte digest"
@@ -232,8 +240,8 @@ let () =
   (* V3: no digits is the key 0, the encoder's rule (Val.lean:1136) *)
   check
     "a handle payload of one kind byte is the key 0"
-    (exact decode_handle (frame tag_handle "\001") = Some (1, 0)
-     && to_string emit_handle (1, 0) = frame tag_handle "\001");
+    (exact decode_handle (frame tag_handle "\001") = Some (1, Z.zero)
+     && to_string emit_handle (1, Z.zero) = frame tag_handle "\001");
   (* V2: the refusals *)
   check
     "a handle key with a leading zero digit is refused"
@@ -245,16 +253,17 @@ let () =
     "a ref with an empty payload (no kind byte) is refused"
     (exact decode_ref (frame tag_ref "") = None);
   check
-    "a handle key of nine digits is refused"
+    "a handle key of nine digits is read exactly: 2^64"
     (exact decode_handle (frame tag_handle "\002\001\000\000\000\000\000\000\000\000")
-     = None);
+     = Some (2, Z.pow (z 2) 64));
   check
-    "a handle key of eight digits above max_int is refused"
-    (exact decode_handle (frame tag_handle "\002\064\000\000\000\000\000\000\000") = None);
+    "a handle key of eight digits above max_int is read exactly: 2^62"
+    (exact decode_handle (frame tag_handle "\002\064\000\000\000\000\000\000\000")
+     = Some (2, Z.pow (z 2) 62));
   check
     "a handle key of eight digits at max_int is accepted"
     (exact decode_handle (frame tag_handle "\002\063\255\255\255\255\255\255\255")
-     = Some (2, max_int));
+     = Some (2, z max_int));
   check
     "the two tags do not read each other's frames"
     (exact decode_handle (frame tag_ref "\002\003") = None
@@ -274,7 +283,7 @@ let () =
   (* V4: neither frame is a program frame *)
   check
     "the program wire refuses a bare handle and a bare ref"
-    (Eff_codec.decode_program (to_string emit_handle (1, 3)) = None
+    (Eff_codec.decode_program (to_string emit_handle (1, z 3)) = None
      && Eff_codec.decode_program (to_string emit_ref (2, String.make 32 '\000')) = None)
 ;;
 
@@ -286,16 +295,17 @@ let () =
   List.iter
     (fun n ->
        check
-         (Printf.sprintf "the negative integer -(%d+1) reads back" n)
+         (Printf.sprintf "the negative integer -(%s+1) reads back" (Z.to_string n))
          (Eff_val.decode_exact (Eff_val.to_bytes (Eff_types.Val.NegInt n))
           = Some (Eff_types.Val.NegInt n)))
-    [ 0; 1; 255; 256; max_int ];
+    [ z 0; z 1; z 255; z 256; z max_int; Z.succ (z max_int); Z.pow (z 2) 64 ];
   check
     "a negative integer with a leading zero digit is refused"
     (Eff_val.decode_exact (frame tag_int "\000\001") = None);
   check
-    "a negative integer of nine digits is refused"
-    (Eff_val.decode_exact (frame tag_int "\001\000\000\000\000\000\000\000\000") = None);
+    "a negative integer of nine digits is read exactly: -(2^64+1)"
+    (Eff_val.decode_exact (frame tag_int "\001\000\000\000\000\000\000\000\000")
+     = Some (Eff_types.Val.NegInt (Z.pow (z 2) 64)));
   check
     "the negative integer and the natural do not read each other's frames"
     (exact decode_neg_int (frame tag_nat "\001") = None

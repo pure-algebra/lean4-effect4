@@ -22,17 +22,18 @@ open Effect4_engine
 [@@@warning "-32"]
 (* A module type used only for an ascription has, by definition, no used values. *)
 
+(* An index, a path and a length are Lean naturals, Zarith's `Z.t` (M4). *)
 module type PPATH = sig
   type 'n t
 
   val make : 'n -> 'n t
   val root : 'n t -> 'n
-  val snoc : ('n -> int -> 'n option) -> 'n t -> int -> 'n t
-  val append : ('n -> int -> 'n option) -> 'n t -> int list -> 'n t
-  val node : ('n -> int -> 'n option) -> 'n t -> 'n option
-  val walk : ('n -> int -> 'n option) -> 'n -> int list -> 'n option
-  val to_list : 'n t -> int list
-  val length : 'n t -> int
+  val snoc : ('n -> Z.t -> 'n option) -> 'n t -> Z.t -> 'n t
+  val append : ('n -> Z.t -> 'n option) -> 'n t -> Z.t list -> 'n t
+  val node : ('n -> Z.t -> 'n option) -> 'n t -> 'n option
+  val walk : ('n -> Z.t -> 'n option) -> 'n -> Z.t list -> 'n option
+  val to_list : 'n t -> Z.t list
+  val length : 'n t -> Z.t
 end
 
 module type PENV = sig
@@ -41,9 +42,9 @@ module type PENV = sig
   val empty : 'a t
   val snoc : 'a t -> 'a -> 'a t
   val append : 'a t -> 'a list -> 'a t
-  val get : 'a t -> int -> 'a option
-  val length : 'a t -> int
-  val take : 'a t -> int -> 'a t
+  val get : 'a t -> Z.t -> 'a option
+  val length : 'a t -> Z.t
+  val take : 'a t -> Z.t -> 'a t
   val to_list : 'a t -> 'a list
   val of_list : 'a list -> 'a t
 end
@@ -53,8 +54,32 @@ module _ : PENV = E4_env
 
 [@@@warning "+32"]
 
-module P = E4_ppath
-module V = E4_env
+(* The laws drive the carriers at the host's ints, each index a natural exactly (`Z.of_int`), and
+   read every natural back (`Z.to_int`). A view adds no allocation to a measured call: `Z.of_int`
+   is the identity on a small int. *)
+module P = struct
+  let z = Z.of_int
+  let make = E4_ppath.make
+  let root = E4_ppath.root
+  let snoc c p i = E4_ppath.snoc c p (z i)
+  let append c p l = E4_ppath.append c p (List.map z l)
+  let node = E4_ppath.node
+  let walk c n l = E4_ppath.walk c n (List.map z l)
+  let to_list p = List.map Z.to_int (E4_ppath.to_list p)
+  let length p = Z.to_int (E4_ppath.length p)
+end
+
+module V = struct
+  let z = Z.of_int
+  let empty = E4_env.empty
+  let snoc = E4_env.snoc
+  let append = E4_env.append
+  let get e i = E4_env.get e (z i)
+  let length e = Z.to_int (E4_env.length e)
+  let take e k = E4_env.take e (z k)
+  let to_list = E4_env.to_list
+  let of_list = E4_env.of_list
+end
 
 let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [by construction: %s]\n" name why
@@ -79,7 +104,11 @@ let rand n = if n <= 0 then 0 else next () mod n
    `Node.child` — total, and `None` off the tree. *)
 type tree = Node of int * tree list
 
-let child (Node (_, kids)) i = List.nth_opt kids i
+(* Its child function takes a natural, as `Node.child` does: one past the host's int is past
+   every list. *)
+let child (Node (_, kids)) (i : Z.t) =
+  if Z.fits_int i then List.nth_opt kids (Z.to_int i) else None
+;;
 
 let rec build depth id =
   if depth = 0
@@ -94,7 +123,7 @@ let rec at_ n l =
   match l with
   | [] -> Some n
   | i :: rest ->
-    (match child n i with
+    (match child n (Z.of_int i) with
      | None -> None
      | Some m -> at_ m rest)
 ;;

@@ -15,19 +15,29 @@
     [evalTerm], [Decision.decide], [errOf] and [Eval.badShape]/[Eval.outside]. The theorems of
     this development ([denoteD_approx], [denoteBD_same]) hold for any evaluator their statements
     fix, so the lane compares the trees, not two evaluators. Rocq strings become OCaml strings,
-    and [nat] OCaml [int]. Rocq's [Z] is spelled as the program types spell a Lean natural, here
-    OCaml [int]. These are assumptions of the extracted code, outside any proof here.
+    and [nat] OCaml [int]. Rocq's [positive], [N] and [Z], and so RocqOfOCaml's [int], become
+    Zarith's integer, as the program types spell a Lean natural (M4). Rocq's own
+    [ExtrOcamlZBigInt] maps them. It names the type [Big_int_Z.big_int], which Zarith defines as
+    [Z.t], since the module [Z] that the runner extracts would shadow Zarith's. The conversions
+    with [nat] that the lane computes with are mapped by name. These are assumptions of the
+    extracted code, outside any proof here.
     An event's answer type crosses as [Obj.t], which [ocaml/STANDARDS.md] forbids in a program of
     the estate: the generated file is a test input, and its header says so. *)
 
 From Stdlib Require Import List ZArith String Extraction.
 Import ListNotations.
-From Stdlib Require ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlZInt ExtrOcamlNativeString.
+From Stdlib Require ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlZBigInt ExtrOcamlNativeString.
 Require Import RocqOfOCaml.RocqOfOCaml.
 Require Import E4.Eff_types E4.Denote E4.Budget E4.BudgetDefs E4.Api E4.EffExtract.
 
-Extract Inlined Constant RocqOfOCaml.Basics.int => "int".
-Extract Inlined Constant RocqOfOCaml.RocqOfOCaml.int => "int".
+(** RocqOfOCaml's [int] is Rocq's [Z], extracted as [ExtrOcamlZBigInt] extracts [Z]. A
+    definition's index is a [nat], the target's [int]. So [Z.of_nat] is Zarith's injection, and
+    [Z.to_nat] answers zero below zero, as Rocq's does, and raises past the target's [int]. *)
+Extract Inlined Constant RocqOfOCaml.Basics.int => "Big_int_Z.big_int".
+Extract Inlined Constant RocqOfOCaml.RocqOfOCaml.int => "Big_int_Z.big_int".
+Extract Inlined Constant Z.to_nat =>
+  "(fun z -> if Big_int_Z.sign_big_int z <= 0 then 0 else Big_int_Z.int_of_big_int z)".
+Extract Inlined Constant Z.of_nat => "Big_int_Z.big_int_of_int".
 
 Local Open Scope string_scope.
 

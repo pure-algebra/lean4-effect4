@@ -27,8 +27,8 @@ the value, and exactly when it supports every natural literal of the program.
 - Reach: every profile, every value tree and every program over the native operations. Decisions
   rows 108 and 417 (1), DI-56: the bound is the ingress rule.
 - Does not establish: which face reads a supported value, or that it reads it exactly; arithmetic
-  inside a run, which the builtin rows' crossing refuses until M4; the native carrier's own domain
-  (a natural below zero, a string that is not UTF-8), which the host checks (`Eff_val.valid`).
+  inside a run, which the OCaml face computes exactly (M4); the native carrier's own domain (a
+  natural below zero, a string that is not UTF-8), which the host checks (`Eff_val.valid`).
 - Unlocks: R8's refusal outside the profile, at ingress, for the TypeScript face, the tool's JSON
   and the native engine and kit, through one lowered judgment.
 -/
@@ -111,11 +111,9 @@ def refusalHom (profile : ProfileData) : Store.ValHom profile.supportsAlgebra wh
   h_val_ref _ _ := rfl
   h_val_handle _ key := natRefusal_isNone profile key
   h_val_negInt n := by
-    show (if n < profile.natBound then none else some _ : Option ProfileRefusal).isNone =
-      decide (n + 1 ≤ profile.natBound)
-    split
-    · next h => exact (decide_eq_true (Nat.succ_le_of_lt h)).symm
-    · next h => exact (decide_eq_false fun le => h (Nat.lt_of_succ_le le)).symm
+    show (if profile.admitsNat (n + 1) then none else some _ : Option ProfileRefusal).isNone =
+      profile.admitsNat (n + 1)
+    cases profile.admitsNat (n + 1) <;> rfl
   h_val_float _ := rfl
 
 /-- The refusal is absent exactly when the unlocated judgment holds, as one Boolean: the two folds

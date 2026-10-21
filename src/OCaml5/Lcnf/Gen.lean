@@ -627,8 +627,6 @@ def run (argv : List String) (recipeOuts : List String)
   IO.println s!"wrapper referenced directly: {closure.wrapperRefs}"
   IO.println s!"todos ({closure.todos.size}):"
   for t in closure.todos do IO.println s!"  {t}"
-  IO.println s!"clock refusals ({closure.clockRefusals.size}):"
-  for t in closure.clockRefusals do IO.println s!"  {t}"
   IO.println s!"types in full: {gen.full}"
   IO.println s!"types as abbreviations: {gen.aliases}"
   IO.println s!"types as placeholders: {gen.placeholders}"

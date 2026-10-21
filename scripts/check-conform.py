@@ -59,15 +59,16 @@ PROFILES = {
 
 # The emitted-code mutations of the compiler checkpoint. Each alters one definition of the
 # runtime library (`ocaml/lcnf`), whose modules the compiled module carries, and names the first
-# observation that reads the altered definition: the key
-# of the handle type whose name is not ASCII, the product of the first name fixture, and the
-# membership test under an asymmetric instance, whose two arguments the third one swaps. The
-# name is a host fixture of the selection, never a position in a list.
+# observation that reads the altered definition: the key of the handle type whose name is not
+# ASCII, the difference of the name fixture that subtracts (`Lcnf_nat.sub` with its operands
+# swapped), and the membership test under an asymmetric instance, whose two arguments the third
+# one swaps. The name is a host fixture of the selection, never a position in a list.
 MUTATIONS = [
     {"id": "utf8-mutation", "file": "mutated", "original": "Char.code (String.get s i)",
      "replacement": "0", "fails": {"key/handle-utf8"}},
-    {"id": "support-mutation", "file": "mutated-support", "original": "max_int else a * b",
-     "replacement": "max_int else a * a", "fails": {"names/mulCap"}},
+    {"id": "support-mutation", "file": "mutated-support",
+     "original": "if Z.lt a b then Z.of_int 0 else Z.sub a b",
+     "replacement": "if Z.lt b a then Z.of_int 0 else Z.sub b a", "fails": {"names/freeCapAt"}},
     {"id": "contains-mutation", "file": "mutated-contains", "original": "(fun e -> inst a e)",
      "replacement": "(fun e -> inst e a)", "fails": {"contains-order"}},
 ]
@@ -182,7 +183,7 @@ def first_difference(actual, expected):
     return "the lists differ only in their line ends"
 
 
-def mutation(out, processes, compiler, text, spec, host):
+def mutation(out, processes, compiler, link, text, spec, host):
     """Compile an altered copy of the emitted module and run it.
 
     The alteration must compile. The run must stop with exit 1 at one observation. That
@@ -196,7 +197,7 @@ def mutation(out, processes, compiler, text, spec, host):
     if text.count(spec["original"]) != 1:
         raise RuntimeError(f"{name}: mutation anchor missing or ambiguous")
     (out / f"{name}.ml").write_text(text.replace(spec["original"], spec["replacement"]))
-    processes.run([compiler, "-w", "-a", str(out / f"{name}.ml"), "-o", str(out / name)])
+    processes.run([compiler, "-w", "-a", *link, str(out / f"{name}.ml"), "-o", str(out / name)])
     result = processes.run([str(out / name)], check=False)
     failed = [line.split("\t")[0] for line in result.stderr.splitlines() if line.endswith("\tFAIL")]
     if result.returncode != 1 or len(failed) != 1:
@@ -244,7 +245,12 @@ def step_compiler(out, execute=execute):
         compiler = str(Path(processes.run(["opam", "var", "bin", "--switch=" + os.environ.get("OPAM_SWITCH", "effect4")]).stdout.strip()) / "ocamlopt")
     if not compiler:
         raise RuntimeError("ocamlopt is required for the compiler profile")
-    processes.run([compiler, "-w", "-a", str(out / "normalization.ml"), "-o", str(out / "normalization")])
+    # A Lean natural is Zarith's `Z.t` (M4), so the module links Zarith: its directory, as the
+    # compiler's own `ocamlfind` reports it, or $ZARITH_DIR.
+    zarith = os.environ.get("ZARITH_DIR") or processes.run(
+        [str(Path(compiler).parent / "ocamlfind"), "query", "zarith"]).stdout.strip()
+    link = ["-I", zarith, str(Path(zarith) / "zarith.cmxa")]
+    processes.run([compiler, "-w", "-a", *link, str(out / "normalization.ml"), "-o", str(out / "normalization")])
     # The observation is written before it is judged: a mismatch keeps what the run printed.
     observed = processes.run([str(out / "normalization")], check=False)
     (out / "actual.txt").write_text(observed.stdout)
@@ -252,7 +258,7 @@ def step_compiler(out, execute=execute):
         raise RuntimeError("compiled OCaml observations differ from the Lean fixture list "
                            f"(exit {observed.returncode}): {first_difference(observed.stdout, expected)}\n{observed.stderr}")
     text = (out / "normalization.ml").read_text()
-    failures = [mutation(out, processes, compiler, text, spec, host) for spec in MUTATIONS]
+    failures = [mutation(out, processes, compiler, link, text, spec, host) for spec in MUTATIONS]
     controls = [spec["id"] for spec in MUTATIONS]
     if len(set(host + controls)) != len(host + controls):
         raise RuntimeError("duplicate host observation ID")

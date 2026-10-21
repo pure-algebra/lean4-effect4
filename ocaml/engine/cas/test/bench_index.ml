@@ -90,7 +90,7 @@ let lookup_cell entries lookups =
 (* ---------------------------------------------------------------- rebuild *)
 
 let framed = Eff_frame.framed
-let f_nat n = framed 2 (Eff_frame.nat_digits n)
+let f_nat n = framed 2 (Eff_frame.nat_digits (Z.of_int n))
 let f_ctor i args = framed 10 (String.concat "" (f_nat i :: args))
 let f_bytes s = framed 8 s
 

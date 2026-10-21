@@ -8,7 +8,7 @@
    declaration and its documentation is written here and nowhere else.  The component's header,
    with its behaviours EN1-EN9, stays in e4_engine.mli.
 
-   Depends on: effect4_eff (Eff_types, Eff_codec), effect4_clock (E4_clock).
+   Depends on: effect4_eff (Eff_types, Eff_codec), effect4_lcnf (Lcnf_crossing), Zarith (Z).
 
    Behaviours:
    EI1 Each module type is declared once.  e4_engine.ml includes this module and e4_engine.mli
@@ -16,7 +16,10 @@
        through the same declarations.                               by construction
    EI2 Callers keep their paths: `E4_engine.ENGINE`, `E4_engine.INSTANCE`, `E4_engine.answer`
        with its constructors, `E4_engine.frontier` with its fields, `E4_engine.outside` with its
-       constructors, `E4_engine.Make` and `E4_engine.Fast`.        by construction *)
+       constructors, `E4_engine.Make` and `E4_engine.Fast`.        by construction
+   EI3 The machine's naturals are Zarith's `Z.t`, as the generated alphabet spells every Lean
+       `Nat` (M4): `INSTANCE` transcribes them so. A count the host reads (a cardinal, a
+       length) is an `int`, narrowed once in the instance.               by construction *)
 
 open Eff_types
 
@@ -35,14 +38,14 @@ module Alphabet = struct
     | Finished
     | Suspended of frontier
     | Refused of string (** the `Stuck` constructor, spelled *)
-    | Outside_profile of E4_clock.refusal
+    | Outside_profile of Lcnf_crossing.refusal
     (** a value refused at a named crossing (D9); the input machine is retained *)
     | Delay of frontier (** the fuel ran out; the command residue is non-empty *)
 
   (** Lean's profile-support refusal ([Effect4.Program.ProfileRefusal],
       src/Effect4/Program/ProfileSupport.lean): a number outside the profile's bound, at its path
       in a value tree, or at the address of the program node whose literal it is. *)
-  type profile_refusal = (int list, ProfileReason.t) Located.t
+  type profile_refusal = (Z.t list, ProfileReason.t) Located.t
 
   (** Why a value is outside the profile (DI-56; decisions row 408 (2)). *)
   type outside =
@@ -54,9 +57,10 @@ module Alphabet = struct
     (** a host's answer is no Lean value: a natural below zero, a byte outside 0..255 or a
             string that is not UTF-8 ([Eff_val.valid] over its value tree). Lean's judgments
             cannot ask, since a Lean value has no such shape *)
-    | Crossing of E4_clock.refusal
-    (** a step's numeric crossing refused a value the step computed ([E4_clock]); the
-            arithmetic crossing stays in the builtin rows until M4 *)
+    | Crossing of Lcnf_crossing.refusal
+    (** a step's crossing refused a value the step computed ([Lcnf_crossing]): an exponent,
+            a shift or an index past the target's [int]. The run's arithmetic is exact since
+            M4 *)
 end
 
 include Alphabet
@@ -80,26 +84,26 @@ module type INSTANCE = sig
       against every instance: a constructor added, dropped, renamed or re-ordered in the generated file is
       a compile error here. *)
 
-  type fiber_id = int (* fiber_id (ocaml/engine/api_engine.ml) *)
+  type fiber_id = Z.t (* fiber_id (ocaml/engine/api_engine.ml) *)
 
   type stuck =
     (* stuck (ocaml/engine/api_engine.ml) *)
     | Stuck_unknownFiber of fiber_id
-    | Stuck_unknownScope of int
-    | Stuck_unknownRace of int
+    | Stuck_unknownScope of Z.t
+    | Stuck_unknownRace of Z.t
 
   type parked =
     | Parked_notParked
-    | Parked_withGuard of int (* parked (ocaml/engine/api_engine.ml) *)
+    | Parked_withGuard of Z.t (* parked (ocaml/engine/api_engine.ml) *)
 
   type observer =
     (* observer (ocaml/engine/api_engine.ml) *)
-    | Observer_resumeAwait of fiber_id * int * ObserverMode.t
+    | Observer_resumeAwait of fiber_id * Z.t * ObserverMode.t
     | Observer_untrackChild of fiber_id
-    | Observer_dropScopeFinalizer of int * int
-    | Observer_countdown of fiber_id * int
-    | Observer_raceCallback of int
-    | Observer_callback of int
+    | Observer_dropScopeFinalizer of Z.t * Z.t
+    | Observer_countdown of fiber_id * Z.t
+    | Observer_raceCallback of Z.t
+    | Observer_callback of Z.t
 
   type scope_mode =
     | ScopeMode_forkIn
@@ -121,7 +125,7 @@ module type INSTANCE = sig
   type ctx =
     { (* ctx (ocaml/engine/api_engine.ml) *)
       services : Val.t context
-    ; max_ops_before_yield : int
+    ; max_ops_before_yield : Z.t
     ; prevent_yield : bool
     }
 
@@ -143,7 +147,7 @@ module type INSTANCE = sig
     | Prim_onExit of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim * 'nu * bool
     | Prim_setInterruptible of bool
     | Prim_whileLoop of 'nu * 'b
-    | Prim_yieldNowWith of int
+    | Prim_yieldNowWith of Z.t
     | Prim_async of 'nu * bool * 'nu option
     | Prim_asyncFinalizer of 'nu
 
@@ -167,37 +171,37 @@ module type INSTANCE = sig
 
   type wake_key =
     { kind : handle_kind
-    ; index : int
+    ; index : Z.t
     }
 
   type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =
     (* task (ocaml/engine/api_engine.ml) *)
     | Task_start of fiber_id
-    | Task_resume of fiber_id * int * 'k
-    | Task_wake of wake_key * int
+    | Task_resume of fiber_id * Z.t * 'k
+    | Task_wake of wake_key * Z.t
 
   type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =
     (* run_event (ocaml/engine/api_engine.ml) *)
     | RunEvent_forked of fiber_id * fiber_id * bool
     | RunEvent_started of fiber_id
-    | RunEvent_scheduledTask of fiber_id * int * ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
+    | RunEvent_scheduledTask of fiber_id * Z.t * ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
     | RunEvent_ranTask of fiber_id * ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
-    | RunEvent_yieldInjected of fiber_id * int
-    | RunEvent_parkedOn of fiber_id * int
-    | RunEvent_resumedWith of fiber_id * int * 'k
+    | RunEvent_yieldInjected of fiber_id * Z.t
+    | RunEvent_parkedOn of fiber_id * Z.t
+    | RunEvent_resumedWith of fiber_id * Z.t * 'k
     | RunEvent_interruptRecorded of fiber_id option * fiber_id
     | RunEvent_interruptDeferred of fiber_id
     | RunEvent_childrenInterrupted of fiber_id * fiber_id list
     | RunEvent_observerFired of fiber_id * observer
     | RunEvent_frame of fiber_id * 'h
     | RunEvent_finalizerProgram of fiber_id * 'nu * ('b, 'e, 'd, 'i, 'a) Exit.t
-    | RunEvent_scopeLinked of scope_mode * int * int * fiber_id
-    | RunEvent_scopeClosedOnLink of int * fiber_id
-    | RunEvent_raceStarted of int * fiber_id * int
-    | RunEvent_raceLaunched of int * fiber_id
-    | RunEvent_raceSettled of int * ('b, 'e, 'd, 'i, 'a) Exit.t
+    | RunEvent_scopeLinked of scope_mode * Z.t * Z.t * fiber_id
+    | RunEvent_scopeClosedOnLink of Z.t * fiber_id
+    | RunEvent_raceStarted of Z.t * fiber_id * Z.t
+    | RunEvent_raceLaunched of Z.t * fiber_id
+    | RunEvent_raceSettled of Z.t * ('b, 'e, 'd, 'i, 'a) Exit.t
     | RunEvent_contextSet of fiber_id * 'ch
-    | RunEvent_callback of int * ('b, 'e, 'd, 'i, 'a) Exit.t
+    | RunEvent_callback of Z.t * ('b, 'e, 'd, 'i, 'a) Exit.t
     | RunEvent_exited of fiber_id * ('b, 'e, 'd, 'i, 'a) Exit.t
 
   type ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =
@@ -206,10 +210,10 @@ module type INSTANCE = sig
     | RunDecision_flush
     | RunDecision_evaluate of fiber_id
     | RunDecision_yieldVerdict of fiber_id * bool
-    | RunDecision_answerAsync of fiber_id * int * ('b, 'e, 'd, 'i, 'a) Completion.t
+    | RunDecision_answerAsync of fiber_id * Z.t * ('b, 'e, 'd, 'i, 'a) Completion.t
     | RunDecision_interruptFrom of fiber_id option * 'a ReasonAnnotations.t * fiber_id
     | RunDecision_installMiddleware
-    | RunDecision_advance of E4_clock.t
+    | RunDecision_advance of Z.t
 
   (** The fully applied machine.  `machine`, `fiber` and `interp` are abstract: they mention
       the carriers. *)
@@ -243,9 +247,9 @@ module type INSTANCE = sig
   val interp_of : Row.t list -> program -> interp
 
   val prepare : Row.t list -> program -> prepared
-  val load : program -> fuel:int -> machine
-  val step : prepared -> fuel:int -> machine -> api_decision -> machine * bool
-  val run_api : Row.t list -> program -> fuel:int -> outcome * machine
+  val load : program -> fuel:Z.t -> machine
+  val step : prepared -> fuel:Z.t -> machine -> api_decision -> machine * bool
+  val run_api : Row.t list -> program -> fuel:Z.t -> outcome * machine
 
   (* Lean's checked replay asks this before each decision (`Effect4.Program.admit`): a stale
      token, a call that is not a host row's, a wrong answer type, a dead handle or a reserved
@@ -256,7 +260,7 @@ module type INSTANCE = sig
      operation and its request. A host driver answers the host rows among them. *)
   type await =
     { fiber : fiber_id
-    ; token : int
+    ; token : Z.t
     ; op : NativeOp.t
     ; request : Val.t
     }
@@ -278,14 +282,15 @@ module type INSTANCE = sig
   val program_profile_data_value_refusal
     :  profile_data
     -> Val.t
-    -> (int list, ProfileReason.t) Located.t option
+    -> (Z.t list, ProfileReason.t) Located.t option
 
   val program_profile_data_literal_refusal
     :  profile_data
     -> program
-    -> (int list, ProfileReason.t) Located.t option
+    -> (Z.t list, ProfileReason.t) Located.t option
 
-  (** The free rows. *)
+  (** The free rows. A count is the host's [int] (EI3); every other number is the machine's
+      natural. *)
 
   val fibers : machine -> (fiber_id * fiber) list
   val fiber_count : machine -> int
@@ -293,8 +298,8 @@ module type INSTANCE = sig
   val trace_length : machine -> int
   val stuck_of : machine -> stuck option
   val armed_of : machine -> fiber_id list
-  val next_id : machine -> int
-  val next_token : machine -> int
+  val next_id : machine -> Z.t
+  val next_token : machine -> Z.t
   val race_count : machine -> int
   val middleware : machine -> bool
   val finished : machine -> bool
@@ -304,26 +309,26 @@ module type INSTANCE = sig
     -> (fiber_id * (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t) list
 
   val refs : machine -> Val.t list
-  val next_name : machine -> int
+  val next_name : machine -> Z.t
   val due_count : machine -> int
   val cell_count : machine -> int
   val scope_count : machine -> int
   val memo_map_count : machine -> int
-  val memo_paths : machine -> (int * (int list * int list list) list) list
+  val memo_paths : machine -> (Z.t * (Z.t list * Z.t list list) list) list
   val f_id : fiber -> fiber_id
   val f_exit : fiber -> (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t option
   val f_parked : fiber -> parked
   val f_running : fiber -> bool
   val f_finalizing : fiber -> bool
-  val f_pending_tokens : fiber -> int list
+  val f_pending_tokens : fiber -> Z.t list
   val f_observers : fiber -> observer list
   val f_children : fiber -> fiber_id list
-  val f_op_count : fiber -> int
-  val f_max_ops : fiber -> int
+  val f_op_count : fiber -> Z.t
+  val f_max_ops : fiber -> Z.t
   val f_prevent_yield : fiber -> bool
   val f_yield_override : fiber -> bool option
   val f_context : fiber -> ctx
-  val f_dispatcher : fiber -> (int * int) list
+  val f_dispatcher : fiber -> (Z.t * int) list
 end
 
 (** {1 The engine} *)
@@ -354,7 +359,7 @@ module type ENGINE = sig
   val answer_async
     :  int
     -> int
-    -> (Val.t, Err.t, Defect.t, int, unit) Completion.t
+    -> (Val.t, Err.t, Defect.t, Z.t, unit) Completion.t
     -> decision
   (* [answer_async fiber token c] answers the parked token with the completion [c], a success or a
      failure. A constructor: a host driver asks {!ingress} first (EN9). *)
@@ -368,9 +373,10 @@ module type ENGINE = sig
   val install_middleware : decision
   val advance : int -> decision
 
-  (** Exact logical milliseconds. [advance] promotes a nonnegative host integer;
-      [advance_exact] also accepts values above the host integer range. *)
-  val advance_exact : E4_clock.t -> decision
+  (** Exact logical milliseconds, a Lean natural. [advance] promotes a nonnegative host integer
+      and raises [Invalid_argument] on a negative one, which no duration is; [advance_exact]
+      takes the natural itself, past the host integer range too. *)
+  val advance_exact : Z.t -> decision
 
   (** {2 Ingress} *)
 
@@ -385,7 +391,7 @@ module type ENGINE = sig
       ([Eff_val.valid]), and [Unsupported] when Lean's profile support refuses that tree at
       the selected profile ([ProfileData.valueRefusal] at [rc112], lowered). Never [Crossing].
       A host driver asks it before {!admits}. *)
-  val ingress : (Val.t, Err.t, Defect.t, int, unit) Completion.t -> outside option
+  val ingress : (Val.t, Err.t, Defect.t, Z.t, unit) Completion.t -> outside option
 
   (** {2 Loading} *)
 
@@ -448,7 +454,7 @@ module type ENGINE = sig
   val outcome : t -> string
   val exits : t -> (int * string) list
   val root_exit : t -> string option
-  val root_exit_of : t -> (Val.t, Err.t, Defect.t, int, unit) Exit.t option
+  val root_exit_of : t -> (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t option
 
   (* The root's exit itself, as Lean's `Run.exit` answers it; `root_exit` renders it. *)
   val host_calls : t -> (int * int * int * Val.t) list
@@ -478,7 +484,7 @@ module type E4_engine = sig
   (** {1 Outside the profile} *)
 
   (** The refusal as a report spells it: the number and its path, the value that is no Lean
-      value, or the crossing's text ([E4_clock.refusal_text]). *)
+      value, or the crossing's text ([Lcnf_crossing.refusal_text]). *)
   val outside_text : outside -> string
 
   module type INSTANCE = INSTANCE

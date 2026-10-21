@@ -71,7 +71,7 @@ open Effect4.Tool Effect4.Tool.Methods
 -- a shared structure or sum is a `$defs` key by its name, so its name needs no escape either
 #guard (((Effect4.Store.shape Request).root :: (Effect4.Store.shape Request).defs.map (·.2)).flatMap
     (nested [])).all fun d => d.1.all fun c => c != '"' && c != '\\' && c != '~' && c != '/'
-#guard toString Effect4.Program.rc112.natBound = "9007199254740991"
+#guard toString Effect4.safeBound = "9007199254740991" && Effect4.Program.rc112.natBound = some Effect4.safeBound
 -- schemas: an object of the case's fields, with what they reach under $defs
 #guard (entries.find? (·.listing.name == "reset")).map (·.listing.inputSchema) =
   some "{\"type\":\"object\",\"properties\":{},\"required\":[],\"additionalProperties\":false}"

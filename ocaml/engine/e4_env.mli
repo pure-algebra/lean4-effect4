@@ -18,7 +18,8 @@
    Externs.lean `carrierSignatures`) verbatim; the ascription is checked in
    test/prop_point.ml, whose model is Lean's list.
 
-   Depends on: the OCaml standard library only (List).
+   Depends on: Zarith (Z) and the OCaml standard library (List). An index and a length are
+   Lean naturals, Zarith's `Z.t` since M4; the cached length is the heap's `int` inside.
 
    Representation: { rev : the values, LAST BOUND FIRST; len : the length }.
 
@@ -46,13 +47,13 @@ val snoc : 'a t -> 'a -> 'a t
 val append : 'a t -> 'a list -> 'a t
 
 (** Lean's [env[i]?] — index from the front (PE3). *)
-val get : 'a t -> int -> 'a option
+val get : 'a t -> Z.t -> 'a option
 
 (** O(1) (PE4). *)
-val length : 'a t -> int
+val length : 'a t -> Z.t
 
 (** Lean's [List.take k], clamped at both ends; shares the tail of the spine (PE5). *)
-val take : 'a t -> int -> 'a t
+val take : 'a t -> Z.t -> 'a t
 
 (** The Lean `Point.env` value.  One reversal, O(length). *)
 val to_list : 'a t -> 'a list

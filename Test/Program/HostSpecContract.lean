@@ -63,7 +63,7 @@ open Effect4.Program
 section Data
 
 #guard rc112.name = "effect@4.0.0-rc.112"
-#guard rc112.natBound = 9007199254740991
+#guard rc112.natBound = some 9007199254740991
 #guard rc112.formsOf (.row .sync) = some ⟨true, false⟩
 #guard rc112.formsOf (.row .async) = some ⟨true, true⟩
 #guard rc112.formsOf (.row .program) = some ⟨false, false⟩

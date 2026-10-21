@@ -3,14 +3,15 @@
 ; `Lcnf_string.utf8_bytes`), and each row of `OCaml5.Lcnf.builtins` that needs one says so. The
 ; functions were the prelude the route printed into each generated file until slice 2.1 of the
 ; OCaml estate refactor (docs/research/2026-10-17-ocaml-estate-review/plan.md). Unwrapped, as
-; effect4_clock and effect4_eff are, so generated code names its modules directly. Standard
-; library only.
+; effect4_eff is, so generated code names its modules directly. Zarith carries every natural and
+; integer (M4), and the standard library the rest.
 
 (library
  (name effect4_lcnf)
  (public_name effect4_lcnf)
  (wrapped false)
- (modules lcnf_array lcnf_list lcnf_nat lcnf_string)
+ (modules lcnf_array lcnf_crossing lcnf_list lcnf_nat lcnf_string)
+ (libraries zarith)
  (flags
   (:standard -w +a-4-9-40-41-42-44-45-70)))
 
@@ -30,7 +31,7 @@
 (test
  (name test_lcnf)
  (modules test_lcnf)
- (libraries effect4_lcnf))
+ (libraries zarith effect4_lcnf))
 
 (test
  (name test_array_conversion)

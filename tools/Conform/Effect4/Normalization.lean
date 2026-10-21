@@ -74,6 +74,10 @@ structure Fixture where
   /-- Actual emitted OCaml call and independently computed Lean observation. -/
   mlCheck : String
 
+/-- A natural in a compiled check, as the emitted module spells one: the `Nat` row's literal
+(`OCaml5.Lcnf.natLiteral`, Zarith's `Z.t` since M4). -/
+def natText (n : Nat) : String := OCaml5.Ml.renderExpr 0 (OCaml5.Lcnf.natLiteral n)
+
 def fixtures : Array Fixture := Id.run do
   let mut out := #[]
   let g := OCaml5.Lcnf.globalName
@@ -81,7 +85,7 @@ def fixtures : Array Fixture := Id.run do
     let ml := (Conform.Effect4.LcnfMl.tyT typeNames t).render
     out := out.push ⟨s!"key/{v}", ``Ty.key, #[Conform.Effect4.LcnfSemantics.tyValue t], #[Conform.Effect4.LcnfMl.tyT typeNames t],
       Value.ofNatList t.key, Conform.Effect4.LcnfMl.natListT t.key,
-      s!"{g ``Ty.key} ({ml}) = [{String.intercalate ";" (t.key.map toString)}]"⟩
+      s!"{g ``Ty.key} ({ml}) = [{String.intercalate ";" (t.key.map natText)}]"⟩
     for (short, decl) in [("normalize", ``Ty.normalize), ("canonical", ``canonicalRaw)] do
       out := out.push ⟨s!"{short}/{v}", decl, #[Conform.Effect4.LcnfSemantics.tyValue t], #[Conform.Effect4.LcnfMl.tyT typeNames t],
         Conform.Effect4.LcnfSemantics.tyValue t.normalize, Conform.Effect4.LcnfMl.tyT typeNames t.normalize,
@@ -93,7 +97,7 @@ def fixtures : Array Fixture := Id.run do
         | none => "None"
         | some (answer, error, rows) =>
           let ans := match answer with | none => "None" | some t => s!"Some ({(Conform.Effect4.LcnfMl.tyT typeNames t).render})"
-          s!"Some ({ans}, ({(Conform.Effect4.LcnfMl.tyT typeNames error).render}, [{String.intercalate ";" (rows.map fun (pair : Nat × Nat) => s!"({pair.1},{pair.2})")}]))"
+          s!"Some ({ans}, ({(Conform.Effect4.LcnfMl.tyT typeNames error).render}, [{String.intercalate ";" (rows.map fun (pair : Nat × Nat) => s!"({natText pair.1},{natText pair.2})")}]))"
       out := out.push ⟨s!"merge/{va}/{vb}", ``mergeColumns,
         #[Conform.Effect4.LcnfSemantics.tyValue a, Conform.Effect4.LcnfSemantics.tyValue b], #[Conform.Effect4.LcnfMl.tyT typeNames a, Conform.Effect4.LcnfMl.tyT typeNames b], mergeS result, mergeT result,
         s!"{g ``mergeColumns} ({(Conform.Effect4.LcnfMl.tyT typeNames a).render}) ({(Conform.Effect4.LcnfMl.tyT typeNames b).render}) = ({expected})"⟩
@@ -256,7 +260,7 @@ def main (args : List String) : IO UInt32 := do
         | .raises exn => s!"match ({rendered}) with _ -> false | exception {exn} -> true")
     -- The name fixtures as the emitted module calls them, against Lean's own answers.
     let checks := checks ++ Conform.Effect4.CompilerControls.nameChecks.map fun (id, call, answer) =>
-      observe id s!"({call}) = ({answer})"
+      observe id s!"({call}) = ({natText answer})"
     unless checks.length == (lane (·.host)).size do
       throwError "the compiled module has {checks.length} observations, the selection {(lane (·.host)).size}"
     IO.FS.writeFile (out / "normalization.ml") (OCaml5.Ml.render module ++ "\n" ++ String.intercalate "\n" checks ++ "\n")
@@ -270,12 +274,13 @@ def main (args : List String) : IO UInt32 := do
         Row.pass "normalization.control" subject .tested "the mutated source fails a selected comparison"
       else Row.refused "normalization.control" subject "mutation did not produce a counterexample"
     -- A wrong reference definition must reach the target evaluator: the program assembled from
-    -- an altered `Lcnf_nat.mul` fails a comparison that the name fixtures select.
-    let squaring := OCaml5.Lcnf.support.map fun s =>
-      if s.name == "Lcnf_nat.mul" then { s with body := .binop "*" (.var "a") (.var "a") } else s
+    -- an altered `Lcnf_nat.sub`, its operands swapped, fails a comparison that the name fixtures
+    -- select (`freeCapAt` subtracts 4 from 9).
+    let swapped := OCaml5.Lcnf.support.map fun s =>
+      if s.name == "Lcnf_nat.sub" then { s with params := ["b", "a"] } else s
     let supportSubject : Subject := ⟨"mutation", [supportMutation]⟩
     let supportRow :=
-      match Conform.Effect4.LcnfMl.assemble translated.decls (word := word) (support := squaring) with
+      match Conform.Effect4.LcnfMl.assemble translated.decls (word := word) (support := swapped) with
       | .error why =>
         Row.refused "normalization.control" supportSubject s!"the altered program did not assemble: {why}"
       | .ok altered =>

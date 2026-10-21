@@ -58,10 +58,10 @@ val raw_length : 'a t -> int
 
 (** `MemoWorld.lookup` over a world whose maps hold these lists (ML7). *)
 val lookup
-  :  parent:('m -> int option)
-  -> id:('m -> int)
+  :  parent:('m -> Z.t option)
+  -> id:('m -> Z.t)
   -> entries:('m -> 'a t)
   -> 'm list
   -> key
-  -> int
-  -> (int * 'a) option
+  -> Z.t
+  -> (Z.t * 'a) option

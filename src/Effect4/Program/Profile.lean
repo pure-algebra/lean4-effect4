@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Program.Native
+public import Effect4.Data.NatJson
 
 /-!
 # Program.Profile — the target profile: what is data, what is specification
@@ -91,10 +92,12 @@ adding a function-typed field here is the mistake this structure exists to preve
 structure ProfileData where
   /-- The profile's identity, as the pinned package spells it. -/
   name : String
-  /-- The upper bound of the scalar domain: the largest `Nat` this target represents exactly.
-  A request or answer above it is outside the profile, and its execution outcome is a
-  distinguished refusal rather than an ordinary failure (DI-56). -/
-  natBound : Nat
+  /-- The upper bound of the scalar domain: the largest `Nat` this target represents exactly, or
+  `none` when it represents every natural exactly, as the native profile does (owner decision D3,
+  2026-10-20). The one owner of a profile's bound: every reader asks `admitsNat`. A request or
+  answer above it is outside the profile, and its execution outcome is a distinguished refusal
+  rather than an ordinary failure (DI-56). -/
+  natBound : Option Nat
   /-- Which invocation forms each call class admits. -/
   admittedForms : List (CallClass × InvocationForms)
   /-- Row name to adapter identifier: what implements the row on this target. An identifier,
@@ -118,20 +121,33 @@ def formsOf (profile : ProfileData) (call : CallClass) : Option InvocationForms 
 def adapterOf (profile : ProfileData) (row : String) : Option String :=
   (profile.adapters.find? fun entry => entry.1 == row).map Prod.snd
 
-/-- The scalar refusal rule, as a decision on the value's magnitude. -/
-def admitsNat (profile : ProfileData) (n : Nat) : Bool := n ≤ profile.natBound
+/-- The scalar refusal rule, as a decision on the value's magnitude: inside the bound, and
+every natural when the profile has none. -/
+def admitsNat (profile : ProfileData) (n : Nat) : Bool :=
+  profile.natBound.all fun bound => decide (n ≤ bound)
 
 /-- The Boolean policy and the proposition the models guard on are the same thing. -/
 theorem admitsNat_iff (profile : ProfileData) (n : Nat) :
-    profile.admitsNat n = true ↔ n ≤ profile.natBound := by
-  simp [admitsNat]
+    profile.admitsNat n = true ↔ ∀ bound, profile.natBound = some bound → n ≤ bound := by
+  unfold admitsNat
+  cases profile.natBound with
+  | none => exact ⟨(fun _ _ h => nomatch h), fun _ => rfl⟩
+  | some bound =>
+    simp only [Option.all_some, decide_eq_true_eq, Option.some.injEq]
+    exact ⟨fun h _ hb => hb ▸ h, fun h => h bound rfl⟩
+
+/-- A magnitude the profile admits admits every smaller one. -/
+theorem admitsNat_of_le (profile : ProfileData) {m n : Nat} (h : profile.admitsNat n = true)
+    (hle : m ≤ n) : profile.admitsNat m = true :=
+  (admitsNat_iff profile m).mpr fun bound hb => Nat.le_trans hle ((admitsNat_iff profile n).mp h bound hb)
 
 end ProfileData
 
 /-- The first target profile: `effect@4.0.0-rc.112` on the pinned host (DB-09).
 
-`natBound` is JavaScript's `Number.MAX_SAFE_INTEGER`, `2^53 - 1`: above it the host's `+`
-stops being exact (`ts/prelude/prelude.ts`, `add`), which is the arithmetic DI-56 rules on.
+`natBound` is `some safeBound`, JavaScript's `Number.MAX_SAFE_INTEGER`, `2^53 - 1`: above it the
+host's `+` stops being exact (`ts/prelude/prelude.ts`, `add`), which is the arithmetic DI-56 rules
+on.
 
 `admittedForms` records the runner's invocation routes (DI-61): asynchronous built-ins
 and external rows admit both spellings, while synchronous rows retain `perform` only.
@@ -143,7 +159,7 @@ The shared production dispatcher and its independent route matrix establish this
 and `KvHandle` members). `imports` is that file's own import list. -/
 def rc112 : ProfileData where
   name := "effect@4.0.0-rc.112"
-  natBound := 2 ^ 53 - 1
+  natBound := some safeBound
   admittedForms :=
     [ (.row .sync, ⟨true, false⟩)
     , (.row .async, ⟨true, true⟩)
@@ -204,7 +220,7 @@ structure LawfulHostSpec {HostState HostVal : Type}
   /-- The scalar domain is the profile's: a natural number is represented only inside the
   bound. This is what makes `natBound` policy and not a comment (DI-56). -/
   rep_scalar_bound :
-    ∀ (n : Nat) (hostValue : HostVal), spec.Rep .nat (.nat n) hostValue → n ≤ profile.natBound
+    ∀ (n : Nat) (hostValue : HostVal), spec.Rep .nat (.nat n) hostValue → profile.admitsNat n = true
   /-- DB-07: a completed step retains a resulting state allowed by its specified work.
   Resource.Work fixes the charged state, so its rolling-back failure cannot satisfy this;
   Profile.Resource.rollback_not_lawful is the concrete counterexample. A generic arbitrary
@@ -287,7 +303,7 @@ def waitRow : Row where
 fixture fits on one line. rc.112's own bound is `rc112.natBound`. -/
 def profile : ProfileData where
   name := "hostspec-scalar-model"
-  natBound := 8
+  natBound := some 8
   admittedForms := [(.external, ⟨false, true⟩)]
   adapters := [("wait", "model.Host.wait")]
   imports := []
@@ -301,7 +317,7 @@ abbrev State := Unit
 
 /-- A number means a number, inside the bound. -/
 def Rep (ty : Ty) (value : Val) (hostValue : HostVal) : Prop :=
-  ty = .nat ∧ value = .nat hostValue ∧ hostValue ≤ profile.natBound
+  ty = .nat ∧ value = .nat hostValue ∧ profile.admitsNat hostValue = true
 
 /-- A pure row mints no handle, so a related store has an empty external allocation table. -/
 def RelatedState (stores : Stores) (_state : State) : Prop :=
@@ -329,7 +345,7 @@ def outcome? (row : Row) (request : Val) (_state : State) :
   match request with
   | .nat n =>
     if row = waitRow then
-      if n ≤ profile.natBound then some (.ofExit (.success (.nat n)))
+      if profile.admitsNat n then some (.ofExit (.success (.nat n)))
       else none
     else none
   | _ => none
@@ -361,14 +377,14 @@ theorem deterministic : DeterministicHostSpec spec where
 
 /-! The three facts the settlement asks a scalar row to show. -/
 
-theorem outcome_in_profile (n : Nat) (h : n ≤ profile.natBound) :
+theorem outcome_in_profile (n : Nat) (h : profile.admitsNat n = true) :
     outcome? waitRow (.nat n) () = some (.ofExit (.success (.nat n))) := if_pos h
 
-theorem outcome_out_of_profile (n : Nat) (h : ¬ n ≤ profile.natBound) :
+theorem outcome_out_of_profile (n : Nat) (h : ¬ profile.admitsNat n = true) :
     outcome? waitRow (.nat n) () = none := if_neg h
 
 /-- A request inside the bound is answered by echoing it. -/
-theorem in_profile (n : Nat) (h : n ≤ profile.natBound) :
+theorem in_profile (n : Nat) (h : profile.admitsNat n = true) :
     spec.RowStep waitRow (.nat n) () (.ofExit (.success (.nat n))) () := by
   show step? waitRow (.nat n) () = _
   unfold step?
@@ -377,7 +393,7 @@ theorem in_profile (n : Nat) (h : n ≤ profile.natBound) :
 
 /-- Outside-profile input has no admitted semantic completion. The boundary classifies
 it as outsideProfile, independently of valid calls whose reply is currently pending. -/
-theorem no_step_out_of_profile (n : Nat) (h : ¬ n ≤ profile.natBound) :
+theorem no_step_out_of_profile (n : Nat) (h : ¬ profile.admitsNat n = true) :
     ¬ ∃ completion state', spec.RowStep waitRow (.nat n) () completion state' := by
   rintro ⟨completion, state', hstep⟩
   change graphOf (outcome? waitRow (.nat n) ()) (after waitRow (.nat n) ()) =
@@ -452,7 +468,7 @@ def releaseRow : Row where
 
 def profile : ProfileData where
   name := "hostspec-resource-model"
-  natBound := 8
+  natBound := some 8
   admittedForms := [(.external, ⟨false, true⟩)]
   adapters :=
     [ ("acquire", "model.Host.acquire")
@@ -503,7 +519,7 @@ deriving DecidableEq, Repr
 /-- A number means a number inside the bound; a resource means the external handle at its
 index; nothing means `unit`. Liveness is deliberately absent — see the module header. -/
 def Rep (ty : Ty) (value : Val) : HostVal → Prop
-  | .num n => ty = .nat ∧ value = .nat n ∧ n ≤ profile.natBound
+  | .num n => ty = .nat ∧ value = .nat n ∧ profile.admitsNat n = true
   | .res index => ty = .handle target ∧ value = Value.external index
   | .unit => ty = .unit ∧ value = .unit
 

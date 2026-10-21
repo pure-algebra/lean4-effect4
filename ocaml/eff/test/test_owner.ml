@@ -44,7 +44,7 @@ and size_stmt : 'op. 'op Stmt.t -> int = function
   | Stmt.Ret _ | Stmt.BreakLoop -> 1
 ;;
 
-let nat n = Term.Lit (Lit.Nat n)
+let nat n = Term.Lit (Lit.Nat (Z.of_int n))
 let body () : 'op Stmts.t = Stmts.Cons (Stmt.Ret (nat 1), Stmts.Nil)
 
 let program op : 'op Eff.t =
@@ -67,11 +67,12 @@ let () =
     (match Eff_codec.decode_program bytes with
      | Some p -> Eff_codec.encode_program p = bytes
      | None -> false);
-  let key = { ServiceKey.name = 1; service = 2 } in
+  let key = { ServiceKey.name = Z.of_int 1; service = Z.of_int 2 } in
   check
     "O3 a record of the owner by its fields reads back"
     (match Eff_codec.decode_program (Eff_codec.encode_program (Eff.Service key)) with
-     | Some (Eff.Service k) -> k.ServiceKey.name = 1 && k.ServiceKey.service = 2
+     | Some (Eff.Service k) ->
+       Z.equal k.ServiceKey.name (Z.of_int 1) && Z.equal k.ServiceKey.service (Z.of_int 2)
      | _ -> false);
   if !failures > 0 then exit 1
 ;;

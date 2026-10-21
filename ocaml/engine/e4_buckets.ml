@@ -23,23 +23,24 @@ module type S = sig
   val armed : 'a t -> bool
   val arm : 'a t -> 'a t
   val disarm : 'a t -> 'a t
-  val enqueue : 'a t -> priority:int -> 'a -> 'a t
+  val enqueue : 'a t -> priority:Z.t -> 'a -> 'a t
   val drain : 'a t -> 'a list * 'a t
-  val length : 'a t -> int
-  val priorities : 'a t -> int list
-  val to_list : 'a t -> (int * 'a list) list
-  val of_list : armed:bool -> (int * 'a list) list -> 'a t
+  val length : 'a t -> Z.t
+  val priorities : 'a t -> Z.t list
+  val to_list : 'a t -> (Z.t * 'a list) list
+  val of_list : armed:bool -> (Z.t * 'a list) list -> 'a t
 end
 
 (* The one place a priority is refused, shared by both carriers. `Dispatcher.enqueue` takes a
    `Nat` (Dispatcher.enqueue (src/Effect4/Machine/Fibers.lean)), so a negative priority cannot arise from the generated code; it is
    a violated precondition, hence an exception and not a `result` (Mirage's rule, survey §7). *)
-let check_priority p = if p < 0 then invalid_arg "E4_buckets: negative priority"
+let check_priority p = if Z.sign p < 0 then invalid_arg "E4_buckets: negative priority"
 
-let rec check_ascending : (int * _) list -> unit = function
+let rec check_ascending : (Z.t * _) list -> unit = function
   | [] | [ _ ] -> ()
   | (p, _) :: ((q, _) :: _ as rest) ->
-    if p >= q then invalid_arg "E4_buckets.of_list: priorities are not strictly ascending";
+    if Z.geq p q
+    then invalid_arg "E4_buckets.of_list: priorities are not strictly ascending";
     check_ascending rest
 ;;
 
@@ -48,7 +49,7 @@ let rec check_ascending : (int * _) list -> unit = function
 module Assoc : S = struct
   (* A bucket: its priority and its deque as a front/back pair. Contents = front @ rev back. *)
   type 'a bucket =
-    { priority : int
+    { priority : Z.t
     ; front : 'a list
     ; back : 'a list
     }
@@ -77,9 +78,9 @@ module Assoc : S = struct
   let rec insert p x = function
     | [] -> [ { priority = p; front = [ x ]; back = [] } ]
     | b :: rest ->
-      if b.priority = p
+      if Z.equal b.priority p
       then { b with back = x :: b.back } :: rest
-      else if p < b.priority
+      else if Z.lt p b.priority
       then { priority = p; front = [ x ]; back = [] } :: b :: rest
       else b :: insert p x rest
   ;;
@@ -100,7 +101,11 @@ module Assoc : S = struct
   ;;
 
   let length t =
-    List.fold_left (fun n b -> n + List.length b.front + List.length b.back) 0 t.buckets
+    Z.of_int
+      (List.fold_left
+         (fun n b -> n + List.length b.front + List.length b.back)
+         0
+         t.buckets)
   ;;
 
   let priorities t = List.map (fun b -> b.priority) t.buckets
@@ -118,23 +123,23 @@ end
 (* ============================================================ the tripwire carrier *)
 
 module Map_variant : S = struct
-  module IMap = Map.Make (Int)
+  module ZMap = Map.Make (Z)
 
   (* The same deque, under a balanced tree instead of an assoc list. R-A3-4: measured slower at
      every priority count >= 4 and every drain depth >= 8 (design §6.2), kept behind the same
      signature so the switch is one line if a program ever uses many priorities. *)
   type 'a t =
-    { buckets : ('a list * 'a list) IMap.t
+    { buckets : ('a list * 'a list) ZMap.t
     ; is_armed : bool
     }
 
-  let empty = { buckets = IMap.empty; is_armed = false }
+  let empty = { buckets = ZMap.empty; is_armed = false }
   let armed t = t.is_armed
   let arm t = if t.is_armed then t else { t with is_armed = true }
   let disarm t = if t.is_armed then { t with is_armed = false } else t
 
   let is_empty t =
-    IMap.for_all
+    ZMap.for_all
       (fun _ q ->
          match q with
          | [], [] -> true
@@ -145,7 +150,7 @@ module Map_variant : S = struct
   let enqueue t ~priority x =
     check_priority priority;
     let buckets =
-      IMap.update
+      ZMap.update
         priority
         (function
           | None -> Some ([ x ], [])
@@ -156,9 +161,9 @@ module Map_variant : S = struct
   ;;
 
   let drain t =
-    (* `IMap.fold` visits in increasing key order, so this list is descending; folding it left
+    (* `ZMap.fold` visits in increasing key order, so this list is descending; folding it left
        while prepending each bucket's contents rebuilds the ascending concatenation. *)
-    let descending = IMap.fold (fun _ q acc -> q :: acc) t.buckets [] in
+    let descending = ZMap.fold (fun _ q acc -> q :: acc) t.buckets [] in
     let tasks =
       List.fold_left (fun acc (f, b) -> f @ List.rev_append b acc) [] descending
     in
@@ -166,19 +171,19 @@ module Map_variant : S = struct
   ;;
 
   let length t =
-    IMap.fold (fun _ (f, b) n -> n + List.length f + List.length b) t.buckets 0
+    Z.of_int (ZMap.fold (fun _ (f, b) n -> n + List.length f + List.length b) t.buckets 0)
   ;;
 
-  let priorities t = List.map fst (IMap.bindings t.buckets)
+  let priorities t = List.map fst (ZMap.bindings t.buckets)
 
   let to_list t =
-    List.map (fun (p, (f, b)) -> p, f @ List.rev b) (IMap.bindings t.buckets)
+    List.map (fun (p, (f, b)) -> p, f @ List.rev b) (ZMap.bindings t.buckets)
   ;;
 
   let of_list ~armed l =
     List.iter (fun (p, _) -> check_priority p) l;
     check_ascending l;
-    { buckets = List.fold_left (fun m (p, xs) -> IMap.add p (xs, []) m) IMap.empty l
+    { buckets = List.fold_left (fun m (p, xs) -> ZMap.add p (xs, []) m) ZMap.empty l
     ; is_armed = armed
     }
   ;;

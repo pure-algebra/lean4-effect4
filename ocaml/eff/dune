@@ -2,9 +2,10 @@
 ; come from the LCNF route (`make gen-lcnf`, ocaml/gen/roots.json), eff_ctors, eff_layout,
 ; eff_subterm and eff_native from `make gen-eff` (src/OCaml5/Tools/EffGen.lean). eff_frame and
 ; eff_val are the hand-written framing kernel, and eff_codec composes it with eff_image: a
-; program's canonical bytes by Lean's exact embedding. Standard library only. A carrier's JSON is
+; program's canonical bytes by Lean's exact embedding. Zarith and the standard library. A carrier's JSON is
 ; Lean's, lowered into effect4_gen (Store.ShapeJson); this library holds none. The route's join
-; points are `let[@local always]`, so warning 55 is an error here as in gen/ (gen/dune).
+; points are `let[@local always]`, so warning 55 is an error here as in gen/ (gen/dune). A Lean
+; natural is Zarith's `Z.t` (M4), so the library links Zarith.
 
 (library
  (name effect4_eff)
@@ -20,6 +21,7 @@
   eff_codec
   eff_subterm
   eff_native)
+ (libraries zarith)
  (flags
   (:standard -w -4-9-39-40-41-42-44-45-70 -w @55)))
 

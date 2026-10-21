@@ -32,7 +32,7 @@
    It is test machinery: it left the installed effect4_engine for the test library
    e4_reference on 2026-10-18 (the hygiene lane's H3).
 
-   Depends on: E4_engine, E4_clock, effect4_eff (Eff_types), stdlib.
+   Depends on: E4_engine, Lcnf_crossing, effect4_eff (Eff_types), stdlib.
 
    Behaviours:
    D1  {!compare} is reflexive-complete: `compare p p = []` for every projection, and
@@ -115,7 +115,7 @@ module type SIDE = sig
   val load : Eff_codec.program -> fuel:int -> t
   val step : t -> decision -> t
 
-  (** @raise E4_clock.Profile_refusal for an Outside_profile host answer. *)
+  (** @raise Lcnf_crossing.Refused for an Outside_profile host answer. *)
   val project : t -> projection
 
   (** The projection at every position of `replay_steps`: `|tape| + 1` of them. *)

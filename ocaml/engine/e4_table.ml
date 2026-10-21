@@ -1,6 +1,6 @@
-(* E4_table — the persistent int-keyed table.  The property list is in e4_table.mli. *)
+(* E4_table — the persistent table keyed by naturals.  The property list is in e4_table.mli. *)
 
-module IMap = Map.Make (Int)
+module ZMap = Map.Make (Z)
 
 (* The threshold, MEASURED in test/bench_carriers.ml (crossover section, 10 000 ops per cell,
    best of 7, native, OCaml 5.1.1).  A1 §7 R6 predicted an ascending assoc list would beat
@@ -21,8 +21,8 @@ module IMap = Map.Make (Int)
 let small_max = 0
 
 type 'a rep =
-  | Small of (int * 'a) list (* ascending by key, no duplicate key, length <= small_max *)
-  | Big of 'a IMap.t (* cardinal > small_max *)
+  | Small of (Z.t * 'a) list (* ascending by key, no duplicate key, length <= small_max *)
+  | Big of 'a ZMap.t (* cardinal > small_max *)
 
 (* The cardinal is carried so that `cardinal` is O(1) (the ref heap allocates at it). *)
 type 'a t =
@@ -32,7 +32,7 @@ type 'a t =
 
 let empty : 'a t = { n = 0; rep = Small [] }
 let is_empty (t : 'a t) : bool = t.n = 0
-let cardinal (t : 'a t) : int = t.n
+let cardinal (t : 'a t) : Z.t = Z.of_int t.n
 
 let is_small (t : 'a t) : bool =
   match t.rep with
@@ -40,53 +40,55 @@ let is_small (t : 'a t) : bool =
   | Big _ -> false
 ;;
 
-let big_of_small (l : (int * 'a) list) : 'a IMap.t =
-  List.fold_left (fun m (k, v) -> IMap.add k v m) IMap.empty l
+let big_of_small (l : (Z.t * 'a) list) : 'a ZMap.t =
+  List.fold_left (fun m (k, v) -> ZMap.add k v m) ZMap.empty l
 ;;
 
 (* ------------------------------------------------------------------ reads *)
 
-let rec find_small (k : int) (l : (int * 'a) list) : 'a option =
+let rec find_small (k : Z.t) (l : (Z.t * 'a) list) : 'a option =
   match l with
   | [] -> None
-  | (k', v) :: r -> if k' = k then Some v else if k' > k then None else find_small k r
+  | (k', v) :: r ->
+    if Z.equal k' k then Some v else if Z.gt k' k then None else find_small k r
 ;;
 
-let find_opt (k : int) (t : 'a t) : 'a option =
+let find_opt (k : Z.t) (t : 'a t) : 'a option =
   match t.rep with
   | Small l -> find_small k l
-  | Big m -> IMap.find_opt k m
+  | Big m -> ZMap.find_opt k m
 ;;
 
-let find_opt' (t : 'a t) (k : int) : 'a option = find_opt k t
+let find_opt' (t : 'a t) (k : Z.t) : 'a option = find_opt k t
 
 (* Separate from find_small so that no `option` is ever compared structurally: the values
    are abstract to this module (ocaml/STANDARDS.md §4). *)
-let rec mem_small (k : int) (l : (int * 'a) list) : bool =
+let rec mem_small (k : Z.t) (l : (Z.t * 'a) list) : bool =
   match l with
   | [] -> false
-  | (k', _) :: r -> if k' = k then true else if k' > k then false else mem_small k r
+  | (k', _) :: r ->
+    if Z.equal k' k then true else if Z.gt k' k then false else mem_small k r
 ;;
 
-let mem (k : int) (t : 'a t) : bool =
+let mem (k : Z.t) (t : 'a t) : bool =
   match t.rep with
   | Small l -> mem_small k l
-  | Big m -> IMap.mem k m
+  | Big m -> ZMap.mem k m
 ;;
 
 (* ------------------------------------------------------------------ writes *)
 
 (* Replace-if-present, ascending list.  `None` means "absent", so the caller can return the
    argument PHYSICALLY (T1). *)
-let rec set_small (k : int) (v : 'a) (acc : (int * 'a) list) (l : (int * 'a) list)
-  : (int * 'a) list option
+let rec set_small (k : Z.t) (v : 'a) (acc : (Z.t * 'a) list) (l : (Z.t * 'a) list)
+  : (Z.t * 'a) list option
   =
   match l with
   | [] -> None
   | (k', v') :: r ->
-    if k' = k
+    if Z.equal k' k
     then Some (List.rev_append acc ((k, v) :: r))
-    else if k' > k
+    else if Z.gt k' k
     then None
     else set_small k v ((k', v') :: acc) r
 ;;
@@ -94,7 +96,7 @@ let rec set_small (k : int) (v : 'a) (acc : (int * 'a) list) (l : (int * 'a) lis
 (* ONE walk, not `mem` then `add`: Map.update rebuilds nothing when the callback answers
    None, and the stdlib's `if l == ll then m` short-circuit means an absent key gives back
    the SAME map physically — which is exactly T1. *)
-let set (k : int) (v : 'a) (t : 'a t) : 'a t =
+let set (k : Z.t) (v : 'a) (t : 'a t) : 'a t =
   match t.rep with
   | Small l ->
     (match set_small k v [] l with
@@ -102,7 +104,7 @@ let set (k : int) (v : 'a) (t : 'a t) : 'a t =
      | Some l' -> { t with rep = Small l' })
   | Big m ->
     let m' =
-      IMap.update
+      ZMap.update
         k
         (function
           | None -> None
@@ -113,20 +115,20 @@ let set (k : int) (v : 'a) (t : 'a t) : 'a t =
 ;;
 
 (* Insert-or-replace, ascending list; the flag says whether the key was fresh. *)
-let rec add_small (k : int) (v : 'a) (acc : (int * 'a) list) (l : (int * 'a) list)
-  : (int * 'a) list * bool
+let rec add_small (k : Z.t) (v : 'a) (acc : (Z.t * 'a) list) (l : (Z.t * 'a) list)
+  : (Z.t * 'a) list * bool
   =
   match l with
   | [] -> List.rev_append acc [ k, v ], true
   | (k', v') :: r ->
-    if k' = k
+    if Z.equal k' k
     then List.rev_append acc ((k, v) :: r), false
-    else if k' > k
+    else if Z.gt k' k
     then List.rev_append acc ((k, v) :: (k', v') :: r), true
     else add_small k v ((k', v') :: acc) r
 ;;
 
-let add (k : int) (v : 'a) (t : 'a t) : 'a t =
+let add (k : Z.t) (v : 'a) (t : 'a t) : 'a t =
   match t.rep with
   | Small l ->
     let l', fresh = add_small k v [] l in
@@ -139,7 +141,7 @@ let add (k : int) (v : 'a) (t : 'a t) : 'a t =
          machine value (brief §2.3). *)
     let fresh = ref true in
     let m' =
-      IMap.update
+      ZMap.update
         k
         (function
           | None -> Some v
@@ -151,50 +153,50 @@ let add (k : int) (v : 'a) (t : 'a t) : 'a t =
     { n = (if !fresh then t.n + 1 else t.n); rep = Big m' }
 ;;
 
-let remove (k : int) (t : 'a t) : 'a t =
+let remove (k : Z.t) (t : 'a t) : 'a t =
   match t.rep with
   | Small l ->
     if not (mem_small k l)
     then t
-    else { n = t.n - 1; rep = Small (List.filter (fun (k', _) -> k' <> k) l) }
+    else { n = t.n - 1; rep = Small (List.filter (fun (k', _) -> not (Z.equal k' k)) l) }
   | Big m ->
-    if not (IMap.mem k m)
+    if not (ZMap.mem k m)
     then t
     else (
-      let m' = IMap.remove k m in
+      let m' = ZMap.remove k m in
       let n' = t.n - 1 in
       if n' <= small_max
-      then { n = n'; rep = Small (IMap.bindings m') }
+      then { n = n'; rep = Small (ZMap.bindings m') }
       else { n = n'; rep = Big m' })
 ;;
 
 let map (f : 'a -> 'a) (t : 'a t) : 'a t =
   match t.rep with
   | Small l -> { t with rep = Small (List.map (fun (k, v) -> k, f v) l) }
-  | Big m -> { t with rep = Big (IMap.map f m) }
+  | Big m -> { t with rep = Big (ZMap.map f m) }
 ;;
 
 (* ------------------------------------------------------------- enumeration *)
 
-let bindings (t : 'a t) : (int * 'a) list =
+let bindings (t : 'a t) : (Z.t * 'a) list =
   match t.rep with
   | Small l -> l
-  | Big m -> IMap.bindings m
+  | Big m -> ZMap.bindings m
 ;;
 
-let fold (f : int -> 'a -> 'b -> 'b) (t : 'a t) (init : 'b) : 'b =
+let fold (f : Z.t -> 'a -> 'b -> 'b) (t : 'a t) (init : 'b) : 'b =
   match t.rep with
   | Small l -> List.fold_left (fun acc (k, v) -> f k v acc) init l
-  | Big m -> IMap.fold f m init
+  | Big m -> ZMap.fold f m init
 ;;
 
-let for_all (f : int -> 'a -> bool) (t : 'a t) : bool =
+let for_all (f : Z.t -> 'a -> bool) (t : 'a t) : bool =
   match t.rep with
   | Small l -> List.for_all (fun (k, v) -> f k v) l
-  | Big m -> IMap.for_all f m
+  | Big m -> ZMap.for_all f m
 ;;
 
-let filter_map (f : int -> 'a -> 'b option) (t : 'a t) : 'b list =
+let filter_map (f : Z.t -> 'a -> 'b option) (t : 'a t) : 'b list =
   List.rev
     (fold
        (fun k v acc ->
@@ -207,8 +209,8 @@ let filter_map (f : int -> 'a -> 'b option) (t : 'a t) : 'b list =
 
 let to_list (t : 'a t) : 'a list = List.map snd (bindings t)
 
-let of_list (l : (int * 'a) list) : 'a t =
+let of_list (l : (Z.t * 'a) list) : 'a t =
   List.fold_left (fun t (k, v) -> add k v t) empty l
 ;;
 
-let singleton (k : int) (v : 'a) : 'a t = add k v empty
+let singleton (k : Z.t) (v : 'a) : 'a t = add k v empty

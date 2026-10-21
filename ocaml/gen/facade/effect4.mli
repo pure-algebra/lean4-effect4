@@ -12,14 +12,14 @@ module Api :
       end
     val replay :
       Eff_types.NativeOp.t Eff_types.Eff.t ->
-      int ->
+      Z.t ->
       (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-       Eff_types.Defect.t, int, unit)
+       Eff_types.Defect.t, Z.t, unit)
       Api_gen.run_decision list ->
-      Eff_types.Row.t list -> int -> Api_gen.inspection
+      Eff_types.Row.t list -> Z.t -> Api_gen.inspection
     val run :
       Eff_types.NativeOp.t Eff_types.Eff.t ->
-      int -> Eff_types.Row.t list -> int -> Api_gen.inspection
+      Z.t -> Eff_types.Row.t list -> Z.t -> Api_gen.inspection
   end
 module Cause = Eff_types.Cause
 module Exit = Eff_types.Exit
@@ -49,12 +49,12 @@ module Machine :
 module NatJson :
   sig
     val parse :
-      int list ->
-      (Api_gen.nat_json, (int, Api_gen.text_reason) Eff_types.Located.t)
+      Z.t list ->
+      (Api_gen.nat_json, (Z.t, Api_gen.text_reason) Eff_types.Located.t)
       result
     val refusal_text :
-      (int, Api_gen.text_reason) Eff_types.Located.t -> string
-    val render : Api_gen.nat_json -> int list
+      (Z.t, Api_gen.text_reason) Eff_types.Located.t -> string
+    val render : Api_gen.nat_json -> Z.t list
   end
 module Program :
   sig
@@ -66,56 +66,56 @@ module Program :
             val invoke :
               string ->
               (Api_gen.env ->
-               int list ->
+               Z.t list ->
                (Eff_types.Term.t,
-                (int list, Api_gen.reason) Eff_types.Located.t)
+                (Z.t list, Api_gen.reason) Eff_types.Located.t)
                result)
               list ->
               Api_gen.env ->
-              int list ->
+              Z.t list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               (int list, Api_gen.reason) Eff_types.Located.t)
+               (Z.t list, Api_gen.reason) Eff_types.Located.t)
               result
           end
         module Ref :
           sig
             val get :
               (Api_gen.env ->
-               int list ->
+               Z.t list ->
                (Eff_types.Term.t,
-                (int list, Api_gen.reason) Eff_types.Located.t)
+                (Z.t list, Api_gen.reason) Eff_types.Located.t)
                result) ->
               Api_gen.env ->
-              int list ->
+              Z.t list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               (int list, Api_gen.reason) Eff_types.Located.t)
+               (Z.t list, Api_gen.reason) Eff_types.Located.t)
               result
             val make :
               (Api_gen.env ->
-               int list ->
+               Z.t list ->
                (Eff_types.Term.t,
-                (int list, Api_gen.reason) Eff_types.Located.t)
+                (Z.t list, Api_gen.reason) Eff_types.Located.t)
                result) ->
               Api_gen.env ->
-              int list ->
+              Z.t list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               (int list, Api_gen.reason) Eff_types.Located.t)
+               (Z.t list, Api_gen.reason) Eff_types.Located.t)
               result
             val set :
               (Api_gen.env ->
-               int list ->
+               Z.t list ->
                (Eff_types.Term.t,
-                (int list, Api_gen.reason) Eff_types.Located.t)
+                (Z.t list, Api_gen.reason) Eff_types.Located.t)
                result) ->
               (Api_gen.env ->
-               int list ->
+               Z.t list ->
                (Eff_types.Term.t,
-                (int list, Api_gen.reason) Eff_types.Located.t)
+                (Z.t list, Api_gen.reason) Eff_types.Located.t)
                result) ->
               Api_gen.env ->
-              int list ->
+              Z.t list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               (int list, Api_gen.reason) Eff_types.Located.t)
+               (Z.t list, Api_gen.reason) Eff_types.Located.t)
               result
           end
         module Row :
@@ -123,14 +123,14 @@ module Program :
             val call_named :
               string ->
               (Api_gen.env ->
-               int list ->
+               Z.t list ->
                (Eff_types.Term.t,
-                (int list, Api_gen.reason) Eff_types.Located.t)
+                (Z.t list, Api_gen.reason) Eff_types.Located.t)
                result) ->
               Api_gen.env ->
-              int list ->
+              Z.t list ->
               (Eff_types.NativeOp.t Eff_types.Eff.t,
-               (int list, Api_gen.reason) Eff_types.Located.t)
+               (Z.t list, Api_gen.reason) Eff_types.Located.t)
               result
             val host :
               string ->
@@ -139,277 +139,277 @@ module Program :
           end
         val and_then :
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('a Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val app :
           string ->
           (Api_gen.env ->
-           int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+           Z.t list ->
+           (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result)
           list ->
           Api_gen.env ->
-          int list ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+          Z.t list ->
+          (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val bind_with :
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
-            int list ->
+            Z.t list ->
             (Eff_types.Term.t,
-             (int list, Api_gen.reason) Eff_types.Located.t)
+             (Z.t list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('a Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val bool :
           bool ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+          (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val catch_with :
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
-            int list ->
+            Z.t list ->
             (Eff_types.Term.t,
-             (int list, Api_gen.reason) Eff_types.Located.t)
+             (Z.t list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('a Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val elaborate_at :
           Eff_types.Row.t list ->
           Eff_types.NativeOp.t Api_gen.def_src list ->
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            (Eff_types.NativeOp.t Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           (Eff_types.NativeOp.t Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val exit_ :
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('a Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val fail :
           (Api_gen.env ->
-           int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+           Z.t list ->
+           (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('a Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val if_else :
           'a ->
           (Api_gen.env ->
-           int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+           Z.t list ->
+           (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('b Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('b Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('b Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val loop_with :
           (Api_gen.env ->
-           int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+           Z.t list ->
+           (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
-            int list ->
+            Z.t list ->
             (Eff_types.Term.t,
-             (int list, Api_gen.reason) Eff_types.Located.t)
+             (Z.t list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
-           int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+           Z.t list ->
+           (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
-            int list ->
+            Z.t list ->
             (Eff_types.Term.t,
-             (int list, Api_gen.reason) Eff_types.Located.t)
+             (Z.t list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
-           int list ->
+           Z.t list ->
            (Eff_types.NativeOp.t Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
-            int list ->
+            Z.t list ->
             (Eff_types.Term.t,
-             (int list, Api_gen.reason) Eff_types.Located.t)
+             (Z.t list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            (Api_gen.env ->
-            int list ->
+            Z.t list ->
             (Eff_types.Term.t,
-             (int list, Api_gen.reason) Eff_types.Located.t)
+             (Z.t list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
-           int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+           Z.t list ->
+           (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
-            int list ->
+            Z.t list ->
             (Eff_types.Term.t,
-             (int list, Api_gen.reason) Eff_types.Located.t)
+             (Z.t list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
-           int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+           Z.t list ->
+           (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           (Eff_types.NativeOp.t Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val nat :
-          int ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+          Z.t ->
+          (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val on_exit_with :
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
-            int list ->
+            Z.t list ->
             (Eff_types.Term.t,
-             (int list, Api_gen.reason) Eff_types.Located.t)
+             (Z.t list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('a Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val select_option_with :
           (Api_gen.env ->
-           int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+           Z.t list ->
+           (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           ((Api_gen.env ->
-            int list ->
+            Z.t list ->
             (Eff_types.Term.t,
-             (int list, Api_gen.reason) Eff_types.Located.t)
+             (Z.t list, Api_gen.reason) Eff_types.Located.t)
             result) ->
            Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('a Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val str :
           string ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+          (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val succeed :
           (Api_gen.env ->
-           int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+           Z.t list ->
+           (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('a Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val suspend :
           (Api_gen.env ->
-           int list ->
+           Z.t list ->
            ('a Eff_types.Eff.t,
-            (int list, Api_gen.reason) Eff_types.Located.t)
+            (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('a Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val sync :
           (Api_gen.env ->
-           int list ->
-           (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+           Z.t list ->
+           (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
            result) ->
           Api_gen.env ->
-          int list ->
+          Z.t list ->
           ('a Eff_types.Eff.t,
-           (int list, Api_gen.reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val unit :
           Api_gen.env ->
-          int list ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+          Z.t list ->
+          (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
         val var :
           string ->
           Api_gen.env ->
-          int list ->
-          (Eff_types.Term.t, (int list, Api_gen.reason) Eff_types.Located.t)
+          Z.t list ->
+          (Eff_types.Term.t, (Z.t list, Api_gen.reason) Eff_types.Located.t)
           result
       end
     module CauseTerm = Eff_types.CauseTerm
@@ -468,54 +468,54 @@ module Program :
         val admit :
           Api_gen.prepared ->
           (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-           Eff_types.Err.t, Eff_types.Defect.t, int, unit, Api_gen.ctx,
+           Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit, Api_gen.ctx,
            Api_gen.stores,
            (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-            Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+            Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
            Api_gen.prim,
            (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-            Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+            Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
            Api_gen.frame_fiber,
            (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-            Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+            Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
            Api_gen.frame_event)
           Api_gen.run_machine ->
           (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-           Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+           Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
           Api_gen.run_decision -> Api_gen.refusal option
         val make :
           Eff_types.NativeOp.t Eff_types.Eff.t ->
           Eff_types.Row.t list -> Api_gen.prepared
         val step :
           Api_gen.prepared ->
-          int ->
+          Z.t ->
           (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-           Eff_types.Err.t, Eff_types.Defect.t, int, unit, Api_gen.ctx,
+           Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit, Api_gen.ctx,
            Api_gen.stores,
            (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-            Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+            Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
            Api_gen.prim,
            (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-            Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+            Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
            Api_gen.frame_fiber,
            (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-            Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+            Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
            Api_gen.frame_event)
           Api_gen.run_machine ->
           (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-           Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+           Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
           Api_gen.run_decision ->
           (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-           Eff_types.Err.t, Eff_types.Defect.t, int, unit, Api_gen.ctx,
+           Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit, Api_gen.ctx,
            Api_gen.stores,
            (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-            Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+            Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
            Api_gen.prim,
            (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-            Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+            Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
            Api_gen.frame_fiber,
            (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-            Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+            Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
            Api_gen.frame_event)
           Api_gen.run_machine * bool
       end
@@ -533,19 +533,19 @@ module Program :
     val admit :
       Api_gen.sig_app ->
       (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-       Eff_types.Defect.t, int, unit, Api_gen.ctx, Api_gen.stores,
+       Eff_types.Defect.t, Z.t, unit, Api_gen.ctx, Api_gen.stores,
        (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-        Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+        Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
        Api_gen.prim,
        (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-        Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+        Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
        Api_gen.frame_fiber,
        (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t,
-        Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+        Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
        Api_gen.frame_event)
       Api_gen.run_machine ->
       (Api_gen.eff_name, Api_gen.eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-       Eff_types.Defect.t, int, unit)
+       Eff_types.Defect.t, Z.t, unit)
       Api_gen.run_decision -> Api_gen.refusal option
   end
 module Reason = Eff_types.Reason
@@ -565,22 +565,22 @@ module Run :
           Api_gen.sig_app ->
           Eff_types.NativeOp.t Eff_types.Eff.t ->
           (Eff_types.EffTy.t,
-           (int list, Api_gen.type_reason) Eff_types.Located.t)
+           (Z.t list, Api_gen.type_reason) Eff_types.Located.t)
           result
         val eff_ty_shape : Api_gen.shape_doc
         val eff_ty_to_val : Eff_types.EffTy.t -> Eff_types.Val.t
         val exit_of_val :
           Eff_types.Val.t ->
-          (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+          (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
           Eff_types.Exit.t option
         val exit_shape : Api_gen.shape_doc
         val exit_to_val :
-          (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+          (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
           Eff_types.Exit.t -> Eff_types.Val.t
         val explore :
           Api_gen.sig_app ->
-          int ->
-          int -> Eff_types.NativeOp.t Eff_types.Eff.t -> Api_gen.path list
+          Z.t ->
+          Z.t -> Eff_types.NativeOp.t Eff_types.Eff.t -> Api_gen.path list
         val program_of_val :
           Eff_types.Val.t -> Eff_types.NativeOp.t Eff_types.Eff.t option
         val program_shape : Api_gen.shape_doc
@@ -588,24 +588,24 @@ module Run :
           Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t
         val refusal_shape : Api_gen.shape_doc
         val refusal_to_val :
-          (int list, Api_gen.type_reason) Eff_types.Located.t ->
+          (Z.t list, Api_gen.type_reason) Eff_types.Located.t ->
           Eff_types.Val.t
         val replies :
           Api_gen.sig_app ->
-          int ->
-          (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+          Z.t ->
+          (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
           Eff_types.Exit.t list
         val reply_fault :
           Api_gen.sig_app ->
-          int ->
-          (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+          Z.t ->
+          (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
           Eff_types.Exit.t -> Api_gen.reply_fault option
         val rows_of_val : Eff_types.Val.t -> Eff_types.Row.t list option
         val rows_shape : Api_gen.shape_doc
         val rows_to_val : Eff_types.Row.t list -> Eff_types.Val.t
         val samples :
           (string * Eff_types.Ty.t) list ->
-          int -> Eff_types.Ty.t -> Eff_types.Val.t list
+          Z.t -> Eff_types.Ty.t -> Eff_types.Val.t list
         val services_of_val :
           Eff_types.Val.t ->
           (Eff_types.ServiceKey.t * Eff_types.Ty.t) list option
@@ -625,43 +625,43 @@ module Run :
                Eff_types.Val.t ->
                'a ->
                ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, 
-                 int, unit)
+                 Z.t, unit)
                 Eff_types.Completion.t * 'b)
                option) ->
-              int ->
+              Z.t ->
               Eff_types.Val.t ->
               'a ->
               ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, 
-                int, unit)
+                Z.t, unit)
                Eff_types.Exit.t * 'b)
               option
             val silent :
-              int ->
+              Z.t ->
               Eff_types.Val.t ->
               unit ->
               ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, 
-                int, unit)
+                Z.t, unit)
                Eff_types.Exit.t * unit)
               option
             val tape :
               (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, 
-               int, unit)
+               Z.t, unit)
               Eff_types.Exit.t list ->
               ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, 
-                int, unit)
+                Z.t, unit)
                Eff_types.Exit.t *
                (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, 
-                int, unit)
+                Z.t, unit)
                Eff_types.Exit.t list)
               option
           end
         val frames :
           Eff_types.Row.t list ->
-          int ->
-          (int ->
+          Z.t ->
+          (Z.t ->
            Eff_types.Val.t ->
            'a ->
-           ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+           ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
             Eff_types.Exit.t * 'a)
            option) ->
           'a ->
@@ -669,41 +669,41 @@ module Run :
           'a Api_gen.effect4_run_tree_outcome list
         val of_program :
           Eff_types.Row.t list ->
-          int -> Eff_types.NativeOp.t Eff_types.Eff.t -> Api_gen.tree
+          Z.t -> Eff_types.NativeOp.t Eff_types.Eff.t -> Api_gen.tree
         val outside_at :
-          Eff_types.NativeOp.t Eff_types.Eff.t -> int list option
+          Eff_types.NativeOp.t Eff_types.Eff.t -> Z.t list option
         val probe :
           Eff_types.Row.t list ->
-          int ->
-          (int ->
+          Z.t ->
+          (Z.t ->
            Eff_types.Val.t ->
            'a ->
-           ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+           ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
             Eff_types.Exit.t * 'a)
            option) ->
           'a ->
           Eff_types.NativeOp.t Eff_types.Eff.t ->
           'a Api_gen.effect4_run_tree_outcome
         val run :
-          (int ->
+          (Z.t ->
            Eff_types.Val.t ->
            'a ->
-           ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+           ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
             Eff_types.Exit.t * 'a)
            option) ->
           Api_gen.tree -> 'a -> 'a Api_gen.effect4_run_tree_outcome
         val settle :
           Eff_types.Row.t list ->
-          int ->
-          (int ->
+          Z.t ->
+          (Z.t ->
            Eff_types.Val.t ->
            'a ->
-           ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+           ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
             Eff_types.Exit.t * 'a)
            option) ->
           'a ->
           Eff_types.NativeOp.t Eff_types.Eff.t ->
-          (int * 'a Api_gen.effect4_run_tree_outcome) option
+          (Z.t * 'a Api_gen.effect4_run_tree_outcome) option
       end
   end
 module ServiceKey = Eff_types.ServiceKey

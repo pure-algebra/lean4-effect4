@@ -6,12 +6,12 @@ type ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =
   | RunDecision_flush
   | RunDecision_evaluate of fiber_id
   | RunDecision_yieldVerdict of fiber_id * bool
-  | RunDecision_answerAsync of fiber_id * int *
+  | RunDecision_answerAsync of fiber_id * Z.t *
       ('b, 'e, 'd, 'i, 'a) Eff_types.Completion.t
   | RunDecision_interruptFrom of fiber_id option *
       'a Eff_types.ReasonAnnotations.t * fiber_id
   | RunDecision_installMiddleware
-  | RunDecision_advance of E4_clock.t
+  | RunDecision_advance of clock_millis
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) replay_result =
     ReplayResult_finished of
       ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine
@@ -39,12 +39,12 @@ and inspection = {
 }
 and refusal =
     Refusal_notParked of fiber_id
-  | Refusal_staleToken of fiber_id * int * int
-  | Refusal_notExternal of fiber_id * int
-  | Refusal_answerType of fiber_id * int * Eff_types.Ty.t
-  | Refusal_errorType of fiber_id * int * Eff_types.Ty.t
-  | Refusal_deadHandle of fiber_id * int
-  | Refusal_reservedDefect of fiber_id * int
+  | Refusal_staleToken of fiber_id * Z.t * Z.t
+  | Refusal_notExternal of fiber_id * Z.t
+  | Refusal_answerType of fiber_id * Z.t * Eff_types.Ty.t
+  | Refusal_errorType of fiber_id * Z.t * Eff_types.Ty.t
+  | Refusal_deadHandle of fiber_id * Z.t
+  | Refusal_reservedDefect of fiber_id * Z.t
   | Refusal_unknownCell of Eff_types.RefKey.t
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber = {
   id : fiber_id;
@@ -54,8 +54,8 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber = {
   pending : ('nu, 'b, 'e, 'd, 'i, 'a) pending list;
   finalizing : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option;
   exit_ : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option;
-  current_op_count : int;
-  max_ops_before_yield : int;
+  current_op_count : Z.t;
+  max_ops_before_yield : Z.t;
   prevent_yield : bool;
   yield_override : bool option;
   observers : observer list;
@@ -63,7 +63,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber = {
   dispatcher : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) dispatcher;
   context : 'ch;
 }
-and parked = Parked_notParked | Parked_withGuard of int
+and parked = Parked_notParked | Parked_withGuard of Z.t
 and sig_app = {
   rows : Eff_types.Row.t list;
   services : (Eff_types.ServiceKey.t * Eff_types.Ty.t) list;
@@ -82,11 +82,11 @@ and check_input =
       Eff_types.NativeOp.t Eff_types.Eff.t
 and verdict = {
   result :
-    (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result;
+    (Eff_types.EffTy.t, (Z.t list, type_reason) Eff_types.Located.t) result;
   table : entry list;
 }
 and admit_refusal =
-    AdmitRefusal_illTyped of (int list, type_reason) Eff_types.Located.t
+    AdmitRefusal_illTyped of (Z.t list, type_reason) Eff_types.Located.t
   | AdmitRefusal_signature of sig_refusal
   | AdmitRefusal_emptyColumn of string list
   | AdmitRefusal_formation of
@@ -106,7 +106,7 @@ and shape =
   | Shape_option of shape
   | Shape_pair of shape * shape
   | Shape_struct of string * (string * shape) list
-  | Shape_sum of string * (string * (int * (string * shape) list)) list
+  | Shape_sum of string * (string * (Z.t * (string * shape) list)) list
   | Shape_ref of kind
   | Shape_anyRef
   | Shape_named of string
@@ -127,43 +127,43 @@ and reason =
 and 'op loop_spec = {
   while_ :
     (env ->
-     int list ->
-     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+     Z.t list ->
+     (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
     env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result;
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result;
   body :
     (env ->
-     int list ->
-     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+     Z.t list ->
+     (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
     env ->
-    int list ->
-    ('op Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result;
+    Z.t list ->
+    ('op Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result;
   step :
     (env ->
-     int list ->
-     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+     Z.t list ->
+     (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
     (env ->
-     int list ->
-     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+     Z.t list ->
+     (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
     env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result;
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result;
   result :
     (env ->
-     int list ->
-     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+     Z.t list ->
+     (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
     env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result;
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result;
   cursor_ty : Eff_types.Ty.t option;
 }
 and env = {
   names : string list;
-  layers : (string * int) list;
-  rows : (string * int) list;
-  defs : (string * int) list;
-  program_params : (string * int) list;
+  layers : (string * Z.t) list;
+  rows : (string * Z.t) list;
+  defs : (string * Z.t) list;
+  program_params : (string * Z.t) list;
 }
 and 'op module_ = {
   rows : row_def list;
@@ -171,15 +171,15 @@ and 'op module_ = {
   layers :
     (string *
      (env ->
-      int list ->
-      ('op Eff_types.LayerTerm.t, (int list, reason) Eff_types.Located.t)
+      Z.t list ->
+      ('op Eff_types.LayerTerm.t, (Z.t list, reason) Eff_types.Located.t)
       result))
     list;
   defs : 'op def_src list;
   main :
     env ->
-    int list ->
-    ('op Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result;
+    Z.t list ->
+    ('op Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result;
   types : (string * Eff_types.Ty.t) list;
 }
 and sketch = {
@@ -188,23 +188,23 @@ and sketch = {
 }
 and 'a checked = { value : 'a; trace : (check_input * verdict) list; }
 and live_record = {
-  version : int;
+  version : Z.t;
   app : sig_app;
   program : Eff_types.NativeOp.t Eff_types.Eff.t;
   session : string;
   binding : string;
   budget : budget;
   journal : command list;
-  row_names : (string * int) list;
+  row_names : (string * Z.t) list;
 }
 and effect4_live_record_refusal =
-    Effect4_live_record_refusal_unsupportedVersion of int
+    Effect4_live_record_refusal_unsupportedVersion of Z.t
   | Effect4_live_record_refusal_admission of admit_refusal
 and built = {
   app : sig_app;
   program : Eff_types.NativeOp.t Eff_types.Eff.t;
   admitted : admitted_program;
-  row_names : (string * int) list;
+  row_names : (string * Z.t) list;
 }
 and run = {
   built : built;
@@ -246,7 +246,7 @@ and effect4_tool_codec_profile_refusal =
 and effect4_tool_wire_refusal =
     Effect4_tool_wire_refusal_codec of effect4_tool_codec_profile_refusal
   | Effect4_tool_wire_refusal_unselected of string
-  | Effect4_tool_wire_refusal_version of string * int * int
+  | Effect4_tool_wire_refusal_version of string * Z.t * Z.t
   | Effect4_tool_wire_refusal_method of string * string
   | Effect4_tool_wire_refusal_connection
 and text_ctx =
@@ -273,31 +273,31 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp = {
   with_fiber_of :
     's -> ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k) with_fiber_action option;
   sync_state : 's -> 'st -> ('st * 'b) option;
-  register_async : 'nu -> fiber_id -> int -> 'st -> 'st * 'k option;
+  register_async : 'nu -> fiber_id -> Z.t -> 'st -> 'st * 'k option;
   answer_code : ('b, 'e, 'd, 'i, 'a) Eff_types.Completion.t -> 'k;
   due_resumes : 'st -> 'k owed list * 'st;
-  wake_list : wake_key -> int -> 'st -> 'st;
-  clock_step : E4_clock.t -> 'st -> 'k owed option * 'st;
-  cancel_name : 'nu -> fiber_id -> int -> 'nu;
+  wake_list : wake_key -> Z.t -> 'st -> 'st;
+  clock_step : clock_millis -> 'st -> 'k owed option * 'st;
+  cancel_name : 'nu -> fiber_id -> Z.t -> 'nu;
   abort_name : 'nu;
   park_cancel_name : 'nu;
-  race_cancel_name : int -> 'nu;
-  race_settle : int -> bool -> ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t -> 'k;
+  race_cancel_name : Z.t -> 'nu;
+  race_settle : Z.t -> bool -> ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t -> 'k;
   finalizer_program :
     'nu -> ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t -> 'k option;
   restore_name : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t -> 'nu;
   merge_name : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t -> 'nu;
   scope_status :
-    int -> 'st -> ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option option;
+    Z.t -> 'st -> ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option option;
   scope_link_fiber :
-    scope_mode -> int -> fiber_id -> 'st -> ('st * int) option;
-  drop_finalizer : int -> int -> 'st -> 'st option;
+    scope_mode -> Z.t -> fiber_id -> 'st -> ('st * Z.t) option;
+  drop_finalizer : Z.t -> Z.t -> 'st -> 'st option;
   close_scope :
-    int ->
+    Z.t ->
     ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t ->
     bool -> fiber_id -> 'st -> ('st * 'k option) option;
-  ambient_scope : 'ch -> int option;
-  budget_of : 'ch -> int * bool;
+  ambient_scope : 'ch -> Z.t option;
+  budget_of : 'ch -> Z.t * bool;
   empty_context : 'ch;
   context_value : 'ch -> 'b;
   exit_value :
@@ -308,7 +308,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp = {
   fibers_value : fiber_id list -> 'b;
   exits_value : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t list -> 'b;
   void_value : 'b;
-  scope_value : int -> 'b;
+  scope_value : Z.t -> 'b;
   close_done_name : 'nu;
   encode_fiber : fiber_id -> 'i;
   stack_annotations : fiber_id -> 'a Eff_types.ReasonAnnotations.t;
@@ -334,13 +334,13 @@ and name =
   | Name_snapshotThen of prog_name
   | Name_registerAwait of deferred_key
   | Name_cancelAwait of deferred_key
-  | Name_registerSleep of E4_clock.t
+  | Name_registerSleep of clock_millis
   | Name_cancelSleep
-  | Name_externalRegister of int
+  | Name_externalRegister of Z.t
   | Name_abortController
   | Name_cancelPark
-  | Name_cancelRace of int
-  | Name_withWaiter of name * fiber_id * int
+  | Name_cancelRace of Z.t
+  | Name_withWaiter of name * fiber_id * Z.t
   | Name_reFail of
       (Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit) Eff_types.Cause.t
   | Name_finalizerName of fin_name
@@ -356,9 +356,9 @@ and name =
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine = {
   fibers : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber list;
   races : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) race list;
-  next_id : int;
-  next_token : int;
-  next_race : int;
+  next_id : Z.t;
+  next_token : Z.t;
+  next_race : Z.t;
   middleware_installed : bool;
   armed : fiber_id list;
   state : 'st;
@@ -399,26 +399,26 @@ and eff_name =
   | EffName_merge of
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
-  | EffName_gen of point * int list * bool
+  | EffName_gen of point * Z.t list * bool
   | EffName_loop of point
   | EffName_registerAwait of deferred_key
   | EffName_cancelAwait of deferred_key
-  | EffName_withWaiter of eff_name * fiber_id * int
+  | EffName_withWaiter of eff_name * fiber_id * Z.t
   | EffName_abort
   | EffName_reFail of
       (Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit) Eff_types.Cause.t
   | EffName_scopeOpen of point
-  | EffName_scopeProvide of point * int
+  | EffName_scopeProvide of point * Z.t
   | EffName_scopeBody of point * ctx
-  | EffName_scopedExit of ctx * int
-  | EffName_scopeClose of int
+  | EffName_scopedExit of ctx * Z.t
+  | EffName_scopeClose of Z.t
   | EffName_restoreCtx of ctx
   | EffName_forkScopedIn of point
   | EffName_constant of Eff_types.Val.t
   | EffName_store of name
   | EffName_acquireCtx of point
   | EffName_acquireIn of point * ctx
-  | EffName_acquired of point * ctx * int
+  | EffName_acquired of point * ctx * Z.t
   | EffName_afterScopeAdd of Eff_types.Val.t * fin_name
   | EffName_releaseUnder of point * ctx *
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
@@ -431,30 +431,30 @@ and eff_name =
   | EffName_provideMask of context_update * region
   | EffName_updateThen of context_update * region * bool
   | EffName_bodyThen of region * ctx * bool
-  | EffName_buildWithScopeFromContext of point * int
-  | EffName_withMemoMapThen of point * int
+  | EffName_buildWithScopeFromContext of point * Z.t
+  | EffName_withMemoMapThen of point * Z.t
   | EffName_addCurrentMemoMap of memo_map_id
   | EffName_fromBuildThen of point * memo_map_id
-  | EffName_memoize of point * memo_map_id * int
+  | EffName_memoize of point * memo_map_id * Z.t
   | EffName_awaitPromise of deferred_key
-  | EffName_buildIntoLayerScope of point * memo_map_id * int
-  | EffName_thenBuildInto of point * memo_map_id * int
-  | EffName_freshThen of point * int
-  | EffName_provideThen of point * memo_map_id * int * combine_mode
+  | EffName_buildIntoLayerScope of point * memo_map_id * Z.t
+  | EffName_thenBuildInto of point * memo_map_id * Z.t
+  | EffName_freshThen of point * Z.t
+  | EffName_provideThen of point * memo_map_id * Z.t * combine_mode
   | EffName_combineWith of combine_mode * Eff_types.Val.t context
   | EffName_mergeChildren of point * memo_map_id
-  | EffName_mergeForkOne of point * int * memo_map_id * int * fiber_id list
-  | EffName_mergeForkNext of point * int * memo_map_id * int * fiber_id list
+  | EffName_mergeForkOne of point * Z.t * memo_map_id * Z.t * fiber_id list
+  | EffName_mergeForkNext of point * Z.t * memo_map_id * Z.t * fiber_id list
   | EffName_mergeContexts
   | EffName_serviceLookup of Eff_types.ServiceKey.t
   | EffName_bindService of Eff_types.ServiceKey.t option
   | EffName_orDie
   | EffName_mergeAllChildren of point * memo_map_id
-  | EffName_mergeAllForkOne of point * int * memo_map_id * int *
+  | EffName_mergeAllForkOne of point * Z.t * memo_map_id * Z.t *
       fiber_id list
-  | EffName_mergeAllForkNext of point * int * memo_map_id * int *
+  | EffName_mergeAllForkNext of point * Z.t * memo_map_id * Z.t *
       fiber_id list
-  | EffName_external of Eff_types.NativeOp.t * Eff_types.Val.t * int list
+  | EffName_external of Eff_types.NativeOp.t * Eff_types.Val.t * Z.t list
   | EffName_caughtError of point
 and native_atom =
     NativeAtom_succ
@@ -539,21 +539,21 @@ and sync_op =
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Completion.t
   | SyncOp_deferredInterruptWith of deferred_key * fiber_id
-  | SyncOp_deferredAwaitCleanup of deferred_key * fiber_id * int
+  | SyncOp_deferredAwaitCleanup of deferred_key * fiber_id * Z.t
   | SyncOp_clockNow
-  | SyncOp_sleepCancel of fiber_id * int
+  | SyncOp_sleepCancel of fiber_id * Z.t
   | SyncOp_scopeMake of Eff_types.FinalizerStrategy.t
-  | SyncOp_scopeAdd of int * fin_name
-  | SyncOp_scopeRemove of int * int
-  | SyncOp_scopeIsClosed of int
-  | SyncOp_scopeFork of int * Eff_types.FinalizerStrategy.t
+  | SyncOp_scopeAdd of Z.t * fin_name
+  | SyncOp_scopeRemove of Z.t * Z.t
+  | SyncOp_scopeIsClosed of Z.t
+  | SyncOp_scopeFork of Z.t * Eff_types.FinalizerStrategy.t
   | SyncOp_memoFork of memo_map_id option
-  | SyncOp_memoGet of (int list * int list list) * memo_map_id
-  | SyncOp_memoBuild of (int list * int list list) * memo_map_id
-  | SyncOp_memoComplete of (int list * int list list) * memo_map_id *
+  | SyncOp_memoGet of (Z.t list * Z.t list list) * memo_map_id
+  | SyncOp_memoBuild of (Z.t list * Z.t list list) * memo_map_id
+  | SyncOp_memoComplete of (Z.t list * Z.t list list) * memo_map_id *
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
-  | SyncOp_memoRelease of (int list * int list list) * memo_map_id
+  | SyncOp_memoRelease of (Z.t list * Z.t list list) * memo_map_id
 and stores = {
   refs : Eff_types.Val.t list;
   deferreds :
@@ -562,43 +562,43 @@ and stores = {
   scopes : scope_store;
   memo : memo_map list;
   timers : timer_store;
-  next_name : int;
+  next_name : Z.t;
   externals : external_store;
 }
 and timer_store = {
-  now : E4_clock.t;
-  wake : E4_clock.t wake_list;
-  target : E4_clock.t option;
+  now : clock_millis;
+  wake : clock_millis wake_list;
+  target : clock_millis option;
 }
 and scope_entry = {
-  key : int;
+  key : Z.t;
   scope :
-    (int, fin_name, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
+    (Z.t, fin_name, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
      fiber_id, unit)
     scope;
 }
 and memo_map = {
   id : memo_map_id;
   parent : memo_map_id option;
-  entries : ((int list * int list list) * memo_entry) list;
+  entries : ((Z.t list * Z.t list list) * memo_entry) list;
 }
 and memo_entry = {
-  observers : int;
-  layer_scope : int;
+  observers : Z.t;
+  layer_scope : Z.t;
   deferred : deferred_key;
   finalizer : fin_name;
 }
 and fin_name =
     FinName_interruptFiber of fiber_id * bool
-  | FinName_closeChildScope of int
-  | FinName_detachFromParent of int * int
-  | FinName_release of int * bool
+  | FinName_closeChildScope of Z.t
+  | FinName_detachFromParent of Z.t * Z.t
+  | FinName_release of Z.t * bool
   | FinName_awaitNewChildren of fiber_id list
-  | FinName_parkThen of int
+  | FinName_parkThen of Z.t
   | FinName_foreign of capture
-  | FinName_closeChildOnFailure of int
-  | FinName_memoEntry of (int list * int list list) * memo_map_id
-  | FinName_memoDone of (int list * int list list) * memo_map_id
+  | FinName_closeChildOnFailure of Z.t
+  | FinName_memoEntry of (Z.t list * Z.t list list) * memo_map_id
+  | FinName_memoDone of (Z.t list * Z.t list list) * memo_map_id
 and 'k deferred_store = {
   cells : 'k deferred_cell list;
   due : 'k owed list;
@@ -607,14 +607,14 @@ and call_class = CallClass_row of Eff_types.RowKind.t | CallClass_external
 and invocation_forms = { perform : bool; callback : bool; }
 and profile_data = {
   name : string;
-  nat_bound : int;
+  nat_bound : Z.t option;
   admitted_forms : (call_class * invocation_forms) list;
   adapters : (string * string) list;
   imports : string list;
   error_projection : string;
 }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket = {
-  priority : int;
+  priority : Z.t;
   tasks : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task list;
 }
 and ('nu, 'b, 'e, 'd, 'i, 'a, 'k, 'f) fiber_core = {
@@ -637,7 +637,7 @@ and ('nu, 'b, 'e, 'd, 'i, 'a, 'k, 'f) fiber_core = {
   enter_uninterruptible : 'f -> 'f;
 }
 and ('nu, 'b, 'e, 'd, 'i, 'a) pending = {
-  token : int;
+  token : Z.t;
   waiting_on : fiber_id option;
   remaining : fiber_id list;
   collected : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t list;
@@ -648,17 +648,17 @@ and fork_record = {
   child : fiber_id;
   parent : fiber_id;
   daemon : bool;
-  site : int list;
+  site : Z.t list;
 }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =
     RunEvent_forked of fiber_id * fiber_id * bool
   | RunEvent_started of fiber_id
-  | RunEvent_scheduledTask of fiber_id * int *
+  | RunEvent_scheduledTask of fiber_id * Z.t *
       ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
   | RunEvent_ranTask of fiber_id * ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task
-  | RunEvent_yieldInjected of fiber_id * int
-  | RunEvent_parkedOn of fiber_id * int
-  | RunEvent_resumedWith of fiber_id * int * 'k
+  | RunEvent_yieldInjected of fiber_id * Z.t
+  | RunEvent_parkedOn of fiber_id * Z.t
+  | RunEvent_resumedWith of fiber_id * Z.t * 'k
   | RunEvent_interruptRecorded of fiber_id option * fiber_id
   | RunEvent_interruptDeferred of fiber_id
   | RunEvent_childrenInterrupted of fiber_id * fiber_id list
@@ -666,40 +666,40 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =
   | RunEvent_frame of fiber_id * 'h
   | RunEvent_finalizerProgram of fiber_id * 'nu *
       ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
-  | RunEvent_scopeLinked of scope_mode * int * int * fiber_id
-  | RunEvent_scopeClosedOnLink of int * fiber_id
-  | RunEvent_raceStarted of int * fiber_id * int
-  | RunEvent_raceLaunched of int * fiber_id
-  | RunEvent_raceSettled of int * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+  | RunEvent_scopeLinked of scope_mode * Z.t * Z.t * fiber_id
+  | RunEvent_scopeClosedOnLink of Z.t * fiber_id
+  | RunEvent_raceStarted of Z.t * fiber_id * Z.t
+  | RunEvent_raceLaunched of Z.t * fiber_id
+  | RunEvent_raceSettled of Z.t * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
   | RunEvent_contextSet of fiber_id * 'ch
-  | RunEvent_callback of int * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+  | RunEvent_callback of Z.t * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
   | RunEvent_exited of fiber_id * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =
     Task_start of fiber_id
-  | Task_resume of fiber_id * int * 'k
-  | Task_wake of wake_key * int
+  | Task_resume of fiber_id * Z.t * 'k
+  | Task_wake of wake_key * Z.t
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) cmd =
     Cmd_evaluate of fiber_id
   | Cmd_loop of fiber_id * bool
   | Cmd_deliver of fiber_id * bool
   | Cmd_finish of fiber_id * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
-  | Cmd_resume of fiber_id * int * 'k
-  | Cmd_launch of int
-  | Cmd_enrollRace of int * fiber_id
-  | Cmd_registrationDone of int * bool
+  | Cmd_resume of fiber_id * Z.t * 'k
+  | Cmd_launch of Z.t
+  | Cmd_enrollRace of Z.t * fiber_id
+  | Cmd_registrationDone of Z.t * bool
   | Cmd_interruptTarget of fiber_id * fiber_id option *
       'a Eff_types.ReasonAnnotations.t
   | Cmd_afterInterrupt of fiber_id * bool * park_kind
-  | Cmd_raceCancel of int * fiber_id * bool * fiber_id list * fiber_id list
+  | Cmd_raceCancel of Z.t * fiber_id * bool * fiber_id list * fiber_id list
   | Cmd_trackChild of fiber_id * fiber_id
   | Cmd_observe of fiber_id * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t *
       observer
   | Cmd_exitDone of fiber_id
   | Cmd_closeParAwait of fiber_id * bool * fiber_id list
-  | Cmd_link of scope_mode * int * fiber_id * fiber_id option *
+  | Cmd_link of scope_mode * Z.t * fiber_id * fiber_id option *
       'a Eff_types.ReasonAnnotations.t
   | Cmd_drainDue
-  | Cmd_wake of wake_key * int
+  | Cmd_wake of wake_key * Z.t
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) effect4_machine_outcome =
     Effect4_machine_outcome_continue_
   | Effect4_machine_outcome_parked
@@ -740,38 +740,38 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim =
   | Prim_onExit of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim * 'nu * bool
   | Prim_setInterruptible of bool
   | Prim_whileLoop of 'nu * 'b
-  | Prim_yieldNowWith of int
+  | Prim_yieldNowWith of Z.t
   | Prim_async of 'nu * bool * 'nu option
   | Prim_asyncFinalizer of 'nu
 and 'nu resume = Resume_exitsValue | Resume_void | Resume_continueWith of 'nu
 and park_kind =
     ParkKind_join of fiber_id * Eff_types.ObserverMode.t
-  | ParkKind_race of int
+  | ParkKind_race of Z.t
   | ParkKind_awaitAll of fiber_id list
 and stuck =
     Stuck_unknownFiber of fiber_id
-  | Stuck_unknownScope of int
-  | Stuck_unknownRace of int
+  | Stuck_unknownScope of Z.t
+  | Stuck_unknownRace of Z.t
 and observer =
-    Observer_resumeAwait of fiber_id * int * Eff_types.ObserverMode.t
+    Observer_resumeAwait of fiber_id * Z.t * Eff_types.ObserverMode.t
   | Observer_untrackChild of fiber_id
-  | Observer_dropScopeFinalizer of int * int
-  | Observer_countdown of fiber_id * int
-  | Observer_raceCallback of int
-  | Observer_callback of int
+  | Observer_dropScopeFinalizer of Z.t * Z.t
+  | Observer_countdown of fiber_id * Z.t
+  | Observer_raceCallback of Z.t
+  | Observer_callback of Z.t
 and ('e, 'd, 'i, 'a) fiber_edit =
     FiberEdit_observe of fiber_id * observer
-  | FiberEdit_dropToken of int
+  | FiberEdit_dropToken of Z.t
   | FiberEdit_interrupt of fiber_id * ('e, 'd, 'i, 'a) Eff_types.Cause.t
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) race = {
-  id : int;
+  id : Z.t;
   host : fiber_id;
-  token : int;
+  token : Z.t;
   state : ('b, 'e, 'd, 'i, 'a) race_all_state;
   settled : bool;
   programs : 'k list;
   registering : bool;
-  next_site : int list option;
+  next_site : Z.t list option;
   mode : race_mode;
   selected : fiber_id option;
 }
@@ -779,7 +779,7 @@ and ('b, 'e, 'd, 'i, 'a) race_all_state = {
   unstarted : fiber_id list;
   starting : fiber_id option;
   live : fiber_id list;
-  remaining : int;
+  remaining : Z.t;
   failures : ('e, 'd, 'i, 'a) Eff_types.Reason.t list;
   winner : (fiber_id * 'b) option;
   accepted : ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t option;
@@ -794,14 +794,14 @@ and frontier_reason =
     FrontierReason_commandFuel
   | FrontierReason_compileFuel of fiber_id
   | FrontierReason_awaitHost of key
-  | FrontierReason_awaitTimer of fiber_id * E4_clock.t
+  | FrontierReason_awaitTimer of fiber_id * clock_millis
   | FrontierReason_awaitDecision
 and tree =
     Tree_done of
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
   | Tree_cut
-  | Tree_call of int * Eff_types.Val.t *
+  | Tree_call of Z.t * Eff_types.Val.t *
       ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
        Eff_types.Exit.t -> tree)
   | Tree_cell of sync_op * (Eff_types.Val.t -> tree)
@@ -814,9 +814,9 @@ and stop =
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
   | Stop_cut
-  | Stop_waiting of int * Eff_types.Val.t
+  | Stop_waiting of Z.t * Eff_types.Val.t
 and step =
-    Step_called of int * Eff_types.Val.t *
+    Step_called of Z.t * Eff_types.Val.t *
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
   | Step_celled of sync_op * Eff_types.Val.t
@@ -841,8 +841,8 @@ and type_reason =
   | TypeReason_serviceUnknown of Eff_types.ServiceKey.t
   | TypeReason_valueNotSubtype of Eff_types.ServiceKey.t * Eff_types.Ty.t *
       Eff_types.Ty.t
-  | TypeReason_layerReference of int list
-  | TypeReason_referenceIllFormed of int list * ref_fault
+  | TypeReason_layerReference of Z.t list
+  | TypeReason_referenceIllFormed of Z.t list * ref_fault
   | TypeReason_mergeAllEmpty
   | TypeReason_returnNotLast
   | TypeReason_breakOutsideLoop
@@ -850,33 +850,33 @@ and type_reason =
   | TypeReason_instantiatedFormation of string *
       (string list, formation_reason) Eff_types.Located.t
   | TypeReason_recordTerm of
-      (int list, record_typing_reason) Eff_types.Located.t
+      (Z.t list, record_typing_reason) Eff_types.Located.t
   | TypeReason_recordCause of
-      (int list, (int list, record_typing_reason) Eff_types.Located.t)
+      (Z.t list, (Z.t list, record_typing_reason) Eff_types.Located.t)
       Eff_types.Located.t
   | TypeReason_tupleTerm of
-      (int list, tuple_typing_reason) Eff_types.Located.t
+      (Z.t list, tuple_typing_reason) Eff_types.Located.t
   | TypeReason_tupleCause of
-      (int list, (int list, tuple_typing_reason) Eff_types.Located.t)
+      (Z.t list, (Z.t list, tuple_typing_reason) Eff_types.Located.t)
       Eff_types.Located.t
   | TypeReason_errorPayloadField of Eff_types.Ty.t * string list *
       Eff_types.Ty.t
   | TypeReason_errorSpelling of Eff_types.Ty.t * Eff_types.Ty.t
   | TypeReason_binderTerm of string * Eff_types.Ty.t
   | TypeReason_resultNotSubtype of string * Eff_types.Ty.t * Eff_types.Ty.t
-  | TypeReason_foldTerm of (int list, fold_typing_reason) Eff_types.Located.t
+  | TypeReason_foldTerm of (Z.t list, fold_typing_reason) Eff_types.Located.t
   | TypeReason_foldCause of
-      (int list, (int list, fold_typing_reason) Eff_types.Located.t)
+      (Z.t list, (Z.t list, fold_typing_reason) Eff_types.Located.t)
       Eff_types.Located.t
   | TypeReason_maskRestoreExpected of Eff_types.Ty.t
   | TypeReason_definitionBlock
-  | TypeReason_definitionsMismatch of int * int
+  | TypeReason_definitionsMismatch of Z.t * Z.t
   | TypeReason_definitionColumns of string
   | TypeReason_bodyNotDeclared of string * Eff_types.EffTy.t
-  | TypeReason_invokeArity of string * int * int
-  | TypeReason_unboundVariable of int list * int * int
-  | TypeReason_unknownAtom of int list * string
-  | TypeReason_refusedArguments of int list * string * Eff_types.Ty.t list
+  | TypeReason_invokeArity of string * Z.t * Z.t
+  | TypeReason_unboundVariable of Z.t list * Z.t * Z.t
+  | TypeReason_unknownAtom of Z.t list * string
+  | TypeReason_refusedArguments of Z.t list * string * Eff_types.Ty.t list
 and sig_data = {
   app : sig_app;
   holes : Eff_types.Row.t list;
@@ -913,9 +913,9 @@ and 'op signature = {
   with_term : 'op -> Eff_types.Term.t -> 'op;
   type_args_of : 'op -> Eff_types.Ty.t list;
   with_type_args : 'op -> Eff_types.Ty.t list -> 'op;
-  call_of : 'op -> int option;
-  param_of : 'op -> int option;
-  def_of : int -> Eff_types.DefDecl.t option;
+  call_of : 'op -> Z.t option;
+  param_of : 'op -> Z.t option;
+  def_of : Z.t -> Eff_types.DefDecl.t option;
   key_names : (Eff_types.ServiceKey.t * string) list;
   types : (string * Eff_types.Ty.t) list;
 }
@@ -924,11 +924,11 @@ and layer_ty = {
   error : Eff_types.Ty.t;
   requires : Eff_types.ServiceKey.t Eff_types.Effect4_row.t;
 }
-and dep_role = DepRole_body of int | DepRole_main | DepRole_layers
-and dep = { role : dep_role; base : int list; input : check_input; }
-and budget = { fuel : int; compile_fuel : int; }
+and dep_role = DepRole_body of Z.t | DepRole_main | DepRole_layers
+and dep = { role : dep_role; base : Z.t list; input : check_input; }
+and budget = { fuel : Z.t; compile_fuel : Z.t; }
 and header = {
-  version : int;
+  version : Z.t;
   session : string;
   binding : string;
   table : Eff_types.Row.t list;
@@ -949,13 +949,13 @@ and session = {
       Eff_types.Defect.t, fiber_id, unit)
      frame_event)
     run_machine;
-  next_call : int;
-  applied : int;
+  next_call : Z.t;
+  applied : Z.t;
   active : bound_call list;
   pending : reply_slot list;
-  consumed : int list;
+  consumed : Z.t list;
   retired : retired_call list;
-  calls : (int list * Eff_types.NativeOp.t call_instance) list;
+  calls : (Z.t list * Eff_types.NativeOp.t call_instance) list;
   funded : bool;
 }
 and event =
@@ -970,7 +970,7 @@ and event =
   | Event_apply of sel
   | Event_wire of command
 and explanation = {
-  refusal : (int list, type_reason) Eff_types.Located.t;
+  refusal : (Z.t list, type_reason) Eff_types.Located.t;
   site : site;
   part : check_input option;
 }
@@ -978,7 +978,7 @@ and raw = {
   doc : doc option;
   fills : fill_set option;
   runs : run_entry list;
-  generation : int;
+  generation : Z.t;
 }
 and state = { transcript : action list; raw : raw; }
 and json_site =
@@ -990,7 +990,7 @@ and json_reason =
   | JsonReason_unknownField of string
   | JsonReason_duplicateField of string
   | JsonReason_unknownCase of string
-  | JsonReason_naturalOutsideProfile of int
+  | JsonReason_naturalOutsideProfile of Z.t
   | JsonReason_carrierValue
   | JsonReason_unsupportedProfile
 and listing = {
@@ -1007,12 +1007,12 @@ and describe = { listing : listing; answers : (string * string) list; }
 and nat_json =
     NatJson_null
   | NatJson_bool of bool
-  | NatJson_nat of int
+  | NatJson_nat of Z.t
   | NatJson_numeral of string
   | NatJson_str of string
   | NatJson_arr of nat_json list
   | NatJson_obj of (string * nat_json) list
-and json_step = JsonStep_key of string | JsonStep_index of int
+and json_step = JsonStep_key of string | JsonStep_index of Z.t
 and text_reason =
     TextReason_value
   | TextReason_separator
@@ -1028,22 +1028,22 @@ and text_reason =
   | TextReason_end_
 and ctx = {
   services : Eff_types.Val.t context;
-  max_ops_before_yield : int;
+  max_ops_before_yield : Z.t;
   prevent_yield : bool;
 }
 and point = {
-  path : int list;
+  path : Z.t list;
   env : Eff_types.Val.t list;
-  fuel : int;
+  fuel : Z.t;
   tape : bool list;
   completed :
     (fiber_id *
      (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
      Eff_types.Exit.t)
     list;
-  root : int;
+  root : Z.t;
   params : arg_site list list;
-  call : int list list;
+  call : Z.t list list;
 }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) iter_step =
     IterStep_done of 'b
@@ -1056,20 +1056,20 @@ and eff_thunk =
   | EffThunk_op of sync_op
   | EffThunk_park of park_kind
   | EffThunk_act of point
-  | EffThunk_forkInAt of point * int
+  | EffThunk_forkInAt of point * Z.t
   | EffThunk_getCtx
   | EffThunk_captureMask
   | EffThunk_provideMasked of context_update * region * bool
   | EffThunk_restoreRegion of region * bool
   | EffThunk_setCtx of ctx
-  | EffThunk_closeScope of int *
+  | EffThunk_closeScope of Z.t *
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
   | EffThunk_store of thunk
   | EffThunk_acquireMasked of point * ctx
   | EffThunk_releaseMasked of point * ctx
-  | EffThunk_memoLookup of point * memo_map_id * int
-  | EffThunk_forkLayer of point * memo_map_id * int
+  | EffThunk_memoLookup of point * memo_map_id * Z.t
+  | EffThunk_forkLayer of point * memo_map_id * Z.t
   | EffThunk_awaitAllFailFast of fiber_id list
 and thunk =
     Thunk_park of park_kind
@@ -1081,10 +1081,10 @@ and thunk =
       Eff_types.Exit.t
 and action_name =
     ActionName_fork of prog_name * Eff_types.ForkOptions.t
-  | ActionName_forkIn of prog_name * Eff_types.ForkOptions.t * int
+  | ActionName_forkIn of prog_name * Eff_types.ForkOptions.t * Z.t
   | ActionName_forkScoped of prog_name * Eff_types.ForkOptions.t
   | ActionName_ambientScope
-  | ActionName_runIn of fiber_id * int
+  | ActionName_runIn of fiber_id * Z.t
   | ActionName_interrupt of fiber_id
   | ActionName_interruptAs of fiber_id * fiber_id
   | ActionName_interruptScoped of fiber_id
@@ -1096,23 +1096,23 @@ and action_name =
   | ActionName_setContext of ctx
   | ActionName_getContext
   | ActionName_getId
-  | ActionName_closeScope of int *
+  | ActionName_closeScope of Z.t *
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
   | ActionName_setInterruptible of prog_name * bool
   | ActionName_refuse of
       (Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit) Eff_types.Cause.t
-  | ActionName_dropObservers of int
-  | ActionName_cancelRace of int
+  | ActionName_dropObservers of Z.t
+  | ActionName_cancelRace of Z.t
   | ActionName_closePar of fin_name list *
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k) with_fiber_action =
-    WithFiberAction_fork of 'k * Eff_types.ForkOptions.t * int list
-  | WithFiberAction_forkIn of 'k * Eff_types.ForkOptions.t * int * int list
-  | WithFiberAction_forkScoped of 'k * Eff_types.ForkOptions.t * int list
+    WithFiberAction_fork of 'k * Eff_types.ForkOptions.t * Z.t list
+  | WithFiberAction_forkIn of 'k * Eff_types.ForkOptions.t * Z.t * Z.t list
+  | WithFiberAction_forkScoped of 'k * Eff_types.ForkOptions.t * Z.t list
   | WithFiberAction_ambientScope
-  | WithFiberAction_runIn of fiber_id * int
+  | WithFiberAction_runIn of fiber_id * Z.t
   | WithFiberAction_interrupt of fiber_id
   | WithFiberAction_interruptAs of fiber_id * fiber_id
   | WithFiberAction_interruptScoped of fiber_id
@@ -1121,17 +1121,17 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k) with_fiber_action =
   | WithFiberAction_awaitAllFailFast of fiber_id list
   | WithFiberAction_snapshotChildren
   | WithFiberAction_awaitNewChildren of fiber_id list
-  | WithFiberAction_raceAll of 'k list * int list option
-  | WithFiberAction_raceAllFirst of 'k list * int list option
+  | WithFiberAction_raceAll of 'k list * Z.t list option
+  | WithFiberAction_raceAllFirst of 'k list * Z.t list option
   | WithFiberAction_setInterruptible of 'k * bool
   | WithFiberAction_setContext of 'ch
   | WithFiberAction_getContext
   | WithFiberAction_getId
-  | WithFiberAction_closeScope of int * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
+  | WithFiberAction_closeScope of Z.t * ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
   | WithFiberAction_closePar of 'k list
   | WithFiberAction_refuse of ('e, 'd, 'i, 'a) Eff_types.Cause.t
-  | WithFiberAction_dropObservers of int
-  | WithFiberAction_cancelRace of int
+  | WithFiberAction_dropObservers of Z.t
+  | WithFiberAction_cancelRace of Z.t
   | WithFiberAction_getInterruptible
 and scope_mode = ScopeMode_forkIn | ScopeMode_fiberRunIn
 and context_update =
@@ -1140,24 +1140,24 @@ and context_update =
   | ContextUpdate_provideService of Eff_types.ServiceKey.t * Eff_types.Val.t
 and region =
     Region_program of point
-  | Region_build of point * memo_map_id * int
-  | Region_buildAdding of point * memo_map_id * int
+  | Region_build of point * memo_map_id * Z.t
+  | Region_buildAdding of point * memo_map_id * Z.t
   | Region_construct of point * Eff_types.ServiceKey.t option
-and arg_site = { path : int list; env : Eff_types.Val.t list; }
+and arg_site = { path : Z.t list; env : Eff_types.Val.t list; }
 and capture = {
-  path : int list;
+  path : Z.t list;
   env : Eff_types.Val.t list;
-  fuel : int;
+  fuel : Z.t;
   tape : bool list;
   ctx : ctx;
-  root : int;
+  root : Z.t;
   params : arg_site list list;
-  call : int list list;
+  call : Z.t list list;
 }
-and wake_key = { kind : handle_kind; index : int; }
+and wake_key = { kind : handle_kind; index : Z.t; }
 and await = {
   fiber : fiber_id;
-  token : int;
+  token : Z.t;
   op : Eff_types.NativeOp.t;
   request : Eff_types.Val.t;
 }
@@ -1169,18 +1169,18 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope = {
 and 'r_val_ val_algebra = {
   val_unit : 'r_val_;
   val_bool : bool -> 'r_val_;
-  val_nat : int -> 'r_val_;
+  val_nat : Z.t -> 'r_val_;
   val_str : string -> 'r_val_;
   val_bytes : int list -> 'r_val_;
   val_list : 'r_val_ list -> 'r_val_;
   val_pair : 'r_val_ -> 'r_val_ -> 'r_val_;
   val_none : 'r_val_;
   val_some : 'r_val_ -> 'r_val_;
-  val_ctor : int -> 'r_val_ list -> 'r_val_;
+  val_ctor : Z.t -> 'r_val_ list -> 'r_val_;
   val_ref : int -> int list -> 'r_val_;
-  val_handle : int -> int -> 'r_val_;
-  val_neg_int : int -> 'r_val_;
-  val_float : int -> 'r_val_;
+  val_handle : int -> Z.t -> 'r_val_;
+  val_neg_int : Z.t -> 'r_val_;
+  val_float : Z.t -> 'r_val_;
 }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_pop = {
   answer : ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer;
@@ -1198,16 +1198,16 @@ and arm = Arm_contA | Arm_contE | Arm_contAll
 and 'p wake_list = {
   waiters : 'p waiter list;
   batch : 'p waiter list option;
-  phase : int;
+  phase : Z.t;
 }
 and sig_refusal =
-    SigRefusal_row of int * row_reason
+    SigRefusal_row of Z.t * row_reason
   | SigRefusal_duplicateRow of (string * Eff_types.RowArg.t list)
-  | SigRefusal_service of int * service_reason
+  | SigRefusal_service of Z.t * service_reason
   | SigRefusal_duplicateCode of Eff_types.ServiceTypeCode.t
-  | SigRefusal_unservedKey of int * Eff_types.ServiceKey.t
-  | SigRefusal_decl of int * decl_reason
-  | SigRefusal_rowName of int * decl_reason
+  | SigRefusal_unservedKey of Z.t * Eff_types.ServiceKey.t
+  | SigRefusal_decl of Z.t * decl_reason
+  | SigRefusal_rowName of Z.t * decl_reason
   | SigRefusal_conflictingDecl of string
   | SigRefusal_unguardedDecl of string
 and path = { steps : step list; stop : stop; }
@@ -1217,17 +1217,17 @@ and node_env =
   | NodeEnv_closed
   | NodeEnv_slots of Eff_types.Ty.t list * Eff_types.ParamDecl.t list
 and entry = {
-  path : int list;
+  path : Z.t list;
   env : node_env option;
   result :
-    (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result
+    (Eff_types.EffTy.t, (Z.t list, type_reason) Eff_types.Located.t) result
     option;
 }
 and term_typing_reason =
     TermTypingReason_record of record_typing_reason
   | TermTypingReason_tuple of tuple_typing_reason
   | TermTypingReason_fold of fold_typing_reason
-  | TermTypingReason_unbound of int * int
+  | TermTypingReason_unbound of Z.t * Z.t
   | TermTypingReason_unknownAtom of string
   | TermTypingReason_refusedArguments of string * Eff_types.Ty.t list
 and row_typing_refusal =
@@ -1237,7 +1237,7 @@ and row_typing_refusal =
   | RowTypingRefusal_term of Eff_types.Ty.t
   | RowTypingRefusal_resultNotSubtype of Eff_types.Ty.t * Eff_types.Ty.t
 and protocol = {
-  version : int;
+  version : Z.t;
   initial : effect4_api_host_protocol_state;
   states : effect4_api_host_protocol_state list;
   transitions : edge list;
@@ -1249,11 +1249,11 @@ and effect4_api_host_protocol_state =
   | Effect4_api_host_protocol_state_parked
   | Effect4_api_host_protocol_state_terminated
 and site =
-    Site_address of int list
-  | Site_inCopy of int list * int list
-  | Site_column of int list
+    Site_address of Z.t list
+  | Site_inCopy of Z.t list * Z.t list
+  | Site_column of Z.t list
   | Site_application
-and 'a envelope = { method_ : string; version : int; payload : 'a; }
+and 'a envelope = { method_ : string; version : Z.t; payload : 'a; }
 and kind =
     Kind_source
   | Kind_export
@@ -1283,12 +1283,12 @@ and prog_name =
   | ProgName_failCause of
       (Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit) Eff_types.Cause.t
   | ProgName_syncOp of sync_op
-  | ProgName_yieldNow of int
-  | ProgName_park of int
+  | ProgName_yieldNow of Z.t
+  | ProgName_park of Z.t
   | ProgName_awaitDeferred of deferred_key
   | ProgName_intoDeferred of prog_name * deferred_key
   | ProgName_intoBody of prog_name * deferred_key
-  | ProgName_maskedPark of int
+  | ProgName_maskedPark of Z.t
   | ProgName_awaitFibers of fiber_id list
   | ProgName_finalizerOf of fin_name *
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
@@ -1299,30 +1299,30 @@ and prog_name =
   | ProgName_forkThen of prog_name * Eff_types.ForkOptions.t *
       Eff_types.ObserverMode.t
   | ProgName_forkOnly of prog_name * Eff_types.ForkOptions.t
-  | ProgName_forkInScope of prog_name * Eff_types.ForkOptions.t * int
-  | ProgName_runInScope of fiber_id * int
+  | ProgName_forkInScope of prog_name * Eff_types.ForkOptions.t * Z.t
+  | ProgName_runInScope of fiber_id * Z.t
   | ProgName_forkScopedOf of prog_name * Eff_types.ForkOptions.t
   | ProgName_raceOf of race_name
-  | ProgName_closeScopeOf of int *
+  | ProgName_closeScopeOf of Z.t *
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
   | ProgName_awaitAllNew of prog_name
   | ProgName_interruptFibers of fiber_id list
-  | ProgName_cancelRace of int
+  | ProgName_cancelRace of Z.t
   | ProgName_joinFiber of fiber_id * Eff_types.ObserverMode.t
   | ProgName_closeWalk of Eff_types.FinalizerStrategy.t * fin_name list *
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
 and 'k owed = {
   waiter : fiber_id;
-  token : int;
+  token : Z.t;
   code : 'k;
   mode : wake_mode;
 }
 and combine_mode = CombineMode_provide | CombineMode_provideMerge
 and service_universe = unit
-and 'p waiter = { fiber : fiber_id; token : int; phase : int; payload : 'p; }
-and wake_mode = WakeMode_now | WakeMode_scheduled of fiber_id * int
+and 'p waiter = { fiber : fiber_id; token : Z.t; phase : Z.t; payload : 'p; }
+and wake_mode = WakeMode_now | WakeMode_scheduled of fiber_id * Z.t
 and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
     ScopeState_empty
   | ScopeState_openEmpty
@@ -1330,22 +1330,22 @@ and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
   | ScopeState_openMap of ('k * 'f) list
   | ScopeState_closed of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
 and ('op, 'a) arg_reader = {
-  child : int -> eff_fam -> 'a;
-  term : int -> Eff_types.Term.t -> 'a;
-  cause : int -> Eff_types.CauseTerm.t -> 'a;
-  op : int -> 'op -> 'a;
-  nat : int -> int -> 'a;
-  mode : int -> Eff_types.ObserverMode.t -> 'a;
-  bool : int -> bool -> 'a;
-  key : int -> Eff_types.ServiceKey.t -> 'a;
-  decision : int -> Eff_types.Decision.t -> 'a;
-  opt_ty : int -> Eff_types.Ty.t option -> 'a;
-  decls : int -> Eff_types.DefDecl.t list -> 'a;
-  fork_options : int -> Eff_types.ForkOptions.t -> 'a;
-  opt_term : int -> Eff_types.Term.t option -> 'a;
-  keys : int -> Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'a;
-  lit : int -> Eff_types.Lit.t -> 'a;
-  path : int -> int list -> 'a;
+  child : Z.t -> eff_fam -> 'a;
+  term : Z.t -> Eff_types.Term.t -> 'a;
+  cause : Z.t -> Eff_types.CauseTerm.t -> 'a;
+  op : Z.t -> 'op -> 'a;
+  nat : Z.t -> Z.t -> 'a;
+  mode : Z.t -> Eff_types.ObserverMode.t -> 'a;
+  bool : Z.t -> bool -> 'a;
+  key : Z.t -> Eff_types.ServiceKey.t -> 'a;
+  decision : Z.t -> Eff_types.Decision.t -> 'a;
+  opt_ty : Z.t -> Eff_types.Ty.t option -> 'a;
+  decls : Z.t -> Eff_types.DefDecl.t list -> 'a;
+  fork_options : Z.t -> Eff_types.ForkOptions.t -> 'a;
+  opt_term : Z.t -> Eff_types.Term.t option -> 'a;
+  keys : Z.t -> Eff_types.ServiceKey.t Eff_types.Effect4_row.t -> 'a;
+  lit : Z.t -> Eff_types.Lit.t -> 'a;
+  path : Z.t -> Z.t list -> 'a;
 }
 and eff_fam =
     EffFam_eff
@@ -1376,7 +1376,7 @@ and ('e, 'd) squashed =
   | Squashed_defect of 'd
   | Squashed_interruptedWithoutError
   | Squashed_emptyCause
-and key = { fiber : fiber_id; token : int; }
+and key = { fiber : fiber_id; token : Z.t; }
 and row_reason =
     RowReason_notExternal
   | RowReason_notAsync
@@ -1420,27 +1420,27 @@ and 'op def_src = {
   requires : Eff_types.ServiceKey.t list;
   body :
     (env ->
-     int list ->
-     (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result)
+     Z.t list ->
+     (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result)
     list ->
     env ->
-    int list ->
-    ('op Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result;
+    Z.t list ->
+    ('op Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result;
   role : Eff_types.DefRole.t;
   program_params : Eff_types.ParamDecl.t list;
 }
 and stmt_ty =
     StmtTy_step of gen_ty * Eff_types.Ty.t list
   | StmtTy_ret of
-      (Eff_types.Ty.t, (int list, type_reason) Eff_types.Located.t) result
+      (Eff_types.Ty.t, (Z.t list, type_reason) Eff_types.Located.t) result
   | StmtTy_pass
 and cause_typing_reason =
     CauseTypingReason_record of
-      (int list, record_typing_reason) Eff_types.Located.t
+      (Z.t list, record_typing_reason) Eff_types.Located.t
   | CauseTypingReason_tuple of
-      (int list, tuple_typing_reason) Eff_types.Located.t
+      (Z.t list, tuple_typing_reason) Eff_types.Located.t
   | CauseTypingReason_fold of
-      (int list, fold_typing_reason) Eff_types.Located.t
+      (Z.t list, fold_typing_reason) Eff_types.Located.t
 and binder_term = {
   term : Eff_types.Term.t;
   param : Eff_types.Ty.t;
@@ -1488,7 +1488,7 @@ and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
   eff_exit : 'r_eff -> 'r_eff;
   eff_uninterruptible : 'r_eff -> 'r_eff;
   eff_interruptible : 'r_eff -> 'r_eff;
-  eff_yield_now : int -> 'r_eff;
+  eff_yield_now : Z.t -> 'r_eff;
   eff_await_fiber : Eff_types.Term.t -> Eff_types.ObserverMode.t -> 'r_eff;
   eff_with_fiber : 'r_action -> 'r_eff;
   eff_scoped : 'r_eff -> 'r_eff;
@@ -1508,7 +1508,7 @@ and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
   eff_restore : Eff_types.Term.t -> 'r_eff -> 'r_eff;
   eff_defs :
     Eff_types.DefDecl.t list -> 'r_effs -> 'r_eff -> 'r_layers -> 'r_eff;
-  eff_invoke : int -> Eff_types.Term.t -> 'r_effs -> 'r_eff;
+  eff_invoke : Z.t -> Eff_types.Term.t -> 'r_effs -> 'r_eff;
   eff_provide_context : Eff_types.Term.t -> 'r_eff -> 'r_eff;
   stmt_bind_yield : 'r_eff -> 'r_stmt;
   stmt_yield_discard : 'r_eff -> 'r_stmt;
@@ -1548,7 +1548,7 @@ and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
   layer_merge : 'r_layer -> 'r_layer -> 'r_layer;
   layer_fresh : 'r_layer -> 'r_layer;
   layer_or_die : 'r_layer -> 'r_layer;
-  layer_ref : int list -> 'r_layer;
+  layer_ref : Z.t list -> 'r_layer;
   layer_merge_all : 'r_layers -> 'r_layer;
   layers_nil : 'r_layers;
   layers_cons : 'r_layer -> 'r_layers -> 'r_layers;
@@ -1595,20 +1595,20 @@ and record_typing_reason =
   | RecordTypingReason_unknownSupplied of string
   | RecordTypingReason_fieldNotSubtype of string * Eff_types.Ty.t *
       Eff_types.Ty.t
-  | RecordTypingReason_columnLengths of int * int
+  | RecordTypingReason_columnLengths of Z.t * Z.t
   | RecordTypingReason_missingReadField of string * Eff_types.Ty.t
   | RecordTypingReason_optionalReadField of string * Eff_types.Ty.t
   | RecordTypingReason_declarationFormation of
       (string list, formation_reason) Eff_types.Located.t
 and tuple_typing_reason =
-    TupleTypingReason_nonTuple of int * Eff_types.Ty.t
-  | TupleTypingReason_outOfBounds of int * int
+    TupleTypingReason_nonTuple of Z.t * Eff_types.Ty.t
+  | TupleTypingReason_outOfBounds of Z.t * Z.t
 and fold_typing_reason =
     FoldTypingReason_notList of Eff_types.Ty.t
   | FoldTypingReason_initialNotAccumulator of Eff_types.Ty.t * Eff_types.Ty.t
   | FoldTypingReason_bodyNotAccumulator of Eff_types.Ty.t * Eff_types.Ty.t
 and ('r_term, 'r_terms) term_algebra = {
-  term_var : int -> 'r_term;
+  term_var : Z.t -> 'r_term;
   term_lit : Eff_types.Lit.t -> 'r_term;
   term_app : string -> 'r_terms -> 'r_term;
   term_record :
@@ -1616,7 +1616,7 @@ and ('r_term, 'r_terms) term_algebra = {
     string list -> 'r_terms -> 'r_term;
   term_field : Eff_types.FieldReadMode.t -> 'r_term -> string -> 'r_term;
   term_record_set : 'r_term -> string -> 'r_term -> 'r_term;
-  term_tuple_at : 'r_term -> int -> 'r_term;
+  term_tuple_at : 'r_term -> Z.t -> 'r_term;
   term_fold :
     Eff_types.Ty.t option -> 'r_term -> 'r_term -> 'r_term -> 'r_term;
   terms_nil : 'r_terms;
@@ -1637,7 +1637,7 @@ and effect4_program_formation_site = {
   ty : Eff_types.Ty.t;
 }
 and command =
-    Command_bind of call * int
+    Command_bind of call * Z.t
   | Command_submit of effect4_api_host_session_reply
   | Command_apply of key
   | Command_control of
@@ -1649,35 +1649,35 @@ and action =
     Action_open_ of string * sig_app * sketch
   | Action_edit of snap * doc_action
   | Action_fill of snap *
-      (int list * Eff_types.NativeOp.t Eff_types.Eff.t) list
+      (Z.t list * Eff_types.NativeOp.t Eff_types.Eff.t) list
   | Action_publish of snap
   | Action_reset
   | Action_start of snap * budget
   | Action_restore of live_record
   | Action_play of run_id * event list
 and query =
-    Query_doc of int list option
+    Query_doc of Z.t list option
   | Query_history
   | Query_fills
   | Query_suggest of snap * place *
-      Eff_types.NativeOp.t Eff_types.Eff.t list * int * int
+      Eff_types.NativeOp.t Eff_types.Eff.t list * Z.t * Z.t
   | Query_run of run_id * run_form
   | Query_preview of preview_query
   | Query_dry of action
   | Query_discover
   | Query_table
   | Query_addresses
-  | Query_slots of int list * ext_slot option
+  | Query_slots of Z.t list * ext_slot option
 and reply = {
   result : (answer, effect4_tool_refusal) result;
   now : snap option;
 }
-and doc_id = { name : string; generation : int; }
+and doc_id = { name : string; generation : Z.t; }
 and doc_origin = { id : doc_id; app : sig_app; sketch : sketch; }
 and fill_set = {
   anchor : snap;
   source : source_session;
-  entries : (int list * Eff_types.NativeOp.t Eff_types.Eff.t) list;
+  entries : (Z.t list * Eff_types.NativeOp.t Eff_types.Eff.t) list;
 }
 and effect4_tool_refusal =
     Effect4_tool_refusal_noDocument
@@ -1688,17 +1688,17 @@ and effect4_tool_refusal =
   | Effect4_tool_refusal_restore of effect4_live_record_refusal
   | Effect4_tool_refusal_preview of effect4_run_preview_refusal
   | Effect4_tool_refusal_noRun of run_id
-  | Effect4_tool_refusal_unresolved of run_id * int * sel
+  | Effect4_tool_refusal_unresolved of run_id * Z.t * sel
   | Effect4_tool_refusal_suggest of feed_refusal
   | Effect4_tool_refusal_place of place_refusal
-  | Effect4_tool_refusal_noProgram of int list
+  | Effect4_tool_refusal_noProgram of Z.t list
 and action_answer =
     ActionAnswer_opened of doc_view
   | ActionAnswer_edited of doc_view * receipt
   | ActionAnswer_filled of add_outcome list
   | ActionAnswer_published of doc_view * receipt
   | ActionAnswer_reset of
-      (int list * Eff_types.NativeOp.t Eff_types.Eff.t) list
+      (Z.t list * Eff_types.NativeOp.t Eff_types.Eff.t) list
   | ActionAnswer_started of run_id * origin * view
   | ActionAnswer_played of run_id * effect4_run_verdict list * view
   | ActionAnswer_restored of run_id * view
@@ -1710,19 +1710,19 @@ and answer =
   | Answer_doc of doc_view
   | Answer_history of doc_action list
   | Answer_fills of snap option *
-      (int list * Eff_types.NativeOp.t Eff_types.Eff.t) list
-  | Answer_suggested of suggestion list * int option
+      (Z.t list * Eff_types.NativeOp.t Eff_types.Eff.t) list
+  | Answer_suggested of suggestion list * Z.t option
   | Answer_run of run_id * run_answer
   | Answer_preview of preview_answer
   | Answer_dry of (action_answer, effect4_tool_refusal) result
-  | Answer_methods of (string * int list) list
+  | Answer_methods of (string * Z.t list) list
   | Answer_table of entry list
-  | Answer_addresses of int list list
-  | Answer_slots of int list * bool * slot_view list
+  | Answer_addresses of Z.t list list
+  | Answer_slots of Z.t list * bool * slot_view list
 and doc_view = {
   snap : snap;
   type_ : Eff_types.EffTy.t option;
-  refusals : (int list, type_reason) Eff_types.Located.t list;
+  refusals : (Z.t list, type_reason) Eff_types.Located.t list;
   holes : hole_view list;
   declared : hole_decl list;
   inspection : effect4_tool_inspection option;
@@ -1741,7 +1741,7 @@ and method_kind = MethodKind_action | MethodKind_query
 and method_descriptor = {
   name : string;
   kind : method_kind;
-  versions : int list;
+  versions : Z.t list;
   arguments : shape_doc;
   result : shape_doc;
   description : string;
@@ -1769,7 +1769,7 @@ and 'u reference = { key : Eff_types.ServiceKey.t; default : 'u; }
 and spec = { scheme : scheme; cite : string; }
 and atom_row = {
   name : string;
-  arity : int option;
+  arity : Z.t option;
   const_generic : bool;
   prelude : string;
 }
@@ -1792,7 +1792,7 @@ and 'r_ty ty_algebra = {
   ty_lit : string -> 'r_ty;
   ty_ref_of : 'r_ty -> 'r_ty;
   ty_deferred_of : 'r_ty -> 'r_ty -> 'r_ty;
-  ty_var : int -> 'r_ty;
+  ty_var : Z.t -> 'r_ty;
   ty_unknown : 'r_ty;
   ty_record : (string * (bool * 'r_ty)) list -> 'r_ty;
   ty_map : 'r_ty -> 'r_ty -> 'r_ty;
@@ -1810,18 +1810,18 @@ and 'op part = {
   program : 'op Eff_types.Eff.t;
 }
 and call = {
-  version : int;
+  version : Z.t;
   session : string;
   table : Eff_types.Row.t list;
-  call_id : int;
+  call_id : Z.t;
   fiber : fiber_id;
   op : Eff_types.NativeOp.t;
   request : Eff_types.Val.t;
 }
 and effect4_api_host_session_reply = {
-  version : int;
+  version : Z.t;
   session : string;
-  call_id : int;
+  call_id : Z.t;
   key : key;
   completion :
     (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
@@ -1830,25 +1830,25 @@ and effect4_api_host_session_reply = {
 and runner = {
   program : Eff_types.NativeOp.t Eff_types.Eff.t;
   app : sig_app;
-  fuel : int;
+  fuel : Z.t;
   session : session;
 }
-and snap = { doc : doc_id; revision : int; }
+and snap = { doc : doc_id; revision : Z.t; }
 and doc_action =
     DocAction_commit of (place * change) list * feed_policy
   | DocAction_draft of edit
-  | DocAction_revert of int
+  | DocAction_revert of Z.t
 and place =
-    Place_hole of int
-  | Place_at_ of int list * Eff_types.NativeOp.t Eff_types.Eff.t
+    Place_hole of Z.t
+  | Place_at_ of Z.t list * Eff_types.NativeOp.t Eff_types.Eff.t
 and preview_query =
     PreviewQuery_settle of
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
-      Eff_types.Exit.t list * int
+      Eff_types.Exit.t list * Z.t
   | PreviewQuery_frames of
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
-      Eff_types.Exit.t list * int
-  | PreviewQuery_explore of int * int
+      Eff_types.Exit.t list * Z.t
+  | PreviewQuery_explore of Z.t * Z.t
 and ext_slot =
     ExtSlot_catchIfTest
   | ExtSlot_iterateTest
@@ -1880,48 +1880,48 @@ and view = {
   waits : wait_view list;
   empty_frontier : bool;
   retired : key list;
-  applied : int;
+  applied : Z.t;
   runnable : fiber_id list;
   queued : fiber_id list;
-  timers : (fiber_id * E4_clock.t) list;
+  timers : (fiber_id * clock_millis) list;
   cells : Eff_types.Val.t list;
   fibers : (fiber_id * fiber_status) list;
-  steps : int;
+  steps : Z.t;
   funded : bool;
   at_rest : bool;
 }
 and effect4_program_edit_session_view = {
   table : entry list;
-  refusals : (int list, type_reason) Eff_types.Located.t list;
+  refusals : (Z.t list, type_reason) Eff_types.Located.t list;
   type_ : Eff_types.EffTy.t option;
 }
 and effect4_tool_inspection = {
-  path : int list;
+  path : Z.t list;
   expected : Eff_types.NativeOp.t Eff_types.Eff.t;
   context : sig_data;
   focus : Eff_types.NativeOp.t focus option;
   entry : entry option;
-  refusal : (int list, type_reason) Eff_types.Located.t option;
+  refusal : (Z.t list, type_reason) Eff_types.Located.t option;
 }
 and place_refusal =
-    PlaceRefusal_outOfRange of int
-  | PlaceRefusal_absent of int
-  | PlaceRefusal_repeated of int * int list list
-  | PlaceRefusal_moved of int list
+    PlaceRefusal_outOfRange of Z.t
+  | PlaceRefusal_absent of Z.t
+  | PlaceRefusal_repeated of Z.t * Z.t list list
+  | PlaceRefusal_moved of Z.t list
 and feed_refusal =
-    FeedRefusal_noProgram of int list
-  | FeedRefusal_noFocus of int list
+    FeedRefusal_noProgram of Z.t list
+  | FeedRefusal_noFocus of Z.t list
   | FeedRefusal_notKept of (Eff_types.Ty.t list * Eff_types.EffTy.t) *
-      (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result
-  | FeedRefusal_refused of (int list, type_reason) Eff_types.Located.t list
+      (Eff_types.EffTy.t, (Z.t list, type_reason) Eff_types.Located.t) result
+  | FeedRefusal_refused of (Z.t list, type_reason) Eff_types.Located.t list
   | FeedRefusal_typeChanged of Eff_types.EffTy.t * Eff_types.EffTy.t
   | FeedRefusal_localChanged of
       (Eff_types.Ty.t list * Eff_types.EffTy.t) option *
       (Eff_types.Ty.t list * Eff_types.EffTy.t) option
   | FeedRefusal_rootRefused of
-      (int list, type_reason) Eff_types.Located.t list
+      (Z.t list, type_reason) Eff_types.Located.t list
 and preview_answer =
-    PreviewAnswer_settled of (int * preview_run) option
+    PreviewAnswer_settled of (Z.t * preview_run) option
   | PreviewAnswer_frames of preview_run list
   | PreviewAnswer_explored of path list
 and scheme =
@@ -1946,7 +1946,7 @@ and 'op call_instance = {
   request : Eff_types.Ty.t;
   answer : Eff_types.Ty.t;
   error : Eff_types.Ty.t;
-  bindings : (int * Eff_types.Ty.t) list;
+  bindings : (Z.t * Eff_types.Ty.t) list;
 }
 and phase =
     Phase_bound
@@ -1957,15 +1957,15 @@ and phase =
   | Phase_refused of effect4_api_host_session_refusal
 and result_ = { phase : phase; session : session; }
 and edit =
-    Edit_fill of int list * Eff_types.NativeOp.t Eff_types.Eff.t
-  | Edit_omitAt of int list * Eff_types.Row.t
+    Edit_fill of Z.t list * Eff_types.NativeOp.t Eff_types.Eff.t
+  | Edit_omitAt of Z.t list * Eff_types.Row.t
 and doc_refusal =
     DocRefusal_foreign of doc_id
   | DocRefusal_stale of snap
   | DocRefusal_empty
-  | DocRefusal_noEntry of int
-  | DocRefusal_place of int * place_refusal
-  | DocRefusal_feed of int * feed_refusal
+  | DocRefusal_noEntry of Z.t
+  | DocRefusal_place of Z.t * place_refusal
+  | DocRefusal_feed of Z.t * feed_refusal
 and effect4_program_doc_internal_entry = {
   policy : feed_policy;
   items : undo_item list;
@@ -1978,23 +1978,23 @@ and work = {
   queued : fiber_id list;
   awaiting : await list;
   pending : key list;
-  timers : (fiber_id * E4_clock.t) list;
+  timers : (fiber_id * clock_millis) list;
 }
 and retired_call = {
   bound : bound_call;
   pending : effect4_api_host_session_reply option;
 }
 and hole_decl = {
-  index : int;
+  index : Z.t;
   name : string;
   perform : Eff_types.NativeOp.t Eff_types.Eff.t;
   performed : bool;
 }
 and effect4_run_preview_refusal =
     Effect4_run_preview_refusal_admission of admit_refusal
-  | Effect4_run_preview_refusal_outsideTree of int list
-  | Effect4_run_preview_refusal_genericRow of int list * int
-  | Effect4_run_preview_refusal_handleAnswer of int list * int
+  | Effect4_run_preview_refusal_outsideTree of Z.t list
+  | Effect4_run_preview_refusal_genericRow of Z.t list * Z.t
+  | Effect4_run_preview_refusal_handleAnswer of Z.t list * Z.t
 and preview_run = {
   steps : step list;
   stop : stop;
@@ -2011,7 +2011,7 @@ and slot_view = {
 and sel = Sel_key of key | Sel_fiber of fiber_id | Sel_row of string
 and delta =
     Delta_unchanged
-  | Delta_spliced of int list list
+  | Delta_spliced of Z.t list list
   | Delta_rechecked
 and effect4_program_edit_step = {
   edit : edit;
@@ -2019,7 +2019,7 @@ and effect4_program_edit_step = {
   delta : delta;
 }
 and undo_item = {
-  path : int list;
+  path : Z.t list;
   before : Eff_types.NativeOp.t Eff_types.Eff.t;
   product : Eff_types.NativeOp.t Eff_types.Eff.t;
 }
@@ -2028,30 +2028,30 @@ and add_refusal =
   | AddRefusal_unknownAddress
   | AddRefusal_notCertified of feed_refusal
   | AddRefusal_conflict
-  | AddRefusal_overlap of int list
+  | AddRefusal_overlap of Z.t list
 and add_outcome =
-    AddOutcome_applied of int list
-  | AddOutcome_collapsed of int list
-  | AddOutcome_refused of int list * add_refusal
+    AddOutcome_applied of Z.t list
+  | AddOutcome_collapsed of Z.t list
+  | AddOutcome_refused of Z.t list * add_refusal
 and call_view = {
   await : await;
-  origin : int list option;
+  origin : Z.t list option;
   checked : Eff_types.NativeOp.t call_instance option;
   held : held_call option;
 }
-and bound_call = { call : call; token : int; }
+and bound_call = { call : call; token : Z.t; }
 and held_call = {
-  call_id : int;
+  call_id : Z.t;
   received :
     (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
     Eff_types.Completion.t option;
 }
-and wait_view = { fiber : fiber_id; token : int; site : wait_site option; }
+and wait_view = { fiber : fiber_id; token : Z.t; site : wait_site option; }
 and edit_session = { app : sig_app; sketch : sketch; table : entry list; }
 and hole_view = {
-  index : int;
+  index : Z.t;
   row : Eff_types.Row.t;
-  path : int list;
+  path : Z.t list;
   focus : (Eff_types.Ty.t list * Eff_types.EffTy.t) option;
 }
 and effect4_api_host_session_refusal =
@@ -2078,21 +2078,21 @@ and reply_slot = {
 and label =
     Label_submit of key
   | Label_answer of key
-  | Label_advanceClock of E4_clock.t
+  | Label_advanceClock of clock_millis
   | Label_cancel of fiber_id
   | Label_schedule
 and suggestion = {
   program : Eff_types.NativeOp.t Eff_types.Eff.t;
-  source_path : int list option;
+  source_path : Z.t list option;
   key : check_input;
   evidence : evidence;
 }
 and effect4_machine_origin =
     Effect4_machine_origin_root
-  | Effect4_machine_origin_forked of fiber_id * bool * int list
+  | Effect4_machine_origin_forked of fiber_id * bool * Z.t list
 and fiber_status =
     FiberStatus_child of fiber_id
-  | FiberStatus_pinned of int * int
+  | FiberStatus_pinned of Z.t * Z.t
   | FiberStatus_daemon
   | FiberStatus_root
   | FiberStatus_exited of
@@ -2101,14 +2101,14 @@ and fiber_status =
 and evidence =
     Evidence_exactFit of Eff_types.EffTy.t
   | Evidence_typeMismatch of Eff_types.EffTy.t * Eff_types.EffTy.t
-  | Evidence_refused of (int list, type_reason) Eff_types.Located.t
+  | Evidence_refused of (Z.t list, type_reason) Eff_types.Located.t
   | Evidence_feedRefused of feed_refusal
   | Evidence_differentEnv of Eff_types.Ty.t list * Eff_types.Ty.t list
 and wait_site = WaitSite_deferred of deferred_key | WaitSite_other
 and recorded_reply = {
   table : Eff_types.Row.t list;
   fiber : fiber_id;
-  token : int;
+  token : Z.t;
   op : Eff_types.NativeOp.t;
   request : Eff_types.Val.t;
   completion :
@@ -2119,7 +2119,8 @@ and memo = (check_input * verdict) list
 and oracle = check_input -> verdict
 and hit_rule = check_input -> check_input * verdict -> bool
 and live = run
-and fiber_id = int
+and fiber_id = Z.t
+and clock_millis = Z.t
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) dispatcher =
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket list
 and row_def = Eff_types.Row.t
@@ -2129,21 +2130,21 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) fiber_evaluator =
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine ->
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber ->
     bool -> ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) iter
-and deferred_key = int
-and memo_map_id = int
+and deferred_key = Z.t
+and memo_map_id = Z.t
 and 'u context = 'u service list
 and scope_store = scope_entry list
 and external_store = string list
-and run_id = int
+and run_id = Z.t
 and receipt = effect4_program_edit_step list
 and 'op typed_program = Eff_types.EffTy.t
 val api_evaluate :
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit)
+   Z.t, unit)
   run_decision
 val cause_fail : 'a -> ('a, 'b, 'c, 'd) Eff_types.Reason.t list
 val store_image_equiv : 'a image -> ('a -> 'b) -> ('b -> 'a) -> 'b image
-val store_image_nat : int image
+val store_image_nat : Z.t image
 val store_image_unit : unit image
 val store_image_string : string image
 val store_image_list : 'a image -> 'a list image
@@ -2163,122 +2164,122 @@ val program_native_op_sync_op_of :
   Eff_types.NativeOp.t ->
   Eff_types.Val.t list -> Eff_types.Val.t -> sync_op option
 val reify_exit_val :
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t -> Eff_types.Val.t
 val store_image_bool : bool image
 val store_image_of_tuple2 :
   'a image -> 'b image -> Eff_types.Val.t -> ('a * 'b) option
 val sync_op_step : sync_op -> stores -> (stores * Eff_types.Val.t) option
 val exit_image :
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t image
-val list_range : int -> int list
+val list_range : Z.t -> Z.t list
 val store_val__inst_decidable_eq : Eff_types.Val.t -> Eff_types.Val.t -> bool
 val program_decision_decide :
   Eff_types.Decision.t ->
   Eff_types.Val.t -> (bool * Eff_types.Val.t option) option
 val program_external_row :
-  Eff_types.Row.t list -> int -> Eff_types.Row.t option
+  Eff_types.Row.t list -> Z.t -> Eff_types.Row.t option
 val program_interp_of :
   Eff_types.NativeOp.t Eff_types.Eff.t ->
   Eff_types.Row.t list ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit, ctx, stores,
+   Z.t, unit, ctx, stores,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    prim)
   run_interp
 val stores_empty : stores
 val api_load :
   Eff_types.NativeOp.t Eff_types.Eff.t ->
-  int ->
+  Z.t ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit, ctx, stores,
+   Z.t, unit, ctx, stores,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    prim,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_fiber,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_event)
   run_machine
 val run_machine_finished :
   ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l) run_machine -> bool
 val run_machine_completed_exits :
   ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l) run_machine ->
-  (int * ('c, 'd, 'e, 'f, 'g) Eff_types.Exit.t) list
+  (Z.t * ('c, 'd, 'e, 'f, 'g) Eff_types.Exit.t) list
 val program_awaits :
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit, ctx, stores,
+   Z.t, unit, ctx, stores,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    prim,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_fiber,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_event)
   run_machine -> await list
 val api_replay :
   Eff_types.NativeOp.t Eff_types.Eff.t ->
-  int ->
+  Z.t ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit)
-  run_decision list -> Eff_types.Row.t list -> int -> inspection
+   Z.t, unit)
+  run_decision list -> Eff_types.Row.t list -> Z.t -> inspection
 val api_run :
   Eff_types.NativeOp.t Eff_types.Eff.t ->
-  int -> Eff_types.Row.t list -> int -> inspection
+  Z.t -> Eff_types.Row.t list -> Z.t -> inspection
 val program_admit :
   sig_app ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit, ctx, stores,
+   Z.t, unit, ctx, stores,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    prim,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_fiber,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_event)
   run_machine ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit)
+   Z.t, unit)
   run_decision -> refusal option
 val run_tree_eval_outside :
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t
 val run_tree_eval_bad_shape :
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t
 val run_tree_of_program :
-  Eff_types.Row.t list -> int -> Eff_types.NativeOp.t Eff_types.Eff.t -> tree
+  Eff_types.Row.t list -> Z.t -> Eff_types.NativeOp.t Eff_types.Eff.t -> tree
 val run_tree_run :
-  (int ->
+  (Z.t ->
    Eff_types.Val.t ->
    'a ->
-   ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+   ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
     Eff_types.Exit.t * 'a)
    option) ->
   tree -> 'a -> 'a effect4_run_tree_outcome
 val run_tree_outside_at :
-  Eff_types.NativeOp.t Eff_types.Eff.t -> int list option
+  Eff_types.NativeOp.t Eff_types.Eff.t -> Z.t list option
 val run_tree_host_tape :
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t list ->
-  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
    Eff_types.Exit.t *
-   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
    Eff_types.Exit.t list)
   option
 val run_tree_host_silent :
-  int ->
+  Z.t ->
   Eff_types.Val.t ->
   unit ->
-  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
    Eff_types.Exit.t * unit)
   option
 val run_tree_host_of_reactor :
@@ -2286,72 +2287,72 @@ val run_tree_host_of_reactor :
   (Eff_types.Row.t ->
    Eff_types.Val.t ->
    'a ->
-   ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+   ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
     Eff_types.Completion.t * 'b)
    option) ->
-  int ->
+  Z.t ->
   Eff_types.Val.t ->
   'a ->
-  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
    Eff_types.Exit.t * 'b)
   option
 val run_tree_probe :
   Eff_types.Row.t list ->
-  int ->
-  (int ->
+  Z.t ->
+  (Z.t ->
    Eff_types.Val.t ->
    'a ->
-   ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+   ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
     Eff_types.Exit.t * 'a)
    option) ->
   'a -> Eff_types.NativeOp.t Eff_types.Eff.t -> 'a effect4_run_tree_outcome
 val run_tree_settle :
   Eff_types.Row.t list ->
-  int ->
-  (int ->
+  Z.t ->
+  (Z.t ->
    Eff_types.Val.t ->
    'a ->
-   ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+   ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
     Eff_types.Exit.t * 'a)
    option) ->
   'a ->
   Eff_types.NativeOp.t Eff_types.Eff.t ->
-  (int * 'a effect4_run_tree_outcome) option
+  (Z.t * 'a effect4_run_tree_outcome) option
 val run_tree_frames :
   Eff_types.Row.t list ->
-  int ->
-  (int ->
+  Z.t ->
+  (Z.t ->
    Eff_types.Val.t ->
    'a ->
-   ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+   ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
     Eff_types.Exit.t * 'a)
    option) ->
   'a ->
   Eff_types.NativeOp.t Eff_types.Eff.t -> 'a effect4_run_tree_outcome list
-val char_of_nat : int -> int
+val char_of_nat : Z.t -> int
 val run_kit_check :
   sig_app ->
   Eff_types.NativeOp.t Eff_types.Eff.t ->
-  (Eff_types.EffTy.t, (int list, type_reason) Eff_types.Located.t) result
+  (Eff_types.EffTy.t, (Z.t list, type_reason) Eff_types.Located.t) result
 val run_kit_admit :
   sig_app -> Eff_types.NativeOp.t Eff_types.Eff.t -> admit_refusal option
 val run_kit_admit_shape : shape_doc
 val run_kit_admit_to_val : admit_refusal -> Eff_types.Val.t
 val run_kit_reply_fault :
   sig_app ->
-  int ->
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  Z.t ->
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t -> reply_fault option
 val run_kit_samples :
   (string * Eff_types.Ty.t) list ->
-  int -> Eff_types.Ty.t -> Eff_types.Val.t list
+  Z.t -> Eff_types.Ty.t -> Eff_types.Val.t list
 val run_kit_replies :
   sig_app ->
-  int ->
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  Z.t ->
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t list
 val run_kit_explore :
-  sig_app -> int -> int -> Eff_types.NativeOp.t Eff_types.Eff.t -> path list
+  sig_app -> Z.t -> Z.t -> Eff_types.NativeOp.t Eff_types.Eff.t -> path list
 val run_kit_program_shape : shape_doc
 val run_kit_program_to_val :
   Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t
@@ -2369,222 +2370,222 @@ val run_kit_eff_ty_shape : shape_doc
 val run_kit_eff_ty_to_val : Eff_types.EffTy.t -> Eff_types.Val.t
 val run_kit_refusal_shape : shape_doc
 val run_kit_refusal_to_val :
-  (int list, type_reason) Eff_types.Located.t -> Eff_types.Val.t
+  (Z.t list, type_reason) Eff_types.Located.t -> Eff_types.Val.t
 val run_kit_exit_shape : shape_doc
 val run_kit_exit_to_val :
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t -> Eff_types.Val.t
 val run_kit_exit_of_val :
   Eff_types.Val.t ->
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t option
 val run_kit_val_shape : shape_doc
 val run_kit_ty_text : Eff_types.Ty.t -> string
 val program_authoring_var :
   string ->
   env ->
-  int list ->
-  (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_nat :
-  int -> (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
+  Z.t -> (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_str :
-  string -> (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
+  string -> (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_bool :
-  bool -> (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
+  bool -> (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_unit :
   env ->
-  int list ->
-  (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_app :
   string ->
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result)
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result)
   list ->
   env ->
-  int list ->
-  (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_succeed :
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_fail :
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_sync :
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_suspend :
   (env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_bind_with :
   (env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   ((env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
    env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_and_then :
   (env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   (env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_if_else :
   'a ->
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   (env ->
-   int list ->
-   ('b Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('b Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   (env ->
-   int list ->
-   ('b Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('b Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('b Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('b Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_select_option_with :
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   (env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   ((env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
    env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_loop_with :
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   ((env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
    env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   ((env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
    env ->
-   int list ->
+   Z.t list ->
    (Eff_types.NativeOp.t Eff_types.Eff.t,
-    (int list, reason) Eff_types.Located.t)
+    (Z.t list, reason) Eff_types.Located.t)
    result) ->
   ((env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
    (env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
    env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   ((env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
    env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
+  Z.t list ->
   (Eff_types.NativeOp.t Eff_types.Eff.t,
-   (int list, reason) Eff_types.Located.t)
+   (Z.t list, reason) Eff_types.Located.t)
   result
 val program_authoring_catch_with :
   (env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   ((env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
    env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_on_exit_with :
   (env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   ((env ->
-    int list ->
-    (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+    Z.t list ->
+    (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
    env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_exit_ :
   (env ->
-   int list ->
-   ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
-  ('a Eff_types.Eff.t, (int list, reason) Eff_types.Located.t) result
+  Z.t list ->
+  ('a Eff_types.Eff.t, (Z.t list, reason) Eff_types.Located.t) result
 val program_authoring_ref_make :
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
+  Z.t list ->
   (Eff_types.NativeOp.t Eff_types.Eff.t,
-   (int list, reason) Eff_types.Located.t)
+   (Z.t list, reason) Eff_types.Located.t)
   result
 val program_authoring_ref_get :
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
+  Z.t list ->
   (Eff_types.NativeOp.t Eff_types.Eff.t,
-   (int list, reason) Eff_types.Located.t)
+   (Z.t list, reason) Eff_types.Located.t)
   result
 val program_authoring_ref_set :
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
+  Z.t list ->
   (Eff_types.NativeOp.t Eff_types.Eff.t,
-   (int list, reason) Eff_types.Located.t)
+   (Z.t list, reason) Eff_types.Located.t)
   result
 val program_authoring_row_host :
   string ->
@@ -2593,34 +2594,34 @@ val program_authoring_row_host :
 val program_authoring_row_call_named :
   string ->
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result) ->
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result) ->
   env ->
-  int list ->
+  Z.t list ->
   (Eff_types.NativeOp.t Eff_types.Eff.t,
-   (int list, reason) Eff_types.Located.t)
+   (Z.t list, reason) Eff_types.Located.t)
   result
 val program_authoring_def_invoke :
   string ->
   (env ->
-   int list ->
-   (Eff_types.Term.t, (int list, reason) Eff_types.Located.t) result)
+   Z.t list ->
+   (Eff_types.Term.t, (Z.t list, reason) Eff_types.Located.t) result)
   list ->
   env ->
-  int list ->
+  Z.t list ->
   (Eff_types.NativeOp.t Eff_types.Eff.t,
-   (int list, reason) Eff_types.Located.t)
+   (Z.t list, reason) Eff_types.Located.t)
   result
 val program_authoring_elaborate_at :
   Eff_types.Row.t list ->
   Eff_types.NativeOp.t def_src list ->
   (env ->
-   int list ->
+   Z.t list ->
    (Eff_types.NativeOp.t Eff_types.Eff.t,
-    (int list, reason) Eff_types.Located.t)
+    (Z.t list, reason) Eff_types.Located.t)
    result) ->
   (Eff_types.NativeOp.t Eff_types.Eff.t,
-   (int list, reason) Eff_types.Located.t)
+   (Z.t list, reason) Eff_types.Located.t)
   result
 val program_inst_decidable_eq_row :
   Eff_types.Row.t -> Eff_types.Row.t -> bool
@@ -2633,7 +2634,7 @@ val rows_reply :
   run ->
   call ->
   key ->
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Completion.t -> effect4_api_host_session_reply
 val api_host_session_bound_call_key : bound_call -> key
 val list_foldl_at_run_play_spec_0 : run -> command list -> run
@@ -2641,61 +2642,61 @@ val program_prepared_make :
   Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Row.t list -> prepared
 val program_prepared_step :
   prepared ->
-  int ->
+  Z.t ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit, ctx, stores,
+   Z.t, unit, ctx, stores,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    prim,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_fiber,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_event)
   run_machine ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit)
+   Z.t, unit)
   run_decision ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit, ctx, stores,
+   Z.t, unit, ctx, stores,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    prim,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_fiber,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_event)
   run_machine * bool
 val program_prepared_admit :
   prepared ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit, ctx, stores,
+   Z.t, unit, ctx, stores,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    prim,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_fiber,
    (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t,
-    Eff_types.Defect.t, int, unit)
+    Eff_types.Defect.t, Z.t, unit)
    frame_event)
   run_machine ->
   (eff_name, eff_thunk, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-   int, unit)
+   Z.t, unit)
   run_decision -> refusal option
 val tool_native_start : workspace
 val program_rc112 : profile_data
 val program_profile_data_value_refusal :
   profile_data ->
   Eff_types.Val.t ->
-  (int list, Eff_types.ProfileReason.t) Eff_types.Located.t option
+  (Z.t list, Eff_types.ProfileReason.t) Eff_types.Located.t option
 val run_inspect : run -> inspection
 val api_inspection_exit_ :
   inspection ->
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t option
 val tool_native_serve :
   workspace ->
@@ -2722,16 +2723,16 @@ val tool_native_serve_tree :
 val tool_native_refusal_tree : effect4_tool_wire_refusal -> nat_json
 val tool_native_relative_refusal :
   json_step list -> effect4_tool_wire_refusal -> effect4_tool_wire_refusal
-val nat_json_render : nat_json -> int list
+val nat_json_render : nat_json -> Z.t list
 val nat_json_parse :
-  int list -> (nat_json, (int, text_reason) Eff_types.Located.t) result
-val nat_json_refusal_text : (int, text_reason) Eff_types.Located.t -> string
+  Z.t list -> (nat_json, (Z.t, text_reason) Eff_types.Located.t) result
+val nat_json_refusal_text : (Z.t, text_reason) Eff_types.Located.t -> string
 val program_profile_data_literal_refusal :
   profile_data ->
   Eff_types.NativeOp.t Eff_types.Eff.t ->
-  (int list, Eff_types.ProfileReason.t) Eff_types.Located.t option
+  (Z.t list, Eff_types.ProfileReason.t) Eff_types.Located.t option
 val program_answer_tree :
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Completion.t -> Eff_types.Val.t
 val program_check_run : check_input -> verdict
 val program_check_oracle_uncached : oracle

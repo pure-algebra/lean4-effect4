@@ -1,7 +1,7 @@
 (* E4_ppath — see e4_ppath.mli.  The spine is reversed and the node rides along. *)
 
 type 'n t =
-  { rev : int list
+  { rev : Z.t list
   ; node : 'n option
   ; base : 'n
   }
@@ -9,7 +9,7 @@ type 'n t =
 let make (n : 'n) : 'n t = { rev = []; node = Some n; base = n }
 let root (p : 'n t) : 'n = p.base
 
-let snoc (child : 'n -> int -> 'n option) (p : 'n t) (i : int) : 'n t =
+let snoc (child : 'n -> Z.t -> 'n option) (p : 'n t) (i : Z.t) : 'n t =
   { rev = i :: p.rev
   ; node =
       (match p.node with
@@ -19,13 +19,13 @@ let snoc (child : 'n -> int -> 'n option) (p : 'n t) (i : int) : 'n t =
   }
 ;;
 
-let append (child : 'n -> int -> 'n option) (p : 'n t) (l : int list) : 'n t =
+let append (child : 'n -> Z.t -> 'n option) (p : 'n t) (l : Z.t list) : 'n t =
   List.fold_left (fun q i -> snoc child q i) p l
 ;;
 
-let node (_child : 'n -> int -> 'n option) (p : 'n t) : 'n option = p.node
+let node (_child : 'n -> Z.t -> 'n option) (p : 'n t) : 'n option = p.node
 
-let rec walk (child : 'n -> int -> 'n option) (n : 'n) (l : int list) : 'n option =
+let rec walk (child : 'n -> Z.t -> 'n option) (n : 'n) (l : Z.t list) : 'n option =
   match l with
   | [] -> Some n
   | i :: rest ->
@@ -34,5 +34,5 @@ let rec walk (child : 'n -> int -> 'n option) (n : 'n) (l : int list) : 'n optio
      | Some m -> walk child m rest)
 ;;
 
-let to_list (p : 'n t) : int list = List.rev p.rev
-let length (p : 'n t) : int = List.length p.rev
+let to_list (p : 'n t) : Z.t list = List.rev p.rev
+let length (p : 'n t) : Z.t = Z.of_int (List.length p.rev)

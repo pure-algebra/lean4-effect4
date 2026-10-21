@@ -94,7 +94,7 @@ let file_size path = (Unix.stat path).Unix.st_size
 
 (* ============================================================ nodes and stores *)
 
-let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 let v_str s = Eff_frame.framed Eff_frame.tag_string s
 let v_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
 

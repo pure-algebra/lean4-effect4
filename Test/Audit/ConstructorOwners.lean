@@ -1,13 +1,12 @@
 import OCaml5.Lcnf.Translate
-import Effect4.Data.ClockMillis
 
 /-!
 # The constructor census of the LCNF route
 
 A type that the route spells natively (`OCaml5.Lcnf.typeRows`) has no declared record or variant in
 OCaml. So the translator lowers each of its constructors and projections by an owner
-(`OCaml5.Lcnf.nativeOwner?`): its row, OCaml's own datatype, the clock, or a transparent
-structure's field. It refuses one with no owner by name. This battery reads the same function
+(`OCaml5.Lcnf.nativeOwner?`): its row, OCaml's own datatype, or a transparent structure's
+field. It refuses one with no owner by name. This battery reads the same function
 over every constructor and every projection function of every such type, a proof field excepted,
 and pins the table. A new type row, a new row or a Lean upgrade that adds a constructor changes the
 table, and the change is a review event.
@@ -26,7 +25,6 @@ namespace Test.Audit.ConstructorOwners
 def label : Option NativeOwner → String
   | some (.row _) => "row"
   | some .datatype => "datatype"
-  | some .clock => "clock"
   | some .field => "field"
   | none => "none"
 
@@ -78,8 +76,6 @@ Prod.fst: row
 Prod.snd: row
 Except.error: datatype
 Except.ok: datatype
-Effect4.ClockMillis.zero: clock
-Effect4.ClockMillis.positive: clock
 unowned: Float.ofModel, Float.toModel
 -/
 #guard_msgs in

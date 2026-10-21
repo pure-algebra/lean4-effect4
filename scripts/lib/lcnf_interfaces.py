@@ -49,7 +49,10 @@ def generate(root, recipe_path, out, checking, run, install):
     imports = sorted({module for entry in artifacts for module in entry.get('import', [])})
     run(['lake', 'build', *imports, 'lcnfgen'])
     run(['opam', 'exec', '--switch=effect4', '--', 'dune', 'build', '--root', 'ocaml',
-         'gen/interface/main.exe', 'clock/effect4_clock.cma', 'lcnf/effect4_lcnf.cma'])
+         'gen/interface/main.exe', 'lcnf/effect4_lcnf.cma'])
+    # A Lean natural is Zarith's `Z.t` (M4): the staged units compile against its interface.
+    zarith = run(['opam', 'exec', '--switch=effect4', '--', 'ocamlfind', 'query', 'zarith'],
+                 True).strip()
     with tempfile.TemporaryDirectory(prefix='effect4-lcnf-') as directory:
         stage = Path(directory) / 'stage'
         fresh = Path(directory) / 'compile'
@@ -58,7 +61,7 @@ def generate(root, recipe_path, out, checking, run, install):
         for index in range(len(artifacts)):
             run(['lake', 'exe', 'lcnfgen',
                  '--stage', str(stage), '--recipe', recipe_path, '--one', str(index)])
-        includes = [fresh, root / 'ocaml/_build/default/clock/.effect4_clock.objs/byte',
+        includes = [fresh, Path(zarith),
                     root / 'ocaml/_build/default/lcnf/.effect4_lcnf.objs/byte']
         flags = [flag for path in includes for flag in ['-I', str(path)]]
         compiler = ['opam', 'exec', '--switch=effect4', '--', 'ocamlopt',

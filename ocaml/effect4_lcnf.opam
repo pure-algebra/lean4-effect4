@@ -2,7 +2,7 @@
 opam-version: "2.0"
 synopsis: "Unstable: the runtime library of Effect4's LCNF-made OCaml"
 description:
-  "The functions every OCaml file that Effect4's LCNF route generates links: strings as UTF-8 bytes, bounded naturals, and the persistent array. Unstable: no release is published, and names may change."
+  "The functions every OCaml file that Effect4's LCNF route generates links: strings as UTF-8 bytes, Lean's total arithmetic on exact naturals, the refusal at a named crossing, and the persistent array. Unstable: no release is published, and names may change."
 maintainer: ["The Fold Lab"]
 authors: ["The Fold Lab"]
 license: "MIT"
@@ -11,6 +11,8 @@ bug-reports: "https://github.com/pure-algebra/lean4-effect4/issues"
 depends: [
   "dune" {>= "3.0"}
   "ocaml" {>= "5.1.1"}
+  "zarith" {>= "1.14"}
+  "conf-gmp"
   "odoc" {with-doc}
 ]
 build: [

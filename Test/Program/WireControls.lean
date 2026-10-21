@@ -49,9 +49,10 @@ open Effect4.Tool.Wire (Envelope Connection decode serveJson)
 -- past 2^53 - 1 refuses at its path, the child indices from the root.
 #guard rc112.valueRefusal (.list [.nat 1, .pair .unit (.nat 9007199254740992)]) =
   some ⟨[1, 1], .aboveBound 9007199254740992⟩
--- A negative integer refuses past the magnitude 2^53 - 1, as the int wire does; the edge carries.
+-- A negative integer refuses past the magnitude 2^53 - 1, as the int wire does, and the reason
+-- names the magnitude; the edge carries.
 #guard rc112.valueRefusal (.ctor 0 [.nat 9007199254740991, .negInt 9007199254740992]) =
-  some ⟨[1], .belowBound 9007199254740992⟩
+  some ⟨[1], .belowBound 9007199254740993⟩
 #guard rc112.valueRefusal (.ctor 0 [.nat 9007199254740991, .negInt 9007199254740990]) = none
 
 /-! ## The Check codecs -/

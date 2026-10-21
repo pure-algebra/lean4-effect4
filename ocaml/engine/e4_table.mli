@@ -1,8 +1,8 @@
-(* E4_table — the persistent int-keyed table behind the fiber table, the ref heap, the
+(* E4_table — the persistent table keyed by naturals behind the fiber table, the ref heap, the
    deferred cells and the scope entries (docs/research/2026-09-08-engine-a1-state.md §4.1,
    fields F2-F5 of §1.2).
 
-   What it is: `Map.Make(Int)` with a Lean-shaped API and a small-size representation.
+   What it is: `Map.Make(Z)` with a Lean-shaped API and a small-size representation.
    The `set` / `add` split is the whole point: Lean's `List.set` is a NO-OP out of range
    (`refPoke` and `DeferredStore.setCell`, src/Effect4/Machine/Stores.lean).
    Replace-by-key `List.map` leaves an absent key unchanged (`ScopeStore.setEntry` in
@@ -16,11 +16,11 @@
    checked at compile time in test/prop_table.ml, whose model `L` is Lean's carrier written
    out: an association list in allocation order under the List operations above.
 
-   Depends on: the OCaml standard library only (Map, List).
+   Depends on: Zarith (Z), the OCaml standard library (Map, List).
 
    Representation (R6 of §7; the answer to acceptance AC9, "no W1 regression"):
      Small l   an assoc list, ASCENDING by key, no duplicate key, length <= small_max
-     Big m     a Map.Make(Int), cardinal > small_max
+     Big m     a Map.Make(Z), cardinal > small_max
    `small_max` is 0, MEASURED: A1 §7 R6 predicted an assoc list would beat Map.Make(Int)
    below ~8 entries; it loses `find` by 1.65x and `add` by 1.41x at ONE entry and the gap
    only widens (the table is in e4_table.ml and in test/bench_carriers.ml's crossover
@@ -67,62 +67,64 @@
                                                                            tested
    R6b representation independence: two tables with the same bindings, built by different
        op sequences, have the same `bindings`, `cardinal` and `is_small`   tested
-   Bound: keys are host ints.  Lean's keys are `Nat` (RefKey.index, DeferredKey.index,
-   ScopeEntry.key, FiberId) and every one of them is < max_int on this host. *)
+   Bound: none.  Lean's keys are `Nat` (RefKey.index, DeferredKey.index, ScopeEntry.key,
+   FiberId), and a key is Zarith's `Z.t`, the `Nat` row's spelling (M4), so every key is exact.
+   The cardinal is a count of bindings the heap holds, so it is an `int` inside, and `cardinal`
+   answers it as a natural. *)
 
 type 'a t
 
 val empty : 'a t
 val is_empty : 'a t -> bool
-val mem : int -> 'a t -> bool
+val mem : Z.t -> 'a t -> bool
 
 (** The key first: the shape the generated call sites use. *)
-val find_opt : int -> 'a t -> 'a option
+val find_opt : Z.t -> 'a t -> 'a option
 
 (** The TABLE first: Lean's argument order for `RunMachine.fiber?` (RunMachine.fiber? (src/Effect4/Machine/Fibers.lean)) and
     `DeferredStore.cellAt` (DeferredStore.cellAt (src/Effect4/Machine/Stores.lean)), so an extern row is a name substitution and
     not an argument permutation.  See the deviation note in
     docs/research/2026-09-08-engine-lane-c-delivery.md. *)
-val find_opt' : 'a t -> int -> 'a option
+val find_opt' : 'a t -> Z.t -> 'a option
 
 (** Replace an EXISTING binding.  A no-op — and PHYSICALLY the same table — when the key is
     absent (T1).  This is Lean's `List.set` / replace-by-key `List.map`. *)
-val set : int -> 'a -> 'a t -> 'a t
+val set : Z.t -> 'a -> 'a t -> 'a t
 
 (** Insert or replace.  Allocation uses [add k v t] with [k = cardinal t] (the ref heap's
     `refMake`). *)
-val add : int -> 'a -> 'a t -> 'a t
+val add : Z.t -> 'a -> 'a t -> 'a t
 
 (** No Lean carrier removes; `remove` exists for the property tests and for A3. *)
-val remove : int -> 'a t -> 'a t
+val remove : Z.t -> 'a t -> 'a t
 
 (** O(1): carried in the value.  See the representation note above. *)
-val cardinal : 'a t -> int
+val cardinal : 'a t -> Z.t
 
 (** Key-preserving bulk transform (RunMachine.dropObservers, dropObservers (src/Effect4/Machine/Fibers.lean)). *)
 val map : ('a -> 'a) -> 'a t -> 'a t
 
 (** ASCENDING; the shape of RunMachine.completedExits (completedExits (src/Effect4/Machine/Fibers.lean)). *)
-val filter_map : (int -> 'a -> 'b option) -> 'a t -> 'b list
+val filter_map : (Z.t -> 'a -> 'b option) -> 'a t -> 'b list
 
 (** The shape of RunMachine.finished (RunMachine.finished (src/Effect4/Machine/Fibers.lean)).  Short-circuits; the visit ORDER is
     unspecified (T5) — the answer is not. *)
-val for_all : (int -> 'a -> bool) -> 'a t -> bool
+val for_all : (Z.t -> 'a -> bool) -> 'a t -> bool
 
 (** Ascending key order. *)
-val fold : (int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+val fold : (Z.t -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
 
 (** Ascending.  O(n) and 4-5x a list walk (§6.2 C6): paid once per READ, never per step. *)
-val bindings : 'a t -> (int * 'a) list
+val bindings : 'a t -> (Z.t * 'a) list
 
 (** Ascending, values only: the Lean list, for every table whose keys are allocated
     monotonically (§4.2's licence). *)
 val to_list : 'a t -> 'a list
 
 (** Left to right, each pair through [add]: a later duplicate key REPLACES an earlier one. *)
-val of_list : (int * 'a) list -> 'a t
+val of_list : (Z.t * 'a) list -> 'a t
 
-val singleton : int -> 'a -> 'a t
+val singleton : Z.t -> 'a -> 'a t
 
 (* --- representation introspection: for the property tests and the bench, not for the
    machine.  Nothing in the engine's hot path may branch on these. --- *)

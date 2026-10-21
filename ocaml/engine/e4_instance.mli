@@ -54,9 +54,9 @@ module Make
 
   val interp_of : Row.t list -> program -> interp
   val prepare : Row.t list -> program -> prepared
-  val load : program -> fuel:int -> machine
-  val step : prepared -> fuel:int -> machine -> api_decision -> machine * bool
-  val run_api : Row.t list -> program -> fuel:int -> outcome * machine
+  val load : program -> fuel:Z.t -> machine
+  val step : prepared -> fuel:Z.t -> machine -> api_decision -> machine * bool
+  val run_api : Row.t list -> program -> fuel:Z.t -> outcome * machine
   val admit : prepared -> machine -> api_decision -> bool
   val fibers : machine -> (fiber_id * fiber) list
   val fiber_count : machine -> int
@@ -64,8 +64,8 @@ module Make
   val trace_length : machine -> int
   val stuck_of : machine -> stuck option
   val armed_of : machine -> fiber_id list
-  val next_id : machine -> int
-  val next_token : machine -> int
+  val next_id : machine -> Z.t
+  val next_token : machine -> Z.t
   val race_count : machine -> int
   val middleware : machine -> bool
   val finished : machine -> bool
@@ -76,24 +76,24 @@ module Make
 
   val stores_of : machine -> stores
   val refs : machine -> Val.t list
-  val next_name : machine -> int
+  val next_name : machine -> Z.t
   val due_count : machine -> int
   val cell_count : machine -> int
   val scope_count : machine -> int
   val memo_map_count : machine -> int
-  val memo_paths : machine -> (int * (int list * int list list) list) list
+  val memo_paths : machine -> (Z.t * (Z.t list * Z.t list list) list) list
   val f_id : fiber -> fiber_id
   val f_exit : fiber -> (Val.t, Err.t, Defect.t, fiber_id, unit) Exit.t option
   val f_parked : fiber -> parked
   val f_running : fiber -> bool
   val f_finalizing : fiber -> bool
-  val f_pending_tokens : fiber -> int list
+  val f_pending_tokens : fiber -> Z.t list
   val f_observers : fiber -> observer list
   val f_children : fiber -> fiber_id list
-  val f_op_count : fiber -> int
-  val f_max_ops : fiber -> int
+  val f_op_count : fiber -> Z.t
+  val f_max_ops : fiber -> Z.t
   val f_prevent_yield : fiber -> bool
   val f_yield_override : fiber -> bool option
   val f_context : fiber -> ctx
-  val f_dispatcher : fiber -> (int * int) list
+  val f_dispatcher : fiber -> (Z.t * int) list
 end

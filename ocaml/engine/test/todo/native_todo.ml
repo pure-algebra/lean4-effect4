@@ -34,8 +34,21 @@ open Eff_types
 (* The rows' error, as the lowered code carries it: the tag and the message. *)
 type sql_error = Todo_gen.sql_tag * string
 
-(* The lane's repository state (`Repo`): the next id, then each to-do's id, title and flag. *)
-type lane_state = int * (int * (string * bool)) list
+(* The lane's repository state (`Repo`): the next id, then each to-do's id, title and flag. An
+   id is a Lean natural, Zarith's `Z.t` (M4). *)
+type lane_state = Z.t * (Z.t * (string * bool)) list
+
+(* The lane's own operations on ids: Lean's `==` and order on naturals. *)
+let find_id (id : Z.t) items =
+  List.find_map (fun (i, e) -> if Z.equal i id then Some e else None) items
+;;
+
+let has_id (id : Z.t) items = List.exists (fun (i, _) -> Z.equal i id) items
+let drop_id (id : Z.t) items = List.filter (fun (i, _) -> not (Z.equal i id)) items
+
+let set_id (id : Z.t) d items =
+  List.map (fun (i, (t, e)) -> if Z.equal i id then i, (t, d) else i, (t, e)) items
+;;
 
 (* ---------------------------------------------------------------- the interface *)
 
@@ -46,8 +59,8 @@ module type REPO = sig
 
   val insert : string -> t -> (Todo_gen.todo, sql_error) result * t
   val all : unit -> t -> (Todo_gen.todo list, sql_error) result * t
-  val set_done : int * bool -> t -> (Todo_gen.todo option, sql_error) result * t
-  val delete : int -> t -> (bool, sql_error) result * t
+  val set_done : Z.t * bool -> t -> (Todo_gen.todo option, sql_error) result * t
+  val delete : Z.t -> t -> (bool, sql_error) result * t
 end
 
 (* A module of type REPO as a value of the lowered record. *)
@@ -57,7 +70,7 @@ let host (type s) (module R : REPO with type t = s) : s Todo_gen.host =
 
 (* The host as the engine driver's provider: the lowered reactor over its record. *)
 let provider (h : 's Todo_gen.host)
-  : Row.t -> Val.t -> 's -> ((Val.t, Err.t, Defect.t, int, unit) Completion.t * 's) option
+  : Row.t -> Val.t -> 's -> ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * 's) option
   =
   Todo_gen.test_dogfood_scenario_todo_typed_host_reactor h
 ;;
@@ -89,7 +102,7 @@ let todo id title d : Todo_gen.todo = { id; title; done_ = d }
 module Untyped = struct
   let todo id title is_done =
     Val.Ctor
-      ( 0
+      ( Z.zero
       , [ Val.List [ Val.Str "done"; Val.Str "id"; Val.Str "title" ]
         ; Val.List [ Val.Bool is_done; Val.Nat id; Val.Str title ]
         ] )
@@ -100,24 +113,18 @@ module Untyped = struct
   let provider (r : Row.t) (sent : Val.t) ((next, items) : lane_state) =
     match r.Row.spelling, sent with
     | "TodoRepo.insert", Val.Str title ->
-      Some (ok (todo next title false), (next + 1, items @ [ next, (title, false) ]))
+      Some (ok (todo next title false), (Z.succ next, items @ [ next, (title, false) ]))
     | "TodoRepo.all", _ ->
       Some
         ( ok (Val.List (List.map (fun (id, (title, d)) -> todo id title d) items))
         , (next, items) )
     | "TodoRepo.setDone", Val.List [ Val.Nat id; Val.Bool d ] ->
-      (match List.assoc_opt id items with
+      (match find_id id items with
        | Some (title, _) ->
-         Some
-           ( ok (Val.Some (todo id title d))
-           , ( next
-             , List.map (fun (i, (t, e)) -> if i = id then i, (t, d) else i, (t, e)) items
-             ) )
+         Some (ok (Val.Some (todo id title d)), (next, set_id id d items))
        | None -> Some (ok Val.None, (next, items)))
     | "TodoRepo.delete", Val.Nat id ->
-      Some
-        ( ok (Val.Bool (List.mem_assoc id items))
-        , (next, List.filter (fun (i, _) -> i <> id) items) )
+      Some (ok (Val.Bool (has_id id items)), (next, drop_id id items))
     | _ -> None
   ;;
 end
@@ -129,22 +136,16 @@ end
 let record : lane_state Todo_gen.host =
   { Todo_gen.insert =
       (fun title (next, items) ->
-        Ok (todo next title false), (next + 1, items @ [ next, (title, false) ]))
+        Ok (todo next title false), (Z.succ next, items @ [ next, (title, false) ]))
   ; all =
       (fun () (next, items) ->
         Ok (List.map (fun (id, (title, d)) -> todo id title d) items), (next, items))
   ; set_done =
       (fun (id, d) (next, items) ->
-        match List.assoc_opt id items with
-        | Some (title, _) ->
-          ( Ok (Some (todo id title d))
-          , ( next
-            , List.map (fun (i, (t, e)) -> if i = id then i, (t, d) else i, (t, e)) items
-            ) )
+        match find_id id items with
+        | Some (title, _) -> Ok (Some (todo id title d)), (next, set_id id d items)
         | None -> Ok None, (next, items))
-  ; delete =
-      (fun id (next, items) ->
-        Ok (List.mem_assoc id items), (next, List.filter (fun (i, _) -> i <> id) items))
+  ; delete = (fun id (next, items) -> Ok (has_id id items), (next, drop_id id items))
   }
 ;;
 
@@ -158,27 +159,37 @@ let broken : lane_state Todo_gen.host =
 
 (* ------------------------------------------------------------------------ Core *)
 
-(* todo_core.ml behind REPO: its own types, converted at the boundary. *)
+(* todo_core.ml behind REPO: its own types, converted at the boundary. Its ids are the host's
+   ints (rocq-of-ocaml reads the file alone, with no library); each is the lane's natural
+   exactly, and the lane's ids are small. *)
 module Core : REPO with type t = Todo_core.t = struct
   type t = Todo_core.t
 
-  let todo (x : Todo_core.todo) : Todo_gen.todo = todo x.id x.title x.done_
+  let todo (x : Todo_core.todo) : Todo_gen.todo = todo (Z.of_int x.id) x.title x.done_
   let error (Todo_core.Sql_error message) : sql_error = Todo_gen.SqlTag_SqlError, message
   let answer f (r, s) = Result.map_error error (Result.map f r), s
   let insert title s = answer todo (Todo_core.insert title s)
   let all () s = answer (List.map todo) (Todo_core.all () s)
-  let set_done request s = answer (Option.map todo) (Todo_core.set_done request s)
-  let delete id s = answer Fun.id (Todo_core.delete id s)
+
+  let set_done (id, d) s =
+    answer (Option.map todo) (Todo_core.set_done (Z.to_int id, d) s)
+  ;;
+
+  let delete id s = answer Fun.id (Todo_core.delete (Z.to_int id) s)
 end
 
 let core_of_lane ((next, items) : lane_state) : Todo_core.t =
-  { next
-  ; items = List.map (fun (id, (title, done_)) -> { Todo_core.id; title; done_ }) items
+  { next = Z.to_int next
+  ; items =
+      List.map
+        (fun (id, (title, done_)) -> { Todo_core.id = Z.to_int id; title; done_ })
+        items
   }
 ;;
 
 let lane_of_core (s : Todo_core.t) : lane_state =
-  s.next, List.map (fun (x : Todo_core.todo) -> x.id, (x.title, x.done_)) s.items
+  ( Z.of_int s.next
+  , List.map (fun (x : Todo_core.todo) -> Z.of_int x.id, (x.title, x.done_)) s.items )
 ;;
 
 (* ----------------------------------------------------------------------- Table *)
@@ -192,22 +203,30 @@ module Table : sig
   val create : ?fault:(string -> unit) -> lane_state -> t
   val snapshot : t -> lane_state
 end = struct
+  (* The ids are naturals, so the table hashes and compares them as Zarith does (rule 7). *)
+  module Ids = Hashtbl.Make (struct
+      type t = Z.t
+
+      let equal = Z.equal
+      let hash = Z.hash
+    end)
+
   type t =
-    { mutable next : int
-    ; rows : (int, string * bool) Hashtbl.t
+    { mutable next : Z.t
+    ; rows : (string * bool) Ids.t
     ; fault : string -> unit
     }
 
   let create ?(fault = fun _ -> ()) ((next, items) : lane_state) : t =
-    let rows = Hashtbl.create 16 in
-    List.iter (fun (id, entry) -> Hashtbl.replace rows id entry) items;
+    let rows = Ids.create 16 in
+    List.iter (fun (id, entry) -> Ids.replace rows id entry) items;
     { next; rows; fault }
   ;;
 
-  let sorted (h : t) : (int * (string * bool)) list =
+  let sorted (h : t) : (Z.t * (string * bool)) list =
     List.sort
-      (fun (a, _) (b, _) -> Int.compare a b)
-      (Hashtbl.fold (fun k v acc -> (k, v) :: acc) h.rows [])
+      (fun (a, _) (b, _) -> Z.compare a b)
+      (Ids.fold (fun k v acc -> (k, v) :: acc) h.rows [])
   ;;
 
   let snapshot (h : t) : lane_state = h.next, sorted h
@@ -215,8 +234,8 @@ end = struct
   let insert title h =
     h.fault "insert";
     let id = h.next in
-    Hashtbl.replace h.rows id (title, false);
-    h.next <- id + 1;
+    Ids.replace h.rows id (title, false);
+    h.next <- Z.succ id;
     Ok (todo id title false), h
   ;;
 
@@ -227,17 +246,17 @@ end = struct
 
   let set_done (id, d) h =
     h.fault "set_done";
-    match Hashtbl.find_opt h.rows id with
+    match Ids.find_opt h.rows id with
     | None -> Ok None, h
     | Some (title, _) ->
-      Hashtbl.replace h.rows id (title, d);
+      Ids.replace h.rows id (title, d);
       Ok (Some (todo id title d)), h
   ;;
 
   let delete id h =
     h.fault "delete";
-    let present = Hashtbl.mem h.rows id in
-    Hashtbl.remove h.rows id;
+    let present = Ids.mem h.rows id in
+    Ids.remove h.rows id;
     Ok present, h
   ;;
 end

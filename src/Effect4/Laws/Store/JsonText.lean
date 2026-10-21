@@ -25,7 +25,7 @@ by one grammar, inside the profile.
 
 - **`json-text-round-trip`** (proposed claim, role compatibility; pointer `parse_render`). Reach:
   every profile tree within the profile (`NatJson.within`: every natural at most
-  `NatJson.limit`, no numeral), every string. Not established: exactness against rendering, that
+  `safeBound`, no numeral), every string. Not established: exactness against rendering, that
   whatever reads is a rendering modulo white space and the spelling of escapes and numbers;
   anything of a host's text before its bytes (a line's UTF-8 from `IO.getLine`); the lowered
   OCaml, which decisions row 391 trusts. Consumers: Lean's session driver
@@ -476,10 +476,10 @@ theorem repr_value (n : Nat) : digitsValue (codes (Nat.repr n)) = n := by
 
 /-- Within the profile, a natural's text has at most `maxDigits` digits. A step of
 `numberOf_repr`. -/
-theorem repr_length {n : Nat} (h : n ≤ NatJson.limit) : (codes (Nat.repr n)).length ≤ maxDigits := by
+theorem repr_length {n : Nat} (h : n ≤ safeBound) : (codes (Nat.repr n)).length ≤ maxDigits := by
   rw [codes_repr, List.length_map]
   have := toDigitsCore_length (n + 1) n 15 [] (Nat.lt_succ_self n)
-    (by unfold NatJson.limit at h; omega)
+    (by unfold safeBound at h; omega)
   simp only [List.length_nil] at this
   unfold maxDigits
   omega
@@ -583,7 +583,7 @@ theorem numberText_repr (n : Nat) {rest : List Nat} (hr : delimited rest = true)
         simp only [Except.bind, fractionPart_delimited hr, Except.map, List.append_nil]
 
 /-- **Within the profile, a natural's text is the natural.** A step of `startValue_nat`. -/
-theorem numberOf_repr {n : Nat} (h : n ≤ NatJson.limit) : numberOf (codes (Nat.repr n)) = .nat n := by
+theorem numberOf_repr {n : Nat} (h : n ≤ safeBound) : numberOf (codes (Nat.repr n)) = .nat n := by
   unfold numberOf
   have hall : (codes (Nat.repr n)).all isDigit = true := List.all_eq_true.mpr (repr_digits n)
   rw [hall, Bool.true_and, decide_eq_true (repr_length h), if_pos rfl, repr_value]
@@ -621,7 +621,7 @@ theorem startValue_str (ctx : TextCtx) (s : String) (r : List Nat) :
 /-- Within the profile, a natural's text starts a value read whole, up to what follows it. A step
 of `readText_renderTo`. -/
 theorem startValue_nat {n : Nat} {d : Nat} {ds rest : List Nat} (ctx : TextCtx)
-    (hn : n ≤ NatJson.limit) (hr : delimited rest = true) (hds : codes (Nat.repr n) = d :: ds) :
+    (hn : n ≤ safeBound) (hr : delimited rest = true) (hds : codes (Nat.repr n) = d :: ds) :
     startValue ctx d (ds ++ rest) = .ok (ctx.put (.nat n), rest) := by
   have hd : isDigit d = true := repr_digits n d (by rw [hds]; exact List.mem_cons_self)
   have hd' : 48 ≤ d ∧ d ≤ 57 := by

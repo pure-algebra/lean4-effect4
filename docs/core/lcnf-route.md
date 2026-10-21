@@ -44,7 +44,7 @@ not made from LCNF (memory `ocaml-only-from-lcnf`).
 | an application at erased arguments only | a function of the callee's remaining parameters | eta-expanded, so OCaml generalizes it past the value restriction (2026-10-15) |
 | `return` / `unreach` | variable / `assert false` | |
 | calls to globals | `g' args` and enqueue `g` | the closure; `redArgTarget?`, `wrapperKeep?` strip Lean's wrappers (`:400-431`) |
-| builtins | one table of rows, `builtins` in `src/OCaml5/Lcnf/Builtins.lean` (§9; 106 rows since 2026-10-05) | `Nat`/`UInt8`/`Bool` arithmetic and comparisons; `Nat.pow` saturates (`Lcnf_nat.pow`); `Nat.sub` truncated as Lean's |
+| builtins | one table of rows, `builtins` in `src/OCaml5/Lcnf/Builtins.lean` (§9; 106 rows since 2026-10-05) | `Nat`/`UInt8`/`Bool` arithmetic and comparisons; `Nat` is Zarith's `Z.t`, exact (M4); `Nat.pow` refuses an exponent past the target's `int` (`Lcnf_nat.pow`); `Nat.sub` truncated as Lean's |
 | stdlib functions | translated from their own mono decls | `List.hasDecEq`, `instDecidableEqProd`, `List.filterTR.loop` came out this way (NOTES §260); a table row only where the stdlib body is an `extern` |
 | externs (strings, floats, `IO`) | `Externs.lean` table | a call with no row is a refusal |
 | carriers (`List`-like op rows) | `carrierRewrite?` (`:607`), `useAsList` (`:500`) | a carrier without a `to_list` row is a refusal |
@@ -110,7 +110,7 @@ lane. Target-specific, to write:
    become a `while (true)` with reassignment, or a trampoline; the machine's stepping functions
    are the case that matters (`Machine/Fibers.lean`'s loops).
 5. **Numbers.** `Nat` as `bigint` (exact) or `number` (fast, wrong past 2^53): a policy row, as
-   `max_int` and the saturating `Lcnf_nat.pow` are for OCaml. The wire already fixes `Nat` as JSON numbers with the
+   Zarith's `Z.t` is for OCaml (M4). The wire already fixes `Nat` as JSON numbers with the
    `isInt`/non-negative checks.
 6. **Strings and bytes.** OCaml strings are bytes; JavaScript strings are UTF-16. The estate's
    codec is bytes (`Store/Utf8.lean`, strict UTF-8), so string externs need the same rows the
@@ -209,13 +209,15 @@ Neither route supplies a self-application theorem.
 - A universal claim needs a kernel-checked certificate or a proved checker; finite tests are never
   promoted to certificates.
 
-**Numbers, as they stand.** Lean's own `Nat` operations in the lowered machine keep these rows
-of the builtin table (reading, `builtins` in `src/OCaml5/Lcnf/Builtins.lean`):
-- natural addition lowers to raw 63-bit `+` (the row `Nat.add`), and so does successor (the row
-  `Nat.succ`), so a large enough sum wraps;
-- multiplication, powers and the left shift saturate at the largest integer (the support
-  functions `Lcnf_nat.mul`, `Lcnf_nat.pow` and `Lcnf_nat.shift_left`);
-- subtraction floors at zero (the row `Nat.sub`).
+**Numbers, as they stand.** Lean's `Nat` and `Int` are Zarith's `Z.t` in the lowered machine
+(M4, decisions row 417 (1)). The type table and the builtin table say so (reading, `typeRows` in
+`src/OCaml5/Lcnf/TypeRows.lean`, `builtins` in `src/OCaml5/Lcnf/Builtins.lean`):
+- addition, successor and multiplication are exact (`Z.add`, `Z.succ`, `Z.mul`), so no sum wraps
+  and no product saturates;
+- subtraction floors at zero, and division and remainder answer at a zero divisor, as Lean's do
+  (the support functions `Lcnf_nat.sub`, `Lcnf_nat.div` and `Lcnf_nat.rem`);
+- a power or a shift is exact. An exponent or a shift past the target's `int` is refused at the
+  arithmetic crossing (`Lcnf_nat.pow`, `Lcnf_nat.shift_left`, `Lcnf_crossing`).
 
 The table became data on 2026-10-05 (§9). That change moved no number.
 
@@ -227,10 +229,11 @@ same atoms (`Program.evalTerm`, `src/Effect4/Machine/Stores.lean`; row 43).
 
 Each face refuses outside the profile's bound, `natBound` (`src/Effect4/Program/Profile.lean`,
 DI-56):
-- **OCaml** (row 321; `E4-RUN-CE-047`): the rows of `Profile.grow` and `Profile.scale` compute
-  exactly on `E4_clock.t`, and `E4_clock.to_profile_nat` raises `Profile_refusal` outside the
-  bound. The engine answers it as `Outside_profile`, with the input machine retained. It also
-  refuses a negative or oversized natural in a host answer and in a literal (`E4-OCAML-CE-001`).
+- **OCaml** (M4, decisions row 417 (1)): the bound is an ingress rule. The engine asks Lean's
+  profile support, lowered, of a program's literals and of a host's answer. It asks at the
+  selected profile `rc112` (`literal_refusal` and `ingress`, EN8 and EN9 of `ocaml/engine/e4_engine.mli`).
+  Inside a run the naturals are exact: `Profile.grow` and `Profile.scale` are lowered from their
+  Lean definitions, and no row spells them.
 - **TypeScript** (row 322; `E4-RUN-CE-047`): the prelude's bodies of the five atoms call
   `inProfile`, which throws `ProfileRefusal` past the bound (`tools/Effect4Gen/PreludeAtoms.lean`).
   `Codegen.emitModule` refuses a natural literal above the bound, and so does the module reader
@@ -242,14 +245,14 @@ DI-56):
 The numbers seat of the 2026-09-30 pass (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-pass/numbers`) ran one
 checked program with small literals on all three faces and got three different answers. DI-56's
 ruling stands: inside its profile each face equals the exact Lean reference, and outside it the
-face refuses, intermediate values included. Decisions row 108 is its implementation plan, open in
+face refuses. TypeScript refuses intermediate values too, and OCaml computes them exactly (M4).
+Decisions row 108 is its implementation plan, open in
 the register (the owner places it, no later than WASM). What row 108 leaves open (reading):
 - **No lane reads a refusal.** The truth runner records no profile refusal, and its comparator
   has no class "outside the profile" (row 322 (4)). No corpus program reaches the bound.
 - **No theorem relates a target's refusal to the reference.** The Lean judgment covers `plus`, and
   the OCaml and TypeScript refusals are finite checks (tested).
 - **No WASM target exists** to inherit the refusal.
-- **Exact native naturals stay conditional**: only when a native use needs values above 2^62.
 
 The side audit (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-09-30-side-audit`) adds two requirements:
 - **The arithmetic boundary includes the store functions and the values stored in cells**
@@ -307,7 +310,7 @@ No second list names a row.
 - An inline form is `fun params -> body`, written in place. Its body binds nothing.
 - A support function lives once in the runtime library `ocaml/lcnf`, and `support` keeps its
   reference definition for the target evaluator. A form that binds a name, or that calls itself,
-  is one: `Lcnf_nat.mul`, `Lcnf_nat.pow`, `Lcnf_nat.shift_left` and `Lcnf_list.contains`.
+  is one: `Lcnf_nat.sub`, `Lcnf_nat.pow`, `Lcnf_nat.shift_left` and `Lcnf_list.contains`.
 - A library function is a trusted leaf of the target (`libraries`), such as `List.map`.
 
 **Application.** `Builtin.apply` puts the arguments in an inline body's place. That is exact
@@ -364,7 +367,7 @@ check, as the row intends.
 
 A type with a row of the type table has no OCaml declaration. One owner lowers each of its
 constructors and projections (`nativeOwner?`, `src/OCaml5/Lcnf/Translate.lean`). The owner is
-its builtin row, OCaml's own datatype, the clock, or a transparent structure's field. The translator
+its builtin row, OCaml's own datatype, or a transparent structure's field. The translator
 refuses one with no owner by name, and a `cases` that OCaml cannot match too. The census
 (`Test/Audit/ConstructorOwners.lean`) pins each owner, and the constructor lane
 (`ocaml/engine/test/ctors/`) runs each lowering against Lean's answers. The probe that found

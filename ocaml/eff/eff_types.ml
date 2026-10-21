@@ -6,11 +6,11 @@
 
 
 module ServiceName = struct
-  type t = int
+  type t = Z.t
 end
 
 module ServiceTypeCode = struct
-  type t = int
+  type t = Z.t
 end
 
 module ServiceKey = struct
@@ -41,7 +41,7 @@ module Ty = struct
     | Lit of string
     | RefOf of t
     | DeferredOf of t * t
-    | Var of int
+    | Var of Z.t
     | Unknown
     | Record of (string * (bool * t)) list
     | Map of t * t
@@ -57,7 +57,7 @@ end
 module Lit = struct
   type t =
     | Unit
-    | Nat of int
+    | Nat of Z.t
     | Bool of bool
     | Str of string
 end
@@ -68,13 +68,13 @@ end
 
 module rec Term : sig
   type t =
-    | Var of int
+    | Var of Z.t
     | Lit of Lit.t
     | App of string * Terms.t
     | Record of (string * (bool * Ty.t)) list * string list * Terms.t
     | Field of FieldReadMode.t * t * string
     | RecordSet of t * string * t
-    | TupleAt of t * int
+    | TupleAt of t * Z.t
     | Fold of Ty.t option * t * t * t
 end = Term
 
@@ -121,7 +121,7 @@ module NativeOp = struct
     | ScopeMake of FinalizerStrategy.t
     | Sleep
     | ClockNow
-    | External of int
+    | External of Z.t
     | DeferredMakeOf of Ty.t * Ty.t
     | RefUpdateWith of Term.t
     | RefGetAndUpdateWith of Term.t
@@ -131,8 +131,8 @@ module NativeOp = struct
     | RefUpdateSomeAndGetWith of Term.t
     | RefModifyWith of Term.t
     | RefModifySomeWith of Term.t
-    | Call of int
-    | Param of int
+    | Call of Z.t
+    | Param of Z.t
 end
 
 module Decision = struct
@@ -144,7 +144,7 @@ module Decision = struct
 end
 
 module DefRole = struct
-  type t = Plain | ServiceInit of string | ServiceMethod of string * string * int
+  type t = Plain | ServiceInit of string | ServiceMethod of string * string * Z.t
 end
 
 module ParamDecl = struct
@@ -184,7 +184,7 @@ module rec Eff : sig
     | Exit of 'op t
     | Uninterruptible of 'op t
     | Interruptible of 'op t
-    | YieldNow of int
+    | YieldNow of Z.t
     | AwaitFiber of Term.t * ObserverMode.t
     | WithFiber of 'op ActionTerm.t
     | Scoped of 'op t
@@ -197,7 +197,7 @@ module rec Eff : sig
     | Iterate of Ty.t option * Term.t * Term.t * Term.t * Term.t * 'op t
     | Restore of Term.t * 'op t
     | Defs of DefDecl.t list * 'op Effs.t * 'op t * 'op LayerTerms.t
-    | Invoke of int * Term.t * 'op Effs.t
+    | Invoke of Z.t * Term.t * 'op Effs.t
     | ProvideContext of Term.t * 'op t
 end = Eff
 
@@ -250,7 +250,7 @@ and LayerTerm : sig
     | Merge of 'op t * 'op t
     | Fresh of 'op t
     | OrDie of 'op t
-    | Ref of int list
+    | Ref of Z.t list
     | MergeAll of 'op LayerTerms.t
 end = LayerTerm
 
@@ -303,18 +303,18 @@ module Val = struct
   type t =
     | Unit
     | Bool of bool
-    | Nat of int
+    | Nat of Z.t
     | Str of string
     | Bytes of int list
     | List of t list
     | Pair of t * t
     | None
     | Some of t
-    | Ctor of int * t list
+    | Ctor of Z.t * t list
     | Ref of int * int list
-    | Handle of int * int
-    | NegInt of int
-    | Float of int
+    | Handle of int * Z.t
+    | NegInt of Z.t
+    | Float of Z.t
 end
 
 module Payload = struct
@@ -324,7 +324,7 @@ end
 module Err = struct
   type t =
     | Boom
-    | Tag of int
+    | Tag of Z.t
     | Tagged of string * string
     | Text of string
     | Payload of Payload.t
@@ -336,7 +336,7 @@ module Defect = struct
     | AsyncFiber
     | BadName
     | MissingService of ServiceKey.t
-    | User of int
+    | User of Z.t
     | Error of Err.t
 end
 
@@ -357,7 +357,7 @@ module Exit = struct
 end
 
 module RefKey = struct
-  type t = int
+  type t = Z.t
 end
 
 module Completion = struct
@@ -369,6 +369,6 @@ module Located = struct
 end
 
 module ProfileReason = struct
-  type t = AboveBound of int | BelowBound of int
+  type t = AboveBound of Z.t | BelowBound of Z.t
 end
 

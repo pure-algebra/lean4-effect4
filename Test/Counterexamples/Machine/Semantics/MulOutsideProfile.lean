@@ -32,9 +32,9 @@ def a : Nat := 2 ^ 27 + 1
 #guard NativeAtom.ofName? "mul" = some .mul
 
 -- The attack: both arguments are inside the profile, and Lean answers the exact product above it.
-#guard a ≤ rc112.natBound
+#guard rc112.admitsNat a
 #guard NativeAtom.eval .mul [.nat a, .nat a] = some (.nat 18014398777917441)
-#guard rc112.natBound < 18014398777917441
+#guard !rc112.admitsNat 18014398777917441
 
 -- The repaired prelude checks its result before exposing it.
 #guard (NativeAtom.row .mul).prelude = "(a: number, b: number): number => inProfile(a * b)"

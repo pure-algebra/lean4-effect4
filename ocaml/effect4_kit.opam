@@ -12,9 +12,9 @@ depends: [
   "dune" {>= "3.0"}
   "ocaml" {>= "5.1.1"}
   "yojson" {>= "2.2.2"}
+  "zarith" {>= "1.14"}
   "conf-gmp"
   "effect4_eff"
-  "effect4_clock"
   "effect4_gen"
   "effect4_engine"
   "odoc" {with-doc}

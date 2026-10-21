@@ -146,8 +146,10 @@ let goldens_dir () =
   | _ -> walk (Sys.getcwd ())
 ;;
 
-(* A natural's digits, the whole string: the window reader over all of it. *)
-let digits (s : string) : int option = Eff_frame.nat_of_digits s 0 (String.length s)
+(* A natural's digits, the whole string: the window reader over all of it. A natural is
+   Zarith's `Z.t` (M4); the checks compare through `Z.equal`. *)
+let digits (s : string) : Z.t option = Eff_frame.nat_of_digits s 0 (String.length s)
+let digits_are (s : string) (n : Z.t) : bool = Option.equal Z.equal (digits s) (Some n)
 
 let check_golden name bytes =
   match Eff_frame.exact_frame bytes with
@@ -271,29 +273,34 @@ let test_be () =
   (* nat digits *)
   check
     "B3 nat_digits 0 = \"\", 1 = [1], 255 = [255], 256 = [1;0], 1947 = [0x07;0x9b]"
-    (Eff_frame.nat_digits 0 = ""
-     && Eff_frame.nat_digits 1 = "\001"
-     && Eff_frame.nat_digits 255 = "\xff"
-     && Eff_frame.nat_digits 256 = "\001\000"
-     && Eff_frame.nat_digits 1947 = "\x07\x9b");
+    (Eff_frame.nat_digits (Z.of_int 0) = ""
+     && Eff_frame.nat_digits (Z.of_int 1) = "\001"
+     && Eff_frame.nat_digits (Z.of_int 255) = "\xff"
+     && Eff_frame.nat_digits (Z.of_int 256) = "\001\000"
+     && Eff_frame.nat_digits (Z.of_int 1947) = "\x07\x9b");
   let nat_ok = ref true in
-  for _ = 1 to 2000 do
-    let n = (next_rand () lsl 31) lor next_rand () land max_int in
-    if digits (Eff_frame.nat_digits n) <> Some n then nat_ok := false;
+  for i = 1 to 2000 do
+    let small = Z.of_int ((next_rand () lsl 31) lor next_rand () land max_int) in
+    (* every fourth natural is past max_int: the kernel reads every natural exactly (M4) *)
+    let n =
+      if i mod 4 = 0 then Z.add (Z.shift_left small (2 + (i mod 80))) Z.one else small
+    in
+    if not (digits_are (Eff_frame.nat_digits n) n) then nat_ok := false;
     let d = Eff_frame.nat_digits n in
     if String.length d > 0 && String.unsafe_get d 0 = '\000' then nat_ok := false
   done;
   check
-    "B3 nat_of_digits (nat_digits n) = Some n and no leading zero, 2000 random n"
+    "B3 nat_of_digits (nat_digits n) = Some n and no leading zero, 2000 random n, 500 \
+     past max_int"
     !nat_ok;
   check
     "B4 nat_of_digits refuses a leading zero digit"
     (digits "\000\017" = None && digits "\000" = None);
   check
-    "B5 nat_of_digits refuses nine digits and eight with a top byte >= 0x40"
-    (digits (String.make 9 '\001') = None
-     && digits ("\x40" ^ String.make 7 '\000') = None
-     && digits ("\x3f" ^ String.make 7 '\xff') = Some max_int);
+    "B5 nat_of_digits reads nine digits and eight with a top byte >= 0x40 exactly (M4)"
+    (digits_are (String.make 9 '\001') (Z.of_bits (String.make 9 '\001'))
+     && digits_are ("\x40" ^ String.make 7 '\000') (Z.shift_left Z.one 62)
+     && digits_are ("\x3f" ^ String.make 7 '\xff') (Z.of_int max_int));
   check
     "B6 the readers are total on 300 random strings, positions and limits"
     (let ok = ref true in
@@ -375,7 +382,7 @@ let test_be_reference () =
   check
     "B7 nat_digits, be64 and framed refuse with the kernel's own messages, before any \
      byte"
-    (outcome (fun () -> Eff_frame.nat_digits (-1))
+    (outcome (fun () -> Eff_frame.nat_digits (Z.of_int (-1)))
      = Error "Eff_frame.nat_digits: negative"
      && outcome (fun () -> Eff_frame.be64 (-1)) = Error "Eff_frame.be64: negative"
      && outcome (fun () -> Eff_frame.framed (-1) "x")
@@ -420,19 +427,26 @@ let test_be_reference () =
      bound, 359 strings x 13 positions (extremes included)"
     !native_ok;
   check
-    "B5 nat_of_digits at the bound: eight digits below 0x40 read, at 0x40 refused, nine \
-     refused"
-    (digits ("\x3f" ^ String.make 7 '\xff') = Some max_int
-     && digits ("\x40" ^ String.make 7 '\000') = None
-     && digits (String.make 9 '\001') = None
-     && digits (String.make 70000 '\001') = None)
+    "B5 nat_of_digits past max_int: eight digits below 0x40 and at 0x40, nine, and 70 \
+     000 digits each read exactly (M4)"
+    (digits_are ("\x3f" ^ String.make 7 '\xff') (Z.of_int max_int)
+     && digits_are ("\x40" ^ String.make 7 '\000') (Z.shift_left Z.one 62)
+     && digits_are (String.make 9 '\001') (Z.of_bits (String.make 9 '\001'))
+     &&
+     match digits (String.make 70000 '\001') with
+     | Some n -> Z.numbits n = (69999 * 8) + 1
+     | None -> false);
+  (* the red control: a leading zero is still refused, at any length *)
+  check
+    "B5 (red control) a leading zero digit is refused past max_int too"
+    (Option.is_none (digits ("\000" ^ String.make 9 '\001')))
 ;;
 
 (* ============================================================ E4_sha256 *)
 
 (* The value frames of src/Effect4/Store/Carrier/Val.lean, built out of Eff_frame — the tags are
    Canonical.lean's (2 nat, 3 string, 10 constructor). *)
-let v_nat n = Eff_frame.framed 2 (Eff_frame.nat_digits n)
+let v_nat n = Eff_frame.framed 2 (Eff_frame.nat_digits (Z.of_int n))
 let v_str s = Eff_frame.framed 3 s
 let v_ctor i args = Eff_frame.framed 10 (v_nat i ^ String.concat "" args)
 

@@ -30,13 +30,14 @@ Consumers: the TypeScript face's emission and reading boundary (`Codegen/Checked
 and, lowered through `ocaml/gen/roots.json`, the engine's ingress (`E4_engine`'s `ingress` and
 `literal_refusal`), which the host driver and the kit call where they call reply admission.
 The bound is the ingress rule: DI-56, decisions rows 108 and 417 (1). The run stays exact, and
-the profile is a datum checked at ingress (the coherence plan's D3).
+the profile is a datum checked at ingress (the coherence plan's D3). A profile with no bound
+(`natBound = none`) supports every number.
 
 Placement: concept translation-simulation (`docs/core/semantics.md` §2.10), the property that a
 face refuses outside its profile. Claim `profile-support-located`, whose pointer is
 `ProfileData.valueRefusal_eq_none_iff` (`Laws/Program/ProfileSupport.lean`); requirement R8.
-Not established: which face reads a supported value, and arithmetic inside a run, which the
-builtin rows' crossing refuses until M4.
+Not established: which face reads a supported value, and arithmetic inside a run. The OCaml
+face computes it exactly (M4), and the rc.112 face's prelude refuses outside its profile.
 -/
 
 @[expose] public section
@@ -52,8 +53,8 @@ inductive ProfileReason where
   /-- A natural above the bound: a natural, a constructor's index, a handle's key or a program's
   literal. -/
   | aboveBound (n : Nat)
-  /-- A negative integer `-(n + 1)` whose magnitude `n + 1` is above the bound. The reason names
-  the stored `n`, so no sum is taken: the lowered `Nat` wraps at `2^62` until M4 (row 417 (1)). -/
+  /-- A negative integer `-n` whose magnitude `n` is above the bound. The reason names the
+  magnitude, the number the profile compares. -/
   | belowBound (n : Nat)
 deriving DecidableEq, Repr
 
@@ -130,10 +131,10 @@ def firstUnder : Nat → List (Option ProfileRefusal) → Option ProfileRefusal
   | i, r :: rs => (r.map (Located.under [i])) <|> firstUnder (i + 1) rs
 
 /-- **Profile support as an algebra of the value tree's fold.** A natural, a negative integer's
-magnitude `n + 1`, a constructor's index and a handle's key are the leaves; the magnitude is
-compared as `n < natBound`, with no sum. A list, a pair, an option and a constructor's arguments
-refuse at their first child that refuses, under its index. Bytes, strings, references, a handle's
-kind and a double's bits hold no natural of the profile. -/
+magnitude `n + 1`, a constructor's index and a handle's key are the leaves, each asked of
+`admitsNat`. A list, a pair, an option and a constructor's arguments refuse at their first child
+that refuses, under its index. Bytes, strings, references, a handle's kind and a double's bits
+hold no natural of the profile. -/
 def valueAlgebra (profile : ProfileData) : Store.ValAlgebra (fun _ => Option ProfileRefusal) where
   val_unit := none
   val_bool _ := none
@@ -147,7 +148,7 @@ def valueAlgebra (profile : ProfileData) : Store.ValAlgebra (fun _ => Option Pro
   val_ctor i rs := profile.natRefusal i <|> firstUnder 0 rs
   val_ref _ _ := none
   val_handle _ key := profile.natRefusal key
-  val_negInt n := if n < profile.natBound then none else some ⟨[], .belowBound n⟩
+  val_negInt n := if profile.admitsNat (n + 1) then none else some ⟨[], .belowBound (n + 1)⟩
   val_float _ := none
 
 /-- **Profile support of a value**: `none` when the profile supports it, otherwise the first

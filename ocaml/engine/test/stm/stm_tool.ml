@@ -117,7 +117,8 @@ let now_of reply =
        (match
           Option.bind (field "doc" now) (field "generation"), field "revision" now
         with
-        | Some (J.NatJson_nat g), Some (J.NatJson_nat r) -> Some (g, r)
+        | Some (J.NatJson_nat g), Some (J.NatJson_nat r) when Z.fits_int g && Z.fits_int r
+          -> Some (Z.to_int g, Z.to_int r)
         | _ -> None)
      | _ -> None)
 ;;

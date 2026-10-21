@@ -33,7 +33,7 @@ def main():
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text('let old = 0\n')
             destination.with_suffix('.mli').write_text('val impossible_old_root : string\n')
-        def run(command):
+        def run(command, capture=False):
             if command[:2] == ['lake', 'build'] or command[:2] == ['opam', 'exec'] and 'dune' in command:
                 return
             if command[:3] == ['lake', 'exe', 'lcnfgen']:
@@ -47,7 +47,10 @@ def main():
                             'abstract': ['memo'] if index == 0 else []}
                 Path(str(source) + '.interface.json').write_text(json.dumps(metadata))
                 return
-            subprocess.run(command, cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            result = subprocess.run(command, cwd=root, check=True, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+            # The production runner answers a captured command's output (the Zarith directory).
+            return result.stdout.decode() if capture else None
         def install(source, destination, checking):
             if checking:
                 assert source.read_bytes() == destination.read_bytes()

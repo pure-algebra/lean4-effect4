@@ -106,7 +106,10 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
       (Todo_gen.test_dogfood_scenario_todo_host_result_val
          ( ( List.map
                (fun (c : H.call) ->
-                  ({ Todo_gen.row = c.row; request = c.request; completion = c.answer }
+                  ({ Todo_gen.row = Z.of_int c.row
+                   ; request = c.request
+                   ; completion = c.answer
+                   }
                    : Todo_gen.tools_run_checks_call))
                s.calls
            , E.root_exit_of s.engine )
@@ -240,8 +243,8 @@ module Native_checks (E : Effect4_engine.E4_engine.ENGINE) = struct
            { Native_todo.record with
              Todo_gen.insert =
                (fun title (next, items) ->
-                 ( Ok (Native_todo.todo id title false)
-                 , (next + 1, items @ [ next, (title, false) ]) ))
+                 ( Ok (Native_todo.todo (Z.of_int id) title false)
+                 , (Z.succ next, items @ [ next, (title, false) ]) ))
            }
          in
          let s = serve built (Native_todo.provider forged) state in
@@ -383,7 +386,7 @@ let () =
            (Todo_gen.test_dogfood_scenario_todo_host_result_val
               ( ( List.map
                     (fun (c : Effect4_engine.E4_host.call) ->
-                       ({ Todo_gen.row = c.row
+                       ({ Todo_gen.row = Z.of_int c.row
                         ; request = c.request
                         ; completion = c.answer
                         }

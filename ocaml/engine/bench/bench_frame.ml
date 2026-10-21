@@ -255,13 +255,14 @@ module Sizes : WRITER = struct
   ;;
 end
 
-(* The frames of Eff_val.emit (ocaml/eff/eff_val.ml), over a writer. *)
+(* The frames of Eff_val.emit (ocaml/eff/eff_val.ml), over a writer. The strategies write a
+   natural an int holds, every one of these values' (`Z.to_int`; a Lean natural is `Z.t`, M4). *)
 module Val_encoder (W : WRITER) = struct
   let rec emit w (v : Val.t) =
     match v with
     | Val.Unit -> W.frame w 9 ""
     | Val.Bool x -> W.frame w 1 (if x then "\001" else "\000")
-    | Val.Nat n -> W.nat w n
+    | Val.Nat n -> W.nat w (Z.to_int n)
     | Val.Str s ->
       if not (String.is_valid_utf_8 s) then invalid_arg "Val_encoder: not valid UTF-8";
       W.frame w 3 s
@@ -275,12 +276,13 @@ module Val_encoder (W : WRITER) = struct
     | Val.Some x -> W.nested w 7 (fun w -> emit w x)
     | Val.Ctor (i, args) ->
       W.nested w 10 (fun w ->
-        W.nat w i;
+        W.nat w (Z.to_int i);
         List.iter (emit w) args)
     | Val.Ref (k, d) -> W.frame w 11 (String.make 1 (Char.chr k) ^ string_of_codes d)
-    | Val.Handle (k, key) -> W.frame w 12 (String.make 1 (Char.chr k) ^ nat_digits key)
-    | Val.NegInt n -> W.frame w 13 (nat_digits n)
-    | Val.Float bits -> W.frame w 14 (be64_string bits)
+    | Val.Handle (k, key) ->
+      W.frame w 12 (String.make 1 (Char.chr k) ^ nat_digits (Z.to_int key))
+    | Val.NegInt n -> W.frame w 13 (nat_digits (Z.to_int n))
+    | Val.Float bits -> W.frame w 14 (be64_string (Z.to_int bits))
   ;;
 
   let to_bytes v = W.run emit v
@@ -294,20 +296,27 @@ module Enc_sizes = Val_encoder (Sizes)
 
 let todo i =
   Val.Ctor
-    ( 0
-    , [ Val.Nat i; Val.Str (Printf.sprintf "to-do number %d" i); Val.Bool (i mod 3 = 0) ]
-    )
+    ( Z.zero
+    , [ Val.Nat (Z.of_int i)
+      ; Val.Str (Printf.sprintf "to-do number %d" i)
+      ; Val.Bool (i mod 3 = 0)
+      ] )
 ;;
 
 let todos n = Val.List (List.init n todo)
-let rec deep_some d = if d = 0 then Val.Nat 1 else Val.Some (deep_some (d - 1))
+let rec deep_some d = if d = 0 then Val.Nat (Z.of_int 1) else Val.Some (deep_some (d - 1))
 
 let rec deep_ctor d =
-  if d = 0 then Val.Unit else Val.Ctor (d land 7, [ Val.Str "name"; deep_ctor (d - 1) ])
+  if d = 0
+  then Val.Unit
+  else Val.Ctor (Z.of_int (d land 7), [ Val.Str "name"; deep_ctor (d - 1) ])
 ;;
 
-let wide n = Val.List (List.init n (fun i -> Val.Nat i))
-let rec tree d = if d = 0 then Val.Nat d else Val.Pair (tree (d - 1), tree (d - 1))
+let wide n = Val.List (List.init n (fun i -> Val.Nat (Z.of_int i)))
+
+let rec tree d =
+  if d = 0 then Val.Nat (Z.of_int d) else Val.Pair (tree (d - 1), tree (d - 1))
+;;
 
 let values =
   [ "1 to-do", todo 7
@@ -323,7 +332,7 @@ let values =
 
 (* ----------------------------------------------------------------- the programs *)
 
-let lit n = Term.Lit (Lit.Nat n)
+let lit n = Term.Lit (Lit.Nat (Z.of_int n))
 
 let rec bind_chain d =
   if d = 0 then Eff.Succeed (lit 1) else Eff.Bind (Eff.Succeed (lit d), bind_chain (d - 1))

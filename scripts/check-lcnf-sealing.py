@@ -10,8 +10,11 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 includes = ['gen/.effect4_gen.objs/byte', 'eff/.effect4_eff.objs/byte',
-            'clock/.effect4_clock.objs/byte', 'lcnf/.effect4_lcnf.objs/byte']
-compiler = ['opam', 'exec', '--switch=effect4', '--', 'ocamlc', '-color', 'never']
+            'lcnf/.effect4_lcnf.objs/byte']
+# A Lean natural is Zarith's `Z.t` (M4), so a client sees Zarith's interface too.
+zarith = subprocess.run(['opam', 'exec', '--switch=effect4', '--', 'ocamlfind', 'query', 'zarith'],
+                        text=True, stdout=subprocess.PIPE, check=True).stdout.strip()
+compiler = ['opam', 'exec', '--switch=effect4', '--', 'ocamlc', '-color', 'never', '-I', zarith]
 for directory in includes:
     compiler += ['-I', str(root / 'ocaml/_build/default' / directory)]
 cases = {
@@ -19,7 +22,7 @@ cases = {
     'prepared-alias': (0, "type execution = A.prepared\nlet value : execution = A.program_prepared_make (Eff_types.Eff.Succeed (Eff_types.Term.Lit Eff_types.Lit.Unit)) []\n"),
     'prepared-table-update': (2, "let forge (p : A.prepared) = { p with table = [] }\n"),
     'prepared-interpreter-read': (2, "let interpreter (p : A.prepared) = p.interp\n"),
-    'built-literal': (2, "type public_built_alias = A.built\nlet forged : public_built_alias = { app = { rows = []; services = []; types = [] }; program = Eff_types.Eff.Perform (Eff_types.NativeOp.External 0, Eff_types.Term.Lit Eff_types.Lit.Unit); admitted = { answer = Eff_types.Ty.Nat; error = Eff_types.Ty.Never; requires = [] }; row_names = [] }\n"),
+    'built-literal': (2, "type public_built_alias = A.built\nlet forged : public_built_alias = { app = { rows = []; services = []; types = [] }; program = Eff_types.Eff.Perform (Eff_types.NativeOp.External (Z.of_int 0), Eff_types.Term.Lit Eff_types.Lit.Unit); admitted = { answer = Eff_types.Ty.Nat; error = Eff_types.Ty.Never; requires = [] }; row_names = [] }\n"),
     'memo-public-alias': (2, "type public_alias = A.memo\nlet forged : public_alias = []\n"),
     'checked-literal': (2, "let forged : int A.checked = { value = 7; trace = [] }\n"),
     'oracle-callback': (2, "let forged : A.oracle = fun input -> A.program_check_run input\n"),

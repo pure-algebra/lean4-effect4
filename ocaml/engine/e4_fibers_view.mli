@@ -19,7 +19,8 @@
    `completed` IS the answer `completedExits` returns — one shared list, allocated only when a
    fiber's exit changes, never per step.
 
-   Depends on: the OCaml standard library only (`Map.Make(Int)`).  It is NOT a face over
+   Depends on: Zarith (Z) and the OCaml standard library (`Map.Make(Z)`): a fiber id is a
+   Lean `Nat`, Zarith's `Z.t` since M4.  It is NOT a face over
    `E4_table`: the value is ONE flat record (`{ cardinal; map; view }`) because a wrapped
    table costs a second block on every write and this carrier is written on nearly every
    step.  `E4_table`'s two-arm `Small`/`Big` representation is not reproduced — lane C
@@ -63,18 +64,18 @@
 type ('a, 'x) t
 
 val empty : ('a, 'x) t
-val find_opt : int -> ('a, 'x) t -> 'a option
-val set : exit_of:('a -> 'x option) -> int -> 'a -> ('a, 'x) t -> ('a, 'x) t
-val add : exit_of:('a -> 'x option) -> int -> 'a -> ('a, 'x) t -> ('a, 'x) t
+val find_opt : Z.t -> ('a, 'x) t -> 'a option
+val set : exit_of:('a -> 'x option) -> Z.t -> 'a -> ('a, 'x) t -> ('a, 'x) t
+val add : exit_of:('a -> 'x option) -> Z.t -> 'a -> ('a, 'x) t -> ('a, 'x) t
 val map : exit_of:('a -> 'x option) -> ('a -> 'a) -> ('a, 'x) t -> ('a, 'x) t
-val for_all : (int -> 'a -> bool) -> ('a, 'x) t -> bool
-val completed : ('a, 'x) t -> (int * 'x) list
-val cardinal : ('a, 'x) t -> int
-val bindings : ('a, 'x) t -> (int * 'a) list
+val for_all : (Z.t -> 'a -> bool) -> ('a, 'x) t -> bool
+val completed : ('a, 'x) t -> (Z.t * 'x) list
+val cardinal : ('a, 'x) t -> Z.t
+val bindings : ('a, 'x) t -> (Z.t * 'a) list
 val to_list : ('a, 'x) t -> 'a list
-val of_list : exit_of:('a -> 'x option) -> (int * 'a) list -> ('a, 'x) t
+val of_list : exit_of:('a -> 'x option) -> (Z.t * 'a) list -> ('a, 'x) t
 
 (* --- windows, for the property tests and the drive loop; not on the seam. --- *)
 
-val mem : int -> ('a, 'x) t -> bool
+val mem : Z.t -> ('a, 'x) t -> bool
 val is_empty : ('a, 'x) t -> bool

@@ -380,9 +380,11 @@ let p_fork : E.NativeOp.t E.Eff.t =
   E.Eff.Bind
     ( E.Eff.WithFiber
         (E.ActionTerm.Fork
-           ( E.Eff.Bind (E.Eff.YieldNow 0, E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 7)))
+           ( E.Eff.Bind
+               ( E.Eff.YieldNow (Z.of_int 0)
+               , E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Z.of_int 7))) )
            , fork_opts ))
-    , E.Eff.AwaitFiber (E.Term.Var 0, E.ObserverMode.AwaitValue) )
+    , E.Eff.AwaitFiber (E.Term.Var (Z.of_int 0), E.ObserverMode.AwaitValue) )
 ;;
 
 let dec_of (d : E4_diff.decision) : F.decision =

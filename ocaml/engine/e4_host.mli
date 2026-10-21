@@ -5,7 +5,7 @@
 
 open Eff_types
 
-type completion = (Val.t, Err.t, Defect.t, int, unit) Eff_types.Completion.t
+type completion = (Val.t, Err.t, Defect.t, Z.t, unit) Eff_types.Completion.t
 
 (** The host's types. None mentions the engine, so they are declared once here and every
     instance of {!Make} re-exports them with type equalities (H12). *)

@@ -4,11 +4,12 @@
    `Eff_types.Val.t`. The engine's lanes compare a value by these bytes: the scenarios lane
    (engine/test/scenarios), the to-do host lane (engine/test/todo) and the Modeled lane
    (engine/test/modeled).
-   Depends on: Eff_frame, Eff_types.
+   Depends on: Eff_frame, Eff_types, Zarith (Z): a Lean natural and a `UInt64` are `Z.t` (M4).
 
    Behaviours it holds itself to:
    V1  `emit` writes every value in Lean's frames: tags 1..14 of Eff_frame, a negative integer
-       `-(n+1)` as tag 13 over n's digits, a double's bits as tag 14 over 8 big-endian bytes.
+       `-(n+1)` as tag 13 over n's digits, a double's bits as tag 14 over 8 big-endian bytes
+       (the `UInt64` word, below 2^64 since M4).
                                                     by construction; tested (test_scenarios S3)
    V2  `decode` reads scalars, strings, lists, options, pairs, constructor applications and
        negative integers, and refuses every other frame (bytes, references, handles, doubles):
@@ -22,9 +23,9 @@
        and compares each field by its own type's equality (ocaml/STANDARDS.md rule 7).
                                                                        by construction
    V6  `valid` is the image of Lean's `Store.Val` in this carrier, the domain `emit` writes
-       (Eff_frame F4): every natural, negative integer's digits, constructor index, handle key
-       and double's bits is nonnegative, every byte and kind is in 0..255, and every string is
-       valid UTF-8. A Lean value has no other shape, so Lean's judgments cannot ask; a host's
+       (Eff_frame F4): every natural, negative integer's digits, constructor index and handle key
+       is nonnegative, a double's bits are a word below 2^64, every byte and kind is in 0..255,
+       and every string is valid UTF-8. A Lean value has no other shape, so Lean's judgments cannot ask; a host's
        answer crosses into the lowered machine only inside it (E4_engine's `ingress`).
                                                        by construction; tested (test_engine) *)
 
@@ -36,7 +37,13 @@ let string_of_codes (codes : int list) : string =
   Bytes.unsafe_to_string s
 ;;
 
-let be64 (n : int) : string = Eff_frame.to_string Eff_frame.emit_be64 n
+(* A `UInt64` word's eight big-endian bytes. The word is below 2^64 (V6), which
+   `Z.to_int64_unsigned` holds exactly. *)
+let word_bytes (bits : Z.t) : string =
+  let b = Bytes.create 8 in
+  Bytes.set_int64_be b 0 (Z.to_int64_unsigned bits);
+  Bytes.unsafe_to_string b
+;;
 
 (* The frames of `Val.encode`. *)
 let rec emit (b : Eff_frame.writer) (v : Eff_types.Val.t) : unit =
@@ -57,7 +64,8 @@ let rec emit (b : Eff_frame.writer) (v : Eff_types.Val.t) : unit =
   | Eff_types.Val.Handle (kind, key) -> Eff_frame.emit_handle b (kind, key)
   | Eff_types.Val.NegInt n ->
     Eff_frame.emit_frame b Eff_frame.tag_int (Eff_frame.nat_digits n)
-  | Eff_types.Val.Float bits -> Eff_frame.emit_frame b Eff_frame.tag_float (be64 bits)
+  | Eff_types.Val.Float bits ->
+    Eff_frame.emit_frame b Eff_frame.tag_float (word_bytes bits)
 ;;
 
 (* A value's canonical bytes. *)
@@ -135,15 +143,15 @@ let rec equal (a : Eff_types.Val.t) (b : Eff_types.Val.t) : bool =
   match a, b with
   | V.Unit, V.Unit | V.None, V.None -> true
   | V.Bool x, V.Bool y -> Bool.equal x y
-  | V.Nat x, V.Nat y | V.NegInt x, V.NegInt y | V.Float x, V.Float y -> Int.equal x y
+  | V.Nat x, V.Nat y | V.NegInt x, V.NegInt y | V.Float x, V.Float y -> Z.equal x y
   | V.Str x, V.Str y -> String.equal x y
   | V.Bytes x, V.Bytes y -> List.equal Int.equal x y
   | V.List xs, V.List ys -> List.equal equal xs ys
   | V.Pair (x, x'), V.Pair (y, y') -> equal x y && equal x' y'
   | V.Some x, V.Some y -> equal x y
-  | V.Ctor (i, xs), V.Ctor (j, ys) -> Int.equal i j && List.equal equal xs ys
+  | V.Ctor (i, xs), V.Ctor (j, ys) -> Z.equal i j && List.equal equal xs ys
   | V.Ref (k, d), V.Ref (k', d') -> Int.equal k k' && List.equal Int.equal d d'
-  | V.Handle (k, x), V.Handle (k', y) -> Int.equal k k' && Int.equal x y
+  | V.Handle (k, x), V.Handle (k', y) -> Int.equal k k' && Z.equal x y
   | ( ( V.Unit
       | V.Bool _
       | V.Nat _
@@ -168,13 +176,14 @@ let rec valid (v : Eff_types.Val.t) : bool =
   let byte b = b >= 0 && b <= 255 in
   match v with
   | V.Unit | V.Bool _ | V.None -> true
-  | V.Nat n | V.NegInt n | V.Float n -> n >= 0
+  | V.Nat n | V.NegInt n -> Z.sign n >= 0
+  | V.Float bits -> Z.sign bits >= 0 && Z.numbits bits <= 64
   | V.Str s -> String.is_valid_utf_8 s
   | V.Bytes bs -> List.for_all byte bs
   | V.List xs -> List.for_all valid xs
   | V.Pair (a, b) -> valid a && valid b
   | V.Some a -> valid a
-  | V.Ctor (i, args) -> i >= 0 && List.for_all valid args
+  | V.Ctor (i, args) -> Z.sign i >= 0 && List.for_all valid args
   | V.Ref (kind, digest) -> byte kind && List.for_all byte digest
-  | V.Handle (kind, key) -> byte kind && key >= 0
+  | V.Handle (kind, key) -> byte kind && Z.sign key >= 0
 ;;

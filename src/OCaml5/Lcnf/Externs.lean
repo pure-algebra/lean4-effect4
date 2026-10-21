@@ -467,7 +467,8 @@ dispatcher is A3's whole-dispatcher carrier, not a table of buckets holding queu
 /-- The seven module types the functor takes, each after its comment, emitted above the functor
 as structured module types (`Ml.Decl.moduleTypeD`): the checker reads each functor parameter's
 module type, and the renderer spells them. The types are `ocaml/engine`'s carriers' own `.mli`
-signatures, so an instance needs no adapter. -/
+signatures, so an instance needs no adapter. A position that holds a Lean natural (a key, an
+index, a length, a priority) is spelled by the `Nat` type row (`builtinTy?`, `Z.t` since M4). -/
 def carrierSignatures : List Ml.Decl :=
   let a := Ml.Ty.var "a"
   let b := Ml.Ty.var "b"
@@ -477,51 +478,52 @@ def carrierSignatures : List Ml.Decl :=
   let t (arg : Ml.Ty) : Ml.Ty := .con "t" [arg]
   let ax : Ml.Ty := .con "t" [a, x]
   let exitOf : Ml.Ty := .arrow a (.option x)
-  let layerId : Ml.Ty := .tuple [.list .int, .list (.list .int)]
-  let child : Ml.Ty := .arrow n (.arrow .int (.option n))
+  let nat : Ml.Ty := (builtinTy? ``Nat []).getD .anon
+  let layerId : Ml.Ty := .tuple [.list nat, .list (.list nat)]
+  let child : Ml.Ty := .arrow n (.arrow nat (.option n))
   let fn : List Ml.Ty → Ml.Ty := fun tys =>
     match tys.reverse with
     | [] => .unit
     | r :: rest => rest.foldl (fun acc d => .arrow d acc) r
   [
-  .comment "An int-keyed persistent table.  `set` REPLACES and never inserts (Lean's List.set and\n   List.map-by-key are no-ops on an absent key); `add` inserts.  `bindings` is ascending.",
+  .comment "A persistent table keyed by naturals.  `set` REPLACES and never inserts (Lean's List.set and\n   List.map-by-key are no-ops on an absent key); `add` inserts.  `bindings` is ascending.",
   .moduleTypeD "TABLE"
     [.type { name := "t", params := ["a"], body := .abstract },
      .value "empty" (t a),
-     .value "find_opt" (fn [.int, t a, .option a]),
-     .value "set" (fn [.int, a, t a, t a]),
-     .value "add" (fn [.int, a, t a, t a]),
-     .value "remove" (fn [.int, t a, t a]),
-     .value "mem" (fn [.int, t a, .bool]),
-     .value "cardinal" (fn [t a, .int]),
+     .value "find_opt" (fn [nat, t a, .option a]),
+     .value "set" (fn [nat, a, t a, t a]),
+     .value "add" (fn [nat, a, t a, t a]),
+     .value "remove" (fn [nat, t a, t a]),
+     .value "mem" (fn [nat, t a, .bool]),
+     .value "cardinal" (fn [t a, nat]),
      .value "map" (fn [.arrow a a, t a, t a]),
-     .value "filter_map" (fn [fn [.int, a, .option b], t a, .list b]),
-     .value "for_all" (fn [fn [.int, a, .bool], t a, .bool]),
-     .value "fold" (fn [fn [.int, a, b, b], t a, b, b]),
-     .value "bindings" (fn [t a, .list (.tuple [.int, a])]),
-     .value "of_list" (fn [.list (.tuple [.int, a]), t a]),
+     .value "filter_map" (fn [fn [nat, a, .option b], t a, .list b]),
+     .value "for_all" (fn [fn [nat, a, .bool], t a, .bool]),
+     .value "fold" (fn [fn [nat, a, b, b], t a, b, b]),
+     .value "bindings" (fn [t a, .list (.tuple [nat, a])]),
+     .value "of_list" (fn [.list (.tuple [nat, a]), t a]),
      .value "to_list" (fn [t a, .list a])],
-  .comment "The fiber table: an int-keyed persistent table that also MAINTAINS the completed view --\n   the (id, exit) pairs of the fibers whose exit is set, ascending by id, kept as the table is\n   written, so `RunMachine.completedExits` (src/Effect4/Machine/Fibers.lean) is a field read and not the\n   Theta(N) scan it was.  `('a, 'x) t` is a table of fibers `'a` whose exit is `'x`; the fiber\n   record is declared INSIDE this functor, so every write takes the projection `~exit_of`\n   rather than closing over it.  `set` REPLACES and never inserts (Lean's replace-by-key map\n   is a no-op on an absent id); `add` inserts; `bindings` and `completed` are ascending.  This\n   is ocaml/engine/e4_fibers_view.mli's own signature, so `module F = E4_fibers_view` needs no\n   adapter.  Nothing removes a fiber -- the ordering argument that licenses the substitution\n   is that no fiber is ever removed (gen-check.sh C1).",
+  .comment "The fiber table: a persistent table keyed by naturals that also MAINTAINS the completed view --\n   the (id, exit) pairs of the fibers whose exit is set, ascending by id, kept as the table is\n   written, so `RunMachine.completedExits` (src/Effect4/Machine/Fibers.lean) is a field read and not the\n   Theta(N) scan it was.  `('a, 'x) t` is a table of fibers `'a` whose exit is `'x`; the fiber\n   record is declared INSIDE this functor, so every write takes the projection `~exit_of`\n   rather than closing over it.  `set` REPLACES and never inserts (Lean's replace-by-key map\n   is a no-op on an absent id); `add` inserts; `bindings` and `completed` are ascending.  This\n   is ocaml/engine/e4_fibers_view.mli's own signature, so `module F = E4_fibers_view` needs no\n   adapter.  Nothing removes a fiber -- the ordering argument that licenses the substitution\n   is that no fiber is ever removed (gen-check.sh C1).",
   .moduleTypeD "FIBERS"
     [.type { name := "t", params := ["a", "x"], body := .abstract },
      .value "empty" ax,
-     .value "find_opt" (fn [.int, ax, .option a]),
-     .value "set" (.labelled "exit_of" exitOf (fn [.int, a, ax, ax])),
-     .value "add" (.labelled "exit_of" exitOf (fn [.int, a, ax, ax])),
+     .value "find_opt" (fn [nat, ax, .option a]),
+     .value "set" (.labelled "exit_of" exitOf (fn [nat, a, ax, ax])),
+     .value "add" (.labelled "exit_of" exitOf (fn [nat, a, ax, ax])),
      .value "map" (.labelled "exit_of" exitOf (fn [.arrow a a, ax, ax])),
-     .value "for_all" (fn [fn [.int, a, .bool], ax, .bool]),
-     .value "completed" (fn [ax, .list (.tuple [.int, x])]),
-     .value "cardinal" (fn [ax, .int]),
-     .value "bindings" (fn [ax, .list (.tuple [.int, a])]),
+     .value "for_all" (fn [fn [nat, a, .bool], ax, .bool]),
+     .value "completed" (fn [ax, .list (.tuple [nat, x])]),
+     .value "cardinal" (fn [ax, nat]),
+     .value "bindings" (fn [ax, .list (.tuple [nat, a])]),
      .value "to_list" (fn [ax, .list a]),
-     .value "of_list" (.labelled "exit_of" exitOf (fn [.list (.tuple [.int, a]), ax]))],
+     .value "of_list" (.labelled "exit_of" exitOf (fn [.list (.tuple [nat, a]), ax]))],
   .comment "An append-and-read-once event log.  `emit []` is O(1) and physically equal.",
   .moduleTypeD "TRACE"
     [.type { name := "t", params := ["e"], body := .abstract },
      .value "empty" (t e),
      .value "emit" (fn [.list e, t e, t e]),
      .value "to_list" (fn [t e, .list e]),
-     .value "length" (fn [t e, .int])],
+     .value "length" (fn [t e, nat])],
   .comment "A table keyed by a layer's identity, its path and the call that runs it\n   (`LayerId = List Nat × CallId`, decisions row 341, step 3).  `insert` KEEPS an existing\n   binding: Lean appends and `find?` answers the first (`MemoWorld.insertEntry`).",
   .moduleTypeD "LAYERS"
     [.type { name := "t", params := ["a"], body := .abstract },
@@ -538,32 +540,32 @@ def carrierSignatures : List Ml.Decl :=
      .value "is_empty" (fn [t a, .bool]),
      .value "armed" (fn [t a, .bool]),
      .value "disarm" (fn [t a, t a]),
-     .value "enqueue" (.arrow (t a) (.labelled "priority" .int (fn [a, t a]))),
+     .value "enqueue" (.arrow (t a) (.labelled "priority" nat (fn [a, t a]))),
      .value "drain" (fn [t a, .tuple [.list a, t a]]),
-     .value "length" (fn [t a, .int]),
-     .value "priorities" (fn [t a, .list .int]),
-     .value "to_list" (fn [t a, .list (.tuple [.int, .list a])]),
-     .value "of_list" (.labelled "armed" .bool (fn [.list (.tuple [.int, .list a]), t a]))],
+     .value "length" (fn [t a, nat]),
+     .value "priorities" (fn [t a, .list nat]),
+     .value "to_list" (fn [t a, .list (.tuple [nat, .list a])]),
+     .value "of_list" (.labelled "armed" .bool (fn [.list (.tuple [nat, .list a]), t a]))],
   .comment "A point's position in the program: a snoc-shared spine that CARRIES the node it addresses,\n   so `Point.child` is O(1) and `resolve` never walks\n   (docs/research/2026-09-08-engine-prof-chain.md SS5.1).  This is\n   ocaml/engine/e4_ppath.mli's own signature.  `'n` is the generated `node` type, which is\n   declared inside this functor, so `Node.child` is passed in rather than closed over.",
   .moduleTypeD "PPATH"
     [.type { name := "t", params := ["n"], body := .abstract },
      .value "make" (fn [n, t n]),
      .value "root" (fn [t n, n]),
-     .value "snoc" (fn [child, t n, .int, t n]),
-     .value "append" (fn [child, t n, .list .int, t n]),
+     .value "snoc" (fn [child, t n, nat, t n]),
+     .value "append" (fn [child, t n, .list nat, t n]),
      .value "node" (fn [child, t n, .option n]),
-     .value "walk" (fn [child, n, .list .int, .option n]),
-     .value "to_list" (fn [t n, .list .int]),
-     .value "length" (fn [t n, .int])],
+     .value "walk" (fn [child, n, .list nat, .option n]),
+     .value "to_list" (fn [t n, .list nat]),
+     .value "length" (fn [t n, nat])],
   .comment "A point's environment: a snoc-shared spine with a cached length.  `get` is Lean's\n   `env[i]?` (indexed from the front) and `take` is Lean's `List.take` (clamped).  This is\n   ocaml/engine/e4_env.mli's own signature.",
   .moduleTypeD "PENV"
     [.type { name := "t", params := ["a"], body := .abstract },
      .value "empty" (t a),
      .value "snoc" (fn [t a, a, t a]),
      .value "append" (fn [t a, .list a, t a]),
-     .value "get" (fn [t a, .int, .option a]),
-     .value "length" (fn [t a, .int]),
-     .value "take" (fn [t a, .int, t a]),
+     .value "get" (fn [t a, nat, .option a]),
+     .value "length" (fn [t a, nat]),
+     .value "take" (fn [t a, nat, t a]),
      .value "to_list" (fn [t a, .list a]),
      .value "of_list" (fn [.list a, t a])]
   ]

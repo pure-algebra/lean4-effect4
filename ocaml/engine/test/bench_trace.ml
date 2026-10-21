@@ -87,7 +87,7 @@ let emit_cell () =
          n
          (dt *. 1000.)
          (rate n dt)
-         (E4_trace.length t))
+         (Z.to_int (E4_trace.length t)))
     [ 100_000; 1_000_000 ]
 ;;
 

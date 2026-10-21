@@ -2,19 +2,22 @@
    the call that runs it (`LayerId := List Nat × CallId`, decisions row 341, step 3).
    The property list is in e4_memo.mli. *)
 
-(* Written out rather than `List.compare Int.compare`, so that the order this module sorts
-   by is in this file and not in a stdlib version (ocaml/STANDARDS.md §4). *)
-let rec compare_path (a : int list) (b : int list) : int =
+(* Written out rather than `List.compare Z.compare`, so that the order this module sorts by
+   is in this file and not in a stdlib version (ocaml/STANDARDS.md §4). A path's index is a Lean
+   `Nat`, Zarith's `Z.t` since M4, compared by `Z.compare`. *)
+let rec compare_path (a : Z.t list) (b : Z.t list) : int =
   match a, b with
   | [], [] -> 0
   | [], _ :: _ -> -1
   | _ :: _, [] -> 1
-  | x :: xs, y :: ys -> if x < y then -1 else if x > y then 1 else compare_path xs ys
+  | x :: xs, y :: ys ->
+    let c = Z.compare x y in
+    if c <> 0 then c else compare_path xs ys
 ;;
 
 (* A call is the list of its invocations' paths, innermost first (`CallId := List (List Nat)`):
    compared element by element with `compare_path`, a proper prefix first. *)
-let rec compare_call (a : int list list) (b : int list list) : int =
+let rec compare_call (a : Z.t list list) (b : Z.t list list) : int =
   match a, b with
   | [], [] -> 0
   | [], _ :: _ -> -1
@@ -24,7 +27,7 @@ let rec compare_call (a : int list list) (b : int list list) : int =
     if c <> 0 then c else compare_call xs ys
 ;;
 
-type key = int list * int list list
+type key = Z.t list * Z.t list list
 
 (* The path first, then the call: the builds of one layer under different calls sort
    together. *)
@@ -68,16 +71,16 @@ let cardinal (t : 'a t) : int = PMap.cardinal t
    with that id.  The fuel is `w.length + 1` and the `0` arm is `none` — a forged parent id
    can make the chain cyclic, and the fuel is what keeps this total (MM5). *)
 let lookup
-      ~(parent : 'm -> int option)
-      ~(id : 'm -> int)
+      ~(parent : 'm -> Z.t option)
+      ~(id : 'm -> Z.t)
       ~(entries : 'm -> 'a t)
       (world : 'm list)
       (layer : key)
-      (start : int)
-  : (int * 'a) option
+      (start : Z.t)
+  : (Z.t * 'a) option
   =
-  let map_at (i : int) : 'm option = List.find_opt (fun m -> id m = i) world in
-  let rec go (fuel : int) (i : int) : (int * 'a) option =
+  let map_at (i : Z.t) : 'm option = List.find_opt (fun m -> Z.equal (id m) i) world in
+  let rec go (fuel : int) (i : Z.t) : (Z.t * 'a) option =
     if fuel <= 0
     then None
     else (

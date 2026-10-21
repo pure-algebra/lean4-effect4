@@ -94,7 +94,7 @@ let classify_runs (t : tally) (g, f) =
       List.fold_left
         (fun (profile, raised) -> function
            | Ok _ -> profile, raised
-           | Error (E4_clock.Profile_refusal _) -> true, raised
+           | Error (Lcnf_crossing.Refused _) -> true, raised
            | Error _ -> profile, true)
         (false, false)
         [ g; f ]
@@ -111,8 +111,10 @@ let differential_valid (t : tally) =
 let classification_controls () =
   let refused =
     Error
-      (E4_clock.Profile_refusal
-         { E4_clock.crossing = E4_clock.Arithmetic; reason = "classification control" })
+      (Lcnf_crossing.Refused
+         { Lcnf_crossing.crossing = Lcnf_crossing.Arithmetic
+         ; reason = "classification control"
+         })
   in
   let raised = Error (Failure "classification control") in
   let incomplete name runs ~profile ~error =

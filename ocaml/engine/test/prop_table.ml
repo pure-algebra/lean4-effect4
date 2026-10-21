@@ -17,22 +17,23 @@ open Effect4_engine
 [@@@warning "-32"]
 (* A module type used only for an ascription has, by definition, no used values. *)
 
+(* A key, a cardinal and a binding are Lean naturals, Zarith's `Z.t` (M4). *)
 module type TABLE = sig
   type 'a t
 
   val empty : 'a t
-  val find_opt : int -> 'a t -> 'a option
-  val set : int -> 'a -> 'a t -> 'a t
-  val add : int -> 'a -> 'a t -> 'a t
-  val remove : int -> 'a t -> 'a t
-  val mem : int -> 'a t -> bool
-  val cardinal : 'a t -> int
+  val find_opt : Z.t -> 'a t -> 'a option
+  val set : Z.t -> 'a -> 'a t -> 'a t
+  val add : Z.t -> 'a -> 'a t -> 'a t
+  val remove : Z.t -> 'a t -> 'a t
+  val mem : Z.t -> 'a t -> bool
+  val cardinal : 'a t -> Z.t
   val map : ('a -> 'a) -> 'a t -> 'a t
-  val filter_map : (int -> 'a -> 'b option) -> 'a t -> 'b list
-  val for_all : (int -> 'a -> bool) -> 'a t -> bool
-  val fold : (int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-  val bindings : 'a t -> (int * 'a) list
-  val of_list : (int * 'a) list -> 'a t
+  val filter_map : (Z.t -> 'a -> 'b option) -> 'a t -> 'b list
+  val for_all : (Z.t -> 'a -> bool) -> 'a t -> bool
+  val fold : (Z.t -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+  val bindings : 'a t -> (Z.t * 'a) list
+  val of_list : (Z.t * 'a) list -> 'a t
   val to_list : 'a t -> 'a list
 end
 
@@ -40,7 +41,28 @@ module _ : TABLE = E4_table
 
 [@@@warning "+32"]
 
-module T = E4_table
+(* The differential drives the carrier at the host's ints, each key a natural exactly
+   (`Z.of_int`), and reads every natural back (`Z.to_int`). The view adds no state: every value
+   it answers is the carrier's, so a physically equal table stays one (T1). *)
+module T = struct
+  let z = Z.of_int
+  let empty = E4_table.empty
+  let find_opt k t = E4_table.find_opt (z k) t
+  let set k v t = E4_table.set (z k) v t
+  let add k v t = E4_table.add (z k) v t
+  let remove k t = E4_table.remove (z k) t
+  let mem k t = E4_table.mem (z k) t
+  let cardinal t = Z.to_int (E4_table.cardinal t)
+  let map = E4_table.map
+  let filter_map f t = E4_table.filter_map (fun k v -> f (Z.to_int k) v) t
+  let for_all f t = E4_table.for_all (fun k v -> f (Z.to_int k) v) t
+  let fold f t init = E4_table.fold (fun k v acc -> f (Z.to_int k) v acc) t init
+  let bindings t = List.map (fun (k, v) -> Z.to_int k, v) (E4_table.bindings t)
+  let to_list = E4_table.to_list
+  let of_list l = E4_table.of_list (List.map (fun (k, v) -> z k, v) l)
+  let small_max = E4_table.small_max
+  let is_small = E4_table.is_small
+end
 
 (* Lean's carrier, the model: the association list in ALLOCATION order, each operation the List
    function the machine applies (e4_table.mli names the Lean line of each).  `bindings` sorts by
@@ -452,6 +474,24 @@ let tl2 () =
   check "TL2 Lean's insertion order = ascending bindings on monotone allocation" !ok
 ;;
 
+(* T10 (M4): a key is a Lean natural, exact past the host's int: 2^64, 2^64 + 1 and 0 are three
+   keys, ascending. The red control: the host's int does not hold 2^64, so no table keyed by it
+   could keep the three apart. *)
+let t10 () =
+  let big = Z.shift_left Z.one 64 in
+  let t = E4_table.of_list [ big, "a"; Z.succ big, "b"; Z.zero, "c" ] in
+  check
+    "T10 keys past max_int are exact: 2^64, 2^64 + 1 and 0 are three bindings, ascending"
+    (Z.equal (E4_table.cardinal t) (Z.of_int 3)
+     && E4_table.find_opt big t = Some "a"
+     && E4_table.find_opt (Z.succ big) t = Some "b"
+     && List.equal
+          Z.equal
+          (List.map fst (E4_table.bindings t))
+          [ Z.zero; big; Z.succ big ]);
+  check "T10 (red control): the host's int does not hold 2^64" (not (Z.fits_int big))
+;;
+
 let () =
   t1 ();
   t2 ();
@@ -465,6 +505,7 @@ let () =
     "'a t is a record of an int and an immutable list or Map; no mutable field anywhere";
   r6 ();
   t9 ();
+  t10 ();
   tl2 ();
   E4_check.finish ()
 ;;

@@ -74,7 +74,7 @@ def wide : List String :=
 Addition uses `Profile.grow`; multiplication uses `Profile.scale` in the reference.
 For admitted integer inputs, a result within the safe-integer bound is exact.
 The helper refuses results outside that bound before exposing them.
-The OCaml target uses `E4_clock.to_profile_nat` (DI-56, decisions rows 108 and 321). -/
+The OCaml target is exact: its profile has no bound (`ProfileData.natBound`, M4). -/
 def profile : List String :=
   [ "/** The represented growing arithmetic checks its result at the profile boundary."
   , " * For admitted integer inputs, a safe-integer sum or product is exact."

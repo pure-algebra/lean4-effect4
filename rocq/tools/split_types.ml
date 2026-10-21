@@ -12,7 +12,9 @@
       `M.t` in a type expression names the flat type of `M`;
    2. split: the flat group is printed as its components (Tarjan), dependencies first.
    These are the names and the order the Rocq workspace was built on, so `Eff_types.v` keeps its
-   spelling when the OCaml layout changes.
+   spelling when the OCaml layout changes. A Lean natural is Zarith's `Z.t` (M4); it is printed
+   as `int`, which rocq-of-ocaml reads as Rocq's `Z` (`RocqOfOCaml.Basics.int`), so the number
+   stays exact.
    With --extract it prints the inverse of step 1 as Rocq directives, one `Extract Inductive` per
    variant and per record (`E4.Eff_types.eff` is `Eff_types.Eff.t`, `Eff_succeed` is
    `Eff_types.Eff.Succeed`). Rocq code extracted over `Eff_types.v` then speaks the estate's own
@@ -76,6 +78,7 @@ let rename_decl (m : string) (d : type_declaration) : type_declaration =
   let retarget lid =
     match lid with
     | Longident.Lident "t" -> Longident.Lident (flat_name m)
+    | Longident.Ldot ({ txt = Longident.Lident "Z"; _ }, { txt = "t"; _ }) -> Longident.Lident "int"
     | Longident.Ldot ({ txt = Longident.Lident m'; _ }, { txt = "t"; _ }) -> Longident.Lident (flat_name m')
     | Longident.Lident _ -> lid
     | _ -> refuse ("a type path in module " ^ m)

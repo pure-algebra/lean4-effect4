@@ -15,11 +15,17 @@ let rec nth (l : 'a list) (k : int) : 'a option =
   | v :: rest -> if k = 0 then Some v else nth rest (k - 1)
 ;;
 
-let get (e : 'a t) (i : int) : 'a option =
-  if i < 0 || i >= e.len then None else nth e.rev (e.len - 1 - i)
+(* A natural index past `max_int` is past every environment a heap holds, so it answers
+   `None`, as Lean's `env[i]?` does past the length. *)
+let get (e : 'a t) (i : Z.t) : 'a option =
+  if not (Z.fits_int i)
+  then None
+  else (
+    let i = Z.to_int i in
+    if i < 0 || i >= e.len then None else nth e.rev (e.len - 1 - i))
 ;;
 
-let length (e : 'a t) : int = e.len
+let length (e : 'a t) : Z.t = Z.of_int e.len
 
 let rec drop (l : 'a list) (k : int) : 'a list =
   if k <= 0
@@ -30,12 +36,22 @@ let rec drop (l : 'a list) (k : int) : 'a list =
     | _ :: rest -> drop rest (k - 1))
 ;;
 
-let take (e : 'a t) (k : int) : 'a t =
+let take_int (e : 'a t) (k : int) : 'a t =
   if k >= e.len
   then e
   else if k <= 0
   then empty
   else { rev = drop e.rev (e.len - k); len = k }
+;;
+
+(* A count past `max_int` is past every length, so it takes the whole environment, as Lean's
+   `List.take` clamps. *)
+let take (e : 'a t) (k : Z.t) : 'a t =
+  if not (Z.fits_int k)
+  then e
+  else (
+    let k = Z.to_int k in
+    take_int e k)
 ;;
 
 let to_list (e : 'a t) : 'a list = List.rev e.rev

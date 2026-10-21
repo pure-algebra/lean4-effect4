@@ -51,7 +51,7 @@ def opened (program : NativeEff) (app : SigApp := {}) : State × Reply :=
   "\"sketch\":{\"holes\":[],\"program\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\"," ++
   "\"value\":{\"_tag\":\"nat\",\"value\":9007199254740993}}}}}}}")).toOption.isNone
 -- red (tested): 2^53 and 2^53 + 2 are exact in binary64 but past the profile's bound
--- (`rc112.natBound`, 2^53 - 1), so they do not read either; 2^53 - 1 reads
+-- (`safeBound`, 2^53 - 1), so they do not read either; 2^53 - 1 reads
 #guard (Tools.WireText.readRequest ("{\"method\":\"open\",\"version\":1,\"payload\":{\"_tag\":\"act\"," ++
   "\"a\":{\"_tag\":\"open_\",\"name\":\"n\",\"app\":{\"rows\":[],\"services\":[],\"types\":[]}," ++
   "\"sketch\":{\"holes\":[],\"program\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\"," ++

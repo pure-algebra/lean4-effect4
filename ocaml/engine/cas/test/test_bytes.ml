@@ -51,7 +51,7 @@ let rand_bytes n = String.init n (fun _ -> Char.chr (rand 256))
 
 let v_unit = Eff_frame.framed Eff_frame.tag_unit ""
 let v_bool b = Eff_frame.framed Eff_frame.tag_bool (if b then "\001" else "\000")
-let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 let v_str s = Eff_frame.framed Eff_frame.tag_string s
 let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
 let v_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
@@ -64,7 +64,7 @@ let v_ref k d = Eff_frame.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^
 let v_handle k n =
   Eff_frame.framed
     Eff_frame.tag_handle
-    (String.make 1 (Char.chr k) ^ Eff_frame.nat_digits n)
+    (String.make 1 (Char.chr k) ^ Eff_frame.nat_digits (Z.of_int n))
 ;;
 
 (* sampleEntry (src/Effect4/Store/Carrier/Val.lean) -- sampleEntry, the input of Digest.lean's third #guard. *)

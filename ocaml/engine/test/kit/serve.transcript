@@ -73,9 +73,10 @@ serve> {"op":"run","program":{"_tag":"bind","first":{"_tag":"withFiber","action"
 # run stopped: suspended
 serve> {"op":"run","program":{"_tag":"perform","op":{"_tag":"sleep"},"request":{"_tag":"lit","value":{"_tag":"nat","value":1000}}}}
 < {"status":"stopped","note":"suspended: no host call, a timer or a decision is due","via":"machine","calls":[]}
-# run stopped: outside the profile
+# run finished: a sum past the rc.112 profile's bound is exact, since the bound is an ingress
+# rule and a natural is Zarith's (M4, decisions row 417 (1))
 serve> {"op":"run","program":{"_tag":"bind","first":{"_tag":"withFiber","action":{"_tag":"fork","program":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":7}}},"options":{"startImmediately":false,"daemon":false,"maskMode":"inherit"}}},"rest":{"_tag":"succeed","value":{"_tag":"app","atom":"add","args":[{"_tag":"lit","value":{"_tag":"nat","value":9007199254740991}},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}}}}
-< {"status":"stopped","note":"outside the host profile: arithmetic: a sum outside the program's profile (DI-56)","via":"machine","calls":[]}
+< {"status":"finished","exit":{"_tag":"success","value":{"_tag":"nat","n":9007199254740992}},"via":"machine","calls":[]}
 # run refused: a literal above the JSON profile's limit (2^53 - 1), refused where the JSON reads
 # (the machine's own literal profile, DI-56, is reached through a program's bytes)
 serve> {"op":"run","program":{"_tag":"bind","first":{"_tag":"withFiber","action":{"_tag":"fork","program":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":7}}},"options":{"startImmediately":false,"daemon":false,"maskMode":"inherit"}}},"rest":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":9007199254740992}}}}}

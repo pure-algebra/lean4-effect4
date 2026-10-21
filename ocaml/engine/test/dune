@@ -99,7 +99,7 @@
 (test
  (name test_serve)
  (modules test_serve)
- (libraries e4_check effect4_engine effect4_eff effect4_clock))
+ (libraries e4_check effect4_engine effect4_eff zarith))
 
 ; lane X — the differential over every corpus, two engines.
 ;   test_diff   `Corpora` (the 37 byte goldens, the truth corpus's Lean-cut wire goldens,

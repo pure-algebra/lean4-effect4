@@ -13,13 +13,15 @@ open Effect4 Effect4.Program
 
 /-- The actual atom returns the largest admitted natural product. -/
 theorem boundary_product :
-    NativeAtom.eval .mul [.nat rc112.natBound, .nat 1] = some (.nat rc112.natBound) ∧
-      Within rc112.natBound (.nat rc112.natBound) = true :=
-  (mulIn_eq_some_iff rc112.natBound rc112.natBound 1 rc112.natBound).mp (by decide)
+    NativeAtom.eval .mul [.nat safeBound, .nat 1] = some (.nat safeBound) ∧
+      Within rc112 (.nat safeBound) = true :=
+  (mulIn_eq_some_iff rc112 safeBound 1 safeBound).mp (by decide)
 
-#guard scaleIn rc112.natBound 0 rc112.natBound = some 0
-#guard scaleIn rc112.natBound 4503599627370496 2 = none
-#guard scaleIn rc112.natBound 134217729 134217729 = none
+#guard scaleIn rc112 0 safeBound = some 0
+#guard scaleIn rc112 4503599627370496 2 = none
+#guard scaleIn rc112 134217729 134217729 = none
+-- control: a profile with no bound, the native one's, admits the product rc.112 refuses
+#guard scaleIn { rc112 with natBound := none } 134217729 134217729 = some 18014398777917441
 #guard NativeAtom.eval .mul [.nat 134217729, .nat 134217729] = some (.nat 18014398777917441)
 
 end Test.Machine.NaturalProfile

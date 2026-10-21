@@ -96,8 +96,9 @@ let exactly (what : string) (decode : string -> 'a option) (hex : string) : 'a =
   | None -> failwith (Printf.sprintf "fixture: %s does not read exactly" what)
 ;;
 
-(* The repository state: the next id, then each to-do's id, title and flag (`repoVal`). *)
-let repo_of (v : Val.t) : int * (int * (string * bool)) list =
+(* The repository state: the next id, then each to-do's id, title and flag (`repoVal`). An id is
+   a Lean natural, Zarith's `Z.t` (M4). *)
+let repo_of (v : Val.t) : Z.t * (Z.t * (string * bool)) list =
   match v with
   | Val.List [ Val.Nat next; Val.List items ] ->
     ( next
@@ -110,7 +111,7 @@ let repo_of (v : Val.t) : int * (int * (string * bool)) list =
 ;;
 
 (* The row names: each spelling and its position (`namesVal`). *)
-let names_of (v : Val.t) : (string * int) list =
+let names_of (v : Val.t) : (string * Z.t) list =
   match v with
   | Val.List xs ->
     List.map

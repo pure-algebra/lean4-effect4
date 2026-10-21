@@ -143,8 +143,13 @@ let build (b : string) : t =
     | Some (tag, after_index, payload_end, next) ->
       (* The bytes carry a wire tag; the entry and the children table speak declaration
          positions (`Tree.ctor_index`). The two differ once a constructor has retired. *)
+      (* A wire tag is a small natural; one past the host's int is no constructor's. *)
       let ci =
-        match Eff_subterm.position_of_tag family tag with
+        match
+          if Z.fits_int tag
+          then Eff_subterm.position_of_tag family (Z.to_int tag)
+          else None
+        with
         | Some p -> p
         | None -> raise Malformed
       in

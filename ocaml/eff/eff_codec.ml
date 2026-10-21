@@ -26,8 +26,9 @@
    C4  A node's bytes are the frames of its sort's image (`Run.Kit.stmtsToVal` to `layersToVal`,
        and `programToVal` for a program), the sub-tree its parent's image holds at its argument.
                                  by construction; tested (test_cache S1, S2)
-   C5  The bound is the framing kernel's: a natural above 2^62 - 1 is a refusal at decoding
-       (Eff_frame F2), where Lean reads it.                           by construction *)
+   C5  No bound: the framing kernel reads every natural exactly (Eff_frame F2, Zarith's `Z.t`
+       since M4), as Lean reads it. Until M4 a natural above 2^62 - 1 was refused at decoding.
+                                                                      by construction *)
 
 open Eff_types
 

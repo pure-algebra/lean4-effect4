@@ -1,10 +1,10 @@
 (* test_lcnf.ml -- the runtime library's own checks: each property of lcnf_string.mli,
-   lcnf_nat.mli, lcnf_list.mli and lcnf_array.mli at chosen points, with Lean's answer where the
-   point is inside the row's domain, and a red control beside each claim that shows what the claim
-   rules out. The chunked vector's checks came here from engine/test/test_log.ml with the vector
+   lcnf_nat.mli, lcnf_crossing.mli, lcnf_list.mli and lcnf_array.mli at chosen points, with
+   Lean's answer where the point is inside the row's domain, and a red control beside each claim
+   that shows what the claim rules out. The chunked vector's checks came here from engine/test/test_log.ml with the vector
    itself. Finite evaluations; no theorem is restated.
 
-   Depends on: effect4_lcnf.
+   Depends on: effect4_lcnf, Zarith.
 
    Run: cd ocaml && dune test lcnf *)
 
@@ -60,54 +60,95 @@ let strings () =
      | exception Invalid_argument _ -> true)
 ;;
 
-(* N1-N3: naturals stopped at max_int. Lean's answer is exact; below max_int the helper's is
-   the same number. *)
+(* N1-N5 and X1-X2: naturals are exact (`Z.t`, M4), and a narrowing to the target's `int` refuses
+   at its named crossing. Lean's answer is the exact one at every point below. *)
+let refused crossing f =
+  match f () with
+  | _ -> false
+  | exception Lcnf_crossing.Refused why -> why.Lcnf_crossing.crossing = crossing
+;;
+
 let naturals () =
-  let half = max_int / 2 in
+  let z = Z.of_int in
+  let past = Z.succ (z max_int) in
+  let huge = Z.pow (z 2) 100 in
   check
-    "N1 mul is the product below max_int: 3 * 5, 0 * max_int, 2 * (max_int / 2)"
-    (Lcnf_nat.mul 3 5 = 15
-     && Lcnf_nat.mul 0 max_int = 0
-     && Lcnf_nat.mul max_int 0 = 0
-     && Lcnf_nat.mul 2 half = max_int - 1);
+    "N1 sub is a - b at or above b, and stops at zero below: 5 - 3, 3 - 5, 2^100 - 1"
+    (Z.equal (Lcnf_nat.sub (z 5) (z 3)) (z 2)
+     && Z.equal (Lcnf_nat.sub (z 3) (z 5)) Z.zero
+     && Z.equal (Lcnf_nat.sub huge Z.one) (Z.pred huge)
+     && Z.equal (Lcnf_nat.pred Z.zero) Z.zero
+     && Z.equal (Lcnf_nat.pred (z 7)) (z 6));
+  (* red control: Zarith's own difference goes below zero, which no natural is *)
+  check "N1 (red control): Z.sub 3 5 is negative" (Z.sign (Z.sub (z 3) (z 5)) < 0);
   check
-    "N1 mul stops at max_int above it: 2 * (max_int / 2 + 1) and max_int * 2"
-    (Lcnf_nat.mul 2 (half + 1) = max_int && Lcnf_nat.mul max_int 2 = max_int);
-  (* red control: OCaml's raw product wraps to a negative word at the same point *)
+    "N2 div and rem are exact, and 0 and a at a zero divisor: 17 / 5, 17 mod 5, 17 / 0, \
+     17 mod 0"
+    (Z.equal (Lcnf_nat.div (z 17) (z 5)) (z 3)
+     && Z.equal (Lcnf_nat.rem (z 17) (z 5)) (z 2)
+     && Z.equal (Lcnf_nat.div (z 17) Z.zero) Z.zero
+     && Z.equal (Lcnf_nat.rem (z 17) Z.zero) (z 17)
+     && Z.equal (Lcnf_nat.div huge (z 2)) (Z.pow (z 2) 99));
+  (* red control: Zarith's own division raises at a zero divisor *)
   check
-    "N1 (red control): the raw product 2 * (max_int / 2 + 1) wraps below zero"
-    (2 * (half + 1) < 0);
+    "N2 (red control): Z.div 17 0 raises Division_by_zero"
+    (raises_division (fun () -> Z.div (z 17) Z.zero));
   check
-    "N2 pow is the power below max_int: 2^10, 2^61, 3^39, 0^0, 0^5, 1^1000"
-    (Lcnf_nat.pow 2 10 = 1024
-     && Lcnf_nat.pow 2 61 = 2305843009213693952
-     && Lcnf_nat.pow 3 39 = 4052555153018976267
-     && Lcnf_nat.pow 0 0 = 1
-     && Lcnf_nat.pow 0 5 = 0
-     && Lcnf_nat.pow 1 1000 = 1);
-  check
-    "N2 pow stops at max_int above it: 2^62, 2^64, 3^40"
-    (Lcnf_nat.pow 2 62 = max_int
-     && Lcnf_nat.pow 2 64 = max_int
-     && Lcnf_nat.pow 3 40 = max_int);
-  (* red control: a wrapping power reads 2^64 as 0, which would make Val.wf's `< 2 ^ 64` false
-     for every value *)
+    "N3 pow and the shifts are exact past max_int: 2^64, 3^40, 1 lsl 100, 2^100 lsr 99, \
+     0^0"
+    (Z.equal (Lcnf_nat.pow (z 2) (z 64)) (Z.shift_left Z.one 64)
+     && Z.equal (Lcnf_nat.pow (z 3) (z 40)) (Z.of_string "12157665459056928801")
+     && Z.equal (Lcnf_nat.pow Z.zero Z.zero) Z.one
+     && Z.equal (Lcnf_nat.shift_left Z.one (z 100)) huge
+     && Z.equal (Lcnf_nat.shift_right huge (z 99)) (z 2));
+  (* red control: the target's own int wraps 2^64 to zero, which made `Val.wf`'s `< 2 ^ 64` read
+     as `< 0` before M4 *)
   let rec raw a b = if b = 0 then 1 else a * raw a (b - 1) in
-  check "N2 (red control): a wrapping power reads 2^64 as 0" (raw 2 64 = 0);
+  check "N3 (red control): the int power reads 2^64 as 0" (raw 2 64 = 0);
   check
-    "N3 shift_left is a * 2^b below max_int: 3 lsl 2, 1 lsl 61, 0 lsl 100"
-    (Lcnf_nat.shift_left 3 2 = 12
-     && Lcnf_nat.shift_left 1 61 = 2305843009213693952
-     && Lcnf_nat.shift_left 0 100 = 0);
+    "N3 an exponent or a shift past max_int is refused at the arithmetic crossing"
+    (refused Lcnf_crossing.Arithmetic (fun () -> Lcnf_nat.pow (z 2) past)
+     && refused Lcnf_crossing.Arithmetic (fun () -> Lcnf_nat.shift_left Z.one past)
+     && refused Lcnf_crossing.Arithmetic (fun () -> Lcnf_nat.shift_right huge past));
   check
-    "N3 shift_left stops at max_int above it: 1 lsl 62, 3 lsl 61, 3 lsl 62"
-    (Lcnf_nat.shift_left 1 62 = max_int
-     && Lcnf_nat.shift_left 3 61 = max_int
-     && Lcnf_nat.shift_left 3 62 = max_int);
-  (* red control: stopping the power alone still wraps the product *)
+    "N4 to_index_exn and to_shift_exn are the natural as an int when it fits"
+    (Lcnf_nat.to_index_exn (z 7) = 7
+     && Lcnf_nat.to_index_exn (z max_int) = max_int
+     && Lcnf_nat.to_shift_exn (z 63) = 63);
   check
-    "N3 (red control): 3 * 2^61 with only the power stopped wraps below zero"
-    (3 * Lcnf_nat.pow 2 61 < 0)
+    "N4 a natural past max_int is refused, at the index and at the arithmetic crossing"
+    (refused Lcnf_crossing.Index (fun () -> Lcnf_nat.to_index_exn past)
+     && refused Lcnf_crossing.Arithmetic (fun () -> Lcnf_nat.to_shift_exn past));
+  (* red control: Zarith's own conversion raises a different exception, which names no crossing *)
+  check
+    "N4 (red control): Z.to_int past max_int raises Z.Overflow"
+    (match Z.to_int past with
+     | _ -> false
+     | exception Z.Overflow -> true);
+  check
+    "N5 index_add and index_sub are the int sum and difference inside the index range"
+    (Lcnf_nat.index_add 3 4 = 7
+     && Lcnf_nat.index_add (max_int - 1) 1 = max_int
+     && Lcnf_nat.index_sub 7 3 = 4
+     && Lcnf_nat.index_sub 3 3 = 0);
+  check
+    "N5 a sum past max_int and a difference below zero are refused at the index crossing"
+    (refused Lcnf_crossing.Index (fun () -> Lcnf_nat.index_add max_int 1)
+     && refused Lcnf_crossing.Index (fun () -> Lcnf_nat.index_sub 3 4));
+  (* red control: the int sum wraps below zero at the same point *)
+  check "N5 (red control): max_int + 1 wraps below zero" (max_int + 1 < 0);
+  check
+    "X1 refuse raises Refused with its crossing and its reason"
+    (match Lcnf_crossing.refuse Lcnf_crossing.Index "a reason" with
+     | () -> false
+     | exception Lcnf_crossing.Refused { crossing = Lcnf_crossing.Index; reason } ->
+       String.equal reason "a reason");
+  check
+    "X2 refusal_text names the crossing as OCaml5.Lcnf.Crossing prints it"
+    (String.equal
+       (Lcnf_crossing.refusal_text { crossing = Lcnf_crossing.Arithmetic; reason = "r" })
+       "arithmetic: r"
+     && String.equal (Lcnf_crossing.crossing_name Lcnf_crossing.Index) "index")
 ;;
 
 (* L1-L2: membership through an asymmetric instance, `a == b` read as `a < b`. *)

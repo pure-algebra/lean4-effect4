@@ -1,8 +1,8 @@
 ; effect4_bytes — the byte layer of the engine and the CAS: hexadecimal (E4_hex) and SHA-256
 ; (E4_sha256). The framing is Eff_frame's (effect4_eff), the one framing kernel, which its
 ; callers name directly. It names no engine module, so it sits below the engine and the CAS:
-; the CAS needs the engine only for E4_checkpoint. Unwrapped, as effect4_eff and effect4_clock
-; are, so the generated engine and the CAS name its modules directly. A library of the
+; the CAS needs the engine only for E4_checkpoint. Unwrapped, as effect4_eff is, so the
+; generated engine and the CAS name its modules directly. A library of the
 ; estate's one dune project (ocaml/dune-project), in its own package, as cas/ is.
 
 (library

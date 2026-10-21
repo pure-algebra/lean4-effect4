@@ -2,14 +2,37 @@
    Regenerate: lake exe lcnfgen --support ocaml/lcnf (make gen-lcnf). The interface,
    lcnf_nat.mli, is hand-written. *)
 
-let mul a b =
-  if a = 0 then 0 else if b > max_int / a then max_int else a * b
+let sub a b =
+  if Z.lt a b then Z.of_int 0 else Z.sub a b
 
-let rec pow a b =
-  if b = 0 then 1 else (let h = pow a (b - 1) in
-    if a = 0 then 0 else if h > max_int / a then max_int else h * a)
+let pred a =
+  if Z.equal a (Z.of_int 0) then Z.of_int 0 else Z.pred a
+
+let div a b =
+  if Z.equal b (Z.of_int 0) then Z.of_int 0 else Z.div a b
+
+let rem a b =
+  if Z.equal b (Z.of_int 0) then a else Z.rem a b
+
+let to_index_exn a =
+  if Z.fits_int a then Z.to_int a else Lcnf_crossing.refuse Lcnf_crossing.Index "a natural past the target's index capacity"
+
+let to_shift_exn a =
+  if Z.fits_int a then Z.to_int a else Lcnf_crossing.refuse Lcnf_crossing.Arithmetic "an exponent or a shift past the target's capacity"
+
+let pow a b =
+  Z.pow a (to_shift_exn b)
 
 let shift_left a b =
-  let s = pow 2 b in
-  if a = 0 then 0 else if s > max_int / a then max_int else a * s
+  Z.shift_left a (to_shift_exn b)
+
+let shift_right a b =
+  Z.shift_right a (to_shift_exn b)
+
+let index_add a b =
+  let s = a + b in
+  if s < a then Lcnf_crossing.refuse Lcnf_crossing.Index "an index sum past the target's capacity" else s
+
+let index_sub a b =
+  if b <= a then a - b else Lcnf_crossing.refuse Lcnf_crossing.Index "an index difference below zero, where Lean wraps"
 

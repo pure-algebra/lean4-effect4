@@ -29,7 +29,7 @@ arguments and of its result, and its hints.
 structure is an object of its fields; a sum is a string when no case has a field, an array when it
 is a list family (`listItem?`), and otherwise an object whose `_tag` names the case, the cases
 with no field sharing one branch; a list is an array; an option is `null` or its item; a pair is a
-two-element array; a natural is an integer up to the profile's bound (`rc112.natBound`); bytes and
+two-element array; a natural is an integer up to the profile's bound (`safeBound`, rc.112's); bytes and
 digests are lower-case hex. Every object refuses extra properties, as the exact reader does.
 
 The table is what an agent pays for on every connection, so each argument schema says a thing
@@ -215,7 +215,7 @@ def schemaIn (p : Plan) : Shape → String
   | .unit => object [("type", quote "null")]
   | .bool => object [("type", quote "boolean")]
   | .nat => object [("type", quote "integer"), ("minimum", "0"),
-      ("maximum", "9007199254740991")]
+      ("maximum", toString safeBound)]
   | .string => object [("type", quote "string")]
   | .bytes => object [("type", quote "string"), ("pattern", hexPattern)]
   | .digest => object [("type", quote "string"), ("pattern", digestPattern)]

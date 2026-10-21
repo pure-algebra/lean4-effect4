@@ -1,18 +1,18 @@
 (lang dune 3.0)
 ; The OCaml estate as one dune project (decision D1, docs/research/2026-10-18-slices/
 ; receipt-w2-closure.md): gen/ (the LCNF route), eff/ (the Eff IR as an OCaml library), engine/
-; (the host engine, its byte layer bytes/, its disk store cas/ and the native kit kit/), clock/
-; and lcnf/ (the libraries generated code links) and tools/; see `dune` and README.md. The avatar
+; (the host engine, its byte layer bytes/, its disk store cas/ and the native kit kit/), lcnf/
+; (the library generated code links) and tools/; see `dune` and README.md. The avatar
 ; and the daemon that were once two more projects are archived on `archive/ocaml5-avatar`.
 ;
-; One project holds the eight packages below. So a package-private library of effect4_gen (the
+; One project holds the seven packages below. So a package-private library of effect4_gen (the
 ; LCNF closure, gen/dune) serves the installed facade Api_gen and the test lanes under
 ; engine/test/ alike, while an installed client names only each package's public modules.
 ;
 ; Install metadata (plan E1, docs/research/2026-10-18-slices/README.md, ruling 4): dune writes one
 ; opam file per package beside this file (`generate_opam_files`). The packages are unstable: no
-; release is published, and their names may change. Zarith links the system's GMP, so a package
-; that reaches Zarith declares conf-gmp beside it; `eff` links it too. ocaml/engine/test/install
+; release is published, and their names may change. A Lean natural is Zarith's `Z.t` (M4), and
+; Zarith links the system's GMP, so a package that reaches Zarith declares conf-gmp beside it. ocaml/engine/test/install
 ; checks the installed packages from a project outside ocaml/.
 (generate_opam_files true)
 (source (github pure-algebra/lean4-effect4))
@@ -21,30 +21,24 @@
 (maintainers "The Fold Lab")
 
 (package
- (name effect4_clock)
- (synopsis "Unstable: exact naturals over Zarith for Effect4")
+ (name effect4_eff)
+ (synopsis "Unstable: Effect4's Eff program IR as an OCaml library")
  (description
-  "Effect4's exact naturals over Zarith: the OCaml target of Effect4.ClockMillis and of the host profile's checked arithmetic. Unstable: no release is published, and names may change.")
+  "The Eff program IR of lean4-effect4 in OCaml: its types, its canonical wire and its JSON print, generated from Lean over a hand-written framing kernel. Unstable: no release is published, and names may change.")
  (depends
   (ocaml (>= 5.1.1))
   (zarith (>= 1.14))
   conf-gmp))
 
 (package
- (name effect4_eff)
- (synopsis "Unstable: Effect4's Eff program IR as an OCaml library")
- (description
-  "The Eff program IR of lean4-effect4 in OCaml: its types, its canonical wire and its JSON print, generated from Lean over a hand-written framing kernel. Unstable: no release is published, and names may change.")
- (depends
-  (ocaml (>= 5.1.1))))
-
-(package
  (name effect4_lcnf)
  (synopsis "Unstable: the runtime library of Effect4's LCNF-made OCaml")
  (description
-  "The functions every OCaml file that Effect4's LCNF route generates links: strings as UTF-8 bytes, bounded naturals, and the persistent array. Unstable: no release is published, and names may change.")
+  "The functions every OCaml file that Effect4's LCNF route generates links: strings as UTF-8 bytes, Lean's total arithmetic on exact naturals, the refusal at a named crossing, and the persistent array. Unstable: no release is published, and names may change.")
  (depends
-  (ocaml (>= 5.1.1))))
+  (ocaml (>= 5.1.1))
+  (zarith (>= 1.14))
+  conf-gmp))
 
 (package
  (name effect4_gen)
@@ -53,7 +47,8 @@
   "Lean's checker, call tree, authoring surface and authoring tool for Effect4, lowered to OCaml through LCNF (Api_gen, generated). Unstable: no release is published, and names may change.")
  (depends
   (ocaml (>= 5.1.1))
-  effect4_clock
+  (zarith (>= 1.14))
+  conf-gmp
   effect4_eff
   effect4_lcnf))
 
@@ -61,7 +56,7 @@
  (name effect4_bytes)
  (synopsis "Unstable: Effect4's byte layer: framing, hexadecimal and SHA-256")
  (description
-  "The byte layer below Effect4's engine and disk store: big-endian framing over Eff_frame, hexadecimal, the host profile's 63-bit naturals and SHA-256. Unstable: no release is published, and names may change.")
+  "The byte layer below Effect4's engine and disk store: big-endian framing over Eff_frame, hexadecimal and SHA-256. Unstable: no release is published, and names may change.")
  (depends
   (ocaml (>= 5.1.1))
   effect4_eff))
@@ -73,8 +68,9 @@
   "The host engine under Effect4's machine lowered from Lean: the carriers, the host drive, and the scheduler over domains with its mailbox, inbox and admission. Unstable: no release is published, and names may change.")
  (depends
   (ocaml (>= 5.1.1))
+  (zarith (>= 1.14))
+  conf-gmp
   effect4_eff
-  effect4_clock
   effect4_bytes
   effect4_lcnf))
 
@@ -99,8 +95,8 @@
  (depends
   (ocaml (>= 5.1.1))
   (yojson (>= 2.2.2))
+  (zarith (>= 1.14))
   conf-gmp
   effect4_eff
-  effect4_clock
   effect4_gen
   effect4_engine))

@@ -68,7 +68,7 @@ let rec raw (t : K.t) : J.t =
   match t with
   | K.NatJson_null -> `Null
   | K.NatJson_bool b -> `Bool b
-  | K.NatJson_nat n -> `Intlit (string_of_int n)
+  | K.NatJson_nat n -> `Intlit (Z.to_string n)
   | K.NatJson_numeral s -> `Floatlit s
   | K.NatJson_str s -> string s
   | K.NatJson_arr ts -> `List (List.map raw ts)
@@ -133,7 +133,7 @@ let create () =
 let envelope (entry : G.effect4_tool_methods_entry) (args : (string * K.t) list) : K.t =
   K.NatJson_obj
     [ "method", K.NatJson_str entry.listing.name
-    ; "version", K.NatJson_nat 1
+    ; "version", K.NatJson_nat Z.one
     ; ( "payload"
       , K.NatJson_obj
           [ "_tag", K.NatJson_str entry.kind

@@ -49,7 +49,7 @@ def answer (o : Oracle) (state : State) (v : Val) : Checked (Except Wire.Refusal
   | none => pure (.error (.codec (.unreadable ⟨.value [], .carrierValue⟩)))
   | some envelope =>
     if (Program.rc112.valueRefusal v).isSome then
-      pure (.error (.codec (.unreadable ⟨.value [], .naturalOutsideProfile Program.rc112.natBound⟩)))
+      pure (.error (.codec (.unreadable ⟨.value [], .naturalOutsideProfile safeBound⟩)))
     else do
     match ← Wire.serveEnvelope o Wire.Connection.v1 state envelope with
     | .error why => pure (.error why)

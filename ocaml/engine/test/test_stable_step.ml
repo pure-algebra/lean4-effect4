@@ -7,19 +7,27 @@ open Effect4_engine
 
 module Check (I : E4_engine.INSTANCE) = struct
   let run () =
-    let program = Eff.Suspend (Eff.Succeed (Term.Lit (Lit.Nat 7))) in
-    let other = Eff.Suspend (Eff.Succeed (Term.Lit (Lit.Nat 99))) in
+    let program = Eff.Suspend (Eff.Succeed (Term.Lit (Lit.Nat (Z.of_int 7)))) in
+    let other = Eff.Suspend (Eff.Succeed (Term.Lit (Lit.Nat (Z.of_int 99)))) in
     let prepared = I.prepare [] program in
     let separate = I.prepare [] other in
-    let machine = I.load program ~fuel:100 in
-    let normal, settled = I.step prepared ~fuel:100 machine (I.RunDecision_evaluate 0) in
-    let repeated, _ = I.step prepared ~fuel:100 machine (I.RunDecision_evaluate 0) in
+    let machine = I.load program ~fuel:(Z.of_int 100) in
+    let normal, settled =
+      I.step prepared ~fuel:(Z.of_int 100) machine (I.RunDecision_evaluate Z.zero)
+    in
+    let repeated, _ =
+      I.step prepared ~fuel:(Z.of_int 100) machine (I.RunDecision_evaluate Z.zero)
+    in
     let alternate, _ =
-      I.step separate ~fuel:100 (I.load other ~fuel:100) (I.RunDecision_evaluate 0)
+      I.step
+        separate
+        ~fuel:(Z.of_int 100)
+        (I.load other ~fuel:(Z.of_int 100))
+        (I.RunDecision_evaluate Z.zero)
     in
     let returns n m =
-      match List.assoc_opt 0 (I.completed_exits m) with
-      | Some (Exit.Success (Val.Nat value)) -> value = n
+      match List.assoc_opt Z.zero (I.completed_exits m) with
+      | Some (Exit.Success (Val.Nat value)) -> Z.equal value (Z.of_int n)
       | _ -> false
     in
     assert settled;
@@ -33,7 +41,8 @@ module Check (I : E4_engine.INSTANCE) = struct
       let started = Sys.time () in
       for _ = 1 to 10000 do
         let package = if prepare_each_step then I.prepare [] program else prepared in
-        ignore (I.step package ~fuel:100 machine (I.RunDecision_evaluate 0))
+        ignore
+          (I.step package ~fuel:(Z.of_int 100) machine (I.RunDecision_evaluate Z.zero))
       done;
       (Gc.allocated_bytes () -. before) /. 10000., (Sys.time () -. started) *. 100.
     in

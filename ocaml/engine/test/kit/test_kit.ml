@@ -117,12 +117,13 @@ let self_call =
 ;;
 
 let stop_text : Kit.stop -> string = function
-  | Kit.Finished (Exit.Success (Val.Nat n)) -> Printf.sprintf "finished %d" n
+  | Kit.Finished (Exit.Success (Val.Nat n)) -> "finished " ^ Z.to_string n
   | Kit.Finished _ -> "finished other"
   | Kit.Unsettled -> "unsettled"
-  | Kit.Waiting (i, Val.Nat n) -> Printf.sprintf "waiting %d %d" i n
-  | Kit.Waiting (i, _) -> Printf.sprintf "waiting %d" i
-  | Kit.Refused (i, _, _, _) -> Printf.sprintf "refused %d" i
+  | Kit.Waiting (i, Val.Nat n) ->
+    Printf.sprintf "waiting %s %s" (Z.to_string i) (Z.to_string n)
+  | Kit.Waiting (i, _) -> "waiting " ^ Z.to_string i
+  | Kit.Refused (i, _, _, _) -> "refused " ^ Z.to_string i
   | Kit.Unsupported _ -> "unsupported"
   | Kit.Stopped why -> "stopped " ^ why
 ;;
@@ -237,10 +238,14 @@ let t2 () =
     (reads_as "1e0" (G.JsonReason_expected G.Shape_nat));
   check
     "T2 a natural past the int range is a numeral, refused as outside the profile"
-    (reads_as "4611686018427387904" (G.JsonReason_naturalOutsideProfile 9007199254740991));
+    (reads_as
+       "4611686018427387904"
+       (G.JsonReason_naturalOutsideProfile (Z.of_int 9007199254740991)));
   check
     "T2 2^53 reads as a natural, refused as outside the profile"
-    (reads_as "9007199254740992" (G.JsonReason_naturalOutsideProfile 9007199254740991));
+    (reads_as
+       "9007199254740992"
+       (G.JsonReason_naturalOutsideProfile (Z.of_int 9007199254740991)));
   (* A key written twice is refused at its object, by the reader, not by the text parser. *)
   let pair_doc =
     { G.root = G.Shape_struct ("P", [ "a", G.Shape_nat; "b", G.Shape_nat ]); defs = [] }
@@ -325,7 +330,10 @@ let t3 corpus =
   in
   check "T3 a row table round trips" rows_back;
   let tape =
-    [ unit_ok; Kit.fail (Val.Str "boom"); Kit.succeed (Val.List [ Val.Nat 3 ]) ]
+    [ unit_ok
+    ; Kit.fail (Val.Str "boom")
+    ; Kit.succeed (Val.List [ Val.Nat (Z.of_int 3) ])
+    ]
   in
   let tape_back =
     match
@@ -365,16 +373,16 @@ let t3 corpus =
 
 let t4 () =
   let raw =
-    let v0 = Term.Var 0 in
+    let v0 = Term.Var (Z.of_int 0) in
     let lt a b = Term.App ("lt", Terms.Cons (a, Terms.Cons (b, Terms.Nil))) in
     let mul a b = Term.App ("mul", Terms.Cons (a, Terms.Cons (b, Terms.Nil))) in
     Eff.Iterate
       ( None
-      , Term.Lit (Lit.Nat 1)
-      , lt v0 (Term.Lit (Lit.Nat 16))
-      , mul v0 (Term.Lit (Lit.Nat 2))
+      , Term.Lit (Lit.Nat (Z.of_int 1))
+      , lt v0 (Term.Lit (Lit.Nat (Z.of_int 16)))
+      , mul v0 (Term.Lit (Lit.Nat (Z.of_int 2)))
       , v0
-      , Eff.Perform (NativeOp.External 0, v0) )
+      , Eff.Perform (NativeOp.External (Z.of_int 0), v0) )
   in
   check "T4 the doubling loop by name is the raw one" (doubling = raw);
   let reason p =
@@ -402,7 +410,7 @@ let t4 () =
   | Error _ -> check "T4 doubling types" false
 ;;
 
-let reason_head (r : (int list, Effect4_gen.Api_gen.type_reason) Located.t) =
+let reason_head (r : (Z.t list, Effect4_gen.Api_gen.type_reason) Located.t) =
   match Kit.Json.refusal_json r with
   | J.NatJson_obj fields ->
     (match List.assoc_opt "reason" fields with
@@ -412,8 +420,8 @@ let reason_head (r : (int list, Effect4_gen.Api_gen.type_reason) Located.t) =
   | _ -> "?"
 ;;
 
-let path_text (r : (int list, Effect4_gen.Api_gen.type_reason) Located.t) =
-  if r.site = [] then "." else String.concat "." (List.map string_of_int r.site)
+let path_text (r : (Z.t list, Effect4_gen.Api_gen.type_reason) Located.t) =
+  if r.site = [] then "." else String.concat "." (List.map Z.to_string r.site)
 ;;
 
 let t5 corpus =
@@ -469,8 +477,8 @@ let t7 () =
     "T7 the run stops refused at the reply, with the fault"
     (r.trace.stop
      = Kit.Refused
-         ( 0
-         , Val.Nat 2
+         ( Z.zero
+         , Val.Nat (Z.of_int 2)
          , Kit.succeed (Val.Str "oops")
          , Kit.Fault (Kit.ReplyFault_answerType Ty.Unit) ));
   check "T7 the refused reply is not applied" (List.length (Kit.calls r.trace) = 1);
@@ -592,12 +600,14 @@ let t10 () =
      | _ -> false);
   check
     "T10 an unreadable program is an error"
-    (field "status" (line [ "op", J.NatJson_str "check"; "program", J.NatJson_nat 3 ])
+    (field
+       "status"
+       (line [ "op", J.NatJson_str "check"; "program", J.NatJson_nat (Z.of_int 3) ])
      = Some (J.NatJson_str "error"));
   let fork =
     Eff.WithFiber
       (ActionTerm.Fork
-         ( Eff.Succeed (Term.Lit (Lit.Nat 7))
+         ( Eff.Succeed (Term.Lit (Lit.Nat (Z.of_int 7)))
          , { ForkOptions.start_immediately = false
            ; daemon = false
            ; mask_mode = MaskMode.Inherit
@@ -649,8 +659,8 @@ let t11 () =
     check
       "T11 a path for each branch and each failure"
       (List.length paths = List.length replies
-       && List.mem (Kit.succeed (Val.Nat 0)) exits
-       && List.mem (Kit.succeed (Val.Nat 1)) exits
+       && List.mem (Kit.succeed (Val.Nat (Z.of_int 0))) exits
+       && List.mem (Kit.succeed (Val.Nat (Z.of_int 1))) exits
        && List.mem (Kit.fail (Val.Str "full")) exits);
     check
       "T11 each path's tape replays it on the machine"
@@ -669,16 +679,17 @@ let t12 () =
         let* x = perform "source" unit in
         succeed (atom "minus" [ atom "minus" [ nat 0; nat 1 ]; x ]))
   in
-  let a1 = Kit.succeed (Val.NegInt max_int) in
+  let a1 = Kit.succeed (Val.NegInt (Z.of_int max_int)) in
+  (* the reason names the reply's magnitude, max_int + 1 (`ProfileReason.belowBound`, M4) *)
   let at_ingress = function
     | Kit.Refused
-        ( 0
+        ( row
         , Val.Unit
         , _
         , Kit.Ingress
             (E4_engine.Unsupported
-               { Located.site = [ 0 ]; reason = ProfileReason.BelowBound n }) ) ->
-      n = max_int
+               { Located.site = [ at ]; reason = ProfileReason.BelowBound n }) ) ->
+      Z.equal row Z.zero && Z.equal at Z.zero && Z.equal n (Z.succ (Z.of_int max_int))
     | _ -> false
   in
   List.iter
@@ -697,15 +708,18 @@ let t12 () =
     (at_ingress (Kit.run ~limit:8 ~check:false app native () p).trace.stop);
   check
     "T12 red control: the reply -2 finishes with 1, as Lean answers"
-    ((Kit.run ~limit:8 app Kit.Reactor.tape [ Kit.succeed (Val.NegInt 1) ] p).trace.stop
-     = Kit.Finished (Exit.Success (Val.Nat 1)));
+    ((Kit.run ~limit:8 app Kit.Reactor.tape [ Kit.succeed (Val.NegInt (Z.of_int 1)) ] p)
+       .trace
+       .stop
+     = Kit.Finished (Exit.Success (Val.Nat (Z.of_int 1))));
   let edge = Int64.to_int 9007199254740991L in
   let literal n = build_in (Kit.app ()) (A.succeed (A.nat n)) in
   let r = Kit.run (Kit.app ()) Kit.Reactor.silent () (literal (edge + 1)) in
   check
     "T12 a literal outside the profile is unsupported at its node, and nothing runs"
     (r.trace.stop
-     = Kit.Unsupported { Located.site = []; reason = ProfileReason.AboveBound (edge + 1) }
+     = Kit.Unsupported
+         { Located.site = []; reason = ProfileReason.AboveBound (Z.of_int (edge + 1)) }
      && r.trace.steps = []);
   check
     "T12 its report says refused, with the profile's refusal"
@@ -715,26 +729,35 @@ let t12 () =
        && List.assoc_opt "profile" fields
           = Some
               (J.NatJson_obj
-                 [ "at", J.NatJson_arr []; "aboveBound", J.NatJson_nat (edge + 1) ])
+                 [ "at", J.NatJson_arr []
+                 ; "aboveBound", J.NatJson_nat (Z.of_int (edge + 1))
+                 ])
      | _ -> false);
   check
     "T12 red control: the largest literal inside the profile runs"
     ((Kit.run (Kit.app ()) Kit.Reactor.silent () (literal edge)).trace.stop
-     = Kit.Finished (Exit.Success (Val.Nat edge)));
-  let r = Kit.run ~limit:8 app Kit.Reactor.tape [ Kit.succeed (Val.Nat (-1)) ] p in
+     = Kit.Finished (Exit.Success (Val.Nat (Z.of_int edge))));
+  let r =
+    Kit.run ~limit:8 app Kit.Reactor.tape [ Kit.succeed (Val.Nat (Z.of_int (-1))) ] p
+  in
   check
     "T12 a reply that is no Lean value is refused as not a value"
     (match r.trace.stop with
-     | Kit.Refused (0, _, _, Kit.Ingress E4_engine.Not_a_value) -> true
+     | Kit.Refused (row, _, _, Kit.Ingress E4_engine.Not_a_value) -> Z.equal row Z.zero
      | _ -> false);
   let echo_app = Kit.app ~rows:[ A.row "echo" ~request:Ty.Unit ~answer:Ty.Nat () ] () in
   let echo = build_in echo_app (A.perform "echo" A.unit) in
   check
     "T12 red control: the largest natural inside the profile is applied"
-    ((Kit.run ~limit:8 echo_app Kit.Reactor.tape [ Kit.succeed (Val.Nat edge) ] echo)
+    ((Kit.run
+        ~limit:8
+        echo_app
+        Kit.Reactor.tape
+        [ Kit.succeed (Val.Nat (Z.of_int edge)) ]
+        echo)
        .trace
        .stop
-     = Kit.Finished (Exit.Success (Val.Nat edge)))
+     = Kit.Finished (Exit.Success (Val.Nat (Z.of_int edge))))
 ;;
 
 let t13 () =

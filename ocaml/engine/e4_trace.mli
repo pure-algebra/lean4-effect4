@@ -1,7 +1,7 @@
 (* E4_trace -- the machine event log over Lcnf_array.
    Source: RunMachine.emit (src/Effect4/Machine/Fibers.lean).
    Reader: Api.Inspection.trace (src/Effect4/Api.lean).
-   Depends on: Lcnf_array and the standard library.
+   Depends on: Lcnf_array, Zarith (Z) and the standard library.
 
    Properties, checked by test/prop_trace.ml:
    TR1 to_list (emit evs t) = to_list t @ evs.
@@ -14,7 +14,8 @@
        Indices outside the carrier return None.
    TR8 random emission sequences agree with the list-backed reference.
 
-   The host count is bounded by max_int and available memory.
+   The host count is bounded by max_int and available memory; `length` answers it as a Lean
+   natural, Zarith's `Z.t` (M4).
    Lcnf_array owns the transient-array capacity check and its list fallback. *)
 
 type 'e t
@@ -28,7 +29,7 @@ val emit : 'e list -> 'e t -> 'e t
 val to_list : 'e t -> 'e list
 
 (** O(1) (TR4). *)
-val length : 'e t -> int
+val length : 'e t -> Z.t
 
 val is_empty : 'e t -> bool
 

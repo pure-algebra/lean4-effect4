@@ -29,7 +29,7 @@ let rec show_val (v : Eff_types.Val.t) =
   match v with
   | Eff_types.Val.Unit -> "unit"
   | Eff_types.Val.Bool b -> string_of_bool b
-  | Eff_types.Val.Nat n -> string_of_int n
+  | Eff_types.Val.Nat n -> Z.to_string n
   | Eff_types.Val.Str s -> "\"" ^ s ^ "\""
   | Eff_types.Val.None -> "none"
   | Eff_types.Val.Some x -> "some " ^ show_val x
@@ -37,20 +37,20 @@ let rec show_val (v : Eff_types.Val.t) =
   | Eff_types.Val.List xs -> "list [" ^ String.concat ", " (List.map show_val xs) ^ "]"
   | Eff_types.Val.Bytes _ -> "bytes"
   | Eff_types.Val.Ctor (i, args) ->
-    Printf.sprintf "ctor %d [%s]" i (String.concat ", " (List.map show_val args))
+    Printf.sprintf "ctor %s [%s]" (Z.to_string i) (String.concat ", " (List.map show_val args))
   | Eff_types.Val.Ref (k, _) -> Printf.sprintf "ref %d" k
-  | Eff_types.Val.Handle (k, n) -> Printf.sprintf "handle %d/%d" k n
-  | Eff_types.Val.NegInt n -> string_of_int (- (n + 1))
-  | Eff_types.Val.Float b -> Printf.sprintf "float %d" b
+  | Eff_types.Val.Handle (k, n) -> Printf.sprintf "handle %d/%s" k (Z.to_string n)
+  | Eff_types.Val.NegInt n -> Z.to_string (Z.neg (Z.succ n))
+  | Eff_types.Val.Float b -> Printf.sprintf "float %s" (Z.to_string b)
 
 let show_reason = function
   | Eff_types.Reason.Fail (Eff_types.Err.Boom, _) -> "fail(boom)"
-  | Eff_types.Reason.Fail (Eff_types.Err.Tag t, _) -> Printf.sprintf "fail(tag %d)" t
+  | Eff_types.Reason.Fail (Eff_types.Err.Tag t, _) -> Printf.sprintf "fail(tag %s)" (Z.to_string t)
   | Eff_types.Reason.Fail (Eff_types.Err.Payload p, _) -> "fail(payload " ^ show_val p ^ ")"
   | Eff_types.Reason.Fail _ -> "fail"
   | Eff_types.Reason.Die (_, _) -> "die"
   | Eff_types.Reason.Interrupt (None, _) -> "interrupt(none)"
-  | Eff_types.Reason.Interrupt (Some i, _) -> Printf.sprintf "interrupt(%d)" i
+  | Eff_types.Reason.Interrupt (Some i, _) -> Printf.sprintf "interrupt(%s)" (Z.to_string i)
 
 let show_exit = function
   | None -> "<no exit>"
@@ -67,13 +67,13 @@ let show_outcome = function
    `Effect4.Api.Run` was renamed `Effect4.Api.Inspection` in the tree; the record is the same
    three fields and `api_run` still answers it. *)
 let root_exit (r : A.inspection) =
-  match List.find_opt (fun (f : (_, _, _, _, _, _, _, _, _, _) A.run_fiber) -> f.A.id = 0)
+  match List.find_opt (fun (f : (_, _, _, _, _, _, _, _, _, _) A.run_fiber) -> Z.equal f.A.id Z.zero)
           r.A.machine.A.fibers with
   | None -> None
   | Some f -> f.A.exit_
 
 let run_and_show name (p : Eff_types.NativeOp.t Eff_types.Eff.t) =
-  let r = A.api_run p 1000 [] 1000 in
+  let r = A.api_run p (Z.of_int 1000) [] (Z.of_int 1000) in
   let e = root_exit r in
   Printf.printf "  %s: outcome=%s fibers=%d exit=%s\n" name (show_outcome r.A.outcome)
     (List.length r.A.machine.A.fibers) (show_exit e);
@@ -81,7 +81,7 @@ let run_and_show name (p : Eff_types.NativeOp.t Eff_types.Eff.t) =
 
 (* ---------------------------------------------------------------- the programs *)
 
-let p42 : Eff_types.NativeOp.t Eff_types.Eff.t = Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat 42))
+let p42 : Eff_types.NativeOp.t Eff_types.Eff.t = Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat (Z.of_int 42)))
 
 let fork_options : Eff_types.ForkOptions.t =
   { Eff_types.ForkOptions.start_immediately = false; daemon = false; mask_mode = Eff_types.MaskMode.Inherit }
@@ -90,24 +90,24 @@ let p_fork : Eff_types.NativeOp.t Eff_types.Eff.t =
   Eff_types.Eff.Bind
     ( Eff_types.Eff.WithFiber
         (Eff_types.ActionTerm.Fork
-           ( Eff_types.Eff.Bind (Eff_types.Eff.YieldNow 0, Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat 7))),
+           ( Eff_types.Eff.Bind (Eff_types.Eff.YieldNow (Z.of_int 0), Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat (Z.of_int 7)))),
              fork_options )),
-      Eff_types.Eff.AwaitFiber (Eff_types.Term.Var 0, Eff_types.ObserverMode.AwaitValue) )
+      Eff_types.Eff.AwaitFiber (Eff_types.Term.Var (Z.of_int 0), Eff_types.ObserverMode.AwaitValue) )
 
 let p_await : Eff_types.NativeOp.t Eff_types.Eff.t =
   Eff_types.Eff.Bind
     ( Eff_types.Eff.Perform (Eff_types.NativeOp.DeferredMakeOf (Eff_types.Ty.Nat, Eff_types.Ty.Nat), Eff_types.Term.Lit Eff_types.Lit.Unit),
-      Eff_types.Eff.Perform (Eff_types.NativeOp.DeferredAwait, Eff_types.Term.Var 0) )
+      Eff_types.Eff.Perform (Eff_types.NativeOp.DeferredAwait, Eff_types.Term.Var (Z.of_int 0)) )
 
 let () =
   print_endline "== G0. the generated engine runs a program (Api.run, fuel 1000) ==";
   let _, e = run_and_show "p42" p42 in
-  check "p42 exits success 42" (e = Some (Eff_types.Exit.Success (Eff_types.Val.Nat 42)));
+  check "p42 exits success 42" (e = Some (Eff_types.Exit.Success (Eff_types.Val.Nat (Z.of_int 42))));
   (* `awaitFiber … awaitValue` answers the child's *reified exit*, `ctor 0 [nat 7]`, not a
      bare 7; the Lean side (`Api.run Wire.Corpus.pFork 1000`) prints exactly the same. *)
   let r, e = run_and_show "pFork" p_fork in
   check "pFork exits success (ctor 0 [7]), two fibers"
-    (e = Some (Eff_types.Exit.Success (Eff_types.Val.Ctor (0, [ Eff_types.Val.Nat 7 ])))
+    (e = Some (Eff_types.Exit.Success (Eff_types.Val.Ctor (Z.of_int 0, [ Eff_types.Val.Nat (Z.of_int 7) ])))
     && List.length r.A.machine.A.fibers = 2);
   let _, e = run_and_show "pAwait" p_await in
   check "pAwait parks on the deferred (no exit, frontier)" (e = None)
@@ -121,24 +121,24 @@ let () =
     (A.program_native_atom_eval A.NativeAtom_isSome [ Eff_types.Val.Some Eff_types.Val.Unit ]
     = Some (Eff_types.Val.Bool true));
   check "getOrElse none selects the default"
-    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val.None; Eff_types.Val.Nat 9 ]
-    = Some (Eff_types.Val.Nat 9));
+    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val.None; Eff_types.Val.Nat (Z.of_int 9) ]
+    = Some (Eff_types.Val.Nat (Z.of_int 9)));
   check "getOrElse some selects its payload"
     (A.program_native_atom_eval A.NativeAtom_getOrElse
-       [ Eff_types.Val.Some (Eff_types.Val.Nat 3); Eff_types.Val.Nat 9 ]
-    = Some (Eff_types.Val.Nat 3));
+       [ Eff_types.Val.Some (Eff_types.Val.Nat (Z.of_int 3)); Eff_types.Val.Nat (Z.of_int 9) ]
+    = Some (Eff_types.Val.Nat (Z.of_int 3)));
   check "getOrElse retains a nested none payload"
     (A.program_native_atom_eval A.NativeAtom_getOrElse
-       [ Eff_types.Val.Some Eff_types.Val.None; Eff_types.Val.Some (Eff_types.Val.Nat 9) ]
+       [ Eff_types.Val.Some Eff_types.Val.None; Eff_types.Val.Some (Eff_types.Val.Nat (Z.of_int 9)) ]
     = Some Eff_types.Val.None);
   check "isSome refuses a malformed outer shape"
-    (A.program_native_atom_eval A.NativeAtom_isSome [ Eff_types.Val.Nat 3 ] = None);
+    (A.program_native_atom_eval A.NativeAtom_isSome [ Eff_types.Val.Nat (Z.of_int 3) ] = None);
   check "getOrElse refuses a malformed outer shape"
-    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val.Nat 3; Eff_types.Val.Nat 9 ]
+    (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val.Nat (Z.of_int 3); Eff_types.Val.Nat (Z.of_int 9) ]
     = None);
   let kind = A.handle_kind_byte A.HandleKind_external in
-  let payload = Eff_types.Val.Handle (kind, 41) in
-  let fallback = Eff_types.Val.Handle (kind, 77) in
+  let payload = Eff_types.Val.Handle (kind, Z.of_int 41) in
+  let fallback = Eff_types.Val.Handle (kind, Z.of_int 77) in
   check "getOrElse preserves the selected payload handle"
     (A.program_native_atom_eval A.NativeAtom_getOrElse [ Eff_types.Val.Some payload; fallback ]
     = Some payload);

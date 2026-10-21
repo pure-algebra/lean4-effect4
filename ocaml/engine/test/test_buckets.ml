@@ -34,11 +34,45 @@ let next_rand () =
 
 let rand n = if n <= 0 then 0 else next_rand () mod n
 
+(* The carriers' signature at the host's int priorities. A priority is a Lean natural, Zarith's
+   `Z.t` (M4); the laws state it as an int, each one a natural exactly. *)
+module type S = sig
+  type 'a t
+
+  val empty : 'a t
+  val is_empty : 'a t -> bool
+  val armed : 'a t -> bool
+  val arm : 'a t -> 'a t
+  val disarm : 'a t -> 'a t
+  val enqueue : 'a t -> priority:int -> 'a -> 'a t
+  val drain : 'a t -> 'a list * 'a t
+  val length : 'a t -> int
+  val priorities : 'a t -> int list
+  val to_list : 'a t -> (int * 'a list) list
+  val of_list : armed:bool -> (int * 'a list) list -> 'a t
+end
+
+module Int_view (B : E4_buckets.S) : S with type 'a t = 'a B.t = struct
+  type 'a t = 'a B.t
+
+  let empty = B.empty
+  let is_empty = B.is_empty
+  let armed = B.armed
+  let arm = B.arm
+  let disarm = B.disarm
+  let enqueue t ~priority x = B.enqueue t ~priority:(Z.of_int priority) x
+  let drain = B.drain
+  let length t = Z.to_int (B.length t)
+  let priorities t = List.map Z.to_int (B.priorities t)
+  let to_list t = List.map (fun (p, xs) -> Z.to_int p, xs) (B.to_list t)
+  let of_list ~armed l = B.of_list ~armed (List.map (fun (p, xs) -> Z.of_int p, xs) l)
+end
+
 (* Both carriers, through the one signature: the tripwire is not a second untested
    implementation. *)
-let for_each_carrier (f : string -> (module E4_buckets.S) -> unit) =
-  f "Assoc" (module E4_buckets.Assoc);
-  f "Map_variant" (module E4_buckets.Map_variant)
+let for_each_carrier (f : string -> (module S) -> unit) =
+  f "Assoc" (module Int_view (E4_buckets.Assoc));
+  f "Map_variant" (module Int_view (E4_buckets.Map_variant))
 ;;
 
 (* ============================================================ the reference observations *)
@@ -65,7 +99,7 @@ let flatten l = List.concat (List.map snd l)
 
 (* ============================================================ P-B1 .. P-B6, B6, B7 *)
 
-let test_properties (module B : E4_buckets.S) label =
+let test_properties (module B : S) label =
   Printf.printf "-- E4_buckets.%s: the property statements of A3 §2.1\n" label;
   (* A pseudo-random state: [n] enqueues over [p] priorities, with a drain every so often. The
      task values are distinct, so `mem` and multiset checks mean something. *)
@@ -226,7 +260,7 @@ let gen_ops n =
     else Disarm)
 ;;
 
-let differential (module B : E4_buckets.S) label ops =
+let differential (module B : S) label ops =
   let bad = ref 0 in
   let first_bad = ref (-1) in
   let step = ref 0 in
@@ -283,7 +317,7 @@ let bench_priorities = [ 1; 4; 16; 256 ]
 let bench_drains = [ 1; 8; 64; 1024; 100_000 ]
 let bench_repeats = 3
 
-let bench_carrier (module B : E4_buckets.S) label =
+let bench_carrier (module B : S) label =
   let cell ~p ~d =
     let best = ref infinity in
     for _ = 1 to bench_repeats do

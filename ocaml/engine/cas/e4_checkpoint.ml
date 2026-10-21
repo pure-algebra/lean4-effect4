@@ -12,7 +12,9 @@ open Effect4_engine
 
 exception Bad
 
-let f_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+(* A natural of this module's own payloads is a host int, written as the kernel's natural and
+   read back only when the host's int holds it. *)
+let f_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 let f_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
 let f_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
 let f_pair a b = Eff_frame.framed Eff_frame.tag_pair (a ^ b)
@@ -65,8 +67,8 @@ let expect tag c =
 let rd_nat c =
   let p, e = expect Eff_frame.tag_nat c in
   match Eff_frame.nat_of_digits c.s p e with
-  | Some n -> n
-  | None -> raise Bad
+  | Some n when Z.fits_int n -> Z.to_int n
+  | Some _ | None -> raise Bad
 ;;
 
 let rd_bytes c =
@@ -678,7 +680,7 @@ let show_answer = function
   | E4_engine.Finished -> "finished"
   | E4_engine.Suspended fr -> "suspended " ^ show_frontier fr
   | E4_engine.Refused s -> "refused " ^ s
-  | E4_engine.Outside_profile s -> "outside-profile " ^ E4_clock.refusal_text s
+  | E4_engine.Outside_profile s -> "outside-profile " ^ Lcnf_crossing.refusal_text s
   | E4_engine.Delay fr -> "delay " ^ show_frontier fr
 ;;
 

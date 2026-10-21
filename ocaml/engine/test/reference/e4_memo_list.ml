@@ -48,16 +48,16 @@ let raw_length (t : 'a t) : int = List.length t
 
 (* MemoWorld.lookup over list-backed entry tables (MemoWorld.lookup (src/Effect4/Machine/Stores.lean)); the same fuel. *)
 let lookup
-      ~(parent : 'm -> int option)
-      ~(id : 'm -> int)
+      ~(parent : 'm -> Z.t option)
+      ~(id : 'm -> Z.t)
       ~(entries : 'm -> 'a t)
       (world : 'm list)
       (layer : E4_memo.key)
-      (start : int)
-  : (int * 'a) option
+      (start : Z.t)
+  : (Z.t * 'a) option
   =
-  let map_at (i : int) : 'm option = List.find_opt (fun m -> id m = i) world in
-  let rec go (fuel : int) (i : int) : (int * 'a) option =
+  let map_at (i : Z.t) : 'm option = List.find_opt (fun m -> Z.equal (id m) i) world in
+  let rec go (fuel : int) (i : Z.t) : (Z.t * 'a) option =
     if fuel <= 0
     then None
     else (

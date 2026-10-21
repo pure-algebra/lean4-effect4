@@ -8,9 +8,11 @@
       callback swallows the refusal; at its exact size it is published whole (F8).
    W: invalid windows, including extreme ints, return None; exact and embedded
       frames still stop at their declared end.
-   B: the one-write writers (Eff_frame's F6) give the per-byte rule's bytes: `emit_be64` and
-      `emit_nat` on 3 956 ints, both ends, the negatives and every byte boundary; and a value's
-      byte string is written whole, a code outside a byte refused. These are finite host checks. *)
+   B: the one-write writers (Eff_frame's F6) give the per-byte rule's bytes: `emit_be64` on
+      3 956 ints, both ends, the negatives and every byte boundary, and `emit_nat` on the
+      naturals among them and on naturals past max_int (M4), against digits computed by
+      division; and a value's byte string is written whole, a code outside a byte refused.
+      These are finite host checks. *)
 
 let failures = ref 0
 
@@ -135,9 +137,9 @@ let test_payload () =
     prefixed (fun w ->
       try
         Eff_frame.with_payload w 4 (fun w ->
-          Eff_frame.emit_nat w 1;
+          Eff_frame.emit_nat w (Z.of_int 1);
           Eff_frame.with_payload w 5 (fun w ->
-            Eff_frame.emit_nat w 2;
+            Eff_frame.emit_nat w (Z.of_int 2);
             raise (Payload_failure 3)))
       with
       | Payload_failure n -> escaped := n = 3)
@@ -174,7 +176,7 @@ let test_payload () =
            (fun p pair ->
               Eff_frame.emit_pair p Eff_frame.emit_nat Eff_frame.emit_string pair)
            pairs)
-      [ 0, ""; 256, "\000" ]
+      [ Z.zero, ""; Z.of_int 256, "\000" ]
   in
   let expected =
     frame
@@ -197,7 +199,7 @@ let test_payload () =
 
 let test_overflow () =
   let write w xs = Eff_frame.emit_list w Eff_frame.emit_nat xs in
-  let value = List.init 40 (fun i -> i * 1000) in
+  let value = List.init 40 (fun i -> Z.of_int (i * 1000)) in
   let whole = Eff_frame.to_string write value in
   let size = String.length whole in
   check
@@ -262,8 +264,17 @@ let be64_by_bytes (n : int) : string =
   String.init 8 (fun i -> Char.chr ((n lsr (8 * (7 - i))) land 0xff))
 ;;
 
-let nat_frame_by_bytes (n : int) : string =
-  let digits = Eff_frame.nat_digits n in
+(* A natural's base-256 digits by repeated division: the rule, independent of the writer. *)
+let rec digits_by_division (n : Z.t) : string =
+  if Z.equal n Z.zero
+  then ""
+  else (
+    let q, r = Z.div_rem n (Z.of_int 256) in
+    digits_by_division q ^ String.make 1 (Char.chr (Z.to_int r)))
+;;
+
+let nat_frame_by_bytes (n : Z.t) : string =
+  let digits = digits_by_division n in
   String.make 1 (Char.chr Eff_frame.tag_nat)
   ^ be64_by_bytes (String.length digits)
   ^ digits
@@ -314,7 +325,13 @@ let test_writers () =
        "B emit_be64 is the per-byte rule on %d ints, negatives included"
        (List.length ints))
     be_ok;
-  let nats = List.filter (fun n -> n >= 0) ints in
+  let past =
+    let big = Z.succ (Z.of_int max_int) in
+    [ big; Z.succ big; Z.pow (Z.of_int 2) 63; Z.pred (Z.pow (Z.of_int 2) 64) ]
+    @ List.init 50 (fun i ->
+      Z.add (Z.shift_left (Z.of_int (next ())) (62 + i)) (Z.of_int (next ())))
+  in
+  let nats = List.map Z.of_int (List.filter (fun n -> n >= 0) ints) @ past in
   let nat_ok =
     List.for_all
       (fun n -> Eff_frame.to_string Eff_frame.emit_nat n = nat_frame_by_bytes n)
@@ -326,9 +343,9 @@ let test_writers () =
        (List.length nats))
     nat_ok;
   check
-    "B emit_nat refuses a negative int, as nat_digits does"
+    "B emit_nat refuses a negative integer, as nat_digits does"
     (try
-       ignore (Eff_frame.to_string Eff_frame.emit_nat (-1));
+       ignore (Eff_frame.to_string Eff_frame.emit_nat (Z.of_int (-1)));
        false
      with
      | Invalid_argument m -> m = "Eff_frame.nat_digits: negative");

@@ -10,7 +10,7 @@ literal as the nearest binary64. Above `Number.MAX_SAFE_INTEGER` that is another
 program computes with a value the model does not hold, and nothing refuses it.
 
 DI-56 rules that a face refuses outside its profile, and the profile's bound is `2^53 - 1`
-(`rc112.natBound`, `src/Effect4/Program/Profile.lean`). Lean's own round trip holds
+(`rc112.natBound`, `some safeBound`, `src/Effect4/Program/Profile.lean`). Lean's own round trip holds
 (`readLiteral_print`): Lean reads the decimal exactly. The defect is the target's reading.
 
 The repair (2026-10-11): the module emission refuses a natural literal above the profile's bound
@@ -38,14 +38,14 @@ def answersUnsafe : Eff NativeOp := .succeed (.lit (.nat beyond))
 #guard (Api.typeOf answersUnsafe).map (·.answer) = some .nat
 
 -- The attack: the literal is outside the profile, and the printer writes its decimal anyway.
-#guard rc112.natBound < beyond
+#guard rc112.natBound = some safeBound && safeBound < beyond
 #guard match printLit (.nat beyond) with
   | .int value => value == 9007199254740993
   | _ => false
 
 -- Control: the bound itself is inside the profile and prints the same way; JavaScript reads it
 -- exactly.
-#guard match printLit (.nat rc112.natBound) with
+#guard match printLit (.nat safeBound) with
   | .int value => value == 9007199254740991
   | _ => false
 
@@ -60,7 +60,7 @@ def answersUnsafe : Eff NativeOp := .succeed (.lit (.nat beyond))
   | _ => false
 
 -- Control: the bound itself emits.
-#guard match Codegen.emitModule "answersBound" (.succeed (.lit (.nat rc112.natBound))) with
+#guard match Codegen.emitModule "answersBound" (.succeed (.lit (.nat safeBound))) with
   | .ok _ => true
   | .error _ => false
 
@@ -77,7 +77,7 @@ def answersUnsafe : Eff NativeOp := .succeed (.lit (.nat beyond))
       | _ => false
 
 -- Control: the bound's text is admitted.
-#guard match Codegen.emitModule "main" (.succeed (.lit (.nat rc112.natBound))) with
+#guard match Codegen.emitModule "main" (.succeed (.lit (.nat safeBound))) with
   | .error _ => false
   | .ok e => match Codegen.admitModule "main" e.module [] Codegen.effectOrigins
       [.named ["Effect"] "effect"] with

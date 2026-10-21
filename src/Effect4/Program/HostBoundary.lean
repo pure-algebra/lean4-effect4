@@ -62,7 +62,7 @@ not this binding. Out-of-domain input is not a program failure. -/
 def checkRequest (row : Row) (request : Val) : HostInputCheck :=
   if row = waitRow then
     match request with
-    | .nat n => if n ≤ profile.natBound then .admitted
+    | .nat n => if profile.admitsNat n then .admitted
         else .outsideProfile "nat outside the profile"
     | _ => .malformed "expected a natural request"
   else .malformed "unknown scalar row"

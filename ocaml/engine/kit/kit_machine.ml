@@ -6,8 +6,8 @@ module E4_host = Effect4_engine.E4_host
 module E = E4_engine.Fast
 module H = E4_host.Make (E4_engine.Fast)
 
-type exit = (Val.t, Err.t, Defect.t, int, unit) Exit.t
-type completion = (Val.t, Err.t, Defect.t, int, unit) Eff_types.Completion.t
+type exit = (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t
+type completion = (Val.t, Err.t, Defect.t, Z.t, unit) Eff_types.Completion.t
 
 type stop =
   | Finished of exit

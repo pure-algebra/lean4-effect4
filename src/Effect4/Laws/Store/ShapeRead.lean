@@ -1376,16 +1376,16 @@ theorem Canonical.readLocated_site {α : Type} [Canonical α] {t : NatJson} {r :
 
 /-! ## The profile's tree within the profile and its binary64 image (K1)
 
-A profile tree whose naturals are at most `NatJson.limit` and that holds no numeral is the profile
+A profile tree whose naturals are at most `safeBound` and that holds no numeral is the profile
 tree of its own binary64 image (`ofBinary64_toBinary64`). So the native face, which builds the
 profile's tree from text, and the binary64 face, which builds the binary64 tree, read such a
 tree alike. This replaces `kit_json.ml`'s comment-only caveat K1 ("the two spellings agree below
 2^53") with a theorem. -/
 
 mutual
-/-- **A profile tree within the profile**: every natural at most `NatJson.limit`, and no numeral. -/
+/-- **A profile tree within the profile**: every natural at most `safeBound`, and no numeral. -/
 def _root_.Effect4.NatJson.within : NatJson → Bool
-  | .nat n => decide (n ≤ NatJson.limit)
+  | .nat n => decide (n ≤ safeBound)
   | .numeral _ => false
   | .arr ts => NatJson.withinList ts
   | .obj entries => NatJson.withinEntries entries
@@ -1413,7 +1413,7 @@ theorem ofBinary64_toBinary64 : ∀ {t : NatJson}, t.within = true → NatJson.o
   | .nat n, h => by
     simp only [NatJson.within, decide_eq_true_eq] at h
     have hn : n < 2 ^ 53 := by
-      unfold NatJson.limit at h
+      unfold safeBound at h
       omega
     simp only [NatJson.toBinary64, Effect4.Arch.Json.ofNat, NatJson.ofBinary64,
       natOfBinary64_binary64OfNat hn]

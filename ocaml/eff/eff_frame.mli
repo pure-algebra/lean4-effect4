@@ -45,14 +45,14 @@ val emit_frame : writer -> int -> string -> unit
 val with_payload : writer -> int -> (writer -> unit) -> unit
 
 (** Base-256 digits, big-endian, no leading zero; 0 is the empty string.
-    @raise Invalid_argument on a negative int. *)
-val nat_digits : int -> string
+    @raise Invalid_argument on a negative integer. *)
+val nat_digits : Z.t -> string
 
 val emit_unit : writer -> unit -> unit
 val emit_bool : writer -> bool -> unit
 
-(** @raise Invalid_argument on a negative int (F4). *)
-val emit_nat : writer -> int -> unit
+(** @raise Invalid_argument on a negative integer (F4). *)
+val emit_nat : writer -> Z.t -> unit
 
 (** @raise Invalid_argument on a string that is not valid UTF-8, before any byte (F4). *)
 val emit_string : writer -> string -> unit
@@ -68,7 +68,7 @@ val emit_pair
   -> unit
 
 (** A constructor frame: the index, then what the callback writes. *)
-val emit_ctor : writer -> int -> (writer -> unit) -> unit
+val emit_ctor : writer -> Z.t -> (writer -> unit) -> unit
 
 (** A content reference: the kind byte, then the digest (Val.lean:158).
     @raise Invalid_argument for a kind outside a byte. *)
@@ -76,7 +76,7 @@ val emit_ref : writer -> int * string -> unit
 
 (** A live handle: the kind byte, then the key's Nat digits (Val.lean:159).
     @raise Invalid_argument for a kind outside a byte or a negative key. *)
-val emit_handle : writer -> int * int -> unit
+val emit_handle : writer -> int * Z.t -> unit
 
 (** Why {!encode} published nothing: the encoding needs more than [limit] bytes. *)
 type too_large = { limit : int }
@@ -106,12 +106,12 @@ val expect : int -> string -> int -> int -> (int * int * int) option
 val decode_unit : unit decoder
 val decode_bool : bool decoder
 
-(** A natural's shortest big-endian digits in [s.[p..e)], or [None]: a leading zero, nine digits,
-    or eight above max_int. *)
-val nat_of_digits : string -> int -> int -> int option
+(** A natural's shortest big-endian digits in [s.[p..e)], or [None] for a leading zero. Every
+    natural is read exactly (M4). *)
+val nat_of_digits : string -> int -> int -> Z.t option
 
-val decode_nat : int decoder
-val decode_neg_int : int decoder
+val decode_nat : Z.t decoder
+val decode_neg_int : Z.t decoder
 val decode_string : string decoder
 val decode_list : 'a decoder -> 'a list decoder
 val strictly_ascending : ('a -> 'a -> bool) -> 'a list -> bool
@@ -122,10 +122,10 @@ val decode_checked_list : 'a decoder -> ('a -> 'a -> bool) -> 'a list decoder
 val decode_option : 'a decoder -> 'a option decoder
 val decode_pair : 'a decoder -> 'b decoder -> ('a * 'b) decoder
 val decode_ref : (int * string) decoder
-val decode_handle : (int * int) decoder
+val decode_handle : (int * Z.t) decoder
 
 (** A constructor frame: [(index, position after the index, payload_end, next)]. *)
-val read_ctor : string -> int -> int -> (int * int * int * int) option
+val read_ctor : string -> int -> int -> (Z.t * int * int * int) option
 
 (** The whole string is one frame: trailing bytes are a refusal. *)
 val exact : 'a decoder -> string -> 'a option

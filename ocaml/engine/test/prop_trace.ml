@@ -21,14 +21,19 @@ module type TRACE = sig
   val empty : 'e t
   val emit : 'e list -> 'e t -> 'e t
   val to_list : 'e t -> 'e list
-  val length : 'e t -> int
+  val length : 'e t -> Z.t
 end
 
 module _ : TRACE = E4_trace
 
 [@@@warning "+32"]
 
-module R = E4_trace
+(* The length is a Lean natural, Zarith's `Z.t` (M4); the laws read it as the host's int. *)
+module R = struct
+  include E4_trace
+
+  let length t = Z.to_int (E4_trace.length t)
+end
 
 let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [by construction: %s]\n" name why

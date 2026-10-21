@@ -24,7 +24,7 @@ order, and a list family as an array or as its `cons` cases. It refuses with a r
   document writes it);
 - a field missing from an object, at that object's path;
 - a key repeated, a key that names no field, or a case name the sum lacks, at the object;
-- a natural above `NatJson.limit`, or a number that is no natural, at the number.
+- a natural above `safeBound`, or a number that is no natural, at the number.
 
 No budget bounds the reading, so no refusal says that one ran out. The reader recurses on the
 tree's size, then on the definitions not yet unfolded since the last node, then on the shape's
@@ -216,11 +216,11 @@ def readAt (defs : List (String × Shape)) (seen : List String) (s : Shape) (t :
   | .unit, .null => .ok .unit
   | .bool, .bool b => .ok (.bool b)
   | .nat, .nat n =>
-    if n ≤ NatJson.limit then .ok (.nat n)
-    else .error ⟨.value p, .naturalOutsideProfile NatJson.limit⟩
+    if n ≤ safeBound then .ok (.nat n)
+    else .error ⟨.value p, .naturalOutsideProfile safeBound⟩
   | .nat, .numeral text =>
     .error ⟨.value p,
-      if NatJson.allDigits text then .naturalOutsideProfile NatJson.limit else .expected s⟩
+      if NatJson.allDigits text then .naturalOutsideProfile safeBound else .expected s⟩
   | .string, .str x => .ok (.str x)
   | .bytes, .str h =>
     match canonicalHex? h with

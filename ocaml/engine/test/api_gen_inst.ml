@@ -50,15 +50,15 @@ type program = NativeOp.t Eff.t
 let prepare (table : Row.t list) (p : program) : prepared = program_prepared_make p table
 
 let interp_of (table : Row.t list) (p : program) : interp = program_interp_of p table
-let load (p : program) ~(fuel : int) : machine =
+let load (p : program) ~(fuel : Z.t) : machine =
   api_load p fuel
 
 (* The prepared package retains the interpreter and native evaluator. *)
-let step (prepared : prepared) ~(fuel : int) (m : machine) (d : api_decision)
+let step (prepared : prepared) ~(fuel : Z.t) (m : machine) (d : api_decision)
   : machine * bool =
   program_prepared_step prepared fuel m d
 
-let run_api (table : Row.t list) (p : program) ~(fuel : int) : outcome * machine =
+let run_api (table : Row.t list) (p : program) ~(fuel : Z.t) : outcome * machine =
   let r = api_run p fuel table fuel in
   (r.outcome, r.machine)
 
@@ -75,8 +75,8 @@ let trace (m : machine) : event list = m.trace
 let trace_length (m : machine) : int = List.length m.trace
 let stuck_of (m : machine) : stuck option = m.stuck
 let armed_of (m : machine) : fiber_id list = m.armed
-let next_id (m : machine) : int = m.next_id
-let next_token (m : machine) : int = m.next_token
+let next_id (m : machine) : Z.t = m.next_id
+let next_token (m : machine) : Z.t = m.next_token
 let race_count (m : machine) : int = List.length m.races
 let middleware (m : machine) : bool = m.middleware_installed
 let finished (m : machine) : bool = run_machine_finished m
@@ -87,7 +87,7 @@ let completed_exits (m : machine)
 
 let stores_of (m : machine) : stores = m.state
 let refs (m : machine) : Val.t list = (stores_of m).refs
-let next_name (m : machine) : int = (stores_of m).next_name
+let next_name (m : machine) : Z.t = (stores_of m).next_name
 let due_count (m : machine) : int = List.length (stores_of m).deferreds.due
 let cell_count (m : machine) : int = List.length (stores_of m).deferreds.cells
 let scope_count (m : machine) : int = List.length (stores_of m).scopes
@@ -97,7 +97,7 @@ let memo_map_count (m : machine) : int = List.length (stores_of m).memo
    entry order is unobservable (E4_memo MM6), so the projection sorts here too, as
    `E4_instance.Make` does with its carrier's `bindings`.  The Lean corpus is what found this:
    g227 inserts two entries under one map out of path order. *)
-let memo_paths (m : machine) : (int * (int list * int list list) list) list =
+let memo_paths (m : machine) : (Z.t * (Z.t list * Z.t list list) list) list =
   List.map
     (fun (mm : memo_map) -> (mm.id, List.map fst (E4_memo_list.bindings mm.entries)))
     (stores_of m).memo
@@ -108,18 +108,18 @@ let f_parked (f : fiber) : parked = f.parked
 let f_running (f : fiber) : bool = f.running
 let f_finalizing (f : fiber) : bool = Option.is_some f.finalizing
 
-let f_pending_tokens (f : fiber) : int list =
+let f_pending_tokens (f : fiber) : Z.t list =
   List.map (fun (p : (_, _, _, _, _, _) pending) -> p.token) f.pending
 
 let f_observers (f : fiber) : observer list = f.observers
 let f_children (f : fiber) : fiber_id list = f.children
-let f_op_count (f : fiber) : int = f.current_op_count
-let f_max_ops (f : fiber) : int = f.max_ops_before_yield
+let f_op_count (f : fiber) : Z.t = f.current_op_count
+let f_max_ops (f : fiber) : Z.t = f.max_ops_before_yield
 let f_prevent_yield (f : fiber) : bool = f.prevent_yield
 let f_yield_override (f : fiber) : bool option = f.yield_override
 let f_context (f : fiber) : ctx = f.context
 
-let f_dispatcher (f : fiber) : (int * int) list =
+let f_dispatcher (f : fiber) : (Z.t * int) list =
   List.map
     (fun (b : (_, _, _, _, _, _, _, _) bucket) -> (b.priority, List.length b.tasks))
     f.dispatcher

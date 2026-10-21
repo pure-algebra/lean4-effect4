@@ -12,14 +12,14 @@ and built =
   app : sig_app;
   program : Eff_types.NativeOp.t Eff_types.Eff.t;
   admitted : admitted_program;
-  row_names : (string * int) list;
+  row_names : (string * Z.t) list;
 }
 and 'a image =
   'a Closure_gen.image = {
   to_val : 'a -> Eff_types.Val.t;
   of_val : Eff_types.Val.t -> 'a option;
 }
-and fiber_id = int
+and fiber_id = Z.t
 and admitted_program = Eff_types.NativeOp.t typed_program
 and 'op typed_program = Eff_types.EffTy.t
 val store_image_equiv : 'a image -> ('a -> 'b) -> ('b -> 'a) -> 'b image
@@ -28,14 +28,14 @@ type 's host =
   's Lanes_gen.host = {
   insert : string -> 's -> (todo, sql_tag * string) result * 's;
   all : unit -> 's -> (todo list, sql_tag * string) result * 's;
-  set_done : int * bool -> 's -> (todo option, sql_tag * string) result * 's;
-  delete : int -> 's -> (bool, sql_tag * string) result * 's;
+  set_done : Z.t * bool -> 's -> (todo option, sql_tag * string) result * 's;
+  delete : Z.t -> 's -> (bool, sql_tag * string) result * 's;
 }
-and todo = Lanes_gen.todo = { id : int; title : string; done_ : bool; }
+and todo = Lanes_gen.todo = { id : Z.t; title : string; done_ : bool; }
 and sql_tag = Lanes_gen.sql_tag = SqlTag_SqlError
 and tools_run_checks_call =
   Lanes_gen.tools_run_checks_call = {
-  row : int;
+  row : Z.t;
   request : Eff_types.Val.t;
   completion :
     (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
@@ -44,44 +44,44 @@ and tools_run_checks_call =
 val test_dogfood_scenario_todo_repository :
   Eff_types.Row.t ->
   Eff_types.Val.t ->
-  int * (int * (string * bool)) list ->
-  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
-   Eff_types.Completion.t * (int * (int * (string * bool)) list))
+  Z.t * (Z.t * (string * bool)) list ->
+  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+   Eff_types.Completion.t * (Z.t * (Z.t * (string * bool)) list))
   option
 val test_dogfood_scenario_todo_host_result_val :
   (tools_run_checks_call list *
-   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
    Eff_types.Exit.t option) *
-  (int * (int * (string * bool)) list) -> Eff_types.Val.t
+  (Z.t * (Z.t * (string * bool)) list) -> Eff_types.Val.t
 val test_dogfood_scenario_todo_host_serve_built_val :
-  built -> int * (int * (string * bool)) list -> Eff_types.Val.t
+  built -> Z.t * (Z.t * (string * bool)) list -> Eff_types.Val.t
 val test_dogfood_scenario_todo_forgetful :
   Eff_types.Row.t ->
   Eff_types.Val.t ->
-  int * (int * (string * bool)) list ->
-  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
-   Eff_types.Completion.t * (int * (int * (string * bool)) list))
+  Z.t * (Z.t * (string * bool)) list ->
+  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+   Eff_types.Completion.t * (Z.t * (Z.t * (string * bool)) list))
   option
 val test_dogfood_scenario_todo_host_serve_built_forgetful_val :
-  built -> int * (int * (string * bool)) list -> Eff_types.Val.t
+  built -> Z.t * (Z.t * (string * bool)) list -> Eff_types.Val.t
 val test_dogfood_scenario_todo_typed_todo_modeled_staged :
-  (bool * (int * (string * unit))) image
+  (bool * (Z.t * (string * unit))) image
 val test_dogfood_scenario_todo_typed_todo_modeled_of_c :
-  bool * (int * (string * unit)) -> todo
+  bool * (Z.t * (string * unit)) -> todo
 val test_dogfood_scenario_todo_typed_todo_modeled_to_c :
-  todo -> bool * (int * (string * unit))
+  todo -> bool * (Z.t * (string * unit))
 val test_dogfood_scenario_todo_typed_host_reactor :
   'a host ->
   Eff_types.Row.t ->
   Eff_types.Val.t ->
   'a ->
-  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit)
+  ((Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
    Eff_types.Completion.t * 'a)
   option
 val test_dogfood_scenario_todo_host_serve_built_typed_val :
-  (int * (int * (string * bool)) list) host ->
-  built -> int * (int * (string * bool)) list -> Eff_types.Val.t
+  (Z.t * (Z.t * (string * bool)) list) host ->
+  built -> Z.t * (Z.t * (string * bool)) list -> Eff_types.Val.t
 val test_dogfood_scenario_todo_typed_model :
-  (int * (int * (string * bool)) list) host
+  (Z.t * (Z.t * (string * bool)) list) host
 val test_dogfood_scenario_todo_typed_broken :
-  (int * (int * (string * bool)) list) host
+  (Z.t * (Z.t * (string * bool)) list) host

@@ -136,10 +136,10 @@ def Wire.refused (type : Ty) (supported : Bool := false) : Wire :=
 /-! ## The wires of `nat`, `int` and `number` (decisions rows 121 and 309; the integers packet,
 slice 3; the owner's ruling R7 of 2026-10-19, one numeric bound on the nat and int wires) -/
 
-/-- The bound of a natural's and an integer's JSON image: the profile's, rc.112's `isInt`
-(`Number.isSafeInteger`, `vendor/effect-4.0.0-rc.112/src/Schema.ts:8298-8304`). rc.112's natural
-Schema and its integer Schema both check `isInt`. -/
-def safeBound : Nat := rc112.natBound
+/-! The bound of a natural's and an integer's JSON image is the profile's, rc.112's `isInt`
+(`Number.isSafeInteger`, `vendor/effect-4.0.0-rc.112/src/Schema.ts:8298-8304`): `safeBound`, the
+bound of `rc112` (`Data/NatJson.lean`). rc.112's natural Schema and its integer Schema both check
+`isInt`. -/
 
 /-- **A natural's JSON image**: a natural inside the bound as `Arch.Json.ofNat` writes it. Outside
 the bound it refuses, though binary64 may hold it exactly. -/

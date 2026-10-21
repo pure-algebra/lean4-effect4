@@ -1,7 +1,7 @@
 (* E4_fibers_view — the fiber table plus its maintained completed view.  The property list,
    the laws and the costs are in e4_fibers_view.mli. *)
 
-module IMap = Map.Make (Int)
+module ZMap = Map.Make (Z)
 
 (* ONE record, not a table wrapped in a view.  `E4_table` is `{ n; rep }` with `rep` a
    `Small`/`Big` variant whose small arm is dead (lane C measured `small_max = 0`: the Map
@@ -15,25 +15,25 @@ module IMap = Map.Make (Int)
    every write, so `completed` is this field and nothing else (FV1). *)
 type ('a, 'x) t =
   { n : int
-  ; m : 'a IMap.t
-  ; view : (int * 'x) list
+  ; m : 'a ZMap.t
+  ; view : (Z.t * 'x) list
   }
 
-let empty : ('a, 'x) t = { n = 0; m = IMap.empty; view = [] }
-let find_opt (k : int) (t : ('a, 'x) t) : 'a option = IMap.find_opt k t.m
-let mem (k : int) (t : ('a, 'x) t) : bool = IMap.mem k t.m
+let empty : ('a, 'x) t = { n = 0; m = ZMap.empty; view = [] }
+let find_opt (k : Z.t) (t : ('a, 'x) t) : 'a option = ZMap.find_opt k t.m
+let mem (k : Z.t) (t : ('a, 'x) t) : bool = ZMap.mem k t.m
 let is_empty (t : ('a, 'x) t) : bool = t.n = 0
-let cardinal (t : ('a, 'x) t) : int = t.n
-let bindings (t : ('a, 'x) t) : (int * 'a) list = IMap.bindings t.m
-let to_list (t : ('a, 'x) t) : 'a list = List.map snd (IMap.bindings t.m)
-let for_all (f : int -> 'a -> bool) (t : ('a, 'x) t) : bool = IMap.for_all f t.m
-let completed (t : ('a, 'x) t) : (int * 'x) list = t.view
+let cardinal (t : ('a, 'x) t) : Z.t = Z.of_int t.n
+let bindings (t : ('a, 'x) t) : (Z.t * 'a) list = ZMap.bindings t.m
+let to_list (t : ('a, 'x) t) : 'a list = List.map snd (ZMap.bindings t.m)
+let for_all (f : Z.t -> 'a -> bool) (t : ('a, 'x) t) : bool = ZMap.for_all f t.m
+let completed (t : ('a, 'x) t) : (Z.t * 'x) list = t.view
 
 (* The view's own edit: put `x` at `id` when it is `Some`, take the id out when it is `None`,
    keeping the list ascending.  Tail-recursive (a machine may hold a hundred thousand exited
    fibers and the stack is not a place to find that out).  It is reached ONLY when a fiber's
    exit actually changes — a write that leaves every exit alone never calls it (FV8). *)
-let view_put (id : int) (x : 'x option) (l : (int * 'x) list) : (int * 'x) list =
+let view_put (id : Z.t) (x : 'x option) (l : (Z.t * 'x) list) : (Z.t * 'x) list =
   let rec go acc l =
     match l with
     | [] ->
@@ -42,13 +42,13 @@ let view_put (id : int) (x : 'x option) (l : (int * 'x) list) : (int * 'x) list 
         (match x with
          | None -> []
          | Some v -> [ id, v ])
-    | (k, _) :: rest when k = id ->
+    | (k, _) :: rest when Z.equal k id ->
       List.rev_append
         acc
         (match x with
          | None -> rest
          | Some v -> (id, v) :: rest)
-    | (k, _) :: _ when k > id ->
+    | (k, _) :: _ when Z.gt k id ->
       List.rev_append
         acc
         (match x with
@@ -61,9 +61,9 @@ let view_put (id : int) (x : 'x option) (l : (int * 'x) list) : (int * 'x) list 
 
 (* The view derived from the table by the scan it replaces — FV1's right-hand side.  `map` is
    the one operation that has to use it, because the mapping function may change any exit. *)
-let derive ~(exit_of : 'a -> 'x option) (m : 'a IMap.t) : (int * 'x) list =
+let derive ~(exit_of : 'a -> 'x option) (m : 'a ZMap.t) : (Z.t * 'x) list =
   List.rev
-    (IMap.fold
+    (ZMap.fold
        (fun k v acc ->
           match exit_of v with
           | None -> acc
@@ -73,14 +73,14 @@ let derive ~(exit_of : 'a -> 'x option) (m : 'a IMap.t) : (int * 'x) list =
 ;;
 
 (* `RunMachine.update` (RunMachine.update (src/Effect4/Machine/Fibers.lean)): the replace-by-key map, a NO-OP on an absent id
-   (FV2).  `IMap.update` answering `None` rebuilds nothing and the stdlib's `if l == ll then m`
+   (FV2).  `ZMap.update` answering `None` rebuilds nothing and the stdlib's `if l == ll then m`
    gives the absent case back PHYSICALLY, which is what makes the no-op exact.
 
    The view changes only when this fiber's exit does, and the test for that is PHYSICAL:
    `f.exit` is a field read, so a fiber rebuilt as `{ f with observers = … }` hands back the
    very same option block and the view is shared on (FV8).  When the two are not physically
    equal the view is rewritten, which is correct whether or not they are structurally equal. *)
-let set ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 'x) t =
+let set ~(exit_of : 'a -> 'x option) (k : Z.t) (v : 'a) (t : ('a, 'x) t) : ('a, 'x) t =
   let x = exit_of v in
   match x, t.view with
   | None, [] ->
@@ -88,7 +88,7 @@ let set ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 
        the old value need not be read at all.  This is the write the machine does on almost
        every step, and it costs less than a `TABLE.set` did. *)
     let m =
-      IMap.update
+      ZMap.update
         k
         (function
           | None -> None
@@ -99,7 +99,7 @@ let set ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 
   | _ ->
     let old = ref None in
     let m =
-      IMap.update
+      ZMap.update
         k
         (function
           | None -> None
@@ -122,12 +122,12 @@ let set ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 
 (* `spawn`'s `m.fibers ++ [child]` (spawn (src/Effect4/Machine/Fibers.lean)) and `Api.load`'s root: an insertion at a
    freshly minted id.  Written to be right at a key that is already there as well, because
    `add` is not documented to refuse one. *)
-let add ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 'x) t =
+let add ~(exit_of : 'a -> 'x option) (k : Z.t) (v : 'a) (t : ('a, 'x) t) : ('a, 'x) t =
   let x = exit_of v in
   let old = ref None in
   let fresh = ref true in
   let m =
-    IMap.update
+    ZMap.update
       k
       (function
         | None -> Some v
@@ -156,10 +156,10 @@ let add ~(exit_of : 'a -> 'x option) (k : int) (v : 'a) (t : ('a, 'x) t) : ('a, 
    is re-derived rather than remapped: `f` is the caller's, so it may set or clear an exit,
    and FV1 must hold for every `f`.  Θ(N), which the map itself already is. *)
 let map ~(exit_of : 'a -> 'x option) (f : 'a -> 'a) (t : ('a, 'x) t) : ('a, 'x) t =
-  let m = IMap.map f t.m in
+  let m = ZMap.map f t.m in
   { n = t.n; m; view = derive ~exit_of m }
 ;;
 
-let of_list ~(exit_of : 'a -> 'x option) (l : (int * 'a) list) : ('a, 'x) t =
+let of_list ~(exit_of : 'a -> 'x option) (l : (Z.t * 'a) list) : ('a, 'x) t =
   List.fold_left (fun t (k, v) -> add ~exit_of k v t) empty l
 ;;

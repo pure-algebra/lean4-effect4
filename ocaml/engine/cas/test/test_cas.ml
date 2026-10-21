@@ -67,7 +67,7 @@ let read_file path =
 
 (* ============================================================ frames and nodes *)
 
-let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 let v_str s = Eff_frame.framed Eff_frame.tag_string s
 let v_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
 let v_pair a b = Eff_frame.framed Eff_frame.tag_pair (a ^ b)
@@ -82,7 +82,7 @@ let v_ref k d = Eff_frame.framed Eff_frame.tag_ref (String.make 1 (Char.chr k) ^
 let v_handle k n =
   Eff_frame.framed
     Eff_frame.tag_handle
-    (String.make 1 (Char.chr k) ^ Eff_frame.nat_digits n)
+    (String.make 1 (Char.chr k) ^ Eff_frame.nat_digits (Z.of_int n))
 ;;
 
 let zero = E4_node.zero_digest
@@ -167,8 +167,8 @@ let rec parse_v s pos limit =
     else if tag = Eff_frame.tag_nat
     then (
       match Eff_frame.nat_of_digits s ppos pend with
-      | Some n -> wrap (VNat n)
-      | None -> None)
+      | Some n when Z.fits_int n -> wrap (VNat (Z.to_int n))
+      | Some _ | None -> None)
     else if tag = Eff_frame.tag_string
     then wrap (VStr (payload ()))
     else if tag = Eff_frame.tag_bytes
@@ -207,8 +207,8 @@ let rec parse_v s pos limit =
       if pend - ppos >= 1
       then (
         match Eff_frame.nat_of_digits s (ppos + 1) pend with
-        | Some n -> wrap (VHandle (Char.code s.[ppos], n))
-        | None -> None)
+        | Some n when Z.fits_int n -> wrap (VHandle (Char.code s.[ppos], Z.to_int n))
+        | Some _ | None -> None)
       else None
     else None
 ;;

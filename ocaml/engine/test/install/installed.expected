@@ -1,6 +1,5 @@
 bin/eff
 library effect4_bytes
-library effect4_clock
 library effect4_eff
 library effect4_engine
 library effect4_engine_cas
@@ -10,7 +9,6 @@ library effect4_gen.effect4
 library effect4_kit
 library effect4_lcnf
 package effect4_bytes
-package effect4_clock
 package effect4_eff
 package effect4_engine
 package effect4_engine_cas

@@ -32,7 +32,7 @@ let check = E4_check.check
 
 (* ================================================================ the programs *)
 
-let p42 : E.NativeOp.t E.Eff.t = E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 42))
+let p42 : E.NativeOp.t E.Eff.t = E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Z.of_int 42)))
 
 let fork_opts : E.ForkOptions.t =
   { E.ForkOptions.start_immediately = false
@@ -45,16 +45,18 @@ let p_fork : E.NativeOp.t E.Eff.t =
   E.Eff.Bind
     ( E.Eff.WithFiber
         (E.ActionTerm.Fork
-           ( E.Eff.Bind (E.Eff.YieldNow 0, E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 7)))
+           ( E.Eff.Bind
+               ( E.Eff.YieldNow (Z.of_int 0)
+               , E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Z.of_int 7))) )
            , fork_opts ))
-    , E.Eff.AwaitFiber (E.Term.Var 0, E.ObserverMode.AwaitValue) )
+    , E.Eff.AwaitFiber (E.Term.Var (Z.of_int 0), E.ObserverMode.AwaitValue) )
 ;;
 
 (* A refusal, exhibited: `join` on a fiber the machine never minted halts it with
    `Stuck.unknownFiber` (stepDecisionState (src/Effect4/Machine/Fibers.lean)), and that is the only way
    into `Refused` from a well-formed program -- no decision of the alphabet can do it (R0). *)
 let p_await_unknown : E.NativeOp.t E.Eff.t =
-  E.Eff.AwaitFiber (E.Term.Lit (E.Lit.Nat 99), E.ObserverMode.AwaitValue)
+  E.Eff.AwaitFiber (E.Term.Lit (E.Lit.Nat (Z.of_int 99)), E.ObserverMode.AwaitValue)
 ;;
 
 (* the quadratic detector of A1 §6.1 W2, and the program P6 checkpointed: at a small fuel its
@@ -64,7 +66,8 @@ let rec chain n : E.NativeOp.t E.Eff.t =
   then E.Eff.Succeed (E.Term.Lit E.Lit.Unit)
   else
     E.Eff.Bind
-      (E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat (n - 1))), chain (n - 1))
+      ( E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat (Z.of_int (n - 1))))
+      , chain (n - 1) )
 ;;
 
 (* ================================================================ the laws, per instance *)

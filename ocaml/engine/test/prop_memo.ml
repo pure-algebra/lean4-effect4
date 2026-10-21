@@ -18,15 +18,16 @@ open Effect4_engine
 [@@@warning "-32"]
 (* A module type used only for an ascription has, by definition, no used values. *)
 
+(* A layer's identity is a path of Lean naturals and a call, Zarith's `Z.t` (M4). *)
 module type LAYERS = sig
   type 'a t
 
   val empty : 'a t
-  val find_opt : int list * int list list -> 'a t -> 'a option
-  val insert : int list * int list list -> 'a -> 'a t -> 'a t
-  val update : int list * int list list -> ('a -> 'a) -> 'a t -> 'a t
-  val delete : int list * int list list -> 'a t -> 'a t
-  val bindings : 'a t -> ((int list * int list list) * 'a) list
+  val find_opt : Z.t list * Z.t list list -> 'a t -> 'a option
+  val insert : Z.t list * Z.t list list -> 'a -> 'a t -> 'a t
+  val update : Z.t list * Z.t list list -> ('a -> 'a) -> 'a t -> 'a t
+  val delete : Z.t list * Z.t list list -> 'a t -> 'a t
+  val bindings : 'a t -> ((Z.t list * Z.t list list) * 'a) list
 end
 
 module _ : LAYERS = E4_memo
@@ -54,8 +55,13 @@ let next () =
 
 let rand n = if n <= 0 then 0 else next () mod n
 
+(* A layer's key from int literals: its path and its call, each index a natural exactly. *)
+let kc (p : int list) (c : int list list) : M.key =
+  List.map Z.of_int p, List.map (List.map Z.of_int) c
+;;
+
 (* A layer's key outside every body: its path under no call. *)
-let k p : M.key = p, []
+let k p : M.key = kc p []
 
 (* The universe of layer keys: `LayerId := List Nat × CallId` (src/Effect4/Machine/Alphabets.lean)
    — the layer's path from the root program and the call that runs it.  Short, overlapping,
@@ -75,13 +81,13 @@ let universe =
     ; [ 2 ]
     ; [ 1; 0; 3 ]
     ]
-  @ [ [ 0; 0; 1 ], [ [ 1; 0 ] ]
-    ; [ 0; 0; 1 ], [ [ 1; 0 ]; [ 1 ] ]
-    ; [ 0; 0; 1 ], [ [ 0; 0; 1; 2 ] ]
+  @ [ kc [ 0; 0; 1 ] [ [ 1; 0 ] ]
+    ; kc [ 0; 0; 1 ] [ [ 1; 0 ]; [ 1 ] ]
+    ; kc [ 0; 0; 1 ] [ [ 0; 0; 1; 2 ] ]
     ]
 ;;
 
-let show_path p = "[" ^ String.concat ";" (List.map string_of_int p) ^ "]"
+let show_path p = "[" ^ String.concat ";" (List.map Z.to_string p) ^ "]"
 
 let show_key ((p, c) : M.key) =
   show_path p ^ "@" ^ String.concat "/" (List.map show_path c)
@@ -195,14 +201,17 @@ let mm5 () =
     ; { mid = 2; parent = Some 1; entries = M.empty }
     ]
   in
+  (* The worlds' ids are host ints; each is the map's natural exactly. *)
   let lk w layer start =
-    M.lookup
-      ~parent:(fun m -> m.parent)
-      ~id:(fun m -> m.mid)
-      ~entries:(fun m -> m.entries)
-      w
-      layer
-      start
+    Option.map
+      (fun (i, v) -> Z.to_int i, v)
+      (M.lookup
+         ~parent:(fun m -> Option.map Z.of_int m.parent)
+         ~id:(fun m -> Z.of_int m.mid)
+         ~entries:(fun m -> m.entries)
+         w
+         layer
+         (Z.of_int start))
   in
   if lk world (k [ 7 ]) 2 <> Some (0, 70) then ok := false;
   if lk world (k [ 7 ]) 0 <> Some (0, 70) then ok := false;
@@ -230,13 +239,15 @@ let mm5 () =
     ]
   in
   let lk' w layer start =
-    L.lookup
-      ~parent:(fun m -> m.lparent)
-      ~id:(fun m -> m.lid)
-      ~entries:(fun m -> m.lentries)
-      w
-      layer
-      start
+    Option.map
+      (fun (i, v) -> Z.to_int i, v)
+      (L.lookup
+         ~parent:(fun m -> Option.map Z.of_int m.lparent)
+         ~id:(fun m -> Z.of_int m.lid)
+         ~entries:(fun m -> m.lentries)
+         w
+         layer
+         (Z.of_int start))
   in
   if lk' lworld (k [ 7 ]) 2 <> Some (0, 70) then ok := false;
   if lk' lworld (k [ 8 ]) 2 <> None then ok := false;
@@ -268,19 +279,19 @@ let mm6 () =
      last passed them (the mutant campaign's Y04, docs/research/2026-10-18-slices/
      w2-engine-mutants/).  The order this law states, written out: *)
   let written_out =
-    [ [], []
-    ; [ 0 ], []
-    ; [ 0; 0 ], []
-    ; [ 0; 0; 0 ], []
-    ; [ 0; 0; 1 ], []
-    ; [ 0; 0; 1 ], [ [ 0; 0; 1; 2 ] ]
-    ; [ 0; 0; 1 ], [ [ 1; 0 ] ]
-    ; [ 0; 0; 1 ], [ [ 1; 0 ]; [ 1 ] ]
-    ; [ 0; 1 ], []
-    ; [ 1 ], []
-    ; [ 1; 0 ], []
-    ; [ 1; 0; 3 ], []
-    ; [ 2 ], []
+    [ kc [] []
+    ; kc [ 0 ] []
+    ; kc [ 0; 0 ] []
+    ; kc [ 0; 0; 0 ] []
+    ; kc [ 0; 0; 1 ] []
+    ; kc [ 0; 0; 1 ] [ [ 0; 0; 1; 2 ] ]
+    ; kc [ 0; 0; 1 ] [ [ 1; 0 ] ]
+    ; kc [ 0; 0; 1 ] [ [ 1; 0 ]; [ 1 ] ]
+    ; kc [ 0; 1 ] []
+    ; kc [ 1 ] []
+    ; kc [ 1; 0 ] []
+    ; kc [ 1; 0; 3 ] []
+    ; kc [ 2 ] []
     ]
   in
   if ks <> written_out then ok_a := false;

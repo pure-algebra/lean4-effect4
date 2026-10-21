@@ -211,9 +211,9 @@ let walk
             then raise (Refuse Bad_frame);
             let key =
               match Eff_frame.nat_of_digits s (st + 1) (st + 1 + dlen) with
-              | None ->
-                raise (Refuse Host_limit) (* an index this host cannot have minted *)
-              | Some k -> k
+              | Some k when Z.fits_int k -> Z.to_int k
+              | Some _ | None -> raise (Refuse Host_limit)
+              (* an index this host cannot have minted *)
             in
             on_handle (Char.code (String.unsafe_get s st)) key;
             [])

@@ -3,21 +3,15 @@
 ; -a3-queue-query). Flat layout: every module is one `e4_*.ml` with its `.mli` and a
 ; property list at its head (ocaml/STANDARDS.md); tests live in test/ (their own dune).
 ; Dependencies: the stdlib, unix, threads, `effect4_eff` (the exact program wire, ocaml/eff —
-; the generated engine opens Eff_types, the one program type), `effect4_clock` and `effect4_bytes` (bytes/: framing,
-; hexadecimal, the 63-bit naturals, SHA-256) — nothing else without a measured need recorded
-; in the design that asks for it. Builds as part of the estate workspace (ocaml/dune lists
+; the generated engine opens Eff_types, the one program type), Zarith (a Lean natural is `Z.t`,
+; M4) and `effect4_bytes` (bytes/: hexadecimal, SHA-256) — nothing else without a measured need
+; recorded in the design that asks for it. Builds as part of the estate workspace (ocaml/dune lists
 ; engine; `cd ocaml && dune build engine`).
 
 (library
  (name effect4_engine)
  (public_name effect4_engine)
- (libraries
-  unix
-  threads.posix
-  effect4_eff
-  effect4_clock
-  effect4_bytes
-  effect4_lcnf)
+ (libraries unix threads.posix zarith effect4_eff effect4_bytes effect4_lcnf)
  (flags
   (:standard -w +a-4-9-40-41-42-44-45-70 -w @55)))
 

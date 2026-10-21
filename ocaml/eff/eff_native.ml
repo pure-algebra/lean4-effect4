@@ -23,7 +23,7 @@ let all_ops : NativeOp.t list =
   [NativeOp.RefMake; NativeOp.RefGet; NativeOp.RefSet; NativeOp.RefGetAndSet; NativeOp.RefSetAndGet; NativeOp.RefUpdateWith (Term.Lit Lit.Unit); NativeOp.RefGetAndUpdateWith (Term.Lit Lit.Unit); NativeOp.RefUpdateAndGetWith (Term.Lit Lit.Unit); NativeOp.RefUpdateSomeWith (Term.Lit Lit.Unit); NativeOp.RefGetAndUpdateSomeWith (Term.Lit Lit.Unit); NativeOp.RefUpdateSomeAndGetWith (Term.Lit Lit.Unit); NativeOp.RefModifyWith (Term.Lit Lit.Unit); NativeOp.RefModifySomeWith (Term.Lit Lit.Unit); NativeOp.DeferredMakeOf (Ty.Nat, Ty.Nat); NativeOp.DeferredIsDone; NativeOp.DeferredPoll; NativeOp.DeferredSucceed; NativeOp.DeferredFail; NativeOp.DeferredAwait; NativeOp.ScopeMake FinalizerStrategy.Sequential; NativeOp.ScopeMake FinalizerStrategy.Parallel; NativeOp.Sleep; NativeOp.ClockNow]
 
 let scope_key : ServiceKey.t =
-  ({ ServiceKey.name = 0; ServiceKey.service = 0 } : ServiceKey.t)
+  ({ ServiceKey.name = Z.of_int 0; ServiceKey.service = Z.of_int 0 } : ServiceKey.t)
 
 let scope_ty : Ty.t =
   Ty.Handle "Scope.Scope"

@@ -20,10 +20,15 @@ this repository — in particular **not** `OCaml5.*`: that is the extensibility 
 
 **Properties.**
 * **Machine integers are modelled, not assumed away.** `TValue.int` is a Lean `Int` and every
-  arithmetic primitive reduces its result into the target's word through `Word.wrap`, whose
-  width is a parameter. With `width = 63` this is OCaml's `int`; the evaluator therefore
-  *exhibits* the 63-bit difference rather than hiding it, which is the whole point of having
-  a semantics for the emitted side.
+  arithmetic primitive of the target's `int` reduces its result into the target's word through
+  `Word.wrap`, whose width is a parameter. With `width = 63` this is OCaml's `int`; the evaluator
+  therefore *exhibits* the 63-bit difference rather than hiding it, which is the whole point of
+  having a semantics for the emitted side.
+* **Arbitrary-precision integers are exact.** Zarith's functions (`Z.add`, `Z.pow`, …), the
+  spelling of every Lean natural and integer since M4, answer over the same `TValue.int` with no
+  word; the word reappears only where a conversion narrows to the target's `int` (`Z.to_int`,
+  `Z.fits_int`). `Lcnf_crossing.refuse` raises the runtime library's refusal at a named
+  crossing, the target's exception.
 * **Strings are byte sequences.** `TValue.str` carries the target's own string; the primitive
   `strLength` answers the **byte** length, because that is what OCaml's `String.length` does.
   A backend whose strings are scalar-value sequences supplies a different primitive.
@@ -247,6 +252,34 @@ def applyPrim (pe : PrimEnv) (op : String) (args : Array TValue) : TOutcome :=
       | some c => .value (.bool (f c))
       | none => .stuck s!"{op}: incomparable values ({a.render}, {b.render})"
     | _ => .stuck s!"{op}: arity"
+  let zUnary (f : Int → Int) : TOutcome :=
+    match args with
+    | #[.int x] => .value (.int (f x))
+    | _ => .stuck s!"{op}: not an integer"
+  let zBinary (f : Int → Int → Int) : TOutcome :=
+    match args with
+    | #[.int x, .int y] => .value (.int (f x y))
+    | _ => .stuck s!"{op}: not integers"
+  let zDividing (f : Int → Int → Int) : TOutcome :=
+    match args with
+    | #[.int _, .int 0] => .exn "Division_by_zero"
+    | #[.int x, .int y] => .value (.int (f x y))
+    | _ => .stuck s!"{op}: not integers"
+  let zRelation (f : Int → Int → Bool) : TOutcome :=
+    match args with
+    | #[.int x, .int y] => .value (.bool (f x y))
+    | _ => .stuck s!"{op}: not integers"
+  let zBits (f : Nat → Nat → Nat) : TOutcome :=
+    match args with
+    | #[.int x, .int y] =>
+      if x < 0 || y < 0 then .stuck s!"{op}: a negative operand"
+      else .value (.int (Int.ofNat (f x.toNat y.toNat)))
+    | _ => .stuck s!"{op}: not integers"
+  let zShift (f : Int → Nat → Int) : TOutcome :=
+    match args with
+    | #[.int x, .int k] =>
+      if k < 0 then .exn "Invalid_argument" else .value (.int (f x k.toNat))
+    | _ => .stuck s!"{op}: not integers"
   match op with
   | "+" => bin (· + ·)
   | "-" => bin (· - ·)
@@ -432,6 +465,49 @@ def applyPrim (pe : PrimEnv) (op : String) (args : Array TValue) : TOutcome :=
       | some k => .value (TValue.ofList (List.replicate k.toNat v))
       | none => .stuck "Lcnf_array.replicate: not an integer"
     | _ => .stuck "Lcnf_array.replicate: arity"
+  -- Zarith (`Z`), the spelling of every Lean natural and integer since M4: exact, with no word.
+  -- A `Z.t` is the same `TValue.int`, unbounded; the word reappears only where a conversion
+  -- narrows to the target's `int`. A bitwise function is answered on nonnegative operands, the
+  -- only ones the route's forms give it; a negative one is a refusal, never a guess.
+  | "Z.of_int" => zUnary id
+  | "Z.to_int" => match args with
+    | #[.int n] => if w.fits n then .value (.int n) else .exn "Z.Overflow"
+    | _ => .stuck "Z.to_int: not an integer"
+  | "Z.fits_int" => match args with
+    | #[.int n] => .value (.bool (w.fits n))
+    | _ => .stuck "Z.fits_int: not an integer"
+  | "Z.of_string" => match args with
+    | #[.str t] => match t.toInt? with
+      | some n => .value (.int n)
+      | none => .exn "Invalid_argument"
+    | _ => .stuck "Z.of_string: not a string"
+  | "Z.add" => zBinary (· + ·)
+  | "Z.sub" => zBinary (· - ·)
+  | "Z.mul" => zBinary (· * ·)
+  | "Z.div" => zDividing Int.tdiv
+  | "Z.rem" => zDividing Int.tmod
+  | "Z.succ" => zUnary (· + 1)
+  | "Z.pred" => zUnary (· - 1)
+  | "Z.neg" => zUnary (- ·)
+  | "Z.abs" => zUnary fun n => Int.ofNat n.natAbs
+  | "Z.equal" => zRelation (· == ·)
+  | "Z.lt" => zRelation (· < ·)
+  | "Z.leq" => zRelation (· ≤ ·)
+  | "Z.logand" => zBits (· &&& ·)
+  | "Z.logor" => zBits (· ||| ·)
+  | "Z.logxor" => zBits (· ^^^ ·)
+  | "Z.shift_left" => zShift fun x k => x * 2 ^ k
+  | "Z.shift_right" => zShift fun x k => Int.fdiv x (2 ^ k)
+  | "Z.pow" => zShift fun x k => x ^ k
+  | "Z.extract" => match args with
+    | #[.int x, .int off, .int len] =>
+      if off < 0 || len < 0 then .exn "Invalid_argument"
+      else .value (.int (Int.emod (Int.fdiv x (2 ^ off.toNat)) (2 ^ len.toNat)))
+    | _ => .stuck "Z.extract: not integers"
+  -- The runtime library's refusal at a named crossing (`Lcnf_crossing`, `ocaml/lcnf`).
+  | "Lcnf_crossing.refuse" => match args with
+    | #[.ctorV crossing #[], .str reason] => .exn s!"Lcnf_crossing.Refused({crossing}, {reason})"
+    | _ => .stuck "Lcnf_crossing.refuse: not a crossing and a reason"
   | "id" => match args with
     | #[a] => .value a
     | _ => .stuck "id: arity"

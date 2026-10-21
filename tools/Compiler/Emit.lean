@@ -314,7 +314,7 @@ pins, with no module closure yet (`Inputs`); the checks performed and those not 
 command's arguments as given. An emission's manifest and a group's share them. -/
 def manifestFields (spec : Spec) (written : List Artifact) : List (String × NatJson) :=
   [("profile", .obj [("declaration", .str (``Effect4.Program.rc112).toString),
-      ("name", .str rc112.name), ("natBound", .nat rc112.natBound)]),
+      ("name", .str rc112.name), ("natBound", match rc112.natBound with | some b => .nat b | none => .null)]),
     ("target", .str "ts"),
     ("artifacts", .arr (written.map Artifact.json)),
     ("inputs", spec.inputs.json),

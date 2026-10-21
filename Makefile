@@ -697,7 +697,7 @@ $(eval $(call cached_check,ocaml,ocaml,$(CORPUS) $(OCAML_SOURCES) $(CHK)/fiber-w
 $(CHK)/ocaml.key: $(CORPUS)/index.tsv $(GEN)/fixtures $(GEN)/lcnf $(CHK)/fiber-writes
 _run-ocaml:
 	cd ocaml && $(OCAML) dune build @fmt
-	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen clock lcnf tools
+	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen lcnf tools
 	cd ocaml && $(OCAML) dune test engine
 	$(PY) scripts/check-lcnf-interfaces.py
 	$(PY) scripts/check-lcnf-sealing.py

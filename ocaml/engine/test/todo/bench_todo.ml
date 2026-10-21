@@ -85,7 +85,10 @@ let () =
       (Todo_gen.test_dogfood_scenario_todo_host_result_val
          ( ( List.map
                (fun (c : H.call) ->
-                  ({ Todo_gen.row = c.row; request = c.request; completion = c.answer }
+                  ({ Todo_gen.row = Z.of_int c.row
+                   ; request = c.request
+                   ; completion = c.answer
+                   }
                    : Todo_gen.tools_run_checks_call))
                s.calls
            , F.root_exit_of s.engine )
@@ -218,20 +221,21 @@ let () =
       Todo_gen.test_dogfood_scenario_todo_typed_todo_modeled_to_c
   in
   let list_image = Todo_gen.store_image_list image in
-  let one = Native_todo.todo 7 "write the bench" false in
+  let one = Native_todo.todo (Z.of_int 7) "write the bench" false in
   let many =
-    List.init 100 (fun i -> Native_todo.todo i (Printf.sprintf "item %d" i) (i mod 2 = 0))
+    List.init 100 (fun i ->
+      Native_todo.todo (Z.of_int i) (Printf.sprintf "item %d" i) (i mod 2 = 0))
   in
   let frame = list_image.to_val many in
   if image.of_val (image.to_val one) <> Some one || list_image.of_val frame <> Some many
   then failwith "the derived codec does not round-trip";
   if
     Eff_val.to_bytes (image.to_val one)
-    <> Eff_val.to_bytes (Native_todo.Untyped.todo 7 "write the bench" false)
+    <> Eff_val.to_bytes (Native_todo.Untyped.todo (Z.of_int 7) "write the bench" false)
   then failwith "the derived codec and the hand frame disagree";
   report "encode one to-do, derived (Modeled image)" (fun () -> image.to_val one);
   report "encode one to-do, frame built by hand" (fun () ->
-    Native_todo.Untyped.todo 7 "write the bench" false);
+    Native_todo.Untyped.todo (Z.of_int 7) "write the bench" false);
   report
     "decode one to-do, derived"
     (let v = image.to_val one in

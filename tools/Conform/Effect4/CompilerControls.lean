@@ -21,10 +21,10 @@ private def decl (name : String) (deps : Array String := #[]) : Lcnf.Translated 
 #guard Lcnf.emissionGroups #[decl "a", decl "a"] = .error "duplicate emitted name: a"
 
 /-- The program a builtin's form is evaluated in: the runtime library's functions, read from
-their reference definitions (`OCaml5.Lcnf.support`), `max_int`, and the evaluator's primitives
-computed from the table. -/
+their reference definitions (`OCaml5.Lcnf.support`), and the evaluator's primitives computed from
+the table. -/
 private def programOf (support : List Lcnf.Support) : Except String Target.Program :=
-  (Conform.Effect4.LcnfMl.supportBinds { bits := 63 } support).map fun binds =>
+  (Conform.Effect4.LcnfMl.supportBinds support).map fun binds =>
     { binds, pe := Conform.Effect4.LcnfMl.primEnv }
 
 /-- A program with no binding: the evaluator's primitives alone. -/
@@ -63,7 +63,9 @@ private def raises (actual : Target.TOutcome) (exn : String) : Bool :=
 private def frontier (actual : Target.TOutcome) : Bool :=
   match actual with | .outOfFuel => true | _ => false
 
-private def maxInt : Target.TValue := .int 4611686018427387903
+/-- A natural as the `Nat` row spells it (`OCaml5.Lcnf.natLiteral`): `Z.of_int n`, or its digits
+past the target's `int`. -/
+private def nat (n : Nat) : Ml.Expr := Lcnf.natLiteral n
 
 #guard equals (evaluate `Nat.div [.int 5, .int 0]) (.int 0)
 #guard equals (evaluate `Nat.mod [.int 5, .int 0]) (.int 5)
@@ -74,26 +76,35 @@ private def maxInt : Target.TValue := .int 4611686018427387903
 /-! ### The runtime library's functions run from their reference definitions
 
 The evaluator reads each body from `OCaml5.Lcnf.support`, the reference definition of the
-runtime library's function of that name (`ocaml/lcnf`). The saturating rows answer through
-`Lcnf_nat.mul`, `Lcnf_nat.pow` and `Lcnf_nat.shift_left`. -/
+runtime library's function of that name (`ocaml/lcnf`). A natural is exact, Zarith's `Z.t`
+(M4): the product, the power and the shift answer past the target's `int`, and an exponent or a
+shift past it is refused at the arithmetic crossing, the target's exception. -/
 
-#guard equals (evaluate `Nat.shiftLeft [.int 3, .int 62]) maxInt
+#guard equals (evaluate `Nat.shiftLeft [.int 3, .int 62]) (.int (3 * 2 ^ 62))
 #guard equals (evaluate `Nat.shiftLeft [.int 3, .int 2]) (.int 12)
 #guard equals (evaluate `Nat.mul [.int 3, .int 5]) (.int 15)
 #guard equals (evaluate `Nat.mul [.int 0, .int 5]) (.int 0)
-#guard equals (evaluate `Nat.mul [.var "max_int", .int 2]) maxInt
+#guard equals (evaluate `Nat.mul [nat (2 ^ 62 - 1), .int 2]) (.int (2 * (2 ^ 62 - 1)))
 #guard equals (evaluate `Nat.pow [.int 2, .int 10]) (.int 1024)
-#guard equals (evaluate `Nat.pow [.int 2, .int 64]) maxInt
+#guard equals (evaluate `Nat.pow [.int 2, .int 64]) (.int (2 ^ 64))
 #guard equals (evaluate `Nat.pow [.int 0, .int 0]) (.int 1)
+-- an exponent past the target's `int` is refused at the arithmetic crossing
+#guard raises (evaluate `Nat.pow [.int 2, nat (2 ^ 62)])
+  "Lcnf_crossing.Refused(Lcnf_crossing.Arithmetic, an exponent or a shift past the target's capacity)"
+#guard raises (evaluate `Nat.shiftLeft [.int 1, nat (2 ^ 62)])
+  "Lcnf_crossing.Refused(Lcnf_crossing.Arithmetic, an exponent or a shift past the target's capacity)"
+-- the red control: the target's own `int` product wraps where `Z.mul` is exact
+#guard equals (run bare 100 (.binop "*" (.int (2 ^ 62 - 1)) (.int 2))) (.int (-2))
 
--- A wrong body is what runs: the altered definition changes the answer.
-private def squaring : List Lcnf.Support := Lcnf.support.map fun s =>
-  if s.name == "Lcnf_nat.mul" then { s with body := .binop "*" (.var "a") (.var "a") } else s
-#guard equals (evaluateIn squaring `Nat.mul [.int 3, .int 5]) (.int 9)
+-- A wrong body is what runs: the altered definition changes the answer. Its parameters are
+-- swapped, so it subtracts the first operand from the second.
+private def swapped : List Lcnf.Support := Lcnf.support.map fun s =>
+  if s.name == "Lcnf_nat.sub" then { s with params := ["b", "a"] } else s
+#guard equals (evaluateIn swapped `Nat.sub [.int 5, .int 3]) (.int 0)
 -- A missing definition, a body outside the reader's fragment and a primitive's name are
 -- refusals with their reason, never a silent default.
-#guard refused (evaluateIn (Lcnf.support.filter (·.name != "Lcnf_nat.mul")) `Nat.mul [.int 3, .int 5])
-  "unbound name `Lcnf_nat.mul`"
+#guard refused (evaluateIn (Lcnf.support.filter (·.name != "Lcnf_nat.sub")) `Nat.sub [.int 3, .int 5])
+  "unbound name `Lcnf_nat.sub`"
 #guard refused (evaluateIn [{ name := "lcnf_x", params := ["a"], body := .seq (.var "a") (.var "a") }]
     `Nat.add [.int 1, .int 2])
   "support `lcnf_x`: Ml.Expr.seq"
@@ -175,8 +186,8 @@ private def elementFirst : List Lcnf.Support := Lcnf.support.map fun s =>
 #guard refused (evaluate `List.any [ints [1], .fn ["e"] (.var "e")])
   "List.exists: the callback did not answer a boolean"
 #guard refused (evaluate `List.any [.int 5, sixOver "=" 2]) "List.exists: not a list"
--- The library entries with no rule on the evaluator (the other callback functions and the
--- clock's) are refusals there: a call of one is never a value.
+-- The library entries with no rule on the evaluator (the other callback functions and two string
+-- functions) are refusals there: a call of one is never a value.
 #guard (Lcnf.targetLibrary.filter (·.target matches .unruled)).all fun f =>
   refused (run bare 200 (Ml.Expr.call f.name [sixOver "=" 2, ints [1]])) s!"unbound name `{f.name}`"
 
@@ -319,18 +330,19 @@ first — so `[3].contains 2` under `a == b := a < b` is `2 < 3 = true` (Lean 4.
 `List.contains`) was right. -/
 def hostChecks : List (String × Ml.Expr × Expect) := [
   ("contains-order", host `List.contains [lessThan, ints [3], .int 2], .value (.bool true)),
-  ("shift-saturation", host `Nat.shiftLeft [.int 3, .int 62], .value (.var "max_int")),
-  ("mul-saturation", host `Nat.mul [.var "max_int", .int 2], .value (.var "max_int")),
-  ("pow-saturation", host `Nat.pow [.int 2, .int 64], .value (.var "max_int")),
-  ("utf8-length", host `String.length [.str "é🙂"], .value (.int 2)),
+  -- a natural is exact past the target's `int`: each is Zarith's `Z.t`, written by its row
+  ("shift-exact", host `Nat.shiftLeft [nat 3, nat 62], .value (nat (3 * 2 ^ 62))),
+  ("mul-exact", host `Nat.mul [nat (2 ^ 62 - 1), nat 2], .value (nat (2 * (2 ^ 62 - 1)))),
+  ("pow-exact", host `Nat.pow [nat 2, nat 64], .value (nat (2 ^ 64))),
+  ("utf8-length", host `String.length [.str "é🙂"], .value (nat 2)),
   -- a byte array is a vector (`Lcnf_array`), so the check reads its bytes as Lean's
   -- `s.toUTF8.data.toList` does
   ("utf8-literal-bytes",
     host `Array.toList [host `ByteArray.data [host `String.toUTF8 [.str "é🙂\n"]]],
     .value (ints [195, 169, 240, 159, 153, 130, 10])),
-  ("u8-clamp", host `UInt8.ofNatTruncate [.int 256], .value (.int 255)),
-  ("div-zero", host `Nat.div [.int 5, .int 0], .value (.int 0)),
-  ("mod-zero", host `Nat.mod [.int 5, .int 0], .value (.int 5)),
+  ("u8-clamp", host `UInt8.ofNatTruncate [nat 256], .value (.int 255)),
+  ("div-zero", host `Nat.div [nat 5, nat 0], .value (nat 0)),
+  ("mod-zero", host `Nat.mod [nat 5, nat 0], .value (nat 5)),
   -- the instance's first argument by a partial application, the element through the scan
   ("elem-order", host `List.elem [lessThan, .int 2, ints [3]], .value (.bool true)),
   -- a callback's exception passes through the support function
@@ -400,11 +412,13 @@ def nameRoots : Array Name := (LoweringNames.entries.map (·.1)).toArray
 /-- The stable name of a name fixture, in every lane that runs it. -/
 def nameId (name : Name) : String := s!"names/{name.getString!}"
 
-/-- One entry as the emitted OCaml calls it, with Lean's own answer. -/
+/-- One entry as the emitted OCaml calls it, with Lean's own answer. Each argument and the answer
+is a natural, written as the `Nat` row spells one (`Z.of_int n`). -/
 def nameChecks : List (String × String × Nat) :=
   LoweringNames.entries.filterMap fun (name, args) =>
     (LoweringNames.leanAnswer name args).map fun answer =>
-      (nameId name, String.intercalate " " (Lcnf.globalName name :: args.map toString), answer)
+      (nameId name, String.intercalate " " (Lcnf.globalName name ::
+        args.map fun a => "(" ++ Ml.renderExpr 0 (nat a) ++ ")"), answer)
 
 #guard nameChecks.length == LoweringNames.entries.length
 
@@ -428,14 +442,14 @@ run_cmd liftTermElabM do
         throwError "name fixtures: {name} {args}: Lean answers {expected}, the target {v.render}"
     | other => throwError "name fixtures: {name} {args}: {other.render}"
   -- the binders that took a reserved name were named again, and the forms kept their names;
-  -- helperCap's `lcnf_nat_mul` keeps its own, since the runtime library's function is the
-  -- qualified `Lcnf_nat.mul`, which no binder can take
+  -- helperCap's `lcnf_nat_mul` keeps its own, since every function of the runtime library and of
+  -- Zarith is qualified (`Lcnf_nat.sub`, `Z.mul`), which no binder can take
   let body (root : Name) : String :=
     ((translated.decls.find? (·.leanName == root)).map fun d => Ml.renderExpr 0 d.bind.body).getD ""
   let params (root : Name) : List String :=
     ((translated.decls.find? (·.leanName == root)).map fun d => d.bind.params.map (·.1)).getD []
   let mulBody := body ``LoweringNames.mulCap
-  unless mulBody == "Lcnf_nat.mul x _mula" do
+  unless mulBody == "Z.mul x _mula" do
     throwError "name fixtures: mulCap is {mulBody}"
   for (root, expected) in [
       (``LoweringNames.etaCap, ["_b1_1", "y"]),
@@ -532,9 +546,9 @@ run_cmd liftTermElabM do
 
 /-! ### A row without a contract does not elaborate
 
-The contract's fields, the runtime column and the receipt under the exact spelling have no
-default, so an omission is an error of the elaborator and not a row that reads as exact or as a
-body. -/
+The contract's fields and the runtime column have no default, so an omission is an error of the
+elaborator and not a row that reads as exact or as a body. Since M4 a row has one contract: the
+receipt under a second spelling went with the `int` spelling of `Nat`. -/
 
 run_cmd liftTermElabM do
   let elaborates (row : Term) : TermElabM Bool :=
@@ -544,19 +558,19 @@ run_cmd liftTermElabM do
     catch _ => pure false
   let complete ← `(({ lean := `Nat.add, runtime := .extern "lean_nat_add" (some .natAdd),
                       form := Lcnf.Form.op "+", fidelity := Lcnf.Fidelity.exact,
-                      domain := "", controls := [], note := "", cost := "",
-                      receipt := Lcnf.Receipt.exact } : Lcnf.Builtin))
+                      domain := "", crossing := none, controls := [], note := "",
+                      cost := "" } : Lcnf.Builtin))
   let contractless ← `(({ lean := `Nat.add, runtime := .body, form := Lcnf.Form.op "+" } : Lcnf.Builtin))
   let noRuntime ← `(({ lean := `Nat.add, form := Lcnf.Form.op "+",
-                        fidelity := Lcnf.Fidelity.exact, domain := "", controls := [], note := "",
-                        cost := "", receipt := Lcnf.Receipt.exact } : Lcnf.Builtin))
-  -- the receipt under the exact spelling has no default either: a row cannot leave it out
-  let noReceipt ← `(({ lean := `Nat.add, runtime := .extern "lean_nat_add" (some .natAdd),
+                        fidelity := Lcnf.Fidelity.exact, domain := "", crossing := none,
+                        controls := [], note := "", cost := "" } : Lcnf.Builtin))
+  -- the crossing has no default either: a row cannot leave out where it refuses
+  let noCrossing ← `(({ lean := `Nat.add, runtime := .extern "lean_nat_add" (some .natAdd),
                         form := Lcnf.Form.op "+", fidelity := Lcnf.Fidelity.exact,
                         domain := "", controls := [], note := "", cost := "" } : Lcnf.Builtin))
   unless ← elaborates complete do throwError "the complete row did not elaborate"
   if ← elaborates contractless then throwError "a row without a contract elaborated"
   if ← elaborates noRuntime then throwError "a row without its runtime column elaborated"
-  if ← elaborates noReceipt then throwError "a row without its receipt elaborated"
+  if ← elaborates noCrossing then throwError "a row without its crossing elaborated"
 
 end Conform.Effect4.CompilerControls

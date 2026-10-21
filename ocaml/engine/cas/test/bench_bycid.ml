@@ -57,7 +57,7 @@ let rec rm_rf p =
 ;;
 
 (* the frame builders bench_cache uses, so the store shape is the same one P7-D measured *)
-let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 
 let v_ctor i args =
   Eff_frame.framed Eff_frame.tag_ctor (String.concat "" (v_nat i :: args))

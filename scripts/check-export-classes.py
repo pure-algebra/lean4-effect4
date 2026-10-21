@@ -18,10 +18,13 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 build = root / 'ocaml/_build/default'
 includes = ['gen/.effect4_gen.objs/byte', 'gen/.effect4_closure.objs/byte', 'eff/.effect4_eff.objs/byte',
-            'clock/.effect4_clock.objs/byte', 'lcnf/.effect4_lcnf.objs/byte',
+            'lcnf/.effect4_lcnf.objs/byte',
             'engine/.effect4_engine.objs/byte', 'engine/bytes/.effect4_bytes.objs/byte']
+# A Lean natural is Zarith's `Z.t` (M4), so a client sees Zarith's interface too.
+zarith = subprocess.run(['opam', 'exec', '--switch=effect4', '--', 'ocamlfind', 'query', 'zarith'],
+                        text=True, stdout=subprocess.PIPE, check=True).stdout.strip()
 compiler = ['opam', 'exec', '--switch=effect4', '--', 'ocamlc', '-color', 'never',
-            '-I', '+unix', '-I', '+threads']
+            '-I', '+unix', '-I', '+threads', '-I', zarith]
 for directory in includes:
     compiler += ['-I', str(build / directory)]
 

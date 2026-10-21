@@ -75,11 +75,11 @@ let () =
   (* M3 *)
   let native : Modeled_gen.item =
     { name = "caf\xc3\xa9"
-    ; qty = -3
+    ; qty = Z.of_int (-3)
     ; tags = []
     ; note = None
     ; status = Modeled_gen.Status_pending
-    ; todo = { id = 1; title = "write the lane"; done_ = false }
+    ; todo = { id = Z.one; title = "write the lane"; done_ = false }
     ; color = Modeled_gen.Color_red
     }
   in

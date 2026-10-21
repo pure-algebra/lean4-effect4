@@ -57,7 +57,7 @@ let rm_rf = E4_check.remove_tree
 
 (* ============================================================ frames, by hand *)
 
-let f_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let f_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 let f_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
 let f_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
 
@@ -1142,7 +1142,7 @@ let rec chain_prog n : E.NativeOp.t E.Eff.t =
   then E.Eff.Succeed (E.Term.Lit E.Lit.Unit)
   else
     E.Eff.Bind
-      ( E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat (n - 1)))
+      ( E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat (Z.of_int (n - 1))))
       , chain_prog (n - 1) )
 ;;
 

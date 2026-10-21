@@ -62,241 +62,326 @@ let rec nth_error l n0 =
 
 module Pos =
  struct
-  (** val succ : int -> int **)
+  (** val succ : Big_int_Z.big_int -> Big_int_Z.big_int **)
 
   let rec succ x =
     (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-      (fun p -> (fun p->2*p) (succ p))
-      (fun p -> (fun p->1+2*p) p)
-      (fun _ -> (fun p->2*p) 1)
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+      (fun p -> Big_int_Z.mult_int_big_int 2 (succ p))
+      (fun p ->
+      (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+      p)
+      (fun _ -> Big_int_Z.mult_int_big_int 2 Big_int_Z.unit_big_int)
       x
 
-  (** val add : int -> int -> int **)
+  (** val add :
+      Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
   let rec add x y =
     (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
       (fun p ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-        (fun q -> (fun p->2*p) (add_carry p q))
-        (fun q -> (fun p->1+2*p) (add p q))
-        (fun _ -> (fun p->2*p) (succ p))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+        (fun q -> Big_int_Z.mult_int_big_int 2 (add_carry p q))
+        (fun q ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        (add p q))
+        (fun _ -> Big_int_Z.mult_int_big_int 2 (succ p))
         y)
       (fun p ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-        (fun q -> (fun p->1+2*p) (add p q))
-        (fun q -> (fun p->2*p) (add p q))
-        (fun _ -> (fun p->1+2*p) p)
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+        (fun q ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        (add p q))
+        (fun q -> Big_int_Z.mult_int_big_int 2 (add p q))
+        (fun _ ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x)) p)
         y)
       (fun _ ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-        (fun q -> (fun p->2*p) (succ q))
-        (fun q -> (fun p->1+2*p) q)
-        (fun _ -> (fun p->2*p) 1)
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+        (fun q -> Big_int_Z.mult_int_big_int 2 (succ q))
+        (fun q ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        q)
+        (fun _ -> Big_int_Z.mult_int_big_int 2 Big_int_Z.unit_big_int)
         y)
       x
 
-  (** val add_carry : int -> int -> int **)
+  (** val add_carry :
+      Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
   and add_carry x y =
     (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
       (fun p ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-        (fun q -> (fun p->1+2*p) (add_carry p q))
-        (fun q -> (fun p->2*p) (add_carry p q))
-        (fun _ -> (fun p->1+2*p) (succ p))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+        (fun q ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        (add_carry p q))
+        (fun q -> Big_int_Z.mult_int_big_int 2 (add_carry p q))
+        (fun _ ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        (succ p))
         y)
       (fun p ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-        (fun q -> (fun p->2*p) (add_carry p q))
-        (fun q -> (fun p->1+2*p) (add p q))
-        (fun _ -> (fun p->2*p) (succ p))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+        (fun q -> Big_int_Z.mult_int_big_int 2 (add_carry p q))
+        (fun q ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        (add p q))
+        (fun _ -> Big_int_Z.mult_int_big_int 2 (succ p))
         y)
       (fun _ ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-        (fun q -> (fun p->1+2*p) (succ q))
-        (fun q -> (fun p->2*p) (succ q))
-        (fun _ -> (fun p->1+2*p) 1)
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+        (fun q ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        (succ q))
+        (fun q -> Big_int_Z.mult_int_big_int 2 (succ q))
+        (fun _ ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        Big_int_Z.unit_big_int)
         y)
       x
 
-  (** val mul : int -> int -> int **)
+  (** val mul :
+      Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
   let rec mul x y =
     (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-      (fun p -> add y ((fun p->2*p) (mul p y)))
-      (fun p -> (fun p->2*p) (mul p y))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+      (fun p -> add y (Big_int_Z.mult_int_big_int 2 (mul p y)))
+      (fun p -> Big_int_Z.mult_int_big_int 2 (mul p y))
       (fun _ -> y)
       x
 
-  (** val compare_cont : comparison -> int -> int -> comparison **)
+  (** val compare_cont :
+      comparison -> Big_int_Z.big_int -> Big_int_Z.big_int -> comparison **)
 
   let rec compare_cont r x y =
     (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
       (fun p ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
         (fun q -> compare_cont r p q)
         (fun q -> compare_cont Gt p q)
         (fun _ -> Gt)
         y)
       (fun p ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
         (fun q -> compare_cont Lt p q)
         (fun q -> compare_cont r p q)
         (fun _ -> Gt)
         y)
       (fun _ ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
         (fun _ -> Lt)
         (fun _ -> Lt)
         (fun _ -> r)
         y)
       x
 
-  (** val compare : int -> int -> comparison **)
+  (** val compare : Big_int_Z.big_int -> Big_int_Z.big_int -> comparison **)
 
   let compare =
     compare_cont Eq
 
-  (** val eqb : int -> int -> bool **)
+  (** val eqb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool **)
 
   let rec eqb p q =
     (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
       (fun p0 ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
         (fun q0 -> eqb p0 q0)
         (fun _ -> false)
         (fun _ -> false)
         q)
       (fun p0 ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
         (fun _ -> false)
         (fun q0 -> eqb p0 q0)
         (fun _ -> false)
         q)
       (fun _ ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
         (fun _ -> false)
         (fun _ -> false)
         (fun _ -> true)
         q)
       p
 
-  (** val iter_op : ('a1 -> 'a1 -> 'a1) -> int -> 'a1 -> 'a1 **)
+  (** val iter_op : ('a1 -> 'a1 -> 'a1) -> Big_int_Z.big_int -> 'a1 -> 'a1 **)
 
   let rec iter_op op p a =
     (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
       (fun p0 -> op a (iter_op op p0 (op a a)))
       (fun p0 -> iter_op op p0 (op a a))
       (fun _ -> a)
       p
 
-  (** val to_nat : int -> int **)
+  (** val to_nat : Big_int_Z.big_int -> int **)
 
   let to_nat x =
     iter_op Coq__1.add x (Stdlib.Int.succ 0)
 
-  (** val of_succ_nat : int -> int **)
+  (** val of_succ_nat : int -> Big_int_Z.big_int **)
 
   let rec of_succ_nat n0 =
     (fun fO fS n -> if n=0 then fO () else fS (n-1))
-      (fun _ -> 1)
+      (fun _ -> Big_int_Z.unit_big_int)
       (fun x -> succ (of_succ_nat x))
       n0
  end
 
 module Coq_Pos =
  struct
-  (** val succ : int -> int **)
+  (** val succ : Big_int_Z.big_int -> Big_int_Z.big_int **)
 
-  let rec succ = Stdlib.Int.succ
+  let rec succ = Big_int_Z.succ_big_int
 
-  (** val add : int -> int -> int **)
+  (** val add :
+      Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
-  let rec add = (+)
+  let rec add = Big_int_Z.add_big_int
 
-  (** val add_carry : int -> int -> int **)
+  (** val add_carry :
+      Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
   and add_carry x y =
     (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
       (fun p ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-        (fun q -> (fun p->1+2*p) (add_carry p q))
-        (fun q -> (fun p->2*p) (add_carry p q))
-        (fun _ -> (fun p->1+2*p) (succ p))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+        (fun q ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        (add_carry p q))
+        (fun q -> Big_int_Z.mult_int_big_int 2 (add_carry p q))
+        (fun _ ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        (succ p))
         y)
       (fun p ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-        (fun q -> (fun p->2*p) (add_carry p q))
-        (fun q -> (fun p->1+2*p) (add p q))
-        (fun _ -> (fun p->2*p) (succ p))
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+        (fun q -> Big_int_Z.mult_int_big_int 2 (add_carry p q))
+        (fun q ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        (add p q))
+        (fun _ -> Big_int_Z.mult_int_big_int 2 (succ p))
         y)
       (fun _ ->
       (fun f2p1 f2p f1 p ->
-  if p<=1 then f1 () else if p mod 2 = 0 then f2p (p/2) else f2p1 (p/2))
-        (fun q -> (fun p->1+2*p) (succ q))
-        (fun q -> (fun p->2*p) (succ q))
-        (fun _ -> (fun p->1+2*p) 1)
+  if Big_int_Z.le_big_int p Big_int_Z.unit_big_int then f1 () else
+  let (q,r) = Big_int_Z.quomod_big_int p (Big_int_Z.big_int_of_int 2) in
+  if Big_int_Z.eq_big_int r Big_int_Z.zero_big_int then f2p q else f2p1 q)
+        (fun q ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        (succ q))
+        (fun q -> Big_int_Z.mult_int_big_int 2 (succ q))
+        (fun _ ->
+        (fun x -> Big_int_Z.succ_big_int (Big_int_Z.mult_int_big_int 2 x))
+        Big_int_Z.unit_big_int)
         y)
       x
 
-  (** val mul : int -> int -> int **)
+  (** val mul :
+      Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
-  let rec mul = ( * )
+  let rec mul = Big_int_Z.mult_big_int
  end
 
 module N =
  struct
-  (** val compare : int -> int -> comparison **)
+  (** val compare : Big_int_Z.big_int -> Big_int_Z.big_int -> comparison **)
 
-  let compare = fun x y -> if x=y then Eq else if x<y then Lt else Gt
+  let compare = (fun x y -> let s = Big_int_Z.compare_big_int x y in
+  if s = 0 then Eq else if s < 0 then Lt else Gt)
 
-  (** val add : int -> int -> int **)
+  (** val add :
+      Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
-  let add = (+)
+  let add = Big_int_Z.add_big_int
 
-  (** val mul : int -> int -> int **)
+  (** val mul :
+      Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
-  let mul = ( * )
+  let mul = Big_int_Z.mult_big_int
 
-  (** val eqb : int -> int -> bool **)
+  (** val eqb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool **)
 
   let eqb n0 m =
-    (fun f0 fp n -> if n=0 then f0 () else fp n)
+    (fun fO fp n -> if Big_int_Z.sign_big_int n <= 0 then fO () else fp n)
       (fun _ ->
-      (fun f0 fp n -> if n=0 then f0 () else fp n)
+      (fun fO fp n -> if Big_int_Z.sign_big_int n <= 0 then fO () else fp n)
         (fun _ -> true)
         (fun _ -> false)
         m)
       (fun p ->
-      (fun f0 fp n -> if n=0 then f0 () else fp n)
+      (fun fO fp n -> if Big_int_Z.sign_big_int n <= 0 then fO () else fp n)
         (fun _ -> false)
         (fun q -> Pos.eqb p q)
         m)
       n0
 
-  (** val ltb : int -> int -> bool **)
+  (** val ltb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool **)
 
   let ltb x y =
     match compare x y with
@@ -306,71 +391,38 @@ module N =
 
 module Z =
  struct
-  (** val mul : int -> int -> int **)
+  (** val mul :
+      Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int **)
 
-  let mul = ( * )
+  let mul = Big_int_Z.mult_big_int
 
-  (** val compare : int -> int -> comparison **)
+  (** val compare : Big_int_Z.big_int -> Big_int_Z.big_int -> comparison **)
 
-  let compare = fun x y -> if x=y then Eq else if x<y then Lt else Gt
+  let compare = (fun x y -> let s = Big_int_Z.compare_big_int x y in
+  if s = 0 then Eq else if s < 0 then Lt else Gt)
 
-  (** val ltb : int -> int -> bool **)
+  (** val ltb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool **)
 
   let ltb x y =
     match compare x y with
     | Lt -> true
     | _ -> false
 
-  (** val eqb : int -> int -> bool **)
+  (** val eqb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool **)
 
-  let eqb x y =
-    (fun f0 fp fn z -> if z=0 then f0 () else if z>0 then fp z else fn (-z))
-      (fun _ ->
-      (fun f0 fp fn z -> if z=0 then f0 () else if z>0 then fp z else fn (-z))
-        (fun _ -> true)
-        (fun _ -> false)
-        (fun _ -> false)
-        y)
-      (fun p ->
-      (fun f0 fp fn z -> if z=0 then f0 () else if z>0 then fp z else fn (-z))
-        (fun _ -> false)
-        (fun q -> Pos.eqb p q)
-        (fun _ -> false)
-        y)
-      (fun p ->
-      (fun f0 fp fn z -> if z=0 then f0 () else if z>0 then fp z else fn (-z))
-        (fun _ -> false)
-        (fun _ -> false)
-        (fun q -> Pos.eqb p q)
-        y)
-      x
-
-  (** val to_nat : int -> int **)
-
-  let to_nat z0 =
-    (fun f0 fp fn z -> if z=0 then f0 () else if z>0 then fp z else fn (-z))
-      (fun _ -> 0)
-      (fun p -> Pos.to_nat p)
-      (fun _ -> 0)
-      z0
-
-  (** val of_nat : int -> int **)
-
-  let of_nat n0 =
-    (fun fO fS n -> if n=0 then fO () else fS (n-1))
-      (fun _ -> 0)
-      (fun n1 -> (Pos.of_succ_nat n1))
-      n0
+  let eqb = Big_int_Z.eq_big_int
  end
 
-(** val n_of_digits : bool list -> int **)
+(** val n_of_digits : bool list -> Big_int_Z.big_int **)
 
 let rec n_of_digits = function
-| [] -> 0
+| [] -> Big_int_Z.zero_big_int
 | b :: l' ->
-  N.add (if b then 1 else 0) (N.mul ((fun p->2*p) 1) (n_of_digits l'))
+  N.add (if b then Big_int_Z.unit_big_int else Big_int_Z.zero_big_int)
+    (N.mul (Big_int_Z.mult_int_big_int 2 Big_int_Z.unit_big_int)
+      (n_of_digits l'))
 
-(** val n_of_ascii : char -> int **)
+(** val n_of_ascii : char -> Big_int_Z.big_int **)
 
 let n_of_ascii a =
   (* If this appears, you're using Ascii internals. Please don't *)
@@ -417,15 +469,18 @@ type 'a orderDec =
 
 module String =
  struct
-  (** val length : string -> int **)
+  (** val length : string -> Big_int_Z.big_int **)
 
   let length s =
-    Z.of_nat (length s)
+    Big_int_Z.big_int_of_int (length s)
 
-  (** val get : string -> int -> char **)
+  (** val get : string -> Big_int_Z.big_int -> char **)
 
   let get s n0 =
-    match get (Z.to_nat n0) s with
+    match get
+            ((fun z -> if Big_int_Z.sign_big_int z <= 0 then 0 else Big_int_Z.int_of_big_int z)
+              n0)
+            s with
     | Some c -> c
     | None -> '?'
 
@@ -450,12 +505,15 @@ module String =
      | [] -> s
      | _ :: _ -> (^) ((^) s sep) (concat sep sl0))
 
-  (** val make : int -> char -> string **)
+  (** val make : Big_int_Z.big_int -> char -> string **)
 
   let make n0 c =
-    _make (Z.to_nat n0) c
+    _make
+      ((fun z -> if Big_int_Z.sign_big_int z <= 0 then 0 else Big_int_Z.int_of_big_int z)
+        n0)
+      c
 
-  (** val sub : string -> int -> int -> string **)
+  (** val sub : string -> Big_int_Z.big_int -> Big_int_Z.big_int -> string **)
 
   let sub s _ _ =
     s
@@ -545,9 +603,9 @@ type 'a orderDec0 =
 
 module Coq_String = String
 
-type service_name = int
+type service_name = Big_int_Z.big_int
 
-type service_type_code = int
+type service_type_code = Big_int_Z.big_int
 
 module Coq_service_key =
  struct
@@ -610,7 +668,7 @@ and eval_terms = Lane_eval.eval_terms
 let decide = Lane_eval.decide
 
 type 'x rowE =
-| Row of int * Eff_types.Val.t
+| Row of Big_int_Z.big_int * Eff_types.Val.t
 
 type 'x storeE =
 | RefMake of Eff_types.Val.t
@@ -783,7 +841,9 @@ let rec denoteW bodies k call e env ps ctx =
         | Eff_types.NativeOp.External i ->
           PVis ((Inr1 (Row (i, v))), (fun x -> PRet (Some (Obj.magic x))))
         | Eff_types.NativeOp.Call n0 ->
-          (match nth_error bodies (Z.to_nat n0) with
+          (match nth_error bodies
+                   ((fun z -> if Big_int_Z.sign_big_int z <= 0 then 0 else Big_int_Z.int_of_big_int z)
+                     n0) with
            | Some body -> call body (v :: []) (([], []) :: ps) ctx
            | None -> PRet (Some bad_shape))
         | Eff_types.NativeOp.Param i ->
@@ -791,7 +851,9 @@ let rec denoteW bodies k call e env ps ctx =
            | [] -> PRet (Some bad_shape)
            | f :: below ->
              let (args, fenv) = f in
-             (match nth_error args (Z.to_nat i) with
+             (match nth_error args
+                      ((fun z -> if Big_int_Z.sign_big_int z <= 0 then 0 else Big_int_Z.int_of_big_int z)
+                        i) with
               | Some a -> call a (app fenv (v :: [])) below ctx
               | None -> PRet (Some bad_shape)))
         | _ -> PRet (Some outside))
@@ -831,7 +893,9 @@ let rec denoteW bodies k call e env ps ctx =
   | Eff_types.Eff.Invoke (n0, r, args) ->
     (match eval_term env r with
      | Some v ->
-       (match nth_error bodies (Z.to_nat n0) with
+       (match nth_error bodies
+                ((fun z -> if Big_int_Z.sign_big_int z <= 0 then 0 else Big_int_Z.int_of_big_int z)
+                  n0) with
         | Some body -> call body (v :: []) (((effs_list args), env) :: ps) ctx
         | None -> PRet (Some bad_shape))
      | None -> PRet (Some bad_shape))
@@ -874,20 +938,20 @@ let route cs rows e st =
      | None -> None)
 
 (** val fn_host :
-    (int -> Eff_types.Val.t -> 'a1 -> (Lane_eval.exitv * 'a1) option) -> __
-    rowE -> 'a1 -> (__ * 'a1) option **)
+    (Big_int_Z.big_int -> Eff_types.Val.t -> 'a1 -> (Lane_eval.exitv * 'a1)
+    option) -> __ rowE -> 'a1 -> (__ * 'a1) option **)
 
 let fn_host f e s =
   let Row (i, v) = e in Obj.magic f i v s
 
 type step =
-| Called of int * Eff_types.Val.t * Lane_eval.exitv
+| Called of Big_int_Z.big_int * Eff_types.Val.t * Lane_eval.exitv
 | Celled of string * Eff_types.Val.t * Eff_types.Val.t
 
 type stop =
 | Finished of Lane_eval.exitv
 | Cut
-| Waiting of int * Eff_types.Val.t
+| Waiting of Big_int_Z.big_int * Eff_types.Val.t
 | Refused of string * Eff_types.Val.t
 
 (** val step_of : (__ storeE, __ rowE, 'a1) sum1 -> 'a1 -> step **)
@@ -949,8 +1013,8 @@ let cells_fn c e s =
 
 (** val lane_run :
     (string -> Eff_types.Val.t -> Eff_types.Val.t -> 'a1 ->
-    (Eff_types.Val.t * 'a1) option) -> (int -> Eff_types.Val.t -> 'a2 ->
-    (Lane_eval.exitv * 'a2) option) -> int -> Eff_types.NativeOp.t
+    (Eff_types.Val.t * 'a1) option) -> (Big_int_Z.big_int -> Eff_types.Val.t
+    -> 'a2 -> (Lane_eval.exitv * 'a2) option) -> int -> Eff_types.NativeOp.t
     Eff_types.Eff.t -> 'a1 -> 'a2 -> (step list * stop) * ('a1 * 'a2) **)
 
 let lane_run c f k e cs s =

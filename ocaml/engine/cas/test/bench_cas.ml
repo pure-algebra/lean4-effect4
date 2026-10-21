@@ -45,7 +45,7 @@ let chain_len =
   | _ -> 2_000
 ;;
 
-let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 let v_str s = Eff_frame.framed Eff_frame.tag_string s
 let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
 

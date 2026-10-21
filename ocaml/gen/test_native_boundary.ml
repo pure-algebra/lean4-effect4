@@ -20,18 +20,18 @@ let refused = function
   | Ok _ -> false
 ;;
 
-let program : NativeOp.t Eff.t = Eff.Succeed (Term.Lit (Lit.Nat 7))
+let program : NativeOp.t Eff.t = Eff.Succeed (Term.Lit (Lit.Nat (Z.of_int 7)))
 
 let malformed : NativeOp.t Eff.t =
   Eff.Succeed
     (Term.Record
        ( [ "x", (false, Ty.Nat); "x", (true, Ty.String) ]
        , [ "x" ]
-       , Terms.Cons (Term.Lit (Lit.Nat 7), Terms.Nil) ))
+       , Terms.Cons (Term.Lit (Lit.Nat (Z.of_int 7)), Terms.Nil) ))
 ;;
 
 let app : A.sig_app = { rows = []; services = []; types = [] }
-let budget : A.budget = { fuel = 37; compile_fuel = 53 }
+let budget : A.budget = { fuel = Z.of_int 37; compile_fuel = Z.of_int 53 }
 
 type public_memo_alias = A.memo
 
@@ -60,7 +60,10 @@ let () =
   check
     "full-admission-open-save-restore"
     (restored.session = "seams-s0" && restored.binding = "test");
-  check "both-budgets" (restored.budget.fuel = 37 && restored.budget.compile_fuel = 53);
+  check
+    "both-budgets"
+    (Z.equal restored.budget.fuel (Z.of_int 37)
+     && Z.equal restored.budget.compile_fuel (Z.of_int 53));
   check
     "duplicate-field-admission-refused"
     (refused (A.api_built_of_sketch app { program = malformed; holes = [] }));
@@ -68,19 +71,23 @@ let () =
     "duplicate-field-restore-refused"
     (refused (A.live_record_restore { record with program = malformed }));
   let unnamed =
-    get (A.live_record_restore { record with session = ""; row_names = [ "stored", 9 ] })
+    get
+      (A.live_record_restore
+         { record with session = ""; row_names = [ "stored", Z.of_int 9 ] })
   in
   let retained = A.live_record_save unnamed in
   check
     "restore-stored-names-and-empty-session"
-    (retained.session = "" && retained.row_names = [ "stored", 9 ]);
+    (retained.session = "" && retained.row_names = [ "stored", Z.of_int 9 ]);
   check
     "unadmitted-call-refused"
     (refused
        (A.api_built_of_sketch
           app
-          { program = Eff.Perform (NativeOp.External 0, Term.Lit Lit.Unit); holes = [] }));
+          { program = Eff.Perform (NativeOp.External (Z.of_int 0), Term.Lit Lit.Unit)
+          ; holes = []
+          }));
   check
     "record-version-refused"
-    (refused (A.live_record_restore { record with version = 2 }))
+    (refused (A.live_record_restore { record with version = Z.of_int 2 }))
 ;;

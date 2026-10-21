@@ -1,11 +1,11 @@
 (* E4_trace -- the machine event log over Lcnf_array.
    Properties TR1-TR8 are in e4_trace.mli and checked by prop_trace.
-   Depends on: Lcnf_array. The array owner also owns conversion to lists. *)
+   Depends on: Lcnf_array, Zarith (Z). The array owner also owns conversion to lists. *)
 
 type 'e t = 'e Lcnf_array.t
 
 let empty : 'e t = Lcnf_array.empty
-let length (t : 'e t) : int = Lcnf_array.length t
+let length (t : 'e t) : Z.t = Z.of_int (Lcnf_array.length t)
 let is_empty (t : 'e t) : bool = Lcnf_array.is_empty t
 
 (* TR2 is the `[] ->` arm: the argument itself, physically.  The general arm appends in list

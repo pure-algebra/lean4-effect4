@@ -2,7 +2,7 @@
 opam-version: "2.0"
 synopsis: "Unstable: Effect4's byte layer: framing, hexadecimal and SHA-256"
 description:
-  "The byte layer below Effect4's engine and disk store: big-endian framing over Eff_frame, hexadecimal, the host profile's 63-bit naturals and SHA-256. Unstable: no release is published, and names may change."
+  "The byte layer below Effect4's engine and disk store: big-endian framing over Eff_frame, hexadecimal and SHA-256. Unstable: no release is published, and names may change."
 maintainer: ["The Fold Lab"]
 authors: ["The Fold Lab"]
 license: "MIT"

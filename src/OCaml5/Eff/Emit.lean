@@ -437,8 +437,8 @@ def layoutModule (bs : List (List Family)) : Ml.Module :=
 
 /-! ### Controls: the carriers' OCaml spellings are the type rows' -/
 
-#guard OTy.nat.ml == Ml.Ty.int
-#guard (OTy.option .nat).ml == Ml.Ty.option Ml.Ty.int
+#guard OTy.nat.ml == .con "Z.t" []
+#guard (OTy.option .nat).ml == Ml.Ty.option (.con "Z.t" [])
 #guard (OTy.prod .string .bool).ml == .tuple [Ml.Ty.string, Ml.Ty.bool]
 #guard OTy.requirements.ml == Ml.Ty.list (.named (otype ``Effect4.ServiceKey))
 

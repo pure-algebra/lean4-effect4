@@ -4,7 +4,7 @@
 type status = Lanes_gen.status = Status_pending | Status_closed of string
 and test_codegen_modeled_lane_todo =
   Lanes_gen.test_codegen_modeled_lane_todo = {
-  id : int;
+  id : Z.t;
   title : string;
   done_ : bool;
 }
@@ -12,7 +12,7 @@ and color = Lanes_gen.color = Color_red | Color_green | Color_blue
 and item =
   Lanes_gen.item = {
   name : string;
-  qty : int;
+  qty : Z.t;
   tags : string list;
   note : string option;
   status : status;

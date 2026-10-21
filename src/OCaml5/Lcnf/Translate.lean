@@ -5,8 +5,6 @@ import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Native
-import OCaml5.Lcnf.Clock
-import OCaml5.Lcnf.ClockFlow
 import OCaml5.Lcnf.Builtins
 import OCaml5.Ml.Check
 
@@ -21,7 +19,7 @@ ordering that decides how to emit them.
 **Depends on.** `OCaml5.Lcnf.Dump` (`monoDecl?`), `OCaml5.Lcnf.Naming`,
 `OCaml5.Lcnf.Types` (the type declarations; the type rows' `builtinTy?`), `OCaml5.Lcnf.Builtins`
 (the builtin table and its reserved names), `OCaml5.Lcnf.Native` (OCaml's own
-datatypes), `OCaml5.Lcnf.Clock` (the clock's constructors), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
+datatypes), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
 `Lean.Compiler.LCNF.Basic` (`Code.collectUsed`).
 
 **Properties.**
@@ -59,7 +57,7 @@ datatypes), `OCaml5.Lcnf.Clock` (the clock's constructors), `OCaml5.Ml.Syntax`, 
 * **A natively spelled type is never declared, and never built or matched as if it were.** A
   type with a row of the type table has no OCaml record or variant. Its constructors and
   projections are lowered by their owner (`nativeOwner?`): a builtin row, OCaml's own datatype,
-  the clock, or a transparent structure's field. One with no owner, a projection with none, and
+  or a transparent structure's field. One with no owner, a projection with none, and
   a `cases` OCaml cannot match are each refused by name — *by construction*; *checked* by the
   constructor census (`Test/Audit/ConstructorOwners.lean`) and *tested* by the constructor lane
   (`ocaml/engine/test/ctors/`). Before 2026-10-16 `ByteArray.mk` became a record of no declared
@@ -88,13 +86,13 @@ datatypes), `OCaml5.Lcnf.Clock` (the clock's constructors), `OCaml5.Ml.Syntax`, 
 | `\| _ =>` | `\| _ ->` |
 | `return x` | `x` |
 | `⊥` (`unreach`) | `assert false` |
-| `LetValue.lit (nat n)` / `(str s)` | `n` (63-bit caveat) / `"s"` |
+| `LetValue.lit (nat n)` / `(str s)` | the `Nat` row's literal, `Z.of_int n` (`natLiteral`) / `"s"` |
 | `LetValue.erased` | `()` |
 | `LetValue.proj T i s` on a `structure` | `s.fᵢ`; `Prod` → `fst`/`snd`; else a hole |
 | `LetValue.fvar f args` | `f args`, `◾` as `()` |
 | `LetValue.const C.mk ◾… fields` (structure ctor) | `({ f₁ = …; … } : (_,…) t)`, erased fields dropped |
 | `LetValue.const C.c ◾… args` (inductive ctor) | `C_c (args)`; `List`/`Option`/`Prod`/`Bool`/`Except` natively |
-| `LetValue.const g args`, `g` in the builtin table | the table's form: `Nat.decEq` → `=`, `Nat.decLt` → `<`, `Nat.sub` → `max 0 (a - b)`, `List.appendTR` → `@`, `List.reverse` → `List.rev`, `List.reverseAux` → `List.rev_append`, `List.instDecidableEqNil` → `= []`, `Array.mkEmpty` → `[]`, `Array.toList` → identity, `List.foldl._at_.Array.appendList.spec_0` → `@`, … (`builtin?`) |
+| `LetValue.const g args`, `g` in the builtin table | the table's form: `Nat.decEq` → `Z.equal`, `Nat.decLt` → `Z.lt`, `Nat.sub` → `Lcnf_nat.sub`, `List.appendTR` → `@`, `List.reverse` → `List.rev`, `List.reverseAux` → `List.rev_append`, `List.instDecidableEqNil` → `= []`, `Array.mkEmpty` → `[]`, `Array.toList` → identity, `List.foldl._at_.Array.appendList.spec_0` → `@`, … (`builtin?`) |
 | `LetValue.const g args`, other | `g' args` with `g' = globalName g`; `g` enqueued for translation |
 | `g._redArg` | translated under `globalName g`; the wrapper `g` is skipped |
 | `Decl.value = extern` | a hole |
@@ -186,12 +184,6 @@ structure St where
   /-- Free variables bound to a list literal: `none` is `[]`, `some e` is `[e]`. It is what
   tells `x ++ ys` from `x ++ [i]`, i.e. `append` from `snoc`. -/
   listLit : Std.HashMap FVarId (Option Ml.Expr) := {}
-  /-- Original naturals before the ordinary target's literal saturation. Clock ingress
-  consumes this provenance as canonical decimal text; aliases retain it. -/
-  natLit : Std.HashMap FVarId Nat := {}
-  /-- Values derived from a saturated natural after its exact literal provenance was lost.
-  A clock ingress must refuse these rather than reinterpret the narrowed target integer. -/
-  narrowedNat : Std.HashSet FVarId := {}
   /-- `ops` rows this declaration used, as `<carrier>#<op>`. -/
   usedOps : Array String := #[]
   /-- `carg` rows this declaration used, by the declaration the row names. -/
@@ -242,8 +234,8 @@ def readTypeNames : TM TypeNames := return (← read).tn
 def readExterns : TM Externs := return (← read).ex
 
 /-- The unqualified names the translator's own forms leave free: the pair projections of
-`letValueExpr` and its saturated literal. -/
-def translatorNames : List String := ["fst", "snd", "max_int"]
+`letValueExpr`. A natural's literal is qualified (`natLiteral`), so it leaves none. -/
+def translatorNames : List String := ["fst", "snd"]
 
 /-- The names no source binder of a declaration may take: the builtin table's
 (`reservedNames`, computed from the rows), the translator's own, and the eta binders of the
@@ -326,22 +318,19 @@ inductive NativeOwner where
   | row (b : Builtin)
   /-- One of OCaml's own constructors (`OCaml5.Lcnf.Native`). -/
   | datatype
-  /-- The clock's constructors (`OCaml5.Lcnf.Clock`). -/
-  | clock
   /-- A transparent structure's constructor or projection: the one relevant field itself
   (`transparentStructures`). -/
   | field
 
 /-- **The owner of a constructor or projection function** `n` of the natively spelled type
-`typeName`, in that order: its row, OCaml's datatype, the clock, the transparent field. `none`
-is refused by name (`ctorApp`, `letValueExpr`). The constructor census reads the same function
+`typeName`, in that order: its row, OCaml's datatype, the transparent field. `none` is refused by
+name (`ctorApp`, `letValueExpr`). The constructor census reads the same function
 (`Test/Audit/ConstructorOwners.lean`), so what it checks is what the translator does. -/
 def nativeOwner? (typeName n : Name) : Option NativeOwner :=
   match builtin? n with
   | some b => some (.row b)
   | none =>
     if (Native.find? n).isSome then some .datatype
-    else if Clock.owns typeName then some .clock
     else if transparentStructures.contains typeName then some .field
     else none
 
@@ -420,54 +409,6 @@ def applyBuiltin (b : Builtin) (args : List Ml.Expr) : TM Ml.Expr := do
       lets := lets ++ [(x, a)]
       atoms := atoms ++ [.var x]
   return lets.foldr (fun (x, v) body => .letIn x v body) (b.apply atoms)
-
-/-- The natural literal an argument originated from, before target integer lowering. -/
-def argNatLit? : Arg .pure → TM (Option Nat)
-  | .fvar id => return (← get).natLit[id]?
-  | _ => return none
-
-/-- Whether an argument already depends on a natural the ordinary target narrowed. -/
-def argNarrowedNat : Arg .pure → TM Bool
-  | .fvar id => return (← get).narrowedNat.contains id
-  | _ => return false
-
-/-- Local literal and alias facts, independent of the ordinary Nat target's representation. -/
-def natFact? : LetValue .pure → TM (Option Nat)
-  | .lit (.nat n) => return some n
-  | .fvar id args => if args.isEmpty then return (← get).natLit[id]? else return none
-  | _ => return none
-
-/-- Dependency on a saturated literal propagates through local operations. Exact clock
-constructors consume that provenance and produce an exact value, so they clear the marker. -/
-def narrowedNatFact : LetValue .pure → TM Bool
-  | .lit (.nat n) => return n ≥ 4611686018427387904
-  | .fvar id args => do
-    if (← get).narrowedNat.contains id then return true
-    args.anyM argNarrowedNat
-  | .const n _ args =>
-    if stripRedArg n == `Effect4.ClockMillis.ofNat || n == `Effect4.ClockMillis.positive then
-      return false
-    else args.anyM argNarrowedNat
-  | .proj _ _ id => return (← get).narrowedNat.contains id
-  | _ => return false
-
-/-- Preserve a clock's known literal before the shared Nat path can narrow it. An
-unrecoverable local dependency is a located generation refusal. Dynamic Nat parameters
-still enter through the existing checked scalar-profile bridge. -/
-def clockNatIngress? (declName n : Name) (args : Array (Arg .pure)) : TM (Option Ml.Expr) := do
-  let name := stripRedArg n
-  let successor := name == `Effect4.ClockMillis.positive
-  unless successor || name == `Effect4.ClockMillis.ofNat do return none
-  let relevant := args.filter fun | .fvar _ => true | _ => false
-  let #[arg] := relevant | return none
-  if let some value ← argNatLit? arg then
-    let exactValue := if successor then value + 1 else value
-    return some (Ml.Expr.call "E4_clock.literal" [.str (toString exactValue)])
-  if ← argNarrowedNat arg then
-    let reason := s!"{declName}: {name} consumes a narrowed Nat without exact literal provenance"
-    todo reason
-    return some (.hole reason (.assertE (.bool false)))
-  return none
 
 /-! ## Carriers
 
@@ -585,7 +526,6 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
     let form? : Option Ml.Expr := match owner with
       | some (.row _) => none
       | some .datatype => Native.expression ci.name rel
-      | some .clock => Clock.constructor? ci.name rel
       | some .field => match rel with
         | [x] => some x
         | _ => none
@@ -708,15 +648,14 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
   | .lit (.uint8 n) => return (.int n.toNat, none)
   | .lit (.uint16 n) => return (.int n.toNat, none)
   | .lit (.uint32 n) => return (.int n.toNat, none)
-  -- A `UInt64` is a bit pattern (the float frame's bits), not a quantity: clamping it at
-  -- `max_int` like a `Nat` would change the value, so a literal OCaml's `int` cannot hold is a
-  -- hole, fatal at generation, until the engine has an exact 64-bit carrier.
-  | .lit (.uint64 n) =>
-    if n.toNat ≥ 4611686018427387904 then do
-      todo s!"{declName}: UInt64 literal {n.toNat} exceeds the OCaml int carrier"
+  -- A `UInt64` is its natural below 2^64 (the float frame's bits), `Z.t` as a `Nat` is.
+  | .lit (.uint64 n) => return (natLiteral n.toNat, none)
+  -- A `USize` is the target's `int` index: a literal past it is refused at generation.
+  | .lit (.usize n) =>
+    if n.toNat < 4611686018427387904 then return (.int n.toNat, none)
+    else do
+      todo s!"{declName}: USize literal {n.toNat} exceeds the target's index capacity"
       return (.unit, none)
-    else return (.int n.toNat, none)
-  | .lit (.usize n) => return (.int n.toNat, none)
   | .erased => return (.unit, none)
   | .proj typeName i s =>
     let env ← readEnv
@@ -764,7 +703,6 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
     noteLocalArgs f args
     return (.app fv (← args.toList.mapM argExpr), none)
   | .const n _ args =>
-    if let some exactClock ← clockNatIngress? declName n args then return (exactClock, none)
     let env ← readEnv
     -- `Extract Constant`: the row wins over the constructor rule and over `builtin?`, so a
     -- carrier's own constructor (`Dispatcher.mk`, `MemoMap.mk`) can be re-spelled too. Erased
@@ -912,13 +850,7 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
   | .let decl k =>
     let (v, carr?) ← letValueExpr declName decl.value
     let lit? ← listFact? decl.value
-    let nat? ← natFact? decl.value
-    let narrowed ← narrowedNatFact decl.value
     let x ← bindVar decl.fvarId decl.binderName
-    if let some n := nat? then
-      modify fun s => { s with natLit := s.natLit.insert decl.fvarId n }
-    if narrowed then
-      modify fun s => { s with narrowedNat := s.narrowedNat.insert decl.fvarId }
     if let some c := carr? then setCarrier decl.fvarId c
     if let some f := lit? then
       modify fun s => { s with listLit := s.listLit.insert decl.fvarId f }
@@ -939,9 +871,6 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
   | .return x => return .var (← nameOf x)
   | .unreach _ => return .assertE (.bool false)
   | .cases cs =>
-    if Clock.owns cs.typeName then
-      todo s!"{declName}: raw ClockMillis elimination escapes its checked operations"
-      return .hole "raw ClockMillis elimination" (.assertE (.bool false))
     -- A type the type table spells natively is matched only where OCaml can: by OCaml's own
     -- constructors (`Native.matchable`), or as a transparent structure's one field. Lean's
     -- compiler takes every other apart through its projections (`Int` and `Nat` by comparison,
@@ -1149,8 +1078,6 @@ structure Closure where
   mentioned : Array Name := #[]
   /-- Constructs the translation has no rule for (`St.todos`). -/
   todos : Array String := #[]
-  /-- The clock boundary's refusals (`ClockFlow.refusals`), read off the walk's declarations. -/
-  clockRefusals : Array String := #[]
   /-- `fn` extern rows a translated declaration actually hit (G10's ledger). -/
   usedExterns : Array FnKey := #[]
   /-- `ops` rows a rewrite used, as `<carrier>#<op>`. -/
@@ -1166,8 +1093,8 @@ structure Closure where
   since the walk closes over them before any later group begins. -/
   phaseStarts : Array Nat := #[]
 
-/-- Every refusal of the closure: the translation's, then the clock boundary's. -/
-def Closure.problems (c : Closure) : Array String := c.todos ++ c.clockRefusals
+/-- Every refusal of the closure: the translation's. -/
+def Closure.problems (c : Closure) : Array String := c.todos
 
 private def pushNew (a : Array Name) (n : Name) : Array Name :=
   if a.contains n then a else a.push n
@@ -1208,12 +1135,10 @@ node, and the first consumer's declarations come in the order its own walk gives
 where each phase begins is `Closure.phaseStarts`: the declarations before the first are exactly
 those `roots` reach, which no later phase walks again. -/
 private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
-    (ex : Externs := {}) (phases : Array (Array Name) := #[]) :
-    CoreM (Closure × Array ClockFlow.Flow) := do
+    (ex : Externs := {}) (phases : Array (Array Name) := #[]) : CoreM Closure := do
   let env ← getEnv
   let mono := persistedMonoIndex env
   let mut c : Closure := {}
-  let mut clockFlows : Array ClockFlow.Flow := #[]
   let mut done : NameSet := {}
   let mut queue : Array Name := roots
   let mut phase := 0
@@ -1239,7 +1164,6 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
       c := { c with missing := pushNew c.missing n }
       continue
     let d := d?.get!
-    clockFlows := clockFlows.push (ClockFlow.ofDecl d)
     -- the wrapper folds onto its twin
     let mut d := d
     let mut userName := n
@@ -1248,14 +1172,11 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
       done := done.insert twin
       if let some dt := mono.findIn? env twin then
         d := dt
-        clockFlows := clockFlows.push (ClockFlow.ofDecl dt)
     | none =>
       -- a twin reached directly: its wrapper is the user-facing name
       userName := stripRedArg n
       if userName != n then
         done := done.insert userName
-        if let some wrapper := mono.findIn? env userName then
-          clockFlows := clockFlows.push (ClockFlow.ofDecl wrapper)
     let (t, st) := translateDecl env d userName (globalName userName) tn ex
     c := c.absorb t st
     for callee in st.calls do
@@ -1265,32 +1186,13 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
           if (mono.findIn? env (callee ++ `_redArg)).isSome then
             c := { c with wrapperRefs := pushNew c.wrapperRefs callee }
         queue := queue.push callee
-  return (c, clockFlows)
-
-/-- The mono type of a host reactor, `Effect4.Run.Reactor σ`, made by the compiler's own type
-translation (`toLCNFType`, then `toMonoType`): the type mono LCNF gives a reactor parameter, with
-`σ` as `lcAny`. `none` when the environment holds no `Effect4.Run.Reactor`. -/
-def reactorMonoType? : CoreM (Option Lean.Expr) := do
-  unless (← getEnv).contains `Effect4.Run.Reactor do return none
-  Meta.MetaM.run' do
-    Meta.withLocalDeclD `σ (.sort (.succ .zero)) fun σ => do
-      let base ← toLCNFType (mkApp (mkConst `Effect4.Run.Reactor) σ)
-      return some (← toMonoType base)
-
-/-- What the clock boundary reads besides the flows (`ClockFlow.Context`): the persisted mono
-declarations and the mono type of a host reactor. -/
-def clockContext : CoreM ClockFlow.Context := do
-  return { mono := persistedMonoIndex (← getEnv), reactor := ← reactorMonoType? }
+  return c
 
 /-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
-declarations, then each later root group of `phases` (`collectClosure`). Validate the final
-closure at the clock boundary before returning it. -/
+declarations, then each later root group of `phases` (`collectClosure`). -/
 def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
-    (ex : Externs := {}) (phases : Array (Array Name) := #[]) : CoreM Closure := do
-  let (closure, clockFlows) ← collectClosure roots cap tn ex phases
-  return { closure with
-    clockRefusals := ClockFlow.refusals (← clockContext) (← getEnv) (roots ++ phases.flatten)
-      clockFlows }
+    (ex : Externs := {}) (phases : Array (Array Name) := #[]) : CoreM Closure :=
+  collectClosure roots cap tn ex phases
 
 /-- `translateClosure`, with the carrier parameters inferred. A carrier that has no `to_list`
 operation can only be passed on as itself, so a generated callee that is handed one takes it as
@@ -1304,9 +1206,7 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
     CoreM (Closure × Externs × Array String) := do
   let mut ex := ex
   let mut inferred : Array String := #[]
-  let (initial, initialFlows) ← collectClosure roots cap tn ex phases
-  let mut closure := initial
-  let mut clockFlows := initialFlows
+  let mut closure ← collectClosure roots cap tn ex phases
   for _ in [:64] do
     if closure.wantedCargs.isEmpty then break
     for (g, i, c) in closure.wantedCargs do
@@ -1315,27 +1215,21 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
       unless prev.any (fun row => row.1 == CargParam.pos i) do
         ex := { ex with cargs := ex.cargs.insert key (prev ++ [(CargParam.pos i, [c])]) }
         inferred := inferred.push s!"carg {key} {i} {c}"
-    let (next, nextFlows) ← collectClosure roots cap tn ex phases
-    closure := next
-    clockFlows := nextFlows
+    closure ← collectClosure roots cap tn ex phases
   unless closure.wantedCargs.isEmpty do
     throwError "carrier parameters still unsettled after 64 rounds: {closure.wantedCargs}"
-  -- Carrier rows affect translation, so validate the graph of the settled result.
-  -- Checking intermediate results repeats the same analysis without returning an artifact.
-  return ({ closure with
-    clockRefusals := ClockFlow.refusals (← clockContext) (← getEnv) (roots ++ phases.flatten)
-      clockFlows }, ex, inferred)
+  return (closure, ex, inferred)
 
 /-- The closure translated again under other type names (`tn`), with its settled carrier table.
-The walk, the carrier inference and the clock boundary read no type name, so their results stay:
-each declaration is translated again, in the walk's order, and nothing is walked again. The
-generator's renaming pass took a whole walk with its inference and its clock analysis (LC-4). -/
+The walk and the carrier inference read no type name, so their results stay: each declaration is
+translated again, in the walk's order, and nothing is walked again. The generator's renaming pass
+took a whole walk with its inference (LC-4). -/
 def retranslate (c : Closure) (tn : TypeNames) (ex : Externs) : CoreM Closure := do
   let env ← getEnv
   let mono := persistedMonoIndex env
   let mut out : Closure :=
     { frontier := c.frontier, missing := c.missing, wrapperRefs := c.wrapperRefs,
-      clockRefusals := c.clockRefusals, phaseStarts := c.phaseStarts }
+      phaseStarts := c.phaseStarts }
   for t in c.decls do
     let some d := mono.findIn? env t.leanName
       | throwError "retranslate: no mono declaration for {t.leanName}"

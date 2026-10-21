@@ -31,69 +31,66 @@ val nth_error : 'a1 list -> int -> 'a1 option
 
 module Pos :
  sig
-  val succ : int -> int
+  val succ : Big_int_Z.big_int -> Big_int_Z.big_int
 
-  val add : int -> int -> int
+  val add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
-  val add_carry : int -> int -> int
+  val add_carry : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
-  val mul : int -> int -> int
+  val mul : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
-  val compare_cont : comparison -> int -> int -> comparison
+  val compare_cont :
+    comparison -> Big_int_Z.big_int -> Big_int_Z.big_int -> comparison
 
-  val compare : int -> int -> comparison
+  val compare : Big_int_Z.big_int -> Big_int_Z.big_int -> comparison
 
-  val eqb : int -> int -> bool
+  val eqb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
 
-  val iter_op : ('a1 -> 'a1 -> 'a1) -> int -> 'a1 -> 'a1
+  val iter_op : ('a1 -> 'a1 -> 'a1) -> Big_int_Z.big_int -> 'a1 -> 'a1
 
-  val to_nat : int -> int
+  val to_nat : Big_int_Z.big_int -> int
 
-  val of_succ_nat : int -> int
+  val of_succ_nat : int -> Big_int_Z.big_int
  end
 
 module Coq_Pos :
  sig
-  val succ : int -> int
+  val succ : Big_int_Z.big_int -> Big_int_Z.big_int
 
-  val add : int -> int -> int
+  val add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
-  val add_carry : int -> int -> int
+  val add_carry : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
-  val mul : int -> int -> int
+  val mul : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
  end
 
 module N :
  sig
-  val compare : int -> int -> comparison
+  val compare : Big_int_Z.big_int -> Big_int_Z.big_int -> comparison
 
-  val add : int -> int -> int
+  val add : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
-  val mul : int -> int -> int
+  val mul : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
-  val eqb : int -> int -> bool
+  val eqb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
 
-  val ltb : int -> int -> bool
+  val ltb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
  end
 
 module Z :
  sig
-  val mul : int -> int -> int
+  val mul : Big_int_Z.big_int -> Big_int_Z.big_int -> Big_int_Z.big_int
 
-  val compare : int -> int -> comparison
+  val compare : Big_int_Z.big_int -> Big_int_Z.big_int -> comparison
 
-  val ltb : int -> int -> bool
+  val ltb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
 
-  val eqb : int -> int -> bool
-
-  val to_nat : int -> int
-
-  val of_nat : int -> int
+  val eqb : Big_int_Z.big_int -> Big_int_Z.big_int -> bool
  end
 
-val n_of_digits : bool list -> int
+val n_of_digits : bool list -> Big_int_Z.big_int
 
-val n_of_ascii : char -> int
+val n_of_ascii : char -> Big_int_Z.big_int
 
 val length : string -> int
 
@@ -105,17 +102,17 @@ type 'a orderDec =
 
 module String :
  sig
-  val length : string -> int
+  val length : string -> Big_int_Z.big_int
 
-  val get : string -> int -> char
+  val get : string -> Big_int_Z.big_int -> char
 
   val _make : int -> char -> string
 
   val concat : string -> string list -> string
 
-  val make : int -> char -> string
+  val make : Big_int_Z.big_int -> char -> string
 
-  val sub : string -> int -> int -> string
+  val sub : string -> Big_int_Z.big_int -> Big_int_Z.big_int -> string
 
   val escaped : string -> string
 
@@ -136,17 +133,17 @@ type 'a orderDec0 =
 
 module Coq_String :
  sig
-  val length : string -> int
+  val length : string -> Big_int_Z.big_int
 
-  val get : string -> int -> char
+  val get : string -> Big_int_Z.big_int -> char
 
   val _make : int -> char -> string
 
   val concat : string -> string list -> string
 
-  val make : int -> char -> string
+  val make : Big_int_Z.big_int -> char -> string
 
-  val sub : string -> int -> int -> string
+  val sub : string -> Big_int_Z.big_int -> Big_int_Z.big_int -> string
 
   val escaped : string -> string
 
@@ -161,9 +158,9 @@ module Coq_String :
   val order_dec : string orderDec0
  end
 
-type service_name = int
+type service_name = Big_int_Z.big_int
 
-type service_type_code = int
+type service_type_code = Big_int_Z.big_int
 
 module Coq_service_key :
  sig
@@ -214,7 +211,7 @@ val decide :
   option
 
 type 'x rowE =
-| Row of int * Eff_types.Val.t
+| Row of Big_int_Z.big_int * Eff_types.Val.t
 
 type 'x storeE =
 | RefMake of Eff_types.Val.t
@@ -291,17 +288,17 @@ val route :
   sum1 -> ('a1 * 'a2) -> (__ * ('a1 * 'a2)) option
 
 val fn_host :
-  (int -> Eff_types.Val.t -> 'a1 -> (Lane_eval.exitv * 'a1) option) -> __
-  rowE -> 'a1 -> (__ * 'a1) option
+  (Big_int_Z.big_int -> Eff_types.Val.t -> 'a1 -> (Lane_eval.exitv * 'a1)
+  option) -> __ rowE -> 'a1 -> (__ * 'a1) option
 
 type step =
-| Called of int * Eff_types.Val.t * Lane_eval.exitv
+| Called of Big_int_Z.big_int * Eff_types.Val.t * Lane_eval.exitv
 | Celled of string * Eff_types.Val.t * Eff_types.Val.t
 
 type stop =
 | Finished of Lane_eval.exitv
 | Cut
-| Waiting of int * Eff_types.Val.t
+| Waiting of Big_int_Z.big_int * Eff_types.Val.t
 | Refused of string * Eff_types.Val.t
 
 val step_of : (__ storeE, __ rowE, 'a1) sum1 -> 'a1 -> step
@@ -322,6 +319,6 @@ val cells_fn :
 
 val lane_run :
   (string -> Eff_types.Val.t -> Eff_types.Val.t -> 'a1 ->
-  (Eff_types.Val.t * 'a1) option) -> (int -> Eff_types.Val.t -> 'a2 ->
-  (Lane_eval.exitv * 'a2) option) -> int -> Eff_types.NativeOp.t
+  (Eff_types.Val.t * 'a1) option) -> (Big_int_Z.big_int -> Eff_types.Val.t ->
+  'a2 -> (Lane_eval.exitv * 'a2) option) -> int -> Eff_types.NativeOp.t
   Eff_types.Eff.t -> 'a1 -> 'a2 -> (step list * stop) * ('a1 * 'a2)

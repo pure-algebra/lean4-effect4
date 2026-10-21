@@ -19,10 +19,10 @@
         exception.                                                         by construction *)
 
 type exit =
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit) Eff_types.Exit.t
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit) Eff_types.Exit.t
 
 type completion =
-  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, int, unit) Eff_types.Completion.t
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit) Eff_types.Completion.t
 
 type stop =
   | Finished of exit (** the root ended with this exit *)

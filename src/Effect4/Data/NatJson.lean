@@ -15,7 +15,7 @@ path into it, the place a reader refuses at, and its compact text.
   the OCaml route lowers it with no binary64 arithmetic. A JSON number that the tree does not
   hold as a natural (a negative number, a fraction, an exponent, or a natural past the host's
   integers) is a `numeral` with the text it was written in, and every reader refuses it at its
-  place. `NatJson.limit` is the largest natural the profile reads.
+  place. `safeBound` is the largest natural the profile reads.
 - **`JsonStep`** is one step into a value: an object's entry by its key, or an array's element
   by its index. `NatJson.at?` follows a path of steps. A key reaches the object's first entry
   with that name, as every reader of an entry does.
@@ -99,11 +99,15 @@ def JsonSite.relative (base : List JsonStep) : JsonSite → JsonSite
     | none => .missing parent field
   | .schema path => .schema path
 
-namespace NatJson
+/-- **The safe integer bound**, `2^53 - 1`: the largest natural every JSON client reads exactly
+(I-JSON's safe integer bound, RFC 7493 §2.2), JavaScript's `Number.MAX_SAFE_INTEGER`. It is the one
+spelling of the number. The rc.112 profile's bound is `some safeBound` (`Program.rc112`; a
+profile's bound has one owner, `ProfileData.natBound`). The tool's JSON reads naturals up to it
+(`Store.ShapeJson`), and the schema's natural and integer wires write inside it
+(`Schema.Codec`). -/
+def safeBound : Nat := 9007199254740991
 
-/-- **The largest natural the profile reads**: `2^53 - 1`, I-JSON's safe integer bound (RFC 7493
-§2.2), which every JSON client reads exactly. -/
-def limit : Nat := 9007199254740991
+namespace NatJson
 
 /-- The entry of an object with a name: the first. -/
 def entryOf (name : String) : List (String × NatJson) → Option NatJson

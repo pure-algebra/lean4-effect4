@@ -210,22 +210,22 @@ let rec chain (n : int) : Ty.NativeOp.t Ty.Eff.t =
   then Ty.Eff.Succeed (Ty.Term.Lit Ty.Lit.Unit)
   else
     Ty.Eff.Bind
-      ( Ty.Eff.Perform (Ty.NativeOp.RefMake, Ty.Term.Lit (Ty.Lit.Nat (n - 1)))
+      ( Ty.Eff.Perform (Ty.NativeOp.RefMake, Ty.Term.Lit (Ty.Lit.Nat (Z.of_int (n - 1))))
       , chain (n - 1) )
 ;;
 
 (* M nested `yieldNow`, then `succeed 0`: the body every forked fiber runs (W4's M axis). *)
 let rec yields (m : int) : Ty.NativeOp.t Ty.Eff.t =
   if m <= 0
-  then Ty.Eff.Succeed (Ty.Term.Lit (Ty.Lit.Nat 0))
-  else Ty.Eff.Bind (Ty.Eff.YieldNow 0, yields (m - 1))
+  then Ty.Eff.Succeed (Ty.Term.Lit (Ty.Lit.Nat (Z.of_int 0)))
+  else Ty.Eff.Bind (Ty.Eff.YieldNow (Z.of_int 0), yields (m - 1))
 ;;
 
 (* M nested `sync`, then `succeed 0`. *)
 let rec syncs (m : int) : Ty.NativeOp.t Ty.Eff.t =
   if m <= 0
-  then Ty.Eff.Succeed (Ty.Term.Lit (Ty.Lit.Nat 0))
-  else Ty.Eff.Bind (Ty.Eff.Sync (Ty.Term.Lit (Ty.Lit.Nat 0)), syncs (m - 1))
+  then Ty.Eff.Succeed (Ty.Term.Lit (Ty.Lit.Nat (Z.of_int 0)))
+  else Ty.Eff.Bind (Ty.Eff.Sync (Ty.Term.Lit (Ty.Lit.Nat (Z.of_int 0))), syncs (m - 1))
 ;;
 
 (* `forkN N M`: N children, each running [body M] (A1 §6.1 W4 with the M axis of probe
@@ -251,7 +251,8 @@ let rec forkn_then (n : int) (tail : Ty.NativeOp.t Ty.Eff.t) : Ty.NativeOp.t Ty.
   else
     Ty.Eff.Bind
       ( Ty.Eff.WithFiber
-          (Ty.ActionTerm.Fork (Ty.Eff.Succeed (Ty.Term.Lit (Ty.Lit.Nat 0)), fork_opts))
+          (Ty.ActionTerm.Fork
+             (Ty.Eff.Succeed (Ty.Term.Lit (Ty.Lit.Nat (Z.of_int 0))), fork_opts))
       , forkn_then (n - 1) tail )
 ;;
 
@@ -262,15 +263,17 @@ let rec forkn_then (n : int) (tail : Ty.NativeOp.t Ty.Eff.t) : Ty.NativeOp.t Ty.
    against this one's 43, and 4 host decisions under the event-loop rule against 3. *)
 let p_two_bridge : Ty.NativeOp.t Ty.Eff.t =
   let child n =
-    Ty.Eff.Bind (Ty.Eff.YieldNow 0, Ty.Eff.Succeed (Ty.Term.Lit (Ty.Lit.Nat n)))
+    Ty.Eff.Bind
+      (Ty.Eff.YieldNow Z.zero, Ty.Eff.Succeed (Ty.Term.Lit (Ty.Lit.Nat (Z.of_int n))))
   in
   Ty.Eff.Bind
     ( Ty.Eff.WithFiber (Ty.ActionTerm.Fork (child 1, fork_opts))
     , Ty.Eff.Bind
         ( Ty.Eff.WithFiber (Ty.ActionTerm.Fork (child 2, fork_opts))
         , Ty.Eff.Bind
-            ( Ty.Eff.AwaitFiber (Ty.Term.Var 1, Ty.ObserverMode.AwaitValue)
-            , Ty.Eff.AwaitFiber (Ty.Term.Var 1, Ty.ObserverMode.AwaitValue) ) ) )
+            ( Ty.Eff.AwaitFiber (Ty.Term.Var (Z.of_int 1), Ty.ObserverMode.AwaitValue)
+            , Ty.Eff.AwaitFiber (Ty.Term.Var (Z.of_int 1), Ty.ObserverMode.AwaitValue) )
+        ) )
 ;;
 
 (* ==================================================================== the corpora *)
@@ -671,7 +674,7 @@ let sched_engine : (F.t, F.decision) E4_sched.engine =
   ; answer =
       (fun m ->
         match F.answer m with
-        | E4_engine.Outside_profile why -> raise (E4_clock.Profile_refusal why)
+        | E4_engine.Outside_profile why -> raise (Lcnf_crossing.Refused why)
         | E4_engine.Finished -> E4_sched.Finished
         | E4_engine.Suspended _ -> E4_sched.Suspended
         | E4_engine.Refused _ -> E4_sched.Refused

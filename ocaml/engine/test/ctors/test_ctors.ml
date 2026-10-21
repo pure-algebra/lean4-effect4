@@ -8,7 +8,7 @@
    (`Array.replicate`, `uget`, `uset`): insertion, lookup, an update, a kept version and two
    siblings, in a frozen chunk and in the open one. The fixture ctors.txt beside this file is Lean's (write.lean): one
    line per call, the call and its answer.
-   Depends on: Ctors_gen, Lcnf_array (an `Array` and a `ByteArray` are its vectors).
+   Depends on: Ctors_gen, Lcnf_array (an `Array` and a `ByteArray` are its vectors), Zarith.
 
    Properties:
    C1  Every function of the lane compiles: no constructor or projection of a natively spelled
@@ -19,38 +19,50 @@
 
 open Ctors_gen
 
+(* A natural or an integer is Zarith's `Z.t` (M4): written from an int literal, read as its
+   decimal. A word of `int`'s range (`UInt8` to `UInt32`, `Char`) stays an `int`. *)
+let z = Z.of_int
+let n = Z.to_string
 let ints xs = "[" ^ String.concat ", " (List.map string_of_int xs) ^ "]"
+let nats xs = "[" ^ String.concat ", " (List.map Z.to_string xs) ^ "]"
+let pairs xs = List.map (fun (k, v) -> z k, z v) xs
 
 (* An `Array` and a `ByteArray` are a vector (Lcnf_array): built from a list, read as one. *)
 let arr xs = Lcnf_array.of_list xs
 let vec v = ints (Lcnf_array.to_list v)
+let nat_vec v = nats (Lcnf_array.to_list v)
 
 (* The hash map's answers, written as the fixture writes them: a missing value is `-`. *)
 let opt = function
   | None -> "-"
-  | Some n -> string_of_int n
+  | Some v -> Z.to_string v
 ;;
 
-let bucket b = String.concat "," (List.map (fun (k, v) -> Printf.sprintf "%d:%d" k v) b)
-let squares = List.init 1000 (fun k -> k, k * k)
+let bucket b =
+  String.concat
+    ","
+    (List.map (fun (k, v) -> Printf.sprintf "%s:%s" (Z.to_string k) (Z.to_string v)) b)
+;;
+
+let squares = List.init 1000 (fun k -> z k, z (k * k))
 let b = string_of_bool
 let i = string_of_int
 
 let answers =
-  [ "intOfNat 5 = " ^ i (test_codegen_constructor_lane_int_of_nat 5)
-  ; "intNegSucc 4 = " ^ i (test_codegen_constructor_lane_int_neg_succ 4)
-  ; "intMatch -3 = " ^ i (test_codegen_constructor_lane_int_match (-3))
-  ; "intMatch 7 = " ^ i (test_codegen_constructor_lane_int_match 7)
-  ; "intMatchZero 0 = " ^ b (test_codegen_constructor_lane_int_match_zero 0)
-  ; "intMatchZero -1 = " ^ b (test_codegen_constructor_lane_int_match_zero (-1))
-  ; "intMatchZero 2 = " ^ b (test_codegen_constructor_lane_int_match_zero 2)
-  ; "natSucc 4 = " ^ i (test_codegen_constructor_lane_nat_succ 4)
-  ; "natZero = " ^ i test_codegen_constructor_lane_nat_zero
-  ; "natMatch 0 = " ^ i (test_codegen_constructor_lane_nat_match 0)
-  ; "natMatch 5 = " ^ i (test_codegen_constructor_lane_nat_match 5)
-  ; "arrMk = " ^ vec (test_codegen_constructor_lane_arr_mk [ 1; 2 ])
-  ; "arrToList = " ^ ints (test_codegen_constructor_lane_arr_to_list (arr [ 3; 4 ]))
-  ; "arrMatch = " ^ i (test_codegen_constructor_lane_arr_match (arr [ 1; 2; 3 ]))
+  [ "intOfNat 5 = " ^ n (test_codegen_constructor_lane_int_of_nat (z 5))
+  ; "intNegSucc 4 = " ^ n (test_codegen_constructor_lane_int_neg_succ (z 4))
+  ; "intMatch -3 = " ^ n (test_codegen_constructor_lane_int_match (z (-3)))
+  ; "intMatch 7 = " ^ n (test_codegen_constructor_lane_int_match (z 7))
+  ; "intMatchZero 0 = " ^ b (test_codegen_constructor_lane_int_match_zero (z 0))
+  ; "intMatchZero -1 = " ^ b (test_codegen_constructor_lane_int_match_zero (z (-1)))
+  ; "intMatchZero 2 = " ^ b (test_codegen_constructor_lane_int_match_zero (z 2))
+  ; "natSucc 4 = " ^ n (test_codegen_constructor_lane_nat_succ (z 4))
+  ; "natZero = " ^ n test_codegen_constructor_lane_nat_zero
+  ; "natMatch 0 = " ^ n (test_codegen_constructor_lane_nat_match (z 0))
+  ; "natMatch 5 = " ^ n (test_codegen_constructor_lane_nat_match (z 5))
+  ; "arrMk = " ^ nat_vec (test_codegen_constructor_lane_arr_mk [ z 1; z 2 ])
+  ; "arrToList = " ^ nats (test_codegen_constructor_lane_arr_to_list (arr [ z 3; z 4 ]))
+  ; "arrMatch = " ^ n (test_codegen_constructor_lane_arr_match (arr [ z 1; z 2; z 3 ]))
   ; "baMk = " ^ vec (test_codegen_constructor_lane_ba_mk (arr [ 5; 6 ]))
   ; "baData = " ^ vec (test_codegen_constructor_lane_ba_data (arr [ 1; 2 ]))
   ; "baMatch = " ^ vec (test_codegen_constructor_lane_ba_match (arr [ 7 ]))
@@ -58,63 +70,88 @@ let answers =
   ; "strMatch = " ^ vec (test_codegen_constructor_lane_str_match "ab")
   ; "strOfBytes = "
     ^ test_codegen_constructor_lane_str_of_bytes (arr [ 104; 195; 169 ]) ()
-  ; "charOfNat 65 = " ^ i (test_codegen_constructor_lane_char_of_nat 65)
-  ; "charOfNat 55296 = " ^ i (test_codegen_constructor_lane_char_of_nat 55296)
+  ; "charOfNat 65 = " ^ i (test_codegen_constructor_lane_char_of_nat (z 65))
+  ; "charOfNat 55296 = " ^ i (test_codegen_constructor_lane_char_of_nat (z 55296))
   ; "charVal = " ^ i (test_codegen_constructor_lane_char_val (Char.code 'z'))
   ; "charMatch = " ^ i (test_codegen_constructor_lane_char_match (Char.code 'A'))
-  ; "u8OfBitVec = " ^ i (test_codegen_constructor_lane_u8_of_bit_vec 200)
-  ; "u8Match = " ^ i (test_codegen_constructor_lane_u8_match 201)
-  ; "u16OfBitVec = " ^ i (test_codegen_constructor_lane_u16_of_bit_vec 60000)
-  ; "u16Match = " ^ i (test_codegen_constructor_lane_u16_match 60001)
-  ; "u32OfBitVec = " ^ i (test_codegen_constructor_lane_u32_of_bit_vec 4000000000)
-  ; "u32Match = " ^ i (test_codegen_constructor_lane_u32_match 4000000001)
-  ; "u64OfBitVec = " ^ i (test_codegen_constructor_lane_u64_of_bit_vec 123456789012)
-  ; "u64Match = " ^ i (test_codegen_constructor_lane_u64_match 123456789013)
-  ; "bvMatch = " ^ i (test_codegen_constructor_lane_bv_match 7)
-  ; "finMk = " ^ i (test_codegen_constructor_lane_fin_mk 3 ())
-  ; "finMatch = " ^ i (test_codegen_constructor_lane_fin_match 9)
-  ; "subMk = " ^ i (test_codegen_constructor_lane_sub_mk 4 ())
-  ; "subMatch = " ^ i (test_codegen_constructor_lane_sub_match 6)
-  ; "subVal = " ^ i (test_codegen_constructor_lane_sub_val 8)
-  ; "optMatch none = " ^ i (test_codegen_constructor_lane_opt_match None)
-  ; "optMatch some = " ^ i (test_codegen_constructor_lane_opt_match (Some 4))
-  ; "listMatch = " ^ i (test_codegen_constructor_lane_list_match [ 9; 1 ])
-  ; "prodMatch = " ^ i (test_codegen_constructor_lane_prod_match (5, "x"))
-  ; "exceptMatch ok = " ^ i (test_codegen_constructor_lane_except_match (Ok 3))
-  ; "exceptMatch error = " ^ i (test_codegen_constructor_lane_except_match (Error "e"))
+  ; "u8OfBitVec = " ^ i (test_codegen_constructor_lane_u8_of_bit_vec (z 200))
+  ; "u8Match = " ^ n (test_codegen_constructor_lane_u8_match 201)
+  ; "u16OfBitVec = " ^ i (test_codegen_constructor_lane_u16_of_bit_vec (z 60000))
+  ; "u16Match = " ^ n (test_codegen_constructor_lane_u16_match 60001)
+  ; "u32OfBitVec = " ^ i (test_codegen_constructor_lane_u32_of_bit_vec (z 4000000000))
+  ; "u32Match = " ^ n (test_codegen_constructor_lane_u32_match 4000000001)
+  ; "u64OfBitVec = " ^ n (test_codegen_constructor_lane_u64_of_bit_vec (z 123456789012))
+  ; "u64Match = " ^ n (test_codegen_constructor_lane_u64_match (z 123456789013))
+  ; "bvMatch = " ^ n (test_codegen_constructor_lane_bv_match (z 7))
+  ; "finMk = " ^ n (test_codegen_constructor_lane_fin_mk (z 3) ())
+  ; "finMatch = " ^ n (test_codegen_constructor_lane_fin_match (z 9))
+  ; "subMk = " ^ n (test_codegen_constructor_lane_sub_mk (z 4) ())
+  ; "subMatch = " ^ n (test_codegen_constructor_lane_sub_match (z 6))
+  ; "subVal = " ^ n (test_codegen_constructor_lane_sub_val (z 8))
+  ; "optMatch none = " ^ n (test_codegen_constructor_lane_opt_match None)
+  ; "optMatch some = " ^ n (test_codegen_constructor_lane_opt_match (Some (z 4)))
+  ; "listMatch = " ^ n (test_codegen_constructor_lane_list_match [ z 9; z 1 ])
+  ; "prodMatch = " ^ n (test_codegen_constructor_lane_prod_match (z 5, "x"))
+  ; "exceptMatch ok = " ^ n (test_codegen_constructor_lane_except_match (Ok (z 3)))
+  ; "exceptMatch error = " ^ n (test_codegen_constructor_lane_except_match (Error "e"))
   ; "exceptMk true = "
-    ^ i
+    ^ n
         (test_codegen_constructor_lane_except_match
            (test_codegen_constructor_lane_except_mk true))
   ; "exceptMk false = "
-    ^ i
+    ^ n
         (test_codegen_constructor_lane_except_match
            (test_codegen_constructor_lane_except_mk false))
-  ; "unitMatch = " ^ i (test_codegen_constructor_lane_unit_match ())
-  ; "shadeMatch = " ^ i (test_codegen_constructor_lane_shade_match (Shade_dark 4))
+  ; "unitMatch = " ^ n (test_codegen_constructor_lane_unit_match ())
+  ; "shadeMatch = " ^ n (test_codegen_constructor_lane_shade_match (Shade_dark (z 4)))
   ; "ptY = "
-    ^ i (test_codegen_constructor_lane_pt_y (test_codegen_constructor_lane_pt_mk 1 (-2)))
+    ^ n
+        (test_codegen_constructor_lane_pt_y
+           (test_codegen_constructor_lane_pt_mk (z 1) (z (-2))))
   ; "mapFind bound = "
-    ^ opt (test_codegen_constructor_lane_map_find 4 [ 1, 10; 7, 70; 12, 120 ] 7)
+    ^ opt
+        (test_codegen_constructor_lane_map_find
+           (z 4)
+           (pairs [ 1, 10; 7, 70; 12, 120 ])
+           (z 7))
   ; "mapFind absent = "
-    ^ opt (test_codegen_constructor_lane_map_find 4 [ 1, 10; 7, 70; 12, 120 ] 5)
+    ^ opt
+        (test_codegen_constructor_lane_map_find
+           (z 4)
+           (pairs [ 1, 10; 7, 70; 12, 120 ])
+           (z 5))
   ; "mapFind updated = "
-    ^ opt (test_codegen_constructor_lane_map_find 4 [ 1, 10; 6, 60; 1, 11 ] 1)
+    ^ opt
+        (test_codegen_constructor_lane_map_find
+           (z 4)
+           (pairs [ 1, 10; 6, 60; 1, 11 ])
+           (z 1))
   ; "mapBuckets = "
     ^ String.concat
         " | "
         (List.map
            bucket
-           (test_codegen_constructor_lane_map_buckets 2 [ 1, 10; 2, 20; 4, 40; 1, 11 ]))
-  ; (let before, after = test_codegen_constructor_lane_map_retained 4 [ 1, 10 ] 1 99 in
+           (test_codegen_constructor_lane_map_buckets
+              (z 2)
+              (pairs [ 1, 10; 2, 20; 4, 40; 1, 11 ])))
+  ; (let before, after =
+       test_codegen_constructor_lane_map_retained (z 4) (pairs [ 1, 10 ]) (z 1) (z 99)
+     in
      "mapRetained = " ^ opt before ^ " " ^ opt after)
-  ; (let a, (b, shared) = test_codegen_constructor_lane_map_siblings 300 [ 3, 30 ] 8 in
+  ; (let a, (b, shared) =
+       test_codegen_constructor_lane_map_siblings (z 300) (pairs [ 3, 30 ]) (z 8)
+     in
      "mapSiblings frozen = " ^ opt a ^ " " ^ opt b ^ " " ^ opt shared)
-  ; (let a, (b, shared) = test_codegen_constructor_lane_map_siblings 300 [ 3, 30 ] 290 in
+  ; (let a, (b, shared) =
+       test_codegen_constructor_lane_map_siblings (z 300) (pairs [ 3, 30 ]) (z 290)
+     in
      "mapSiblings open = " ^ opt a ^ " " ^ opt b ^ " " ^ opt shared)
-  ; "mapLarge frozen = " ^ opt (test_codegen_constructor_lane_map_find 300 squares 777)
-  ; "mapLarge open = " ^ opt (test_codegen_constructor_lane_map_find 300 squares 290)
-  ; "mapLarge absent = " ^ opt (test_codegen_constructor_lane_map_find 300 squares 1000)
+  ; "mapLarge frozen = "
+    ^ opt (test_codegen_constructor_lane_map_find (z 300) squares (z 777))
+  ; "mapLarge open = "
+    ^ opt (test_codegen_constructor_lane_map_find (z 300) squares (z 290))
+  ; "mapLarge absent = "
+    ^ opt (test_codegen_constructor_lane_map_find (z 300) squares (z 1000))
   ]
 ;;
 

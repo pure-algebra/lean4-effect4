@@ -153,17 +153,15 @@ on this evaluator and in compiled OCaml (`Conform.Effect4.Normalization`). The l
 primitives and the target's own library are not read: they are the evaluator's primitives
 (`Target.applyPrim`), named assumptions. -/
 
-/-- The bindings every target program starts from: `max_int` for the profile's word, and the
-runtime library's functions that `OCaml5.Lcnf.support` defines, each under its library path. A
-support function called from another binding starts from its parameters
-alone (`Target.applyNamed`), so `max_int` is a binding of the program and not of a caller's
-environment. A body the reader refuses, a name bound twice and a name the evaluator already
-answers as a primitive are errors here, never missing bindings. -/
-def supportBinds (word : Target.Word := { bits := 63 })
-    (support : List OCaml5.Lcnf.Support := OCaml5.Lcnf.support) :
+/-- The bindings every target program starts from: the runtime library's functions that
+`OCaml5.Lcnf.support` defines, each under its library path. A support function called from
+another binding starts from its parameters alone (`Target.applyNamed`). A body the reader
+refuses, a name bound twice and a name the evaluator already answers as a primitive are errors
+here, never missing bindings. Until M4 the program also bound `max_int`, at which the natural
+helpers stopped. -/
+def supportBinds (support : List OCaml5.Lcnf.Support := OCaml5.Lcnf.support) :
     Except String (Std.HashMap String (List String × Target.Expr)) := do
   let mut binds : Std.HashMap String (List String × Target.Expr) := {}
-  binds := binds.insert "max_int" ([], .int word.maxInt)
   for s in support do
     if isPrimName s.name then throw s!"support `{s.name}`: the evaluator has a primitive of this name"
     let (name, ps, body) ← (ofBind s.bind).mapError fun why => s!"support `{s.name}`: {why}"
@@ -176,7 +174,7 @@ declarations. A declaration that takes a name already bound is refused. -/
 def assemble (decls : Array OCaml5.Lcnf.Translated) (word : Target.Word := { bits := 63 })
     (support : List OCaml5.Lcnf.Support := OCaml5.Lcnf.support) :
     Except String Target.Program := do
-  let mut binds ← supportBinds word support
+  let mut binds ← supportBinds support
   for d in decls do
     let (name, ps, body) ← (ofBind d.bind).mapError fun why => s!"{d.leanName}: {why}"
     if binds.contains name then throw s!"{d.leanName}: `{name}` is already bound"

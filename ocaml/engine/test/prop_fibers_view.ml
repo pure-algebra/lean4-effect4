@@ -14,7 +14,6 @@
    Exit code 0 iff every line passed. *)
 
 open Effect4_engine
-module V = E4_fibers_view
 
 (* The seam's own text (src/OCaml5/Lcnf/Externs.lean, `carrierSignatures`), so this file fails
    to compile if the carrier stops satisfying it. *)
@@ -25,21 +24,44 @@ module type FIBERS = sig
   type ('a, 'x) t
 
   val empty : ('a, 'x) t
-  val find_opt : int -> ('a, 'x) t -> 'a option
-  val set : exit_of:('a -> 'x option) -> int -> 'a -> ('a, 'x) t -> ('a, 'x) t
-  val add : exit_of:('a -> 'x option) -> int -> 'a -> ('a, 'x) t -> ('a, 'x) t
+  val find_opt : Z.t -> ('a, 'x) t -> 'a option
+  val set : exit_of:('a -> 'x option) -> Z.t -> 'a -> ('a, 'x) t -> ('a, 'x) t
+  val add : exit_of:('a -> 'x option) -> Z.t -> 'a -> ('a, 'x) t -> ('a, 'x) t
   val map : exit_of:('a -> 'x option) -> ('a -> 'a) -> ('a, 'x) t -> ('a, 'x) t
-  val for_all : (int -> 'a -> bool) -> ('a, 'x) t -> bool
-  val completed : ('a, 'x) t -> (int * 'x) list
-  val cardinal : ('a, 'x) t -> int
-  val bindings : ('a, 'x) t -> (int * 'a) list
+  val for_all : (Z.t -> 'a -> bool) -> ('a, 'x) t -> bool
+  val completed : ('a, 'x) t -> (Z.t * 'x) list
+  val cardinal : ('a, 'x) t -> Z.t
+  val bindings : ('a, 'x) t -> (Z.t * 'a) list
   val to_list : ('a, 'x) t -> 'a list
-  val of_list : exit_of:('a -> 'x option) -> (int * 'a) list -> ('a, 'x) t
+  val of_list : exit_of:('a -> 'x option) -> (Z.t * 'a) list -> ('a, 'x) t
 end
 
 module _ : FIBERS = E4_fibers_view
 
 [@@@warning "+32"]
+
+(* The laws drive the carrier at the host's ints, each id a Lean natural exactly (`Z.of_int`,
+   M4), and read every natural back (`Z.to_int`). `shared` is the carrier's own completed list,
+   for the sharing laws (FV3, FV8): the view's `completed` is a fresh list of ints. *)
+module V = struct
+  module C = E4_fibers_view
+
+  type ('a, 'x) t = ('a, 'x) C.t
+
+  let z = Z.of_int
+  let empty = C.empty
+  let find_opt k t = C.find_opt (z k) t
+  let set ~exit_of k v t = C.set ~exit_of (z k) v t
+  let add ~exit_of k v t = C.add ~exit_of (z k) v t
+  let map = C.map
+  let for_all f t = C.for_all (fun k v -> f (Z.to_int k) v) t
+  let completed t = List.map (fun (k, x) -> Z.to_int k, x) (C.completed t)
+  let shared = C.completed
+  let cardinal t = Z.to_int (C.cardinal t)
+  let bindings t = List.map (fun (k, v) -> Z.to_int k, v) (C.bindings t)
+  let to_list = C.to_list
+  let of_list ~exit_of l = C.of_list ~exit_of (List.map (fun (k, v) -> z k, v) l)
+end
 
 let check = E4_check.check
 let argue name why = Printf.printf "PASS %s [%s]\n" name why
@@ -181,7 +203,7 @@ let fv2 () =
             let t' = V.set ~exit_of id f t in
             if V.bindings t' <> V.bindings t then ok := false;
             if V.completed t' <> V.completed t then ok := false;
-            if not (V.completed t' == V.completed t) then ok := false;
+            if not (V.shared t' == V.shared t) then ok := false;
             if V.completed t' <> lean_completed (lean_update l f) then ok := false;
             if V.cardinal t' <> n then ok := false)
          [ -1; n; n + 5; 100000 ])
@@ -206,9 +228,9 @@ let fv3 () =
     if V.completed !t <> scan !t then ok := false
   done;
   (* spawn's child has exit = none (spawn (src/Effect4/Machine/Fibers.lean)): the view does not move *)
-  let before = V.completed !t in
+  let before = V.shared !t in
   let after = V.add ~exit_of 500 { id = 500; exit_ = None; observers = [] } !t in
-  if not (V.completed after == before) then ok := false;
+  if not (V.shared after == before) then ok := false;
   check
     "FV3 add is spawn's append; a child with no exit leaves the view PHYSICALLY alone"
     !ok
@@ -417,7 +439,7 @@ let fv8 () =
             let f' = { f with observers = [ 9 ] } in
             let t' = V.set ~exit_of id f' t in
             incr total;
-            if V.completed t' == V.completed t then incr shares else ok := false;
+            if V.shared t' == V.shared t then incr shares else ok := false;
             (* and a genuine exit: the view must move *)
             let t'' = V.set ~exit_of id { f with exit_ = Some (1000 + id) } t in
             if List.assoc_opt id (V.completed t'') <> Some (1000 + id) then ok := false)

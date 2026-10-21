@@ -21,7 +21,7 @@
  (modules closure_gen)
  (flags
   (:standard -w @55))
- (libraries effect4_clock effect4_eff effect4_lcnf))
+ (libraries zarith effect4_eff effect4_lcnf))
 
 ; The installed face of the closure: Api_gen is `include Closure_gen`, and its interface
 ; (api_gen.mli, read off the closure's typed tree) keeps the public and linkage roots, declares
@@ -33,7 +33,7 @@
  (modules api_gen)
  (flags
   (:standard -w @55))
- (libraries effect4_closure effect4_clock effect4_eff effect4_lcnf))
+ (libraries effect4_closure zarith effect4_eff effect4_lcnf))
 
 (executable
  (name api_check)

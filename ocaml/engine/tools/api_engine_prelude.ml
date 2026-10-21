@@ -26,6 +26,8 @@
    P4  Record parameters carry an `(_, …, _) t` annotation wherever a field name is claimed by
        more than one generated record (`id`, `state`, `scope`, `key`, `interruptible`, …), so
        OCaml's label disambiguation never has to guess.
+   P5  A Lean natural is Zarith's `Z.t` (the `Nat` type row, M4): every natural a row writes is
+       `Z.zero`, `Z.one` or `Z.succ`, and every one it compares goes through `Z.equal`.
    --------------------------------------------------------------------------------------- *)
 
 (* -- carriers of a whole store ---------------------------------------------------------- *)
@@ -39,11 +41,11 @@ let sh_stores_empty : stores =
   ; scopes = M.empty
   ; memo = []
   ; timers =
-      { now = E4_clock.zero
-      ; wake = { waiters = []; batch = None; phase = 0 }
+      { now = Z.zero
+      ; wake = { waiters = []; batch = None; phase = Z.zero }
       ; target = None
       }
-  ; next_name = 0
+  ; next_name = Z.zero
   ; externals = []
   }
 ;;
@@ -52,9 +54,9 @@ let sh_stores_empty : stores =
 let sh_machine_empty state =
   { fibers = F.empty
   ; races = []
-  ; next_id = 0
-  ; next_token = 0
-  ; next_race = 0
+  ; next_id = Z.zero
+  ; next_token = Z.zero
+  ; next_race = Z.zero
   ; middleware_installed = false
   ; armed = []
   ; state
@@ -120,7 +122,7 @@ let sh_machine_completed_exits m = F.completed m.fibers
    `RunFiber.make` were callees of `Api.load` and of `spawn`, which this table deletes, and
    the generic `RunFiber.make` takes the `FiberCore` record — a `@[reducible] instance` that
    the mono phase never emits — as its first argument. *)
-let sh_run_fiber_make id current interruptible (budget : int * bool) context =
+let sh_run_fiber_make id current interruptible (budget : Z.t * bool) context =
   { id
   ; frame =
       ({ current
@@ -135,7 +137,7 @@ let sh_run_fiber_make id current interruptible (budget : int * bool) context =
   ; pending = []
   ; finalizing = None
   ; exit_ = None
-  ; current_op_count = 0
+  ; current_op_count = Z.zero
   ; max_ops_before_yield = fst budget
   ; prevent_yield = snd budget
   ; yield_override = None
@@ -155,9 +157,9 @@ let sh_run_fiber_make id current interruptible (budget : int * bool) context =
 let sh_api_load compile ectx interp program fuel =
   let m = sh_machine_empty sh_stores_empty in
   let root =
-    sh_run_fiber_make 0 (compile program fuel []) true (interp.budget_of ectx) ectx
+    sh_run_fiber_make Z.zero (compile program fuel []) true (interp.budget_of ectx) ectx
   in
-  { m with fibers = F.add ~exit_of:sh_fiber_exit 0 root F.empty; next_id = 1 }
+  { m with fibers = F.add ~exit_of:sh_fiber_exit Z.zero root F.empty; next_id = Z.one }
 ;;
 
 (* Effect4.Machine.spawn, spawn (src/Effect4/Machine/Fibers.lean): the child and its fork record
@@ -193,7 +195,7 @@ let sh_spawn
   let m =
     { m with
       fibers = F.add ~exit_of:sh_fiber_exit child_id child m.fibers
-    ; next_id = m.next_id + 1
+    ; next_id = Z.succ m.next_id
     ; forks =
         m.forks
         @ [ ({ child = child_id; parent = parent.id; daemon = options.daemon; site }
@@ -238,7 +240,7 @@ let sh_spawn_generic
   let m =
     { m with
       fibers = F.add ~exit_of:sh_fiber_exit child_id child m.fibers
-    ; next_id = m.next_id + 1
+    ; next_id = Z.succ m.next_id
     ; forks =
         m.forks
         @ [ ({ child = child_id; parent = parent.id; daemon = options.daemon; site }
@@ -255,8 +257,8 @@ let sh_spawn_generic
    here rather than called, because its own specialisation is a callee of the map's and is
    deleted with it.  The third argument is `List.mapTR.loop`'s accumulator, always `[]`. *)
 let sh_drop_observer_keep token = function
-  | Observer_resumeAwait (_, t, _) -> t <> token
-  | Observer_countdown (_, t) -> t <> token
+  | Observer_resumeAwait (_, t, _) -> not (Z.equal t token)
+  | Observer_countdown (_, t) -> not (Z.equal t token)
   | _ -> true
 ;;
 
@@ -404,7 +406,7 @@ let sh_deferred_make (self : _ deferred_store) =
       cells =
         M.add
           k
-          { completion = None; wake = { waiters = []; batch = None; phase = 0 } }
+          { completion = None; wake = { waiters = []; batch = None; phase = Z.zero } }
           self.cells
     } )
 ;;
@@ -439,7 +441,7 @@ let sh_scope_store_make scope_make store key strategy =
 (* Effect4.Machine.ScopeStore.forkChild, ScopeStore.forkChild (src/Effect4/Machine/Stores.lean).
    `scope_fork` is `Effect4.Scope.fork`, an extra root (its specialisation was a callee of
    this row). *)
-let sh_int_eq (a : int) (b : int) = a = b
+let sh_nat_eq (a : Z.t) (b : Z.t) = Z.equal a b
 
 let sh_scope_fork_child scope_fork store parent_key child_key shared_key strategy =
   match M.find_opt parent_key store with
@@ -449,7 +451,7 @@ let sh_scope_fork_child scope_fork store parent_key child_key shared_key strateg
        row deletes had baked in; κ is the finalizer key, a `Nat` (ScopeEntry (src/Effect4/Machine/Stores.lean)). *)
     let parent_scope, child_scope =
       scope_fork
-        sh_int_eq
+        sh_nat_eq
         parent.scope
         strategy
         shared_key
@@ -469,10 +471,10 @@ let sh_scope_fork_child scope_fork store parent_key child_key shared_key strateg
    `MemoWorld.mapAt` and `MemoWorld.setMap` (src/Effect4/Machine/Stores.lean) are transcribed here rather than
    called, because both are list operations over the world and both would otherwise be
    orphaned by the four rows below. *)
-let sh_memo_map_at w id = List.find_opt (fun (m : memo_map) -> m.id = id) w
+let sh_memo_map_at w id = List.find_opt (fun (m : memo_map) -> Z.equal m.id id) w
 
 let sh_memo_set_map w (m : memo_map) =
-  List.map (fun (n : memo_map) -> if n.id = m.id then m else n) w
+  List.map (fun (n : memo_map) -> if Z.equal n.id m.id then m else n) w
 ;;
 
 (* Effect4.Machine.MemoWorld.entryAt, MemoWorld.entryAt (src/Effect4/Machine/Stores.lean). *)
@@ -532,13 +534,13 @@ let sh_node_at child (n : NativeOp.t node) (p : NativeOp.t node P.t)
    passed programs (decisions row 340) and the running call (row 341, step 3) start empty).
    The spine has to be told which program it addresses, and the generated `rootPoint` is not: `Program.compile` -- its only caller -- holds the root
    under that name, so the row hands it in. *)
-let sh_root_point (root : NativeOp.t Eff.t) (fuel : int) (tape : bool list) : point =
+let sh_root_point (root : NativeOp.t Eff.t) (fuel : Z.t) (tape : bool list) : point =
   ({ path = P.make (Node_eff root)
    ; env = E.empty
    ; fuel
    ; tape
    ; completed = []
-   ; root = 0
+   ; root = Z.zero
    ; params = []
    ; call = []
    }
@@ -549,7 +551,7 @@ let sh_root_point (root : NativeOp.t Eff.t) (fuel : int) (tape : bool list) : po
 let sh_point_redirect child (p : point) target : point =
   { p with
     path = P.append child (P.make (P.root p.path)) target
-  ; fuel = max 0 (p.fuel - 1)
+  ; fuel = Lcnf_nat.sub p.fuel Z.one
   }
 ;;
 

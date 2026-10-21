@@ -2,7 +2,8 @@
    Generator: size-bounded random walks through program syntax and types.
    Focused controls retain record metadata, list lengths, read modes, tuple indices,
    and record-tag strings,
-   with nats spread over 0 .. 2^62 - 1 and strings drawn from a list of valid UTF-8 (ASCII,
+   with nats spread over 0 .. 2^62 - 1 and past it to 2^126 (a Lean natural is Zarith's `Z.t`,
+   M4), and strings drawn from a list of valid UTF-8 (ASCII,
    two-, three- and four-byte scalars, quotes, backslashes, control characters).
    The codec is Lean's exact embedding, lowered (Eff_codec over Eff_image and the framing kernel).
    A term, a decision, a type and fork options cross inside a program that holds them; a row and a
@@ -27,14 +28,23 @@ let rng = Random.State.make [| 42 |]
 let ri n = Random.State.int rng n
 let rb () = Random.State.bool rng
 let pick xs = List.nth xs (ri (List.length xs))
+let z = Z.of_int
 
 let rand_nat () =
-  match ri 5 with
-  | 0 -> ri 10
-  | 1 -> ri 256
-  | 2 -> ri 100000
-  | 3 -> Random.State.bits rng
-  | _ -> (Random.State.bits rng lsl 32) lor Random.State.bits rng
+  match ri 6 with
+  | 0 -> z (ri 10)
+  | 1 -> z (ri 256)
+  | 2 -> z (ri 100000)
+  | 3 -> z (Random.State.bits rng)
+  | 4 -> z ((Random.State.bits rng lsl 32) lor Random.State.bits rng)
+  | _ -> Z.add (Z.shift_left Z.one (62 + ri 64)) (z (Random.State.bits rng))
+;;
+
+(* Lean's order on a service key (`ServiceKey.Lt`): the name, then the service, each a natural. *)
+let compare_key (a : ServiceKey.t) (b : ServiceKey.t) : int =
+  match Z.compare a.ServiceKey.name b.ServiceKey.name with
+  | 0 -> Z.compare a.ServiceKey.service b.ServiceKey.service
+  | c -> c
 ;;
 
 let strings =
@@ -67,7 +77,7 @@ let rand_service_key () = { ServiceKey.name = rand_nat (); service = rand_nat ()
 
 (* A canonical row of keys: strictly ascending by name, then service (`Effect4.Row`, `ServiceKey.Lt`). *)
 let rand_keys () =
-  List.sort_uniq compare (List.init (ri 4) (fun _ -> rand_service_key ()))
+  List.sort_uniq compare_key (List.init (ri 4) (fun _ -> rand_service_key ()))
 ;;
 
 let rand_lit () =
@@ -80,7 +90,7 @@ let rand_lit () =
 
 let rec rand_term d =
   if d <= 0
-  then if rb () then Term.Var (ri 20) else Term.Lit (rand_lit ())
+  then if rb () then Term.Var (z (ri 20)) else Term.Lit (rand_lit ())
   else (
     match ri 8 with
     | 0 -> Term.Var (rand_nat ())
@@ -275,10 +285,7 @@ let rand_list f = List.init (ri 4) (fun _ -> f ())
 
 (* Requirement rows are canonical sets in the Lean source image. Invalid ordering and
    duplicates are test_eff's control (C3); round-trip samples stay in-domain. *)
-let rand_requirements () =
-  let key (k : ServiceKey.t) = k.ServiceKey.name, k.ServiceKey.service in
-  List.sort_uniq (fun a b -> compare (key a) (key b)) (rand_list rand_key)
-;;
+let rand_requirements () = List.sort_uniq compare_key (rand_list rand_key)
 
 let rand_row_arg () =
   if rb () then RowArg.Name (rand_string ()) else RowArg.Str (rand_string ())
@@ -392,35 +399,42 @@ let record_controls =
     Term.Record
       ( [ "z", (true, Ty.Int); "z", (false, Ty.Number); "__proto__", (true, Ty.Nat) ]
       , [ "unknown"; "unknown" ]
-      , Terms.Cons (Term.Lit (Lit.Nat 1), Terms.Nil) )
+      , Terms.Cons (Term.Lit (Lit.Nat (z 1)), Terms.Nil) )
   in
   [ raw
-  ; Term.Record ([ "x", (true, Ty.Nat) ], [], Terms.Cons (Term.Lit (Lit.Nat 1), Terms.Nil))
+  ; Term.Record
+      ([ "x", (true, Ty.Nat) ], [], Terms.Cons (Term.Lit (Lit.Nat (z 1)), Terms.Nil))
   ; Term.Record ([ "x", (true, Ty.Nat) ], [], Terms.Nil)
   ; Term.Field (FieldReadMode.Required, raw, "__proto__")
   ; Term.Field (FieldReadMode.Optional, raw, "a-b")
-  ; Term.RecordSet (raw, "a-b", Term.Var 3)
+  ; Term.RecordSet (raw, "a-b", Term.Var (z 3))
   ]
 ;;
 
 let tuple_controls =
-  [ Term.TupleAt (Term.Var 0, 0)
-  ; Term.TupleAt (Term.Var 1, 9007199254740993)
-  ; Term.TupleAt (Term.TupleAt (Term.Var 2, 65537), max_int)
-  ; Term.Field (FieldReadMode.Optional, Term.TupleAt (Term.Var 3, 1), "a-b")
+  [ Term.TupleAt (Term.Var (z 0), z 0)
+  ; Term.TupleAt (Term.Var (z 1), z 9007199254740993)
+  ; Term.TupleAt (Term.TupleAt (Term.Var (z 2), z 65537), z max_int)
+  ; Term.TupleAt (Term.Var (z 4), Z.shift_left Z.one 100)
+  ; Term.Field (FieldReadMode.Optional, Term.TupleAt (Term.Var (z 3), z 1), "a-b")
   ]
 ;;
 
 (* The list fold (decisions row 228): with no stated type and with one, and a fold inside a
    fold's body. *)
 let fold_controls =
-  [ Term.Fold (None, Term.Var 0, Term.Lit (Lit.Nat 0), Term.Var 1)
-  ; Term.Fold (Some (Ty.List Ty.Nat), Term.Var 0, Term.App ("nil", Terms.Nil), Term.Var 1)
+  [ Term.Fold (None, Term.Var (z 0), Term.Lit (Lit.Nat (z 0)), Term.Var (z 1))
+  ; Term.Fold
+      (Some (Ty.List Ty.Nat), Term.Var (z 0), Term.App ("nil", Terms.Nil), Term.Var (z 1))
   ; Term.Fold
       ( None
-      , Term.Var 0
-      , Term.Var 1
-      , Term.Fold (Some Ty.Never, Term.Var 3, Term.Var 2, Term.TupleAt (Term.Var 5, 0)) )
+      , Term.Var (z 0)
+      , Term.Var (z 1)
+      , Term.Fold
+          ( Some Ty.Never
+          , Term.Var (z 3)
+          , Term.Var (z 2)
+          , Term.TupleAt (Term.Var (z 5), z 0) ) )
   ]
 ;;
 
@@ -436,7 +450,7 @@ let decision_controls =
 
 let () =
   let succeed t = Eff.Succeed t in
-  let selecting d = Eff.Select (Term.Var 0, d, unit_program, unit_program) in
+  let selecting d = Eff.Select (Term.Var (z 0), d, unit_program, unit_program) in
   let forking o = Eff.WithFiber (ActionTerm.Fork (unit_program, o)) in
   List.iteri
     (fun i term ->

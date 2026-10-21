@@ -29,7 +29,7 @@
    list`, `refs : val_ list`).  A functor over both would need those record types written out by
    hand, so that file keeps its own projections.
 
-   Depends on: Api_engine (generated), Eff_types.
+   Depends on: Api_engine (generated), Eff_types, Lcnf_nat (the one narrowing of a count), Zarith.
 
    Behaviours:
    I1  Every projection is a pure function of the machine value: no fuel, no tape, no
@@ -44,7 +44,11 @@
    I3  `trace` is in emission order: `T.to_list` is (E4_trace TR1). by construction
    I4  `step` is the generated `stepDecisionState`, and its second component is the
        generated `settled` -- the discriminator the answer alphabet needs (owner default
-       A1-Q7).                                                      by construction *)
+       A1-Q7).                                                      by construction
+   I5  A Lean natural is read as the machine holds it, Zarith's `Z.t` (M4). A count of what
+       the machine holds (fibers, trace rows, cells, scopes) is narrowed to the host's `int`
+       by `Lcnf_nat.to_index_exn`, which refuses at the index crossing past `max_int`: a heap
+       holds no more.                                               by construction *)
 
 open Eff_types
 
@@ -107,18 +111,18 @@ struct
 
   let interp_of (table : Row.t list) (p : program) : interp = program_interp_of p table
 
-  let load (p : program) ~(fuel : int) : machine =
+  let load (p : program) ~(fuel : Z.t) : machine =
     sh_api_load program_compile empty_ctx stores p fuel
   ;;
 
   (* The prepared package retains the interpreter and native evaluator. *)
-  let step (prepared : prepared) ~(fuel : int) (m : machine) (d : api_decision)
+  let step (prepared : prepared) ~(fuel : Z.t) (m : machine) (d : api_decision)
     : machine * bool
     =
     program_prepared_step prepared fuel m d
   ;;
 
-  let run_api (table : Row.t list) (p : program) ~(fuel : int) : outcome * machine =
+  let run_api (table : Row.t list) (p : program) ~(fuel : Z.t) : outcome * machine =
     let r = api_run p fuel table fuel in
     r.outcome, r.machine
   ;;
@@ -131,14 +135,16 @@ struct
 
   (* -- the free rows ------------------------------------------------------------------ *)
 
+  (* I5: a count of what the machine holds, as the host's int. *)
+  let count (n : Z.t) : int = Lcnf_nat.to_index_exn n
   let fibers (m : machine) : (fiber_id * fiber) list = F.bindings m.fibers
-  let fiber_count (m : machine) : int = F.cardinal m.fibers
+  let fiber_count (m : machine) : int = count (F.cardinal m.fibers)
   let trace (m : machine) : event list = T.to_list m.trace
-  let trace_length (m : machine) : int = T.length m.trace
+  let trace_length (m : machine) : int = count (T.length m.trace)
   let stuck_of (m : machine) : stuck option = m.stuck
   let armed_of (m : machine) : fiber_id list = m.armed
-  let next_id (m : machine) : int = m.next_id
-  let next_token (m : machine) : int = m.next_token
+  let next_id (m : machine) : Z.t = m.next_id
+  let next_token (m : machine) : Z.t = m.next_token
   let race_count (m : machine) : int = List.length m.races
   let middleware (m : machine) : bool = m.middleware_installed
   let finished (m : machine) : bool = sh_machine_finished m
@@ -151,13 +157,13 @@ struct
 
   let stores_of (m : machine) : stores = m.state
   let refs (m : machine) : Val.t list = M.to_list (stores_of m).refs
-  let next_name (m : machine) : int = (stores_of m).next_name
+  let next_name (m : machine) : Z.t = (stores_of m).next_name
   let due_count (m : machine) : int = List.length (stores_of m).deferreds.due
-  let cell_count (m : machine) : int = M.cardinal (stores_of m).deferreds.cells
-  let scope_count (m : machine) : int = M.cardinal (stores_of m).scopes
+  let cell_count (m : machine) : int = count (M.cardinal (stores_of m).deferreds.cells)
+  let scope_count (m : machine) : int = count (M.cardinal (stores_of m).scopes)
   let memo_map_count (m : machine) : int = List.length (stores_of m).memo
 
-  let memo_paths (m : machine) : (int * (int list * int list list) list) list =
+  let memo_paths (m : machine) : (Z.t * (Z.t list * Z.t list list) list) list =
     List.map
       (fun (mm : memo_map) -> mm.id, List.map fst (L.bindings mm.entries))
       (stores_of m).memo
@@ -175,19 +181,19 @@ struct
   let f_running (f : fiber) : bool = f.running
   let f_finalizing (f : fiber) : bool = Option.is_some f.finalizing
 
-  let f_pending_tokens (f : fiber) : int list =
+  let f_pending_tokens (f : fiber) : Z.t list =
     List.map (fun (p : (_, _, _, _, _, _) pending) -> p.token) f.pending
   ;;
 
   let f_observers (f : fiber) : observer list = f.observers
   let f_children (f : fiber) : fiber_id list = f.children
-  let f_op_count (f : fiber) : int = f.current_op_count
-  let f_max_ops (f : fiber) : int = f.max_ops_before_yield
+  let f_op_count (f : fiber) : Z.t = f.current_op_count
+  let f_max_ops (f : fiber) : Z.t = f.max_ops_before_yield
   let f_prevent_yield (f : fiber) : bool = f.prevent_yield
   let f_yield_override (f : fiber) : bool option = f.yield_override
   let f_context (f : fiber) : ctx = f.context
 
-  let f_dispatcher (f : fiber) : (int * int) list =
+  let f_dispatcher (f : fiber) : (Z.t * int) list =
     List.map (fun (p, ts) -> p, List.length ts) (D.to_list f.dispatcher)
   ;;
 end

@@ -99,7 +99,10 @@ let cell n (lean : unit -> unit) (fast : unit -> unit) : int * float * float =
 let build_list n = List.init n (fun i -> i)
 
 let build_table n =
-  List.fold_left (fun t i -> E4_table.add i i t) E4_table.empty (List.init n (fun i -> i))
+  List.fold_left
+    (fun t i -> E4_table.add (Z.of_int i) i t)
+    E4_table.empty
+    (List.init n (fun i -> i))
 ;;
 
 let build_fibers_list n = List.init n (fun i -> { id = i; w = 0 })
@@ -109,7 +112,7 @@ let no_exit (_ : fiber) : unit option = None
 
 let build_fibers_table n =
   List.fold_left
-    (fun t i -> E4_fibers_view.add ~exit_of:no_exit i { id = i; w = 0 } t)
+    (fun t i -> E4_fibers_view.add ~exit_of:no_exit (Z.of_int i) { id = i; w = 0 } t)
     E4_fibers_view.empty
     (List.init n (fun i -> i))
 ;;
@@ -125,7 +128,7 @@ let c1 n =
        done)
     (fun () ->
        for _ = 1 to ops do
-         ignore (E4_table.set (rand n) 7 t)
+         ignore (E4_table.set (Z.of_int (rand n)) 7 t)
        done)
 ;;
 
@@ -140,7 +143,7 @@ let c2 n =
        done)
     (fun () ->
        for _ = 1 to ops do
-         ignore (E4_table.find_opt (rand n) t)
+         ignore (E4_table.find_opt (Z.of_int (rand n)) t)
        done)
 ;;
 
@@ -156,10 +159,11 @@ let c3 n =
     (fun () ->
        for _ = 1 to ops do
          let id = rand n in
-         match E4_fibers_view.find_opt id t with
+         match E4_fibers_view.find_opt (Z.of_int id) t with
          | None -> ()
          | Some f ->
-           ignore (E4_fibers_view.set ~exit_of:no_exit id { f with w = f.w + 1 } t)
+           ignore
+             (E4_fibers_view.set ~exit_of:no_exit (Z.of_int id) { f with w = f.w + 1 } t)
        done)
 ;;
 
@@ -224,7 +228,7 @@ let c6 n =
 
 (* --------------------------------------------------------------------- the memo *)
 
-let path i : E4_memo.key = [ i / 10; i mod 10 ], []
+let path i : E4_memo.key = [ Z.of_int (i / 10); Z.of_int (i mod 10) ], []
 
 let build_memo n =
   List.fold_left
@@ -423,7 +427,7 @@ let wrapper () =
          cellf
            (fun () ->
               for _ = 1 to ops do
-                ignore (E4_table.find_opt (rand n) t)
+                ignore (E4_table.find_opt (Z.of_int (rand n)) t)
               done)
            (fun () ->
               for _ = 1 to ops do
@@ -434,7 +438,7 @@ let wrapper () =
          cellf
            (fun () ->
               for _ = 1 to ops do
-                ignore (E4_table.set (rand n) 1 t)
+                ignore (E4_table.set (Z.of_int (rand n)) 1 t)
               done)
            (fun () ->
               for _ = 1 to ops do
@@ -446,7 +450,7 @@ let wrapper () =
          cellf
            (fun () ->
               for _ = 1 to ops do
-                ignore (E4_table.add (rand n) 1 t)
+                ignore (E4_table.add (Z.of_int (rand n)) 1 t)
               done)
            (fun () ->
               for _ = 1 to ops do

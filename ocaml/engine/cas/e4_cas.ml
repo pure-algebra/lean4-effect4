@@ -447,9 +447,10 @@ let result_query (n : E4_node.t) =
   then None
   else (
     match Eff_frame.read_ctor s 0 len with
-    | Some (0, start, limit, ending) when ending = len ->
+    | Some (index, start, limit, ending) when Z.equal index Z.zero && ending = len ->
       (match Eff_frame.decode_nat s start limit with
-       | Some (version, after) when version = E4_result.envelope_version ->
+       | Some (version, after) when Z.equal version (Z.of_int E4_result.envelope_version)
+         ->
          (match Eff_frame.decode_ref s after limit with
           | Some ((kind, digest), next)
             when kind = E4_kind.byte E4_kind.Query && String.length digest = 32 ->
@@ -858,7 +859,15 @@ let designated_parent view address =
         | Some (_, _, _, next) -> skip_frames (count - 1) next limit
         | None -> None)
     in
-    (match Eff_frame.read_ctor bytes 0 (String.length bytes) with
+    (* A store node's constructor index is a small natural: one past the host's int is none of
+       these. *)
+    let ctor =
+      match Eff_frame.read_ctor bytes 0 (String.length bytes) with
+      | Some (index, start, limit, ending) when Z.fits_int index ->
+        Some (Z.to_int index, start, limit, ending)
+      | Some _ | None -> None
+    in
+    (match ctor with
      | Some (1, start, limit, ending)
        when E4_kind.equal node.E4_node.kind E4_kind.Entry && ending = String.length bytes
        ->

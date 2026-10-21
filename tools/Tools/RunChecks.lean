@@ -56,7 +56,7 @@ def text (j : J) : Except String String := do
   if s.length ≤ 4096 then return s else throw "text bound"
 def nat (j : J) : Except String Nat := do
   let n ← j.getNat?
-  if n ≤ rc112.natBound then return n else throw "unsafe natural"
+  if rc112.admitsNat n then return n else throw "unsafe natural"
 def strField (j : J) (k : String) := field j k >>= text
 def natField (j : J) (k : String) := field j k >>= nat
 

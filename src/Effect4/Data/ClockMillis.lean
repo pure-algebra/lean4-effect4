@@ -7,52 +7,45 @@ import all Init.Data.Nat.ToString
 /-!
 # Exact logical milliseconds
 
-The logical clock is an unbounded natural number. Two constructors retain its nominal
-identity through mono LCNF; a structure containing just one `Nat` would be erased to `Nat`.
-Only this carrier lowers to arbitrary precision target arithmetic. Other naturals retain
-their existing target profile. `toNat` is total in Lean; its target spelling explicitly
-refuses an observation outside the target's natural-number profile (DI-56).
+The logical clock is an unbounded natural number: a structure of one field, so Lean's compiler
+erases it to its natural, and a target spells it as it spells `Nat` (M4: the OCaml route's
+`Z.t`, exact, `OCaml5.Lcnf.typeRows`). Until M4 two constructors kept its nominal identity
+through mono LCNF, so that it alone could lower to exact arithmetic; every natural is exact now.
 
-Decimal transport accepts exactly `0` or a nonzero digit followed by digits. Large clock
-adjustments enter through that transport, without first passing through a host integer.
+Decimal transport accepts exactly `0` or a nonzero digit followed by digits.
 -/
 
 @[expose] public section
 
 namespace Effect4
 
-inductive ClockMillis where
-  | zero
-  | positive (predecessor : Nat)
+structure ClockMillis where
+  millis : Nat
 deriving DecidableEq, Repr
 
 namespace ClockMillis
 
-@[noinline] def toNat : ClockMillis → Nat
-  | .zero => 0
-  | .positive n => n + 1
+def toNat (a : ClockMillis) : Nat := a.millis
 
-@[noinline] def ofNat : Nat → ClockMillis
-  | 0 => .zero
-  | n + 1 => .positive n
+def ofNat (n : Nat) : ClockMillis := ⟨n⟩
 
 instance (n : Nat) : OfNat ClockMillis n := ⟨ofNat n⟩
-instance : Inhabited ClockMillis := ⟨.zero⟩
+instance : Inhabited ClockMillis := ⟨ofNat 0⟩
 
-@[noinline] def add (a b : ClockMillis) : ClockMillis := ofNat (a.toNat + b.toNat)
+def add (a b : ClockMillis) : ClockMillis := ofNat (a.toNat + b.toNat)
 instance : Add ClockMillis := ⟨add⟩
 instance : LE ClockMillis := ⟨fun a b => a.toNat ≤ b.toNat⟩
 instance : LT ClockMillis := ⟨fun a b => a.toNat < b.toNat⟩
 
-@[noinline] def decLe (a b : ClockMillis) : Decidable (a ≤ b) := Nat.decLe a.toNat b.toNat
-@[noinline] def decLt (a b : ClockMillis) : Decidable (a < b) := Nat.decLt a.toNat b.toNat
+def decLe (a b : ClockMillis) : Decidable (a ≤ b) := Nat.decLe a.toNat b.toNat
+def decLt (a b : ClockMillis) : Decidable (a < b) := Nat.decLt a.toNat b.toNat
 instance : DecidableLE ClockMillis := decLe
 instance : DecidableLT ClockMillis := decLt
 
-@[noinline] def beq (a b : ClockMillis) : Bool := decide (a = b)
+def beq (a b : ClockMillis) : Bool := decide (a = b)
 instance : BEq ClockMillis := ⟨beq⟩
 
-@[noinline] def toDecimal (millis : ClockMillis) : String := Nat.repr millis.toNat
+def toDecimal (millis : ClockMillis) : String := Nat.repr millis.toNat
 
 namespace Decimal
 
@@ -64,16 +57,14 @@ def readBytes (bytes : List UInt8) (initial : Nat := 0) : Nat :=
 end Decimal
 
 /-- Read exactly the decimal spelling produced by `toDecimal`, using UTF-8 bytes. -/
-@[noinline] def ofDecimal (text : String) : Option ClockMillis :=
+def ofDecimal (text : String) : Option ClockMillis :=
   let bytes := text.toByteArray.data.toList
   let n := Decimal.readBytes bytes
   if bytes = (Nat.repr n).toByteArray.data.toList then some (ofNat n) else none
 
-theorem ofNat_toNat (a : ClockMillis) : ofNat a.toNat = a := by
-  cases a <;> rfl
+theorem ofNat_toNat (a : ClockMillis) : ofNat a.toNat = a := rfl
 
-theorem toNat_ofNat (n : Nat) : (ofNat n).toNat = n := by
-  cases n <;> rfl
+theorem toNat_ofNat (n : Nat) : (ofNat n).toNat = n := rfl
 
 theorem toNat_add (a b : ClockMillis) : (a + b).toNat = a.toNat + b.toNat :=
   toNat_ofNat _
@@ -142,7 +133,5 @@ theorem ofDecimal_exact {text : String} {a : ClockMillis} (h : ofDecimal text = 
   · cases h
 
 end ClockMillis
-
-attribute [noinline] instDecidableEqClockMillis
 
 end Effect4

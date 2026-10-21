@@ -13,8 +13,8 @@ let check name condition =
 ;;
 
 let app : A.sig_app = { rows = []; services = []; types = [] }
-let nat : NativeOp.t Eff.t = Eff.Succeed (Term.Lit (Lit.Nat 7))
-let bad : NativeOp.t Eff.t = Eff.Succeed (Term.Var 0)
+let nat : NativeOp.t Eff.t = Eff.Succeed (Term.Lit (Lit.Nat (Z.of_int 7)))
+let bad : NativeOp.t Eff.t = Eff.Succeed (Term.Var (Z.of_int 0))
 
 let decl : DefDecl.t =
   { name = "id"
@@ -42,7 +42,7 @@ let mismatch : NativeOp.t Eff.t =
   Eff.Defs
     ( [ decl ]
     , Effs.Nil
-    , Eff.ProvideLayer (LayerTerm.Ref [ 9 ], false, nat)
+    , Eff.ProvideLayer (LayerTerm.Ref [ Z.of_int 9 ], false, nat)
     , LayerTerms.Nil )
 ;;
 
@@ -77,7 +77,7 @@ let sig2 : A.sig_data =
 ;;
 
 let call index : NativeOp.t Eff.t =
-  Eff.Perform (NativeOp.External index, Term.Lit Lit.Unit)
+  Eff.Perform (NativeOp.External (Z.of_int index), Term.Lit Lit.Unit)
 ;;
 
 let part sig_ index = A.CheckInput_part (sig_, [], call index)
@@ -96,7 +96,7 @@ let () =
   check
     "layer-refusal-projected"
     (match (ask A.program_check_oracle_uncached (key layers)).result with
-     | Error why -> why.site = [ 2; 0; 0 ]
+     | Error why -> List.equal Z.equal why.site [ Z.of_int 2; Z.zero; Z.zero ]
      | Ok _ -> false);
   check
     "reference-precedes-mismatch"

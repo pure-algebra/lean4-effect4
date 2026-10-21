@@ -6,7 +6,7 @@
      | String 3 utf8 | List 4 (concat) | none 6 [] | some 7 x | pair 5 (a ++ b)
      | constructor i 10 (encode (i : Nat) ++ args)   (a structure is constructor 0)
      | ref 11 (kind :: digest)      | handle 12 (kind :: nat digits)
-   Depends on: the OCaml standard library only.
+   Depends on: Zarith (Z) and the OCaml standard library. A Lean natural is `Z.t` (M4).
 
    Tags 11 and 12 are the two frames the shared value foundation adds on top of the ten of
    Canonical.lean; the authority for their payloads is the Lean encoder itself,
@@ -22,20 +22,21 @@
    F1  Every frame is self-delimiting: a decoder never reads past payload_end, and every
        decoder's result offset is the frame's end.                     by construction (read_frame)
    F2  Exactness: a wrong tag, a payload of the wrong length, a Bool byte other than 0/1, a
-       Nat with a leading zero digit or above max_int, a String that is not valid UTF-8, a
-       list/option/pair whose elements do not fill the payload exactly, a ref or handle whose
-       payload has no kind byte, a handle whose key digits have a leading zero or run past
-       max_int, or trailing bytes after the top-level frame (exact) are refusals (None), never
-       repairs.                                                         by construction; tested
+       Nat with a leading zero digit, a String that is not valid UTF-8, a list/option/pair
+       whose elements do not fill the payload exactly, a ref or handle whose payload has no
+       kind byte, a handle whose key digits have a leading zero, or trailing bytes after the
+       top-level frame (exact) are refusals (None), never repairs.     by construction; tested
    F3  Round trip: decode (encode v) = Some v for every value in the Lean image, i.e. every
-       int in 0 .. max_int and every valid UTF-8 string.                tested (property test)
+       natural and every valid UTF-8 string.                            tested (property test)
    F4  The Lean image is the domain of encode: emit_nat raises Invalid_argument on a negative
-       int, emit_string on a string that is not valid UTF-8.            by construction
+       integer, emit_string on a string that is not valid UTF-8.        by construction
    F5  Termination: an element loop advances by at least 9 bytes per element.  by construction
    F6  The writers allocate no string per frame header: `emit_be64` is one 64-bit write, and
-       `emit_nat`, `emit_ref` and `emit_handle` write their payloads in place. Their bytes are
-       the per-byte rule's, for every int, the negative ones included.  by construction; tested
-       (test_frame B: the old rule on 3 956 ints, both ends and every byte boundary)
+       `emit_nat`, `emit_ref` and `emit_handle` write their payloads in place for a natural an
+       `int` holds; a larger one is written from its digit string. Their bytes are the per-byte
+       rule's, for every natural.                                   by construction; tested
+       (test_frame B: the per-byte rule on 3 956 naturals, both ends and every byte boundary,
+       and past max_int)
    F7  One pass: an encoding is written into one growable buffer, and the encoder writes each
        of its bytes once. A nested frame reserves its eight length bytes, writes its payload in
        place and fills the length after. Doubling the buffer copies the bytes already written,
@@ -62,9 +63,11 @@
        Invalid_argument before any byte. `read_be64` answers None for a window shorter than
        eight bytes or a negative position, so no reader raises on any string, position and
        limit.                                                    by construction; tested (test_math B)
-   Bound: Lean's Nat is unbounded; this kernel carries 0 .. 2^62 - 1 (OCaml int on 64-bit
-   hosts). A Nat frame of nine or more digits, or of eight digits with a top byte >= 0x40,
-   is refused as out of range. *)
+   Bound: none on a natural. Lean's Nat is unbounded, and this kernel carries every natural as
+   Zarith's `Z.t` (M4): a natural an `int` holds is read and written without allocating its
+   digits, and a larger one through `Z.to_bits` and `Z.of_bits`. A length stays an `int`, the
+   field's 0 .. 2^62 - 1 (F8, F10). Until M4 a Nat frame of nine or more digits, or of eight
+   digits with a top byte >= 0x40, was refused as out of range. *)
 
 let tag_bool = 1
 let tag_nat = 2
@@ -168,20 +171,32 @@ let with_payload (w : writer) (tag : int) (f : writer -> unit) : unit =
     raise e
 ;;
 
+(* The digits of a natural past `max_int`: `Z.to_bits` is little-endian and may carry high zero
+   bytes, so the string is the significant bytes, reversed. *)
+let big_digits (n : Z.t) : string =
+  let le = Z.to_bits n in
+  let k = (Z.numbits n + 7) / 8 in
+  String.init k (fun i -> String.unsafe_get le (k - 1 - i))
+;;
+
 (* Base-256 digits, big-endian, no leading zero; 0 is the empty string. *)
-let nat_digits (n : int) : string =
-  if n < 0 then invalid_arg "Eff_frame.nat_digits: negative";
-  let rec count m k = if m = 0 then k else count (m lsr 8) (k + 1) in
-  let k = count n 0 in
-  let s = Bytes.create k in
-  let rec fill m i =
-    if i >= 0
-    then (
-      Bytes.set s i (Char.chr (m land 0xff));
-      fill (m lsr 8) (i - 1))
-  in
-  fill n (k - 1);
-  Bytes.to_string s
+let nat_digits (n : Z.t) : string =
+  if Z.sign n < 0 then invalid_arg "Eff_frame.nat_digits: negative";
+  if Z.fits_int n
+  then (
+    let n = Z.to_int n in
+    let rec count m k = if m = 0 then k else count (m lsr 8) (k + 1) in
+    let k = count n 0 in
+    let s = Bytes.create k in
+    let rec fill m i =
+      if i >= 0
+      then (
+        Bytes.set s i (Char.chr (m land 0xff));
+        fill (m lsr 8) (i - 1))
+    in
+    fill n (k - 1);
+    Bytes.to_string s)
+  else big_digits n
 ;;
 
 let emit_unit (w : writer) (() : unit) : unit = emit_frame w tag_unit ""
@@ -205,14 +220,19 @@ let set_digits (w : writer) (at : int) (n : int) (k : int) : unit =
   done
 ;;
 
-(* `emit_frame w tag_nat (nat_digits n)`, with the digits written in place (F6). *)
-let emit_nat (w : writer) (n : int) : unit =
-  if n < 0 then invalid_arg "Eff_frame.nat_digits: negative";
-  let k = digit_count n in
-  reserve w (9 + k);
-  set_header w w.len (Char.unsafe_chr tag_nat) k;
-  set_digits w (w.len + 9) n k;
-  w.len <- w.len + 9 + k
+(* `emit_frame w tag_nat (nat_digits n)`, with the digits written in place when an `int` holds
+   them (F6). *)
+let emit_nat (w : writer) (n : Z.t) : unit =
+  if Z.sign n < 0 then invalid_arg "Eff_frame.nat_digits: negative";
+  if Z.fits_int n
+  then (
+    let n = Z.to_int n in
+    let k = digit_count n in
+    reserve w (9 + k);
+    set_header w w.len (Char.unsafe_chr tag_nat) k;
+    set_digits w (w.len + 9) n k;
+    w.len <- w.len + 9 + k)
+  else emit_frame w tag_nat (big_digits n)
 ;;
 
 let emit_string (w : writer) (s : string) : unit =
@@ -242,7 +262,7 @@ let emit_pair
     g w y)
 ;;
 
-let emit_ctor (w : writer) (index : int) (args : writer -> unit) : unit =
+let emit_ctor (w : writer) (index : Z.t) (args : writer -> unit) : unit =
   with_payload w tag_ctor (fun w ->
     emit_nat w index;
     args w)
@@ -262,15 +282,26 @@ let emit_ref (w : writer) ((kind, digest) : int * string) : unit =
 
 (* A live handle: the kind byte, then the key as Nat digits (Val.lean:159). The key 0 is no
    digits at all, so the payload is the kind byte alone. *)
-let emit_handle (w : writer) ((kind, key) : int * int) : unit =
+let emit_handle (w : writer) ((kind, key) : int * Z.t) : unit =
   if kind < 0 || kind > 255 then invalid_arg "Eff_frame.emit_handle: kind is not a byte";
-  if key < 0 then invalid_arg "Eff_frame.emit_handle: negative key";
-  let k = digit_count key in
-  reserve w (10 + k);
-  set_header w w.len (Char.unsafe_chr tag_handle) (1 + k);
-  Bytes.unsafe_set w.buf (w.len + 9) (Char.unsafe_chr kind);
-  set_digits w (w.len + 10) key k;
-  w.len <- w.len + 10 + k
+  if Z.sign key < 0 then invalid_arg "Eff_frame.emit_handle: negative key";
+  if Z.fits_int key
+  then (
+    let key = Z.to_int key in
+    let k = digit_count key in
+    reserve w (10 + k);
+    set_header w w.len (Char.unsafe_chr tag_handle) (1 + k);
+    Bytes.unsafe_set w.buf (w.len + 9) (Char.unsafe_chr kind);
+    set_digits w (w.len + 10) key k;
+    w.len <- w.len + 10 + k)
+  else (
+    let digits = big_digits key in
+    let k = String.length digits in
+    reserve w (10 + k);
+    set_header w w.len (Char.unsafe_chr tag_handle) (1 + k);
+    Bytes.unsafe_set w.buf (w.len + 9) (Char.unsafe_chr kind);
+    Bytes.unsafe_blit_string digits 0 w.buf (w.len + 10) k;
+    w.len <- w.len + 10 + k)
 ;;
 
 (* The default bound: an encoding is a string, so it holds at most Sys.max_string_length bytes
@@ -350,27 +381,26 @@ let decode_bool : bool decoder =
   | _ -> None
 ;;
 
-(* A natural's shortest big-endian digits, s[p..e): no digit is 0, a leading zero is a refusal,
-   and nine digits, or eight above max_int, are out of range. *)
-let nat_of_digits (s : string) (p : int) (e : int) : int option =
+(* A natural's shortest big-endian digits, s[p..e): a leading zero is a refusal. A natural an
+   `int` holds (fewer than eight digits, or eight below 0x40) is read without allocating its
+   digits; a larger one through `Z.of_bits`, which reads little-endian. *)
+let nat_of_digits (s : string) (p : int) (e : int) : Z.t option =
   let len = e - p in
   if len = 0
-  then Some 0
-  else if len > 8
-  then None
+  then Some Z.zero
   else if String.unsafe_get s p = '\000'
   then None
-  else if len = 8 && Char.code (String.unsafe_get s p) >= 0x40
-  then None
-  else (
+  else if len < 8 || (len = 8 && Char.code (String.unsafe_get s p) < 0x40)
+  then (
     let n = ref 0 in
     for i = p to e - 1 do
       n := (!n lsl 8) lor Char.code (String.unsafe_get s i)
     done;
-    Some !n)
+    Some (Z.of_int !n))
+  else Some (Z.of_bits (String.init len (fun i -> String.unsafe_get s (e - 1 - i))))
 ;;
 
-let decode_nat : int decoder =
+let decode_nat : Z.t decoder =
   fun s pos limit ->
   match expect tag_nat s pos limit with
   | None -> None
@@ -378,7 +408,7 @@ let decode_nat : int decoder =
 ;;
 
 (* The negative integer `-(n+1)`, as its `n`: tag 13 over n's digits, the `nat` rule. *)
-let decode_neg_int : int decoder =
+let decode_neg_int : Z.t decoder =
   fun s pos limit ->
   match expect tag_int s pos limit with
   | None -> None
@@ -461,8 +491,8 @@ let decode_ref : (int * string) decoder =
 
 (* A handle frame: the kind byte, then the key's Nat digits. An empty payload is refused; a
    leading zero digit is refused; no digits is the key 0 (Val.lean:618-621, 1136, 1176-1177).
-   The bound is decode_nat's: nine digits, or eight above max_int, are out of range. *)
-let decode_handle : (int * int) decoder =
+   The key is read as decode_nat reads a natural. *)
+let decode_handle : (int * Z.t) decoder =
   fun s pos limit ->
   match expect tag_handle s pos limit with
   | None -> None
@@ -471,26 +501,13 @@ let decode_handle : (int * int) decoder =
     then None
     else (
       let kind = Char.code (String.unsafe_get s p) in
-      let d = p + 1 in
-      let len = e - d in
-      if len = 0
-      then Some ((kind, 0), next)
-      else if len > 8
-      then None
-      else if String.unsafe_get s d = '\000'
-      then None
-      else if len = 8 && Char.code (String.unsafe_get s d) >= 0x40
-      then None
-      else (
-        let n = ref 0 in
-        for i = d to e - 1 do
-          n := (!n lsl 8) lor Char.code (String.unsafe_get s i)
-        done;
-        Some ((kind, !n), next)))
+      match nat_of_digits s (p + 1) e with
+      | None -> None
+      | Some key -> Some ((kind, key), next))
 ;;
 
 (* A constructor frame: (index, position after the index, payload_end, next). *)
-let read_ctor (s : string) (pos : int) (limit : int) : (int * int * int * int) option =
+let read_ctor (s : string) (pos : int) (limit : int) : (Z.t * int * int * int) option =
   match expect tag_ctor s pos limit with
   | None -> None
   | Some (p, e, next) ->

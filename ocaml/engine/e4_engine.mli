@@ -19,9 +19,12 @@
      Refused    `ReplayResult.stuck` -- `Stuck.unknownFiber/unknownScope/unknownRace`.
 
    Outside_profile is separate from those four semantic answers. If a generated decision
-   observes a clock outside the number profile, step retains its INPUT machine and records
-   this host refusal. Intermediate pure values from that decision are discarded; no claim
-   of a simulated transition is made. The refused decision remains in replay_to's residue.
+   computes a value a crossing of the runtime library refuses (`Lcnf_crossing`: an exponent, a
+   shift or an index past the target's int), step retains its INPUT machine and records this
+   host refusal. Intermediate pure values from that decision are discarded; no claim of a
+   simulated transition is made. The refused decision remains in replay_to's residue. The
+   run's naturals are exact (Zarith's `Z.t`, M4); the engine's host face keeps ints for ids,
+   tokens and counts, each a machine natural narrowed once (`Lcnf_nat.to_index_exn`).
 
    ONE loop over any instance.  {!Fast} is {!Make} of `Api_engine_inst`, which applies
    `E4_instance.Make` to the substituted carriers; the test tree applies {!Make} to the
@@ -31,7 +34,7 @@
    {!ENGINE} with one signature -- which is what `test/test_diff.ml` does over every corpus.
 
    Depends on: E4_engine_intf, Api_engine_inst, effect4_eff (Eff_types, Eff_val, Eff_codec),
-   stdlib.
+   effect4_lcnf (Lcnf_crossing, Lcnf_nat), Zarith, stdlib.
 
    Behaviours:
    EN8 A program's literals are profile support's, Lean's: `literal_refusal` is
@@ -45,9 +48,8 @@
        (`Eff_val.valid`), and as `Unsupported` where Lean's profile support refuses it
        (`ProfileData.valueRefusal` at the selected profile, lowered). The refusal is a value
        at the answer's path, never an exception and never a defect. A driver asks it before
-       the machine reads the answer (E4_host H6), as the kit does before either runner. The
-       clock boundary of the LCNF route (OCaml5.Lcnf.ClockFlow) reads a reactor supplied at a
-       root as checked ingress.                           tested (answer_ingress_check)
+       the machine reads the answer (E4_host H6), as the kit does before either runner.
+                                                          tested (answer_ingress_check)
    EN1 `run p ~fuel` is `Api.run p fuel []`: same outcome, same fiber table, same trace
        rows, same exits.  The check is against the instance's OWN `api_run` (the generated
        `Effect4.Api.run`, untouched) on every program of the corpus.
@@ -58,8 +60,9 @@
    EN3 `step` is total: it answers a machine for every decision and never raises -- the two
        `failwith` rows of the generated prelude (`sh_dispatcher_mk`, `sh_memo_map_mk`) are
        the only exception, and they fire on a construction the closure does not contain.
-       test_engine counts them over the whole corpus and expects 0. Clock profile exceptions
-       are caught and returned as Outside_profile with the input machine retained.
+       test_engine counts them over the whole corpus and expects 0. A crossing's refusal
+       (`Lcnf_crossing.Refused`) is caught and returned as Outside_profile with the input
+       machine retained.
                                                           by construction; counted
    EN4 THE TAPE AXIS.  `replay_steps m tape` yields `List.length tape + 1` machines, the
        initial one first, position i equal to `replay m (the first i decisions)`, and the

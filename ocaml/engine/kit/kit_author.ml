@@ -3,13 +3,13 @@
 open Eff_types
 module G = Effect4_gen.Api_gen
 
-type refusal = (int list, G.reason) Eff_types.Located.t
-type term = G.env -> int list -> (Eff_types.Term.t, refusal) result
-type t = G.env -> int list -> (NativeOp.t Eff.t, refusal) result
+type refusal = (Z.t list, G.reason) Eff_types.Located.t
+type term = G.env -> Z.t list -> (Eff_types.Term.t, refusal) result
+type t = G.env -> Z.t list -> (NativeOp.t Eff.t, refusal) result
 
 (* A literal reads no scope, so LCNF lowers it at its reduced arity (`_redArg`); the scope is
-   taken here. *)
-let nat n : term = fun _ _ -> G.program_authoring_nat n
+   taken here. The host's int is the literal's natural, exactly. *)
+let nat n : term = fun _ _ -> G.program_authoring_nat (Z.of_int n)
 let str s : term = fun _ _ -> G.program_authoring_str s
 let bool b : term = fun _ _ -> G.program_authoring_bool b
 let unit : term = G.program_authoring_unit
@@ -80,7 +80,7 @@ let refusal_text (r : refusal) =
   let at =
     match r.site with
     | [] -> "the root"
-    | path -> "node " ^ String.concat "." (List.map string_of_int path)
+    | path -> "node " ^ String.concat "." (List.map Z.to_string path)
   in
   let why =
     match r.reason with

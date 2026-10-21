@@ -26,7 +26,10 @@
         literal outside it is refused at its node's address, from a value and from the wire
         (EN8, `numeric_ingress_check`). A host's answer is refused at ingress when it is no
         Lean value or the profile does not support it, at its path (EN9,
-        `answer_ingress_check`). The ordinal pin went with the conversion on 2026-10-15:
+        `answer_ingress_check`). The run itself is exact (M4): the clock past max_int
+        (`clock_exactness_check`) and a product past the profile and past the host's int
+        (`multiplication_exactness_check`); a crossing's refusal retains the input machine
+        (EN3, `crossing_retention_check`, over a stand-in whose flush refuses). The ordinal pin went with the conversion on 2026-10-15:
         both instances open `Eff_types`, so `ocamlopt` holds the one alphabet.
      5  The two `failwith` rows of the generated prelude (`sh_dispatcher_mk`,
         `sh_memo_map_mk`, api_engine.ml's PRELUDE) never fire in this file's runs: counted.
@@ -73,7 +76,7 @@ let guard (f : unit -> 'a) : ('a, string) result =
 
 (* ================================================================ the G0 programs *)
 
-let p42 : E.NativeOp.t E.Eff.t = E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 42))
+let p42 : E.NativeOp.t E.Eff.t = E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Z.of_int 42)))
 
 let fork_opts : E.ForkOptions.t =
   { E.ForkOptions.start_immediately = false
@@ -86,15 +89,17 @@ let p_fork : E.NativeOp.t E.Eff.t =
   E.Eff.Bind
     ( E.Eff.WithFiber
         (E.ActionTerm.Fork
-           ( E.Eff.Bind (E.Eff.YieldNow 0, E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 7)))
+           ( E.Eff.Bind
+               ( E.Eff.YieldNow (Z.of_int 0)
+               , E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Z.of_int 7))) )
            , fork_opts ))
-    , E.Eff.AwaitFiber (E.Term.Var 0, E.ObserverMode.AwaitValue) )
+    , E.Eff.AwaitFiber (E.Term.Var (Z.of_int 0), E.ObserverMode.AwaitValue) )
 ;;
 
 let p_await : E.NativeOp.t E.Eff.t =
   E.Eff.Bind
     ( E.Eff.Perform (E.NativeOp.DeferredMakeOf (E.Ty.Nat, E.Ty.Nat), E.Term.Lit E.Lit.Unit)
-    , E.Eff.Perform (E.NativeOp.DeferredAwait, E.Term.Var 0) )
+    , E.Eff.Perform (E.NativeOp.DeferredAwait, E.Term.Var (Z.of_int 0)) )
 ;;
 
 (* `chain 0 = succeed unit`, `chain (n+1) = bind (perform refMake (lit (nat n))) (chain n)`
@@ -104,7 +109,8 @@ let rec chain n : E.NativeOp.t E.Eff.t =
   then E.Eff.Succeed (E.Term.Lit E.Lit.Unit)
   else
     E.Eff.Bind
-      (E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat (n - 1))), chain (n - 1))
+      ( E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat (Z.of_int (n - 1))))
+      , chain (n - 1) )
 ;;
 
 (* The term rows' environment (decisions row 43; the state plan's T3b).  A read-modify-write
@@ -114,8 +120,8 @@ let rec chain n : E.NativeOp.t E.Eff.t =
    E.t`, externs.txt) and `sh_ref_step` extends it with `E.snoc`.  The programs and their
    values are Test/Program/CompileContract.lean's `pRefUpdateCapture`, `pRefUpdateLevel` and
    `pRefModifyOther`. *)
-let nat_lit n = E.Term.Lit (E.Lit.Nat n)
-let succ_at n = E.Term.App ("succ", E.Terms.Cons (E.Term.Var n, E.Terms.Nil))
+let nat_lit n = E.Term.Lit (E.Lit.Nat (Z.of_int n))
+let succ_at n = E.Term.App ("succ", E.Terms.Cons (E.Term.Var (Z.of_int n), E.Terms.Nil))
 
 (* `Ref.make(5)`, a bound `10`, `Ref.update(ref, a => add(a, x))`, then `Ref.get(ref)`: the
    term captures the outer `x` (`var 1`) and reads the cell's value at the node's level
@@ -131,9 +137,10 @@ let p_capture : E.NativeOp.t E.Eff.t =
                     (E.Term.App
                        ( "add"
                        , E.Terms.Cons
-                           (E.Term.Var 2, E.Terms.Cons (E.Term.Var 1, E.Terms.Nil)) ))
-                , E.Term.Var 0 )
-            , E.Eff.Perform (E.NativeOp.RefGet, E.Term.Var 0) ) ) )
+                           ( E.Term.Var (Z.of_int 2)
+                           , E.Terms.Cons (E.Term.Var (Z.of_int 1), E.Terms.Nil) ) ))
+                , E.Term.Var (Z.of_int 0) )
+            , E.Eff.Perform (E.NativeOp.RefGet, E.Term.Var (Z.of_int 0)) ) ) )
 ;;
 
 (* `Ref.make(5)`, then `Ref.modify(ref, a => ["s", a])`: the row answers the string and stores
@@ -146,9 +153,9 @@ let p_modify_other : E.NativeOp.t E.Eff.t =
             (E.Term.App
                ( "pair"
                , E.Terms.Cons
-                   (E.Term.Lit (E.Lit.Str "s"), E.Terms.Cons (E.Term.Var 1, E.Terms.Nil))
-               ))
-        , E.Term.Var 0 ) )
+                   ( E.Term.Lit (E.Lit.Str "s")
+                   , E.Terms.Cons (E.Term.Var (Z.of_int 1), E.Terms.Nil) ) ))
+        , E.Term.Var (Z.of_int 0) ) )
 ;;
 
 (* `Ref.make(5)`, a bound `10`, then `Ref.updateAndGet(ref, f)` at a node of level 2. *)
@@ -157,7 +164,7 @@ let p_level (f : E.Term.t) : E.NativeOp.t E.Eff.t =
     ( E.Eff.Perform (E.NativeOp.RefMake, nat_lit 5)
     , E.Eff.Bind
         ( E.Eff.Succeed (nat_lit 10)
-        , E.Eff.Perform (E.NativeOp.RefUpdateAndGetWith f, E.Term.Var 0) ) )
+        , E.Eff.Perform (E.NativeOp.RefUpdateAndGetWith f, E.Term.Var (Z.of_int 0)) ) )
 ;;
 
 (* The list fold with two binders (decisions row 228).  A fold's body runs at the environment
@@ -178,7 +185,10 @@ let snoc xs x = app "append" [ xs; app "cons" [ x; nil_t ] ]
 let p_fold : E.NativeOp.t E.Eff.t =
   E.Eff.Succeed
     (E.Term.Fold
-       (None, nat_list [ 1; 2; 3 ], nat_lit 10, app "sub" [ E.Term.Var 0; E.Term.Var 1 ]))
+       ( None
+       , nat_list [ 1; 2; 3 ]
+       , nat_lit 10
+       , app "sub" [ E.Term.Var (Z.of_int 0); E.Term.Var (Z.of_int 1) ] ))
 ;;
 
 (* A bound `100`; the body reads it below the fold's level: `(0 + (1 + 100)) + (2 + 100)`. *)
@@ -190,7 +200,11 @@ let p_fold_capture : E.NativeOp.t E.Eff.t =
            ( None
            , nat_list [ 1; 2 ]
            , nat_lit 0
-           , app "add" [ E.Term.Var 1; app "add" [ E.Term.Var 2; E.Term.Var 0 ] ] )) )
+           , app
+               "add"
+               [ E.Term.Var (Z.of_int 1)
+               ; app "add" [ E.Term.Var (Z.of_int 2); E.Term.Var (Z.of_int 0) ]
+               ] )) )
 ;;
 
 (* A fold inside a fold, with a stated accumulator type: the inner body reads the outer element
@@ -202,15 +216,19 @@ let p_fold_nested : E.NativeOp.t E.Eff.t =
     , E.Eff.Succeed
         (E.Term.Fold
            ( Some (E.Ty.List (E.Ty.Prod (E.Ty.Nat, E.Ty.Nat)))
-           , E.Term.Var 0
+           , E.Term.Var (Z.of_int 0)
            , nil_t
            , E.Term.Fold
                ( None
-               , E.Term.Var 2
-               , E.Term.Var 1
+               , E.Term.Var (Z.of_int 2)
+               , E.Term.Var (Z.of_int 1)
                , snoc
-                   (E.Term.Var 3)
-                   (app "tuple" [ E.Term.Var 4; app "length" [ E.Term.Var 2 ] ]) ) )) )
+                   (E.Term.Var (Z.of_int 3))
+                   (app
+                      "tuple"
+                      [ E.Term.Var (Z.of_int 4)
+                      ; app "length" [ E.Term.Var (Z.of_int 2) ]
+                      ]) ) )) )
 ;;
 
 (* `Ref.make(5)`, then `Ref.modify(ref, a => [fold(xs, a, (b, x) => b + x), a])`: the term's
@@ -226,22 +244,28 @@ let p_fold_in_op : E.NativeOp.t E.Eff.t =
                [ E.Term.Fold
                    ( None
                    , nat_list [ 1; 2; 3 ]
-                   , E.Term.Var 1
-                   , app "add" [ E.Term.Var 2; E.Term.Var 3 ] )
-               ; E.Term.Var 1
+                   , E.Term.Var (Z.of_int 1)
+                   , app "add" [ E.Term.Var (Z.of_int 2); E.Term.Var (Z.of_int 3) ] )
+               ; E.Term.Var (Z.of_int 1)
                ])
-        , E.Term.Var 0 ) )
+        , E.Term.Var (Z.of_int 0) ) )
 ;;
 
 (* An empty list answers the initial value, and the body, which would refuse, is not run. *)
 let p_fold_empty : E.NativeOp.t E.Eff.t =
-  E.Eff.Succeed (E.Term.Fold (None, nil_t, nat_lit 7, E.Term.TupleAt (E.Term.Var 1, 5)))
+  E.Eff.Succeed
+    (E.Term.Fold
+       (None, nil_t, nat_lit 7, E.Term.TupleAt (E.Term.Var (Z.of_int 1), Z.of_int 5)))
 ;;
 
 (* A body that refuses on an element refuses the fold: no partial answer. *)
 let p_fold_refuses : E.NativeOp.t E.Eff.t =
   E.Eff.Succeed
-    (E.Term.Fold (None, nat_list [ 1; 2 ], nat_lit 0, E.Term.TupleAt (E.Term.Var 1, 0)))
+    (E.Term.Fold
+       ( None
+       , nat_list [ 1; 2 ]
+       , nat_lit 0
+       , E.Term.TupleAt (E.Term.Var (Z.of_int 1), Z.zero) ))
 ;;
 
 (* ================================================================ one report per run *)
@@ -273,7 +297,7 @@ let show_answer (a : E4_engine.answer) =
   | E4_engine.Finished -> "Finished"
   | E4_engine.Suspended f -> "Suspended " ^ show_frontier f
   | E4_engine.Refused r -> "Refused " ^ r
-  | E4_engine.Outside_profile r -> "Outside_profile " ^ E4_clock.refusal_text r
+  | E4_engine.Outside_profile r -> "Outside_profile " ^ Lcnf_crossing.refusal_text r
   | E4_engine.Delay f -> "Delay " ^ show_frontier f
 ;;
 
@@ -399,8 +423,8 @@ let origin_prelude_check () =
   let () =
     let module I = Api_engine_inst in
     let program = p42 in
-    let machine = I.load program ~fuel:100 in
-    let parent = List.assoc 0 (I.fibers machine) in
+    let machine = I.load program ~fuel:(Z.of_int 100) in
+    let parent = List.assoc Z.zero (I.fibers machine) in
     check
       "Fast creation origin: the root has no fork record"
       (match machine.forks with
@@ -412,35 +436,30 @@ let origin_prelude_check () =
       ; mask_mode = Eff_types.MaskMode.Inherit
       }
     in
+    let site = [ Z.of_int 3; Z.one ] in
     let spawned, (_, child_id) =
-      I.sh_spawn
-        (I.interp_of [] program)
-        machine
-        parent
-        parent.frame.current
-        options
-        [ 3; 1 ]
+      I.sh_spawn (I.interp_of [] program) machine parent parent.frame.current options site
     in
     let _child = List.assoc child_id (I.fibers spawned) in
     check
       "Fast creation origin: spawn retains parent, daemon and exact site"
       (match spawned.forks with
        | [ (record : I.fork_record) ] ->
-         record.child = child_id
-         && record.parent = 0
+         Z.equal record.child child_id
+         && Z.equal record.parent Z.zero
          && record.daemon
-         && record.site = [ 3; 1 ]
+         && List.equal Z.equal record.site site
        | _ -> false)
   in
   ()
 ;;
 
-(* DI-56: clock storage remains exact; number-valued clockNow refuses at the host
-   boundary. The refusal retains the input snapshot and its unread decision. *)
-let clock_profile_check () =
+(* The clock is an ordinary natural, Zarith's `Z.t` (M4): its storage, its arithmetic and its
+   reading are exact past max_int, on the generated machine and through the engine. Expected
+   decimals are independent of the clock arithmetic used by the machine. *)
+let clock_exactness_check () =
   (* Read the actual generated machine: store_row deliberately omits timers, so accepting
-     a decision through the public wrapper alone cannot detect a narrowed clock. Expected
-     decimals are independent of the clock arithmetic used by the machine. *)
+     a decision through the public wrapper alone cannot detect a narrowed clock. *)
   let check_generated name load advance evaluate now deadlines root_succeeded =
     let prefix = name ^ " generated clock: " in
     let step label f m =
@@ -448,18 +467,18 @@ let clock_profile_check () =
       check (prefix ^ label ^ " settles") settled;
       next
     in
-    let clock_is m expected = E4_clock.to_decimal (now m) = expected in
+    let clock_is m expected = String.equal (Z.to_string (now m)) expected in
     let deadlines_are m expected =
-      List.map E4_clock.to_decimal (deadlines m) = expected
+      List.equal String.equal (List.map Z.to_string (deadlines m)) expected
     in
-    let huge = E4_clock.literal "4611686018427387905" in
+    let huge = Z.of_string "4611686018427387905" in
     let m0 = load () in
     check (prefix ^ "load starts at zero") (clock_is m0 "0");
     let m1 = step "advance beyond max_int" (advance huge) m0 in
     check
       (prefix ^ "large advance retains every digit")
       (clock_is m1 "4611686018427387905");
-    let m2 = step "add seven" (advance (E4_clock.of_nat 7)) m1 in
+    let m2 = step "add seven" (advance (Z.of_int 7)) m1 in
     check
       (prefix ^ "addition beyond max_int is exact")
       (clock_is m2 "4611686018427387912");
@@ -469,13 +488,13 @@ let clock_profile_check () =
       (clock_is asleep "4611686018427387912"
        && deadlines_are asleep [ "4611686018427387929" ]
        && not (root_succeeded asleep));
-    let early = step "advance before deadline" (advance (E4_clock.of_nat 16)) asleep in
+    let early = step "advance before deadline" (advance (Z.of_int 16)) asleep in
     check
       (prefix ^ "timer remains pending one millisecond before its deadline")
       (clock_is early "4611686018427387928"
        && deadlines_are early [ "4611686018427387929" ]
        && not (root_succeeded early));
-    let fired = step "cross deadline" (advance (E4_clock.of_nat 4)) early in
+    let fired = step "cross deadline" (advance (Z.of_int 4)) early in
     check
       (prefix ^ "timer fires and advance finishes at its exact target")
       (clock_is fired "4611686018427387932"
@@ -487,119 +506,164 @@ let clock_profile_check () =
       (clock_is later "9223372036854775837")
   in
   let sleep_then_42 =
-    E.Eff.Bind (E.Eff.Perform (E.NativeOp.Sleep, E.Term.Lit (E.Lit.Nat 17)), p42)
+    E.Eff.Bind
+      (E.Eff.Perform (E.NativeOp.Sleep, E.Term.Lit (E.Lit.Nat (Z.of_int 17))), p42)
   in
   let () =
     let module I = Api_engine_inst in
     let p = sleep_then_42 in
     let prepared = I.prepare [] p in
-    let step m d = I.step prepared ~fuel:100 m d in
+    let step m d = I.step prepared ~fuel:(Z.of_int 100) m d in
     check_generated
       I.name
-      (fun () -> I.load p ~fuel:100)
+      (fun () -> I.load p ~fuel:(Z.of_int 100))
       (fun millis m -> step m (I.RunDecision_advance millis))
-      (fun m -> step m (I.RunDecision_evaluate 0))
+      (fun m -> step m (I.RunDecision_evaluate Z.zero))
       (fun m -> (I.stores_of m).timers.now)
       (fun m ->
          List.map
-           (fun (w : E4_clock.t I.waiter) -> w.payload)
+           (fun (w : Z.t I.waiter) -> w.payload)
            (I.stores_of m).timers.wake.waiters)
       (fun m ->
-         match List.assoc_opt 0 (I.completed_exits m) with
-         | Some (Eff_types.Exit.Success (Eff_types.Val.Nat 42)) -> true
+         match List.assoc_opt Z.zero (I.completed_exits m) with
+         | Some (Eff_types.Exit.Success (Eff_types.Val.Nat n)) -> Z.equal n (Z.of_int 42)
          | _ -> false)
   in
+  (* `clockNow` answers the clock as a natural: past max_int it is the exact number, where
+     until M4 it refused at the clock crossing. *)
   let check_instance (module En : E4_engine.ENGINE) =
-    let module Projection = E4_diff.Of (En) in
     let p =
       E.Eff.Bind
-        ( E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat 7))
+        ( E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat (Z.of_int 7)))
         , E.Eff.Perform (E.NativeOp.ClockNow, E.Term.Lit E.Lit.Unit) )
     in
     let prefix = En.name ^ " exact clock: " in
     let m0 = En.load p ~fuel:100 in
-    let m = En.step m0 (En.advance_exact (E4_clock.literal "4611686018427387904")) in
+    let m = En.step m0 (En.advance_exact (Z.of_string "4611686018427387904")) in
     check
       (prefix ^ "large adjustment is accepted")
       (match En.answer m with
        | E4_engine.Outside_profile _ -> false
        | _ -> true);
-    let before = En.refs m, En.trace_rows m, En.fiber_rows m, En.store_row m in
-    let refused, residue = En.replay_to m [ En.evaluate 0; En.flush ] in
+    let read = En.replay m [ En.evaluate 0; En.flush ] in
     check
-      (prefix ^ "clockNow explicitly refuses the numeric profile, at the clock crossing")
-      (match En.answer refused with
-       | E4_engine.Outside_profile r -> r.E4_clock.crossing = E4_clock.Clock
-       | _ -> false);
+      (prefix ^ "clockNow answers the exact clock past max_int")
+      (Option.equal String.equal (En.root_exit read) (Some "success 4611686018427387904"));
+    (* the red control: the host's int does not hold the clock it read *)
     check
-      (prefix ^ "mid-decision refusal retains the input machine")
-      (before
-       = ( En.refs refused
-         , En.trace_rows refused
-         , En.fiber_rows refused
-         , En.store_row refused ));
-    check (prefix ^ "refused decision stays unread") (List.length residue = 2);
-    check
-      (prefix ^ "refusal cannot become differential agreement")
-      (match Projection.project refused with
-       | _ -> false
-       | exception E4_clock.Profile_refusal _ -> true);
-    check
-      (prefix ^ "halted refusal holds the input machine")
-      (En.step refused En.flush == refused)
+      (prefix ^ "(red control) the host's int does not hold 2^62")
+      (not (Z.fits_int (Z.of_string "4611686018427387904")))
   in
-  check_instance (module En_fast)
+  check_instance (module En_fast);
+  check_instance (module En_gen)
 ;;
 
-(* The generated multiplication row observes exact products only inside the profile.
-   Out-of-profile products refuse at the decision boundary and retain its input. *)
-let multiplication_profile_check () =
+(* A crossing's refusal (`Lcnf_crossing.Refused`) is a host boundary result (EN3): the step
+   that raised it is not taken, the input machine is retained and the decision stays unread.
+   No program reaches a crossing since M4 (no atom narrows a natural to the target's int), so
+   the stand-in is the generated machine whose flush computes a shift past the target's int,
+   which the runtime library refuses at the arithmetic crossing. *)
+module Refusing = struct
+  include Api_engine_inst
+
+  let name = "Refusing"
+
+  let step prepared ~fuel m d =
+    match d with
+    | RunDecision_flush ->
+      (* 2^62 is no shift the target's int holds: `Lcnf_nat.to_shift_exn` refuses *)
+      ignore (Lcnf_nat.shift_left Z.one (Z.shift_left Z.one 62));
+      Api_engine_inst.step prepared ~fuel m d
+    | _ -> Api_engine_inst.step prepared ~fuel m d
+  ;;
+end
+
+module En_refusing = E4_engine.Make (Refusing)
+
+let crossing_retention_check () =
+  let module En = En_refusing in
+  let module Projection = E4_diff.Of (En) in
+  let prefix = En.name ^ " crossing: " in
+  let p =
+    E.Eff.Bind
+      ( E.Eff.Perform (E.NativeOp.RefMake, E.Term.Lit (E.Lit.Nat (Z.of_int 7)))
+      , E.Eff.Perform (E.NativeOp.ClockNow, E.Term.Lit E.Lit.Unit) )
+  in
+  let m = En.load p ~fuel:100 in
+  let before = En.refs m, En.trace_rows m, En.fiber_rows m, En.store_row m in
+  let refused, residue = En.replay_to m [ En.flush; En.evaluate 0 ] in
+  check
+    (prefix ^ "a refused step answers Outside_profile, at the arithmetic crossing")
+    (match En.answer refused with
+     | E4_engine.Outside_profile r -> r.Lcnf_crossing.crossing = Lcnf_crossing.Arithmetic
+     | _ -> false);
+  check
+    (prefix ^ "mid-decision refusal retains the input machine")
+    (before
+     = ( En.refs refused
+       , En.trace_rows refused
+       , En.fiber_rows refused
+       , En.store_row refused ));
+  check (prefix ^ "refused decision stays unread") (List.length residue = 2);
+  check
+    (prefix ^ "refusal cannot become differential agreement")
+    (match Projection.project refused with
+     | _ -> false
+     | exception Lcnf_crossing.Refused _ -> true);
+  check
+    (prefix ^ "halted refusal holds the input machine")
+    (En.step refused En.flush == refused)
+;;
+
+(* The run is exact (M4, decisions row 417 (1)): a product past the rc.112 profile's bound and
+   past the host's int is the exact natural, on the native profile, which has no bound. The
+   profile is a datum checked at ingress, not by the run's arithmetic (D3). *)
+let multiplication_exactness_check () =
   let program a b =
     E.Eff.Bind
       ( E.Eff.Perform (E.NativeOp.RefMake, nat_lit 7)
       , E.Eff.Succeed
           (E.Term.App
-             ("mul", E.Terms.Cons (nat_lit a, E.Terms.Cons (nat_lit b, E.Terms.Nil)))) )
+             ( "mul"
+             , E.Terms.Cons
+                 ( E.Term.Lit (E.Lit.Nat a)
+                 , E.Terms.Cons (E.Term.Lit (E.Lit.Nat b), E.Terms.Nil) ) )) )
   in
+  let edge = Z.of_string "9007199254740991" in
   let check_instance (module En : E4_engine.ENGINE) =
-    let prefix = En.name ^ " multiplication profile: " in
+    let prefix = En.name ^ " multiplication: " in
     List.iter
       (fun (label, a, b, expected) ->
          let result = En.run (program a b) ~fuel:100 in
          check
            (prefix ^ label)
-           (En.root_exit result = Some ("success " ^ string_of_int expected)))
-      [ "ordinary", 6, 7, 42
-      ; "zero at the boundary", 0, Int64.to_int 9007199254740991L, 0
-      ; ( "largest admitted product"
-        , Int64.to_int 9007199254740991L
-        , 1
-        , Int64.to_int 9007199254740991L )
+           (Option.equal
+              String.equal
+              (En.root_exit result)
+              (Some ("success " ^ expected))))
+      [ "ordinary", Z.of_int 6, Z.of_int 7, "42"
+      ; "zero at the boundary", Z.zero, edge, "0"
+      ; "largest product inside the rc.112 profile", edge, Z.one, "9007199254740991"
+      ; ( "first product past the rc.112 profile is exact"
+        , Z.of_string "4503599627370496"
+        , Z.of_int 2
+        , "9007199254740992" )
+      ; ( "an odd square past 2^53 is exact"
+        , Z.of_int 134217729
+        , Z.of_int 134217729
+        , "18014398777917441" )
+      ; ( "a product past the host's int is exact"
+        , edge
+        , edge
+        , "81129638414606663681390495662081" )
       ];
-    List.iter
-      (fun (label, a, b) ->
-         let before = En.load (program a b) ~fuel:100 in
-         let observation m =
-           En.refs m, En.trace_rows m, En.fiber_rows m, En.store_row m
-         in
-         let result, remaining = En.replay_to before [ En.evaluate 0; En.flush ] in
-         check
-           (prefix ^ label ^ " refuses, at the arithmetic crossing")
-           (match En.answer result with
-            | E4_engine.Outside_profile r -> r.E4_clock.crossing = E4_clock.Arithmetic
-            | _ -> false);
-         check
-           (prefix ^ label ^ " retains the input")
-           (observation result = observation before);
-         check (prefix ^ label ^ " retains the decision") (List.length remaining = 2))
-      [ "first product above the boundary", Int64.to_int 4503599627370496L, 2
-      ; "rounded double product", 134217729, 134217729
-      ; ( "product above machine integers"
-        , Int64.to_int 9007199254740991L
-        , Int64.to_int 9007199254740991L )
-      ]
+    (* the red control: binary64 rounds the odd square, which is what the exact product rules out *)
+    check
+      (prefix ^ "(red control) binary64 rounds 134217729^2 to an even number")
+      (Float.equal (134217729.0 *. 134217729.0) 18014398777917440.0)
   in
-  check_instance (module En_fast)
+  check_instance (module En_fast);
+  check_instance (module En_gen)
 ;;
 
 (* EN8: a program's literals are profile support's, Lean's, lowered (`literal_refusal`, at
@@ -607,7 +671,8 @@ let multiplication_profile_check () =
    from a value and from the wire, on both instances. The decision constructors check nothing:
    a raw decision is a trusted input, and ingress is the driver's question. *)
 let numeric_ingress_check () =
-  let edge = Int64.to_int 9007199254740991L in
+  let edge = Z.of_string "9007199254740991" in
+  let past = Z.succ edge in
   let lit n = E.Eff.Succeed (E.Term.Lit (E.Lit.Nat n)) in
   let above at n = Some { E.Located.site = at; reason = E.ProfileReason.AboveBound n } in
   let check_instance (module En : E4_engine.ENGINE) =
@@ -617,18 +682,22 @@ let numeric_ingress_check () =
       (En.literal_refusal (lit edge) = None);
     check
       (prefix ^ "a literal above the profile, refused at its node")
-      (En.literal_refusal (lit (edge + 1)) = above [] (edge + 1));
+      (En.literal_refusal (lit past) = above [] past);
     check
       (prefix ^ "a literal in a bind's continuation, refused at its address")
-      (En.literal_refusal (E.Eff.Bind (p42, lit (edge + 1))) = above [ 1 ] (edge + 1));
+      (En.literal_refusal (E.Eff.Bind (p42, lit past)) = above [ Z.one ] past);
     check
       (prefix ^ "a literal above the profile from the wire, refused")
-      (match Eff_codec.decode_program (Eff_codec.encode_program (lit (edge + 1))) with
-       | Some p -> En.literal_refusal p = above [] (edge + 1)
+      (match Eff_codec.decode_program (Eff_codec.encode_program (lit past)) with
+       | Some p -> En.literal_refusal p = above [] past
        | None -> false);
     check
+      (prefix ^ "a literal past the host's int, refused at its node")
+      (let huge = Z.shift_left Z.one 64 in
+       En.literal_refusal (lit huge) = above [] huge);
+    check
       (prefix ^ "a constructor checks nothing")
-      (match En.answer_async_success 0 0 (edge + 1) with
+      (match En.answer_async_success 0 0 (Z.to_int past) with
        | _ -> true
        | exception _ -> false)
   in
@@ -645,8 +714,8 @@ let numeric_ingress_check () =
 let answer_ingress_check () =
   let success v = E.Completion.OfExit (E.Exit.Success v) in
   let failure reasons = E.Completion.OfExit (E.Exit.Failure reasons) in
-  let top = Int64.to_int 9007199254740991L
-  and above = Int64.to_int 9007199254740992L in
+  let top = Z.of_string "9007199254740991" in
+  let above = Z.succ top in
   let unsupported = function
     | Some (E4_engine.Unsupported _) -> true
     | _ -> false
@@ -660,12 +729,12 @@ let answer_ingress_check () =
       (fun (label, refused, answer) ->
          check (prefix ^ label ^ " refused") (refused (En.ingress answer)))
       [ "a natural above the profile", unsupported, success (E.Val.Nat above)
-      ; "a negative natural", not_a_value, success (E.Val.Nat (-1))
+      ; "a negative natural", not_a_value, success (E.Val.Nat (Z.of_int (-1)))
       ; ( "a nested natural"
         , unsupported
         , success (E.Val.List [ E.Val.Pair (E.Val.Unit, E.Val.Some (E.Val.Nat above)) ]) )
       ; "a constructor index", unsupported, success (E.Val.Ctor (above, []))
-      ; "a handle key", not_a_value, success (E.Val.Handle (0, -1))
+      ; "a handle key", not_a_value, success (E.Val.Handle (0, Z.of_int (-1)))
       ; "a negative integer's magnitude", unsupported, success (E.Val.NegInt above)
       ; ( "the least negative integer past the profile"
         , unsupported
@@ -673,14 +742,14 @@ let answer_ingress_check () =
       ; "an error code", unsupported, failure [ E.Reason.Fail (E.Err.Tag above, []) ]
       ; ( "an error's payload"
         , not_a_value
-        , failure [ E.Reason.Fail (E.Err.Payload (E.Val.Nat (-1)), []) ] )
+        , failure [ E.Reason.Fail (E.Err.Payload (E.Val.Nat (Z.of_int (-1))), []) ] )
       ; ( "a defect's payload"
         , unsupported
         , failure [ E.Reason.Die (E.Defect.User above, []) ] )
       ; ( "an interrupting fiber"
         , not_a_value
-        , failure [ E.Reason.Interrupt (Some (-1), []) ] )
-      ; "a ref key", not_a_value, E.Completion.OfRefGet (-1)
+        , failure [ E.Reason.Interrupt (Some (Z.of_int (-1)), []) ] )
+      ; "a ref key", not_a_value, E.Completion.OfRefGet (Z.of_int (-1))
       ; (* a Lean String is valid UTF-8, so a reply's string must be (2.2a's open item) *)
         ( "a string with a byte no UTF-8 starts with"
         , not_a_value
@@ -708,24 +777,38 @@ let answer_ingress_check () =
          (success (E.Val.List [ E.Val.Pair (E.Val.Unit, E.Val.Some (E.Val.Nat above)) ]))
        = Some
            (E4_engine.Unsupported
-              { E.Located.site = [ 0; 0; 1; 0 ]
+              { E.Located.site = [ Z.zero; Z.zero; Z.one; Z.zero ]
               ; reason = E.ProfileReason.AboveBound above
               }));
+    (* a negative integer's reason names its magnitude, n + 1 (M4) *)
+    check
+      (prefix ^ "a negative integer is refused with its magnitude")
+      (En.ingress (success (E.Val.NegInt top))
+       = Some
+           (E4_engine.Unsupported
+              { E.Located.site = [ Z.zero ]; reason = E.ProfileReason.BelowBound above })
+      );
     List.iter
       (fun (label, answer) ->
          check (prefix ^ label ^ " passes") (Option.is_none (En.ingress answer)))
       [ "the top natural", success (E.Val.Nat top)
-      ; "nested naturals", success (E.Val.Ctor (0, [ E.Val.Nat top; E.Val.NegInt 0 ]))
-      ; "the least negative integer inside the profile", success (E.Val.NegInt (top - 1))
+      ; ( "nested naturals"
+        , success (E.Val.Ctor (Z.of_int 0, [ E.Val.Nat top; E.Val.NegInt (Z.of_int 0) ]))
+        )
+      ; ( "the least negative integer inside the profile"
+        , success (E.Val.NegInt (Z.pred top)) )
       ; ( "no natural"
         , success
             (E.Val.List
-               [ E.Val.Str "x"; E.Val.Bytes [ 255 ]; E.Val.Float 1; E.Val.Ref (1, [ 2 ]) ])
-        )
+               [ E.Val.Str "x"
+               ; E.Val.Bytes [ 255 ]
+               ; E.Val.Float (Z.of_int 1)
+               ; E.Val.Ref (1, [ 2 ])
+               ]) )
       ; ( "a failure"
         , failure
             [ E.Reason.Die (E.Defect.Error (E.Err.Tag top), [])
-            ; E.Reason.Interrupt (Some 0, [])
+            ; E.Reason.Interrupt (Some Z.zero, [])
             ] )
       ; "a ref key", E.Completion.OfRefGet top
       ; (* the red controls' green twins: valid UTF-8 outside ASCII passes *)
@@ -843,17 +926,17 @@ let bench () =
 
 (* E4-PROV-CE-005: the layer's lexical environment starts closed, matching its checker. *)
 let layer_environment_check () =
-  let key = { E.ServiceKey.name = 4; service = 4 } in
+  let key = { E.ServiceKey.name = Z.of_int 4; service = Z.of_int 4 } in
   let program =
     E.Eff.Bind
-      ( E.Eff.Succeed (E.Term.Lit (E.Lit.Nat 9))
+      ( E.Eff.Succeed (E.Term.Lit (E.Lit.Nat (Z.of_int 9)))
       , E.Eff.Scoped
           (E.Eff.ProvideLayer
              ( E.LayerTerm.Effect
                  ( key
                  , E.Eff.Bind
                      ( E.Eff.Succeed (E.Term.Lit (E.Lit.Str "x"))
-                     , E.Eff.Fail (E.Term.Var 0) ) )
+                     , E.Eff.Fail (E.Term.Var (Z.of_int 0)) ) )
              , false
              , E.Eff.Service key )) )
   in
@@ -875,10 +958,11 @@ let () =
   Printf.printf "  Fast = %s\n  Gen  = %s\n" En_fast.carriers En_gen.carriers;
   print_endline "";
   g0 ();
-  clock_profile_check ();
+  clock_exactness_check ();
+  crossing_retention_check ();
   numeric_ingress_check ();
   answer_ingress_check ();
-  multiplication_profile_check ();
+  multiplication_exactness_check ();
   origin_prelude_check ();
   layer_environment_check ();
   print_endline "";

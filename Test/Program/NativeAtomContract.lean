@@ -14,6 +14,7 @@ the actual generated profile and actual self-test cases in the truth harness.
 namespace Test.Program.NativeAtomContract
 
 open Effect4.Program
+open Effect4 (safeBound)
 
 #guard NativeAtom.names =
   ["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd", "strings",
@@ -200,16 +201,17 @@ Readers of `intAddIn_eq_some_iff` (`src/Effect4/Laws/Machine/IntegerProfile.lean
 bound: the reference adds, and the judgment refuses exactly outside the profile. -/
 
 -- the bound is the profile's datum
-#guard rc112.natBound = 2 ^ 53 - 1
+#guard rc112.natBound = some (2 ^ 53 - 1)
 -- reader: at the bound the reference adds and the checked row refuses
-#guard nativeAtom "plus" [.nat rc112.natBound, .nat 1] = some (.nat (2 ^ 53))
-#guard intAddIn rc112.natBound (.nat rc112.natBound) (.nat 1) = none
-#guard intAddIn rc112.natBound (.nat (rc112.natBound - 1)) (.nat 1) = some (.nat rc112.natBound)
-#guard intAddIn rc112.natBound (.negInt (rc112.natBound - 1)) (.negInt 0) = none
-#guard intAddIn rc112.natBound (.negInt (rc112.natBound - 2)) (.negInt 0) =
-  some (.negInt (rc112.natBound - 1))
+#guard nativeAtom "plus" [.nat safeBound, .nat 1] = some (.nat (2 ^ 53))
+#guard intAddIn rc112 (.nat safeBound) (.nat 1) = none
+#guard intAddIn rc112 (.nat (safeBound - 1)) (.nat 1) = some (.nat safeBound)
+#guard intAddIn rc112 (.negInt (safeBound - 1)) (.negInt 0) = none
+#guard intAddIn rc112 (.negInt (safeBound - 2)) (.negInt 0) = some (.negInt (safeBound - 1))
 -- control: a sum of two signs never leaves the profile
-#guard intAddIn rc112.natBound (.nat rc112.natBound) (.negInt (rc112.natBound - 1)) = some (.nat 0)
+#guard intAddIn rc112 (.nat safeBound) (.negInt (safeBound - 1)) = some (.nat 0)
+-- control: a profile with no bound, the native one's, refuses no sum
+#guard intAddIn { rc112 with natBound := none } (.nat safeBound) (.nat 1) = some (.nat (2 ^ 53))
 
 /-- Every successful native typing names an inventoried atom, for arbitrary input types. -/
 theorem typed_name_known (name : String) (args : List Ty) (answer : Ty)

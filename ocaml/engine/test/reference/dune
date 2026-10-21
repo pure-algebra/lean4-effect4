@@ -12,7 +12,7 @@
  (name e4_reference)
  (wrapped false)
  (modules corpora e4_diff e4_memo_list)
- (libraries effect4_engine effect4_eff effect4_clock yojson))
+ (libraries effect4_engine effect4_eff zarith yojson))
 
 ; Rule 7 of ocaml/STANDARDS.md over this library's typed tree (ocaml/tools/typed_lint).
 

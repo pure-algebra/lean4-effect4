@@ -17,7 +17,7 @@ def typeName : FieldType → String
   | .natural => "natural" | .boolean => "boolean" | .text => "text" | .json => "json"
   | .clockMillis => "clockMillis"
 def fieldSchema : FieldType → Json
-  | .natural => Json.mkObj [("type", "integer"), ("minimum", toJson (0 : Nat)), ("maximum", toJson Effect4.Program.rc112.natBound)]
+  | .natural => Json.mkObj [("type", "integer"), ("minimum", toJson (0 : Nat)), ("maximum", toJson Effect4.safeBound)]
   | .boolean => Json.mkObj [("type", "boolean")]
   | .text => Json.mkObj [("type", "string"), ("maxLength", toJson (4096 : Nat))]
   | .json => Json.mkObj []

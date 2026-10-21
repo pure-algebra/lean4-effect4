@@ -2,4 +2,4 @@
 ; uses the facade's types as the owner's and the implementation's, and runs one program.
 (executable
  (name ok)
- (libraries effect4_gen.effect4))
+ (libraries effect4_gen.effect4 zarith))

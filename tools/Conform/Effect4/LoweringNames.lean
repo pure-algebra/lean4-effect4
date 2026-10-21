@@ -3,8 +3,8 @@ checkpoint translates their persisted mono LCNF and compares each with Lean's ow
 (`Conform.Effect4.CompilerControls`, `Conform.Effect4.Normalization`).
 
 Each `…Cap` definition names a binder as one of: a temporary that an earlier builtin form bound
-at its call site (`_mula`, `_shift_scale`), an eta binder (`_b1`), a free name of a builtin form
-(`max`), a function the route once printed into each file (`lcnf_nat_mul`), a generated
+at its call site (`_mula`, `_shift_scale`), an eta binder (`_b1`), a function of the target's
+library (`max`), a function the route once printed into each file (`lcnf_nat_mul`), a generated
 declaration that the body calls.
 Each `…Ok` definition is its neighbour with an ordinary name. A translation that lets one of
 these binders capture a reference answers differently from Lean: before the builtin table was
@@ -27,13 +27,14 @@ namespace Conform.Effect4.LoweringNames
 @[noinline] def etaCap (_b1 y : Nat) : Nat := applyTo (Nat.add _b1) y
 @[noinline] def etaOk (a y : Nat) : Nat := applyTo (Nat.add a) y
 
-/-- A binder named as a free name of a form: `Nat.sub` is `max 0 (a - b)`. -/
+/-- A binder named as a function of the target's library, `max`, which a reader of the emitted
+code resolves as the library's. Until M4 it was also a free name of the form of `Nat.sub`. -/
 @[noinline] def freeCap (max : Nat → Nat → Nat) (a b : Nat) : Nat := max (a - b) b
 @[noinline] def freeCapAt (a b : Nat) : Nat := freeCap (fun p q => p * q + 1) a b
 
-/-- A binder named as the function the route once printed into each file. The runtime library's
-function is the qualified `Lcnf_nat.mul`, so no binder can take its name, and this one keeps its
-own. -/
+/-- A binder named as the function the route once printed into each file. Every function of the
+runtime library is qualified (`Lcnf_nat.sub`), and since M4 a product is Zarith's `Z.mul`, so no
+binder can take its name, and this one keeps its own. -/
 @[noinline] def helperCap (lcnf_nat_mul : Nat → Nat → Nat) (a b : Nat) : Nat :=
   lcnf_nat_mul (a * b) b
 @[noinline] def helperCapAt (a b : Nat) : Nat := helperCap (fun p q => p + q + 1) a b

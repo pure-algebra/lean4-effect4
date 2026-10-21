@@ -78,7 +78,8 @@ let rec render (s : G.shape) : string =
       (String.concat
          " "
          (List.map
-            (fun (n, (i, fs)) -> Printf.sprintf "(%S %d (%s))" n i (fields fs))
+            (fun (n, (i, fs)) ->
+               Printf.sprintf "(%S %s (%s))" n (Z.to_string i) (fields fs))
             cases))
   | G.Shape_ref _ -> "(ref)"
   | G.Shape_anyRef -> "anyRef"

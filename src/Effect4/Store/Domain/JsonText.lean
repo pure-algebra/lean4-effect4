@@ -150,7 +150,7 @@ def numberText (bs : List Nat) : Except TextStop (List Nat × List Nat) :=
 def digitsValue (ds : List Nat) : Nat := ds.foldl (fun acc c => acc * 10 + (c - 48)) 0
 
 /-- **The most digits a natural of the tree takes**: 16. Every natural the tree holds from text
-is below 10^16, which a host's 63-bit integer holds, and `NatJson.limit` is below it. -/
+is below 10^16, which a host's 63-bit integer holds, and `safeBound` is below it. -/
 def maxDigits : Nat := 16
 
 /-- **A number of the tree** from its text: a natural where the text is digits only, at most

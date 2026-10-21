@@ -12,7 +12,8 @@ bug-reports: "https://github.com/pure-algebra/lean4-effect4/issues"
 depends: [
   "dune" {>= "3.0"}
   "ocaml" {>= "5.1.1"}
-  "effect4_clock"
+  "zarith" {>= "1.14"}
+  "conf-gmp"
   "effect4_eff"
   "effect4_lcnf"
   "odoc" {with-doc}

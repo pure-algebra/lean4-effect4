@@ -159,7 +159,8 @@ let group_cut g refs =
 
 (* ---- the frame layer: Eff_frame only, never a second writer (brief §2.2) ---- *)
 
-let f_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+(* A natural of this module's own payloads is a host int, written as the kernel's natural. *)
+let f_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 let f_list xs = Eff_frame.framed Eff_frame.tag_list (String.concat "" xs)
 let f_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
 
@@ -214,13 +215,14 @@ let decode_manifest bytes =
      | Some (t0, i0, e0, a0) when t0 = Eff_frame.tag_nat ->
        (match Eff_frame.nat_of_digits bytes i0 e0 with
         | None -> None
-        | Some idx when idx = 0 || idx = 1 ->
+        | Some idx when Z.equal idx Z.zero || Z.equal idx Z.one ->
+          let leaf = Z.equal idx Z.zero in
           (match Eff_frame.read_frame bytes a0 pend with
            | Some (tl, lpos, lend, lfend) when tl = Eff_frame.tag_list && lfend = pend ->
-             let kind = if idx = 0 then E4_kind.Chunk else E4_kind.Manifest in
+             let kind = if leaf then E4_kind.Chunk else E4_kind.Manifest in
              (match read_refs_of_kind bytes lpos lend kind with
               | None -> None
-              | Some refs -> Some (if idx = 0 then Leaf refs else Interior refs))
+              | Some refs -> Some (if leaf then Leaf refs else Interior refs))
            | _ -> None)
         | _ -> None)
      | _ -> None)

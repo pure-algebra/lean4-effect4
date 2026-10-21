@@ -16,21 +16,21 @@ include Closure_gen
 type 's host = {
   insert : string -> 's -> (todo, sql_tag * string) result * 's;
   all : unit -> 's -> (todo list, sql_tag * string) result * 's;
-  set_done : int * bool -> 's -> (todo option, sql_tag * string) result * 's;
-  delete : int -> 's -> (bool, sql_tag * string) result * 's;
+  set_done : Z.t * bool -> 's -> (todo option, sql_tag * string) result * 's;
+  delete : Z.t -> 's -> (bool, sql_tag * string) result * 's;
 }
-and todo = { id : int; title : string; done_ : bool }
+and todo = { id : Z.t; title : string; done_ : bool }
 and sql_tag = SqlTag_SqlError
-and tools_run_checks_call = { row : int; request : Val.t; completion : (Val.t, Err.t, Defect.t, fiber_id, unit) Completion.t }
+and tools_run_checks_call = { row : Z.t; request : Val.t; completion : (Val.t, Err.t, Defect.t, fiber_id, unit) Completion.t }
 and 'r columns = { names : string list; to_vals : 'r -> Val.t list; of_vals : Val.t list -> 'r option }
-and shade = Shade_light | Shade_dark of int
-and pt = { x : int; y : int }
+and shade = Shade_light | Shade_dark of Z.t
+and pt = { x : Z.t; y : Z.t }
 and status = Status_pending | Status_closed of string
-and test_codegen_modeled_lane_todo = { id : int; title : string; done_ : bool }
+and test_codegen_modeled_lane_todo = { id : Z.t; title : string; done_ : bool }
 and color = Color_red | Color_green | Color_blue
 and item = {
   name : string;
-  qty : int;
+  qty : Z.t;
   tags : string list;
   note : string option;
   status : status;
@@ -43,18 +43,18 @@ and ('a, 'b) sum = Sum_inl of 'a | Sum_inr of 'b
 
 (* LCNF mono: List.any._at_.Test.Dogfood.Scenario.Todo.repository.spec_0 (n.1 : Nat) (x.2 : List (Prod Nat (Prod String Bool))) : Bool *)
 
-let rec list_any_at_test_dogfood_scenario_todo_repository_spec_0 (n_1 : int) (x_2 : (int * (string * bool)) list) : bool =
+let rec list_any_at_test_dogfood_scenario_todo_repository_spec_0 (n_1 : Z.t) (x_2 : (Z.t * (string * bool)) list) : bool =
   match x_2 with
     | [] -> false
     | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, _ -> (let _x_6 = fst_1 = n_1 in
+        | fst_1, _ -> (let _x_6 = Z.equal fst_1 n_1 in
           if _x_6 then _x_6 else list_any_at_test_dogfood_scenario_todo_repository_spec_0 n_1 tail_5))
 
 
 
 (* LCNF mono: Test.Dogfood.Scenario.ok (value : Effect4.Store.Val) : Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit *)
 
-let test_dogfood_scenario_ok (value : Val.t) : (Val.t, Err.t, Defect.t, int, unit) Completion.t =
+let test_dogfood_scenario_ok (value : Val.t) : (Val.t, Err.t, Defect.t, Z.t, unit) Completion.t =
   let _x_1 = Exit.Success value in
   Completion.OfExit _x_1
 
@@ -62,13 +62,13 @@ let test_dogfood_scenario_ok (value : Val.t) : (Val.t, Err.t, Defect.t, int, uni
 
 (* LCNF mono: List.filterTR.loop._at_.Test.Dogfood.Scenario.Todo.repository.spec_1 (n.1 : Nat) (_x.2 : String) (a.3 : List (Prod Nat (Prod String Bool))) (a.4 : List (Prod Nat (Prod String Bool))) : List (Prod Nat (Prod String Bool)) *)
 
-let rec list_filter_tr_loop_at_test_dogfood_scenario_todo_repository_spec_1 (n_1 : int) (_x_2 : string) (a_3 : (int * (string * bool)) list) (a_4 : (int * (string * bool)) list) : (int * (string * bool)) list =
+let rec list_filter_tr_loop_at_test_dogfood_scenario_todo_repository_spec_1 (n_1 : Z.t) (_x_2 : string) (a_3 : (Z.t * (string * bool)) list) (a_4 : (Z.t * (string * bool)) list) : (Z.t * (string * bool)) list =
   match a_3 with
     | [] -> List.rev a_4
     | head_6 :: tail_7 -> (let[@local always] _jp_8 = fun _y_9 -> if _y_9 then (let _x_11 = head_6 :: a_4 in
         list_filter_tr_loop_at_test_dogfood_scenario_todo_repository_spec_1 n_1 _x_2 tail_7 _x_11) else list_filter_tr_loop_at_test_dogfood_scenario_todo_repository_spec_1 n_1 _x_2 tail_7 a_4 in
       match head_6 with
-        | fst_1, _ -> (let _x_13 = fst_1 = n_1 in
+        | fst_1, _ -> (let _x_13 = Z.equal fst_1 n_1 in
           if _x_13 then (let _x_16 = "TodoRepo.setDone" in
             let _x_17 = _x_2 = _x_16 in
             _jp_8 _x_17) else (let _x_14 = "TodoRepo.delete" in
@@ -79,11 +79,11 @@ let rec list_filter_tr_loop_at_test_dogfood_scenario_todo_repository_spec_1 (n_1
 
 (* LCNF mono: List.find?._at_.Test.Dogfood.Scenario.Todo.repository.spec_2 (n.1 : Nat) (x.2 : List (Prod Nat (Prod String Bool))) : Option (Prod Nat (Prod String Bool)) *)
 
-let rec list_find_opt_at_test_dogfood_scenario_todo_repository_spec_2 (n_1 : int) (x_2 : (int * (string * bool)) list) : (int * (string * bool)) option =
+let rec list_find_opt_at_test_dogfood_scenario_todo_repository_spec_2 (n_1 : Z.t) (x_2 : (Z.t * (string * bool)) list) : (Z.t * (string * bool)) option =
   match x_2 with
     | [] -> None
     | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, _ -> (let _x_6 = fst_1 = n_1 in
+        | fst_1, _ -> (let _x_6 = Z.equal fst_1 n_1 in
           if _x_6 then Some head_4 else list_find_opt_at_test_dogfood_scenario_todo_repository_spec_2 n_1 tail_5))
 
 
@@ -100,7 +100,7 @@ let test_dogfood_p2_handler_layers_record_val (names : string list) (values : Va
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.todo (id : Nat) (title : String) (done : Bool) : Effect4.Store.Val *)
 
-let test_dogfood_scenario_todo_todo (id : int) (title : string) (done_ : bool) : Val.t =
+let test_dogfood_scenario_todo_todo (id : Z.t) (title : string) (done_ : bool) : Val.t =
   let _x_1 = "id" in
   let _x_2 = "title" in
   let _x_3 = "done" in
@@ -120,13 +120,13 @@ let test_dogfood_scenario_todo_todo (id : int) (title : string) (done_ : bool) :
 
 (* LCNF mono: List.mapTR.loop._at_.Test.Dogfood.Scenario.Todo.repository.spec_3 (n.1 : Nat) (b.2 : Bool) (a.3 : List (Prod Nat (Prod String Bool))) (a.4 : List (Prod Nat (Prod String Bool))) : List (Prod Nat (Prod String Bool)) *)
 
-let rec list_map_tr_loop_at_test_dogfood_scenario_todo_repository_spec_3 (n_1 : int) (b_2 : bool) (a_3 : (int * (string * bool)) list) (a_4 : (int * (string * bool)) list) : (int * (string * bool)) list =
+let rec list_map_tr_loop_at_test_dogfood_scenario_todo_repository_spec_3 (n_1 : Z.t) (b_2 : bool) (a_3 : (Z.t * (string * bool)) list) (a_4 : (Z.t * (string * bool)) list) : (Z.t * (string * bool)) list =
   match a_3 with
     | [] -> List.rev a_4
     | head_6 :: tail_7 -> (let[@local always] _jp_8 = fun _y_9 -> let _x_10 = _y_9 :: a_4 in
       list_map_tr_loop_at_test_dogfood_scenario_todo_repository_spec_3 n_1 b_2 tail_7 _x_10 in
       match head_6 with
-        | fst_1, snd_1 -> (let _x_12 = fst_1 = n_1 in
+        | fst_1, snd_1 -> (let _x_12 = Z.equal fst_1 n_1 in
           if _x_12 then (match snd_1 with
               | fst_2, _ -> (let _x_13 = fst_2, b_2 in
                 let _x_14 = fst_1, _x_13 in
@@ -136,7 +136,7 @@ let rec list_map_tr_loop_at_test_dogfood_scenario_todo_repository_spec_3 (n_1 : 
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.todoOf (entry : Prod Nat (Prod String Bool)) : Effect4.Store.Val *)
 
-let test_dogfood_scenario_todo_todo_of (entry : int * (string * bool)) : Val.t =
+let test_dogfood_scenario_todo_todo_of (entry : Z.t * (string * bool)) : Val.t =
   match entry with
     | fst_1, snd_1 -> (match snd_1 with
         | fst_2, snd_2 -> test_dogfood_scenario_todo_todo fst_1 fst_2 snd_2)
@@ -145,7 +145,7 @@ let test_dogfood_scenario_todo_todo_of (entry : int * (string * bool)) : Val.t =
 
 (* LCNF mono: List.mapTR.loop._at_.Test.Dogfood.Scenario.Todo.repository.spec_4 (a.1 : List (Prod Nat (Prod String Bool))) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_test_dogfood_scenario_todo_repository_spec_4 (a_1 : (int * (string * bool)) list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_test_dogfood_scenario_todo_repository_spec_4 (a_1 : (Z.t * (string * bool)) list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _x_6 = test_dogfood_scenario_todo_todo_of head_4 in
@@ -156,7 +156,7 @@ let rec list_map_tr_loop_at_test_dogfood_scenario_todo_repository_spec_4 (a_1 : 
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.repository (row : Effect4.Program.Row) (sent : Effect4.Store.Val) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Prod Nat (List (Prod Nat (Prod String Bool))))) *)
 
-let test_dogfood_scenario_todo_repository (row : Row.t) (sent : Val.t) (state : int * (int * (string * bool)) list) : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * (int * (int * (string * bool)) list)) option =
+let test_dogfood_scenario_todo_repository (row : Row.t) (sent : Val.t) (state : Z.t * (Z.t * (string * bool)) list) : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * (Z.t * (Z.t * (string * bool)) list)) option =
   match (row : Row.t) with
     | { Row.spelling = spelling; _ } -> (let _x_1 = "TodoRepo.insert" in
       let _x_2 = spelling = _x_1 in
@@ -165,8 +165,8 @@ let test_dogfood_scenario_todo_repository (row : Row.t) (sent : Val.t) (state : 
               | fst_4, snd_5 -> (let _x_54 = false in
                 let _x_55 = test_dogfood_scenario_todo_todo fst_4 s_53 _x_54 in
                 let _x_56 = test_dogfood_scenario_ok _x_55 in
-                let _x_57 = 1 in
-                let _x_58 = fst_4 + _x_57 in
+                let _x_57 = Z.of_int 1 in
+                let _x_58 = Z.add fst_4 _x_57 in
                 let _x_59 = s_53, _x_54 in
                 let _x_60 = fst_4, _x_59 in
                 let _x_61 = [] in
@@ -231,7 +231,7 @@ let test_dogfood_scenario_todo_repository (row : Row.t) (sent : Val.t) (state : 
 
 (* LCNF mono: List.find?._at_.Test.Dogfood.Scenario.Todo.Host.externalIndex.spec_0 (table : List Effect4.Program.Row) (row : Effect4.Program.Row) (x.1 : List Nat) : Option Nat *)
 
-let rec list_find_opt_at_test_dogfood_scenario_todo_host_external_index_spec_0 (table : Row.t list) (row : Row.t) (x_1 : int list) : int option =
+let rec list_find_opt_at_test_dogfood_scenario_todo_host_external_index_spec_0 (table : Row.t list) (row : Row.t) (x_1 : Z.t list) : Z.t option =
   match x_1 with
     | [] -> None
     | head_3 :: tail_4 -> (let _x_5 = program_inst_decidable_eq_row in
@@ -244,19 +244,19 @@ let rec list_find_opt_at_test_dogfood_scenario_todo_host_external_index_spec_0 (
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.externalIndex (table : List Effect4.Program.Row) (row : Effect4.Program.Row) : Nat *)
 
-let test_dogfood_scenario_todo_host_external_index (table : Row.t list) (row : Row.t) : int =
-  let _x_1 = List.length table in
+let test_dogfood_scenario_todo_host_external_index (table : Row.t list) (row : Row.t) : Z.t =
+  let _x_1 = Z.of_int (List.length table) in
   let _x_2 = list_range _x_1 in
   let _x_3 = list_find_opt_at_test_dogfood_scenario_todo_host_external_index_spec_0 table row _x_2 in
   match _x_3 with
-    | None -> 0
+    | None -> Z.of_int 0
     | Some val__5 -> val__5
 
 
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.recording._redArg (table : List Effect4.Program.Row) (inner : Effect4.Program.Row -> Effect4.Store.Val -> lcAny -> (Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny))) (row : Effect4.Program.Row) (request : Effect4.Store.Val) (state : Prod lcAny (List Tools.RunChecks.Call)) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Prod lcAny (List Tools.RunChecks.Call))) *)
 
-let test_dogfood_scenario_todo_host_recording (table : Row.t list) (inner : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option) (row : Row.t) (request : Val.t) (state : _ * tools_run_checks_call list) : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * (_ * tools_run_checks_call list)) option =
+let test_dogfood_scenario_todo_host_recording (table : Row.t list) (inner : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option) (row : Row.t) (request : Val.t) (state : _ * tools_run_checks_call list) : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * (_ * tools_run_checks_call list)) option =
   match state with
     | fst_1, snd_1 -> (let _x_1 = inner row request fst_1 in
       match _x_1 with
@@ -275,7 +275,7 @@ let test_dogfood_scenario_todo_host_recording (table : Row.t list) (inner : Row.
 
 (* LCNF mono: List.mapTR.loop._at_.Effect4.Rows.tape.spec_0 (a.1 : List (Effect4.Machine.RunDecision Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (a.2 : List Effect4.Api.Runner.Command) : List Effect4.Api.Runner.Command *)
 
-let rec list_map_tr_loop_at_rows_tape_spec_0 (a_1 : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) run_decision list) (a_2 : command list) : command list =
+let rec list_map_tr_loop_at_rows_tape_spec_0 (a_1 : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, Z.t, unit) run_decision list) (a_2 : command list) : command list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _x_6 = Command_control head_4 in
@@ -286,7 +286,7 @@ let rec list_map_tr_loop_at_rows_tape_spec_0 (a_1 : (eff_name, eff_thunk, Val.t,
 
 (* LCNF mono: Effect4.Rows.tape (decisions : List (Effect4.Machine.RunDecision Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : List Effect4.Api.Runner.Command *)
 
-let rows_tape (decisions : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) run_decision list) : command list =
+let rows_tape (decisions : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, Z.t, unit) run_decision list) : command list =
   let _x_1 = [] in
   list_map_tr_loop_at_rows_tape_spec_0 decisions _x_1
 
@@ -294,7 +294,7 @@ let rows_tape (decisions : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, un
 
 (* LCNF mono: Effect4.Rows.control (d : Effect4.Machine.RunDecision Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : List Effect4.Api.Runner.Command *)
 
-let rows_control (d : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, int, unit) run_decision) : command list =
+let rows_control (d : (eff_name, eff_thunk, Val.t, Err.t, Defect.t, Z.t, unit) run_decision) : command list =
   let _x_1 = [] in
   let _x_2 = d :: _x_1 in
   rows_tape _x_2
@@ -366,7 +366,7 @@ let rows_flush : command list =
 
 (* LCNF mono: Effect4.Rows.answer (s : Effect4.Run) (key : Effect4.Api.HostProtocol.Key) (c : Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : List Effect4.Api.Runner.Command *)
 
-let rows_answer (s : run) (key : key) (c : (Val.t, Err.t, Defect.t, int, unit) Completion.t) : command list =
+let rows_answer (s : run) (key : key) (c : (Val.t, Err.t, Defect.t, Z.t, unit) Completion.t) : command list =
   let _x_1 = api_host_session_call_at s key in
   match _x_1 with
     | None -> []
@@ -384,16 +384,16 @@ let rows_answer (s : run) (key : key) (c : (Val.t, Err.t, Defect.t, int, unit) C
 
 (* LCNF mono: Effect4.Run.driveFrom._redArg (r : Effect4.Program.Row -> Effect4.Store.Val -> lcAny -> (Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny))) (x.1 : Nat) (x.2 : Effect4.Run) (x.3 : lcAny) : Prod Effect4.Run (Prod (List Effect4.Api.Runner.Command) lcAny) *)
 
-let rec run_drive_from (r : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option) (x_1 : int) (x_2 : run) x_3 : run * (command list * _) =
+let rec run_drive_from (r : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option) (x_1 : Z.t) (x_2 : run) x_3 : run * (command list * _) =
   let[@local always] _jp_4 = fun () -> let _x_5 = [] in
   let _x_6 = _x_5, x_3 in
   x_2, _x_6 in
-  let zero = 0 in
-  let is_zero = x_1 = zero in
+  let zero = Z.of_int 0 in
+  let is_zero = Z.equal x_1 zero in
   if is_zero then (let _x_8 = [] in
     let _x_9 = _x_8, x_3 in
-    x_2, _x_9) else (let one = 1 in
-    let n_11 = max 0 (x_1 - one) in
+    x_2, _x_9) else (let one = Z.of_int 1 in
+    let n_11 = Lcnf_nat.sub x_1 one in
     let _x_12 = run_fresh_call x_2 in
     match _x_12 with
       | None -> (let _x_13 = run_outstanding x_2 in
@@ -433,7 +433,7 @@ let rec run_drive_from (r : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, int
 
 (* LCNF mono: Effect4.Run.drive._redArg (s : Effect4.Run) (r : Effect4.Program.Row -> Effect4.Store.Val -> lcAny -> (Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny))) (st : lcAny) (rounds : Nat) : Prod Effect4.Run lcAny *)
 
-let run_drive (s : run) (r : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option) st (rounds : int) : run * _ =
+let run_drive (s : run) (r : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option) st (rounds : Z.t) : run * _ =
   let after = run_drive_from r rounds s st in
   match after with
     | fst_1, snd_1 -> (match snd_1 with
@@ -443,7 +443,7 @@ let run_drive (s : run) (r : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, in
 
 (* LCNF mono: Effect4.Run.runWith._redArg (b : Effect4.Api.Built) (r : Effect4.Program.Row -> Effect4.Store.Val -> lcAny -> (Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny))) (st : lcAny) (id : String) (budget : Effect4.Api.Budget) (rounds : Nat) : Prod Effect4.Run lcAny *)
 
-let run_run_with (b : built) (r : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option) st (id : string) (budget : budget) (rounds : int) : run * _ =
+let run_run_with (b : built) (r : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option) st (id : string) (budget : budget) (rounds : Z.t) : run * _ =
   let _x_1 = "" in
   let _x_2 = run_open_ b id budget _x_1 in
   let _x_3 = rows_start in
@@ -454,7 +454,7 @@ let run_run_with (b : built) (r : Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.
 
 (* LCNF mono: Effect4.Run.exit (s : Effect4.Run) : Option (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
 
-let run_exit_ (s : run) : (Val.t, Err.t, Defect.t, int, unit) Exit.t option =
+let run_exit_ (s : run) : (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t option =
   let _x_1 = run_inspect s in
   api_inspection_exit_ _x_1
 
@@ -462,7 +462,7 @@ let run_exit_ (s : run) : (Val.t, Err.t, Defect.t, int, unit) Exit.t option =
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.serveBuilt (built : Effect4.Api.Built) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Prod (Prod (List Tools.RunChecks.Call) (Option (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) (Prod Nat (List (Prod Nat (Prod String Bool)))) *)
 
-let test_dogfood_scenario_todo_host_serve_built (built : built) (state : int * (int * (string * bool)) list) : (tools_run_checks_call list * (Val.t, Err.t, Defect.t, int, unit) Exit.t option) * (int * (int * (string * bool)) list) =
+let test_dogfood_scenario_todo_host_serve_built (built : built) (state : Z.t * (Z.t * (string * bool)) list) : (tools_run_checks_call list * (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t option) * (Z.t * (Z.t * (string * bool)) list) =
   match (built : built) with
     | { app = app; _ } -> (match (app : sig_app) with
         | { rows = rows; _ } -> (let _x_1 = test_dogfood_scenario_todo_repository in
@@ -470,9 +470,9 @@ let test_dogfood_scenario_todo_host_serve_built (built : built) (state : int * (
           let _x_3 = [] in
           let _x_4 = state, _x_3 in
           let _x_5 = "run" in
-          let _x_6 = 1000 in
+          let _x_6 = Z.of_int 1000 in
           let _x_7 = ({ fuel = _x_6; compile_fuel = _x_6 } : budget) in
-          let _x_8 = 64 in
+          let _x_8 = Z.of_int 64 in
           let _x_9 = run_run_with built _x_2 _x_4 _x_5 _x_7 _x_8 in
           match _x_9 with
             | fst_10, snd_11 -> (match snd_11 with
@@ -484,18 +484,18 @@ let test_dogfood_scenario_todo_host_serve_built (built : built) (state : int * (
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.answerVal (x.1 : Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Store.Val *)
 
-let test_dogfood_scenario_todo_host_answer_val (x_1 : (Val.t, Err.t, Defect.t, int, unit) Completion.t) : Val.t =
+let test_dogfood_scenario_todo_host_answer_val (x_1 : (Val.t, Err.t, Defect.t, Z.t, unit) Completion.t) : Val.t =
   match (x_1 : (_, _, _, _, _) Completion.t) with
     | Completion.OfExit exit__2 -> (let _x_3 = exit_image in
       match (_x_3 : _ image) with
-        | { to_val = to_val; _ } -> (let _x_4 = 0 in
+        | { to_val = to_val; _ } -> (let _x_4 = Z.of_int 0 in
           let _x_5 = Val.Nat _x_4 in
           let _x_6 = to_val exit__2 in
           let _x_7 = [] in
           let _x_8 = _x_6 :: _x_7 in
           let _x_9 = _x_5 :: _x_8 in
           Val.List _x_9))
-    | Completion.OfRefGet cell_11 -> (let _x_12 = 1 in
+    | Completion.OfRefGet cell_11 -> (let _x_12 = Z.of_int 1 in
       let _x_13 = Val.Nat _x_12 in
       let _x_14 = Val.Nat cell_11 in
       let _x_15 = [] in
@@ -525,7 +525,7 @@ let rec list_map_tr_loop_at_test_dogfood_scenario_todo_host_result_val_spec_0 (a
 
 (* LCNF mono: List.mapTR.loop._at_.Test.Dogfood.Scenario.Todo.Host.repoVal.spec_0 (a.1 : List (Prod Nat (Prod String Bool))) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_test_dogfood_scenario_todo_host_repo_val_spec_0 (a_1 : (int * (string * bool)) list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_test_dogfood_scenario_todo_host_repo_val_spec_0 (a_1 : (Z.t * (string * bool)) list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
@@ -545,7 +545,7 @@ let rec list_map_tr_loop_at_test_dogfood_scenario_todo_host_repo_val_spec_0 (a_1
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.repoVal (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Effect4.Store.Val *)
 
-let test_dogfood_scenario_todo_host_repo_val (state : int * (int * (string * bool)) list) : Val.t =
+let test_dogfood_scenario_todo_host_repo_val (state : Z.t * (Z.t * (string * bool)) list) : Val.t =
   match state with
     | fst_1, snd_1 -> (let _x_1 = Val.Nat fst_1 in
       let _x_2 = [] in
@@ -559,7 +559,7 @@ let test_dogfood_scenario_todo_host_repo_val (state : int * (int * (string * boo
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.resultVal (result : Prod (Prod (List Tools.RunChecks.Call) (Option (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) (Prod Nat (List (Prod Nat (Prod String Bool))))) : Effect4.Store.Val *)
 
-let test_dogfood_scenario_todo_host_result_val (result : (tools_run_checks_call list * (Val.t, Err.t, Defect.t, int, unit) Exit.t option) * (int * (int * (string * bool)) list)) : Val.t =
+let test_dogfood_scenario_todo_host_result_val (result : (tools_run_checks_call list * (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t option) * (Z.t * (Z.t * (string * bool)) list)) : Val.t =
   match result with
     | fst_1, snd_1 -> (match fst_1 with
         | fst_2, snd_2 -> (let _x_1 = [] in
@@ -583,7 +583,7 @@ let test_dogfood_scenario_todo_host_result_val (result : (tools_run_checks_call 
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.serveBuiltVal (built : Effect4.Api.Built) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Effect4.Store.Val *)
 
-let test_dogfood_scenario_todo_host_serve_built_val (built : built) (state : int * (int * (string * bool)) list) : Val.t =
+let test_dogfood_scenario_todo_host_serve_built_val (built : built) (state : Z.t * (Z.t * (string * bool)) list) : Val.t =
   let _x_1 = test_dogfood_scenario_todo_host_serve_built built state in
   test_dogfood_scenario_todo_host_result_val _x_1
 
@@ -591,7 +591,7 @@ let test_dogfood_scenario_todo_host_serve_built_val (built : built) (state : int
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.forgetful (row : Effect4.Program.Row) (request : Effect4.Store.Val) (s : Prod Nat (List (Prod Nat (Prod String Bool)))) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Prod Nat (List (Prod Nat (Prod String Bool))))) *)
 
-let test_dogfood_scenario_todo_forgetful (row : Row.t) (request : Val.t) (s : int * (int * (string * bool)) list) : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * (int * (int * (string * bool)) list)) option =
+let test_dogfood_scenario_todo_forgetful (row : Row.t) (request : Val.t) (s : Z.t * (Z.t * (string * bool)) list) : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * (Z.t * (Z.t * (string * bool)) list)) option =
   let _x_1 = test_dogfood_scenario_todo_repository row request s in
   match _x_1 with
     | None -> _x_1
@@ -603,7 +603,7 @@ let test_dogfood_scenario_todo_forgetful (row : Row.t) (request : Val.t) (s : in
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.serveBuiltForgetful (built : Effect4.Api.Built) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Prod (Prod (List Tools.RunChecks.Call) (Option (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) (Prod Nat (List (Prod Nat (Prod String Bool)))) *)
 
-let test_dogfood_scenario_todo_host_serve_built_forgetful (built : built) (state : int * (int * (string * bool)) list) : (tools_run_checks_call list * (Val.t, Err.t, Defect.t, int, unit) Exit.t option) * (int * (int * (string * bool)) list) =
+let test_dogfood_scenario_todo_host_serve_built_forgetful (built : built) (state : Z.t * (Z.t * (string * bool)) list) : (tools_run_checks_call list * (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t option) * (Z.t * (Z.t * (string * bool)) list) =
   match (built : built) with
     | { app = app; _ } -> (match (app : sig_app) with
         | { rows = rows; _ } -> (let _x_1 = test_dogfood_scenario_todo_forgetful in
@@ -611,9 +611,9 @@ let test_dogfood_scenario_todo_host_serve_built_forgetful (built : built) (state
           let _x_3 = [] in
           let _x_4 = state, _x_3 in
           let _x_5 = "run" in
-          let _x_6 = 1000 in
+          let _x_6 = Z.of_int 1000 in
           let _x_7 = ({ fuel = _x_6; compile_fuel = _x_6 } : budget) in
-          let _x_8 = 64 in
+          let _x_8 = Z.of_int 64 in
           let _x_9 = run_run_with built _x_2 _x_4 _x_5 _x_7 _x_8 in
           match _x_9 with
             | fst_10, snd_11 -> (match snd_11 with
@@ -625,7 +625,7 @@ let test_dogfood_scenario_todo_host_serve_built_forgetful (built : built) (state
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.serveBuiltForgetfulVal (built : Effect4.Api.Built) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Effect4.Store.Val *)
 
-let test_dogfood_scenario_todo_host_serve_built_forgetful_val (built : built) (state : int * (int * (string * bool)) list) : Val.t =
+let test_dogfood_scenario_todo_host_serve_built_forgetful_val (built : built) (state : Z.t * (Z.t * (string * bool)) list) : Val.t =
   let _x_1 = test_dogfood_scenario_todo_host_serve_built_forgetful built state in
   test_dogfood_scenario_todo_host_result_val _x_1
 
@@ -817,7 +817,7 @@ let rec list_map_tr_loop_at_store_image_record_spec_0 (a_1 : string list) (a_2 :
 
 let store_image_record__red_arg__lam_0 (r : _ columns) r_1 : Val.t =
   match (r : _ columns) with
-    | { names = names; to_vals = to_vals; _ } -> (let _x_1 = 0 in
+    | { names = names; to_vals = to_vals; _ } -> (let _x_1 = Z.of_int 0 in
       let _x_2 = [] in
       let _x_3 = list_map_tr_loop_at_store_image_record_spec_0 names _x_2 in
       let _x_4 = Val.List _x_3 in
@@ -833,8 +833,8 @@ let store_image_record__red_arg__lam_0 (r : _ columns) r_1 : Val.t =
 
 let store_image_record__red_arg__lam_1 (r : _ columns) (v : Val.t) : _ option =
   match (v : Val.t) with
-    | Val.Ctor (index_1, args_2) -> (let _x_3 = 0 in
-      let _x_4 = index_1 = _x_3 in
+    | Val.Ctor (index_1, args_2) -> (let _x_3 = Z.of_int 0 in
+      let _x_4 = Z.equal index_1 _x_3 in
       if _x_4 then (match args_2 with
           | head_6 :: tail_7 -> (match (head_6 : Val.t) with
               | Val.List xs_8 -> (match tail_7 with
@@ -865,7 +865,7 @@ let store_image_record (r : _ columns) : _ image =
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.Todo.modeledStaged : Effect4.Store.Image (Prod Bool (Prod Nat (Prod String PUnit))) *)
 
-let test_dogfood_scenario_todo_typed_todo_modeled_staged : (bool * (int * (string * unit))) image =
+let test_dogfood_scenario_todo_typed_todo_modeled_staged : (bool * (Z.t * (string * unit))) image =
   let _x_1 = "done" in
   let _x_2 = store_image_bool in
   let _x_3 = "id" in
@@ -882,7 +882,7 @@ let test_dogfood_scenario_todo_typed_todo_modeled_staged : (bool * (int * (strin
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.Todo.modeledOfC (c : Prod Bool (Prod Nat (Prod String PUnit))) : Test.Dogfood.Scenario.Todo.Typed.Todo *)
 
-let test_dogfood_scenario_todo_typed_todo_modeled_of_c (c : bool * (int * (string * unit))) : todo =
+let test_dogfood_scenario_todo_typed_todo_modeled_of_c (c : bool * (Z.t * (string * unit))) : todo =
   match c with
     | fst_1, snd_1 -> (match snd_1 with
         | fst_2, snd_2 -> (match snd_2 with
@@ -892,7 +892,7 @@ let test_dogfood_scenario_todo_typed_todo_modeled_of_c (c : bool * (int * (strin
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.Todo.modeledToC (s : Test.Dogfood.Scenario.Todo.Typed.Todo) : Prod Bool (Prod Nat (Prod String PUnit)) *)
 
-let test_dogfood_scenario_todo_typed_todo_modeled_to_c (s : todo) : bool * (int * (string * unit)) =
+let test_dogfood_scenario_todo_typed_todo_modeled_to_c (s : todo) : bool * (Z.t * (string * unit)) =
   match (s : todo) with
     | { id = id; title = title; done_ = done_ } -> (let _x_1 = () in
       let _x_2 = title, _x_1 in
@@ -913,7 +913,7 @@ let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_t
 
 (* LCNF mono: Effect4.Run.Reactor.fallible._at_.Test.Dogfood.Scenario.Todo.Typed.Host.reactor.spec_0._redArg (spelling : String) (f : String -> lcAny -> (Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) Test.Dogfood.Scenario.Todo.Typed.Todo) lcAny)) (row : Effect4.Program.Row) (sent : Effect4.Store.Val) (state : lcAny) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny) *)
 
-let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_0 (spelling : string) (f : string -> _ -> (todo, sql_tag * string) result * _) (row : Row.t) (sent : Val.t) state : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option =
+let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_0 (spelling : string) (f : string -> _ -> (todo, sql_tag * string) result * _) (row : Row.t) (sent : Val.t) state : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option =
   match (row : Row.t) with
     | { Row.spelling = spelling_1; _ } -> (let _x_1 = spelling_1 = spelling in
       if _x_1 then (let _x_3 = schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_0_spec_0 in
@@ -945,7 +945,7 @@ let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_0
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.Host.reactor._redArg._lam_0 (_x.1 : String) (insert : String -> lcAny -> (Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) Test.Dogfood.Scenario.Todo.Typed.Todo) lcAny)) (_y.2 : Effect4.Program.Row) (_y.3 : Effect4.Store.Val) (_y.4 : lcAny) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny) *)
 
-let test_dogfood_scenario_todo_typed_host_reactor__red_arg__lam_0 (_x_1 : string) (insert : string -> _ -> (todo, sql_tag * string) result * _) (_y_2 : Row.t) (_y_3 : Val.t) _y_4 : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option =
+let test_dogfood_scenario_todo_typed_host_reactor__red_arg__lam_0 (_x_1 : string) (insert : string -> _ -> (todo, sql_tag * string) result * _) (_y_2 : Row.t) (_y_3 : Val.t) _y_4 : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option =
   run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_0 _x_1 insert _y_2 _y_3 _y_4
 
 
@@ -1017,7 +1017,7 @@ let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_t
 
 (* LCNF mono: Effect4.Run.Reactor.fallible._at_.Test.Dogfood.Scenario.Todo.Typed.Host.reactor.spec_1._redArg (spelling : String) (f : PUnit -> lcAny -> (Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) (List Test.Dogfood.Scenario.Todo.Typed.Todo)) lcAny)) (row : Effect4.Program.Row) (sent : Effect4.Store.Val) (state : lcAny) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny) *)
 
-let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_1 (spelling : string) (f : unit -> _ -> (todo list, sql_tag * string) result * _) (row : Row.t) (sent : Val.t) state : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option =
+let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_1 (spelling : string) (f : unit -> _ -> (todo list, sql_tag * string) result * _) (row : Row.t) (sent : Val.t) state : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option =
   match (row : Row.t) with
     | { Row.spelling = spelling_1; _ } -> (let _x_1 = spelling_1 = spelling in
       if _x_1 then (let _x_3 = schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_1_spec_4 in
@@ -1049,14 +1049,14 @@ let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_1
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.Host.reactor._redArg._lam_1 (_x.1 : String) (all : PUnit -> lcAny -> (Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) (List Test.Dogfood.Scenario.Todo.Typed.Todo)) lcAny)) (_y.2 : Effect4.Program.Row) (_y.3 : Effect4.Store.Val) (_y.4 : lcAny) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny) *)
 
-let test_dogfood_scenario_todo_typed_host_reactor__red_arg__lam_1 (_x_1 : string) (all : unit -> _ -> (todo list, sql_tag * string) result * _) (_y_2 : Row.t) (_y_3 : Val.t) _y_4 : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option =
+let test_dogfood_scenario_todo_typed_host_reactor__red_arg__lam_1 (_x_1 : string) (all : unit -> _ -> (todo list, sql_tag * string) result * _) (_y_2 : Row.t) (_y_3 : Val.t) _y_4 : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option =
   run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_1 _x_1 all _y_2 _y_3 _y_4
 
 
 
 (* LCNF mono: Effect4.Schema.Modeled.image._at_.Effect4.Run.Reactor.fallible._at_.Test.Dogfood.Scenario.Todo.Typed.Host.reactor.spec_2.spec_7._lam_0 (c : Prod lcAny lcAny) : Prod Nat Bool *)
 
-let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2_spec_7__lam_0 (c : _ * _) : int * bool =
+let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2_spec_7__lam_0 (c : _ * _) : Z.t * bool =
   match c with
     | fst_1, snd_1 -> fst_1, snd_1
 
@@ -1064,7 +1064,7 @@ let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_t
 
 (* LCNF mono: Effect4.Schema.Modeled.image._at_.Effect4.Run.Reactor.fallible._at_.Test.Dogfood.Scenario.Todo.Typed.Host.reactor.spec_2.spec_7._lam_1 (p : Prod Nat Bool) : Prod lcAny lcAny *)
 
-let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2_spec_7__lam_1 (p : int * bool) : _ * _ =
+let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2_spec_7__lam_1 (p : Z.t * bool) : _ * _ =
   match p with
     | fst_1, snd_1 -> fst_1, snd_1
 
@@ -1072,7 +1072,7 @@ let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_t
 
 (* LCNF mono: Effect4.Schema.Modeled.image._at_.Effect4.Run.Reactor.fallible._at_.Test.Dogfood.Scenario.Todo.Typed.Host.reactor.spec_2.spec_7 : Effect4.Store.Image (Prod Nat Bool) *)
 
-let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2_spec_7 : (int * bool) image =
+let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2_spec_7 : (Z.t * bool) image =
   let _f_1 = schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2_spec_7__lam_0 in
   let _f_2 = schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2_spec_7__lam_1 in
   let _x_3 = store_image_nat in
@@ -1115,7 +1115,7 @@ let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_t
 
 (* LCNF mono: Effect4.Run.Reactor.fallible._at_.Test.Dogfood.Scenario.Todo.Typed.Host.reactor.spec_2._redArg (spelling : String) (f : (Prod Nat Bool) -> lcAny -> (Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) (Option Test.Dogfood.Scenario.Todo.Typed.Todo)) lcAny)) (row : Effect4.Program.Row) (sent : Effect4.Store.Val) (state : lcAny) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny) *)
 
-let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2 (spelling : string) (f : int * bool -> _ -> (todo option, sql_tag * string) result * _) (row : Row.t) (sent : Val.t) state : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option =
+let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2 (spelling : string) (f : Z.t * bool -> _ -> (todo option, sql_tag * string) result * _) (row : Row.t) (sent : Val.t) state : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option =
   match (row : Row.t) with
     | { Row.spelling = spelling_1; _ } -> (let _x_1 = spelling_1 = spelling in
       if _x_1 then (let _x_3 = schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2_spec_7 in
@@ -1147,21 +1147,21 @@ let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.Host.reactor._redArg._lam_2 (_x.1 : String) (setDone : (Prod Nat Bool) -> lcAny -> (Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) (Option Test.Dogfood.Scenario.Todo.Typed.Todo)) lcAny)) (_y.2 : Effect4.Program.Row) (_y.3 : Effect4.Store.Val) (_y.4 : lcAny) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny) *)
 
-let test_dogfood_scenario_todo_typed_host_reactor__red_arg__lam_2 (_x_1 : string) (set_done : int * bool -> _ -> (todo option, sql_tag * string) result * _) (_y_2 : Row.t) (_y_3 : Val.t) _y_4 : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option =
+let test_dogfood_scenario_todo_typed_host_reactor__red_arg__lam_2 (_x_1 : string) (set_done : Z.t * bool -> _ -> (todo option, sql_tag * string) result * _) (_y_2 : Row.t) (_y_3 : Val.t) _y_4 : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option =
   run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_2 _x_1 set_done _y_2 _y_3 _y_4
 
 
 
 (* LCNF mono: Effect4.Schema.Modeled.image._at_.Effect4.Run.Reactor.fallible._at_.Test.Dogfood.Scenario.Todo.Typed.Host.reactor.spec_3.spec_10._lam_0 (_y.1 : Nat) : Nat *)
 
-let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_3_spec_10__lam_0 (_y_1 : int) : int =
+let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_3_spec_10__lam_0 (_y_1 : Z.t) : Z.t =
   _y_1
 
 
 
 (* LCNF mono: Effect4.Schema.Modeled.image._at_.Effect4.Run.Reactor.fallible._at_.Test.Dogfood.Scenario.Todo.Typed.Host.reactor.spec_3.spec_10 : Effect4.Store.Image Nat *)
 
-let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_3_spec_10 : int image =
+let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_3_spec_10 : Z.t image =
   let _f_1 = schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_3_spec_10__lam_0 in
   let _x_2 = store_image_nat in
   store_image_equiv _x_2 _f_1 _f_1
@@ -1186,7 +1186,7 @@ let schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_t
 
 (* LCNF mono: Effect4.Run.Reactor.fallible._at_.Test.Dogfood.Scenario.Todo.Typed.Host.reactor.spec_3._redArg (spelling : String) (f : Nat -> lcAny -> (Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) Bool) lcAny)) (row : Effect4.Program.Row) (sent : Effect4.Store.Val) (state : lcAny) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny) *)
 
-let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_3 (spelling : string) (f : int -> _ -> (bool, sql_tag * string) result * _) (row : Row.t) (sent : Val.t) state : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option =
+let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_3 (spelling : string) (f : Z.t -> _ -> (bool, sql_tag * string) result * _) (row : Row.t) (sent : Val.t) state : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option =
   match (row : Row.t) with
     | { Row.spelling = spelling_1; _ } -> (let _x_1 = spelling_1 = spelling in
       if _x_1 then (let _x_3 = schema_modeled_image_at_run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_3_spec_10 in
@@ -1218,14 +1218,14 @@ let run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_3
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.Host.reactor._redArg._lam_3 (_x.1 : String) (delete : Nat -> lcAny -> (Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) Bool) lcAny)) (_y.2 : Effect4.Program.Row) (_y.3 : Effect4.Store.Val) (_y.4 : lcAny) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny) *)
 
-let test_dogfood_scenario_todo_typed_host_reactor__red_arg__lam_3 (_x_1 : string) (delete : int -> _ -> (bool, sql_tag * string) result * _) (_y_2 : Row.t) (_y_3 : Val.t) _y_4 : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option =
+let test_dogfood_scenario_todo_typed_host_reactor__red_arg__lam_3 (_x_1 : string) (delete : Z.t -> _ -> (bool, sql_tag * string) result * _) (_y_2 : Row.t) (_y_3 : Val.t) _y_4 : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option =
   run_reactor_fallible_at_test_dogfood_scenario_todo_typed_host_reactor_spec_3 _x_1 delete _y_2 _y_3 _y_4
 
 
 
 (* LCNF mono: Effect4.Run.Reactor.first._redArg (x.1 : List (Effect4.Program.Row -> Effect4.Store.Val -> lcAny -> (Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny)))) (a.2 : Effect4.Program.Row) (a.3 : Effect4.Store.Val) (a.4 : lcAny) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny) *)
 
-let rec run_reactor_first (x_1 : (Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option) list) (a_2 : Row.t) (a_3 : Val.t) a_4 : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option =
+let rec run_reactor_first (x_1 : (Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option) list) (a_2 : Row.t) (a_3 : Val.t) a_4 : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option =
   match x_1 with
     | [] -> None
     | head_6 :: tail_7 -> (let _x_8 = head_6 a_2 a_3 a_4 in
@@ -1237,7 +1237,7 @@ let rec run_reactor_first (x_1 : (Row.t -> Val.t -> _ -> ((Val.t, Err.t, Defect.
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.Host.reactor._redArg (h : Test.Dogfood.Scenario.Todo.Typed.Host lcAny) (a.1 : Effect4.Program.Row) (a.2 : Effect4.Store.Val) (a.3 : lcAny) : Option (Prod (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) lcAny) *)
 
-let test_dogfood_scenario_todo_typed_host_reactor (h : _ host) (a_1 : Row.t) (a_2 : Val.t) a_3 : ((Val.t, Err.t, Defect.t, int, unit) Completion.t * _) option =
+let test_dogfood_scenario_todo_typed_host_reactor (h : _ host) (a_1 : Row.t) (a_2 : Val.t) a_3 : ((Val.t, Err.t, Defect.t, Z.t, unit) Completion.t * _) option =
   match (h : _ host) with
     | { insert = insert; all = all; set_done = set_done; delete = delete } -> (let _x_4 = "TodoRepo.insert" in
       let _f_5 = test_dogfood_scenario_todo_typed_host_reactor__red_arg__lam_0 _x_4 insert in
@@ -1258,7 +1258,7 @@ let test_dogfood_scenario_todo_typed_host_reactor (h : _ host) (a_1 : Row.t) (a_
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.serveBuiltTyped (host : Test.Dogfood.Scenario.Todo.Typed.Host (Prod Nat (List (Prod Nat (Prod String Bool))))) (built : Effect4.Api.Built) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Prod (Prod (List Tools.RunChecks.Call) (Option (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) (Prod Nat (List (Prod Nat (Prod String Bool)))) *)
 
-let test_dogfood_scenario_todo_host_serve_built_typed (host : (int * (int * (string * bool)) list) host) (built : built) (state : int * (int * (string * bool)) list) : (tools_run_checks_call list * (Val.t, Err.t, Defect.t, int, unit) Exit.t option) * (int * (int * (string * bool)) list) =
+let test_dogfood_scenario_todo_host_serve_built_typed (host : (Z.t * (Z.t * (string * bool)) list) host) (built : built) (state : Z.t * (Z.t * (string * bool)) list) : (tools_run_checks_call list * (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t option) * (Z.t * (Z.t * (string * bool)) list) =
   match (built : built) with
     | { app = app; _ } -> (match (app : sig_app) with
         | { rows = rows; _ } -> (let _x_1 = fun _eta _eta_1 _eta_2 -> test_dogfood_scenario_todo_typed_host_reactor host _eta _eta_1 _eta_2 in
@@ -1266,9 +1266,9 @@ let test_dogfood_scenario_todo_host_serve_built_typed (host : (int * (int * (str
           let _x_3 = [] in
           let _x_4 = state, _x_3 in
           let _x_5 = "run" in
-          let _x_6 = 1000 in
+          let _x_6 = Z.of_int 1000 in
           let _x_7 = ({ fuel = _x_6; compile_fuel = _x_6 } : budget) in
-          let _x_8 = 64 in
+          let _x_8 = Z.of_int 64 in
           let _x_9 = run_run_with built _x_2 _x_4 _x_5 _x_7 _x_8 in
           match _x_9 with
             | fst_10, snd_11 -> (match snd_11 with
@@ -1280,7 +1280,7 @@ let test_dogfood_scenario_todo_host_serve_built_typed (host : (int * (int * (str
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Host.serveBuiltTypedVal (host : Test.Dogfood.Scenario.Todo.Typed.Host (Prod Nat (List (Prod Nat (Prod String Bool))))) (built : Effect4.Api.Built) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Effect4.Store.Val *)
 
-let test_dogfood_scenario_todo_host_serve_built_typed_val (host : (int * (int * (string * bool)) list) host) (built : built) (state : int * (int * (string * bool)) list) : Val.t =
+let test_dogfood_scenario_todo_host_serve_built_typed_val (host : (Z.t * (Z.t * (string * bool)) list) host) (built : built) (state : Z.t * (Z.t * (string * bool)) list) : Val.t =
   let _x_1 = test_dogfood_scenario_todo_host_serve_built_typed host built state in
   test_dogfood_scenario_todo_host_result_val _x_1
 
@@ -1288,13 +1288,13 @@ let test_dogfood_scenario_todo_host_serve_built_typed_val (host : (int * (int * 
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.model._lam_0 (title : String) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) Test.Dogfood.Scenario.Todo.Typed.Todo) (Prod Nat (List (Prod Nat (Prod String Bool)))) *)
 
-let test_dogfood_scenario_todo_typed_model__lam_0 (title : string) (state : int * (int * (string * bool)) list) : (todo, sql_tag * string) result * (int * (int * (string * bool)) list) =
+let test_dogfood_scenario_todo_typed_model__lam_0 (title : string) (state : Z.t * (Z.t * (string * bool)) list) : (todo, sql_tag * string) result * (Z.t * (Z.t * (string * bool)) list) =
   match state with
     | fst_1, snd_1 -> (let _x_1 = false in
       let _x_2 = ({ id = fst_1; title = title; done_ = _x_1 } : todo) in
       let _x_3 = Ok _x_2 in
-      let _x_4 = 1 in
-      let _x_5 = fst_1 + _x_4 in
+      let _x_4 = Z.of_int 1 in
+      let _x_5 = Z.add fst_1 _x_4 in
       let _x_6 = title, _x_1 in
       let _x_7 = fst_1, _x_6 in
       let _x_8 = [] in
@@ -1307,7 +1307,7 @@ let test_dogfood_scenario_todo_typed_model__lam_0 (title : string) (state : int 
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.todoOf (entry : Prod Nat (Prod String Bool)) : Test.Dogfood.Scenario.Todo.Typed.Todo *)
 
-let test_dogfood_scenario_todo_typed_todo_of (entry : int * (string * bool)) : todo =
+let test_dogfood_scenario_todo_typed_todo_of (entry : Z.t * (string * bool)) : todo =
   match entry with
     | fst_1, snd_1 -> (match snd_1 with
         | fst_2, snd_2 -> ({ id = fst_1; title = fst_2; done_ = snd_2 } : todo))
@@ -1316,7 +1316,7 @@ let test_dogfood_scenario_todo_typed_todo_of (entry : int * (string * bool)) : t
 
 (* LCNF mono: List.mapTR.loop._at_.Test.Dogfood.Scenario.Todo.Typed.model.spec_0 (a.1 : List (Prod Nat (Prod String Bool))) (a.2 : List Test.Dogfood.Scenario.Todo.Typed.Todo) : List Test.Dogfood.Scenario.Todo.Typed.Todo *)
 
-let rec list_map_tr_loop_at_test_dogfood_scenario_todo_typed_model_spec_0 (a_1 : (int * (string * bool)) list) (a_2 : todo list) : todo list =
+let rec list_map_tr_loop_at_test_dogfood_scenario_todo_typed_model_spec_0 (a_1 : (Z.t * (string * bool)) list) (a_2 : todo list) : todo list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _x_6 = test_dogfood_scenario_todo_typed_todo_of head_4 in
@@ -1327,7 +1327,7 @@ let rec list_map_tr_loop_at_test_dogfood_scenario_todo_typed_model_spec_0 (a_1 :
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.model._lam_1 (x.1 : PUnit) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) (List Test.Dogfood.Scenario.Todo.Typed.Todo)) (Prod Nat (List (Prod Nat (Prod String Bool)))) *)
 
-let test_dogfood_scenario_todo_typed_model__lam_1 (x_1 : unit) (state : int * (int * (string * bool)) list) : (todo list, sql_tag * string) result * (int * (int * (string * bool)) list) =
+let test_dogfood_scenario_todo_typed_model__lam_1 (x_1 : unit) (state : Z.t * (Z.t * (string * bool)) list) : (todo list, sql_tag * string) result * (Z.t * (Z.t * (string * bool)) list) =
   match state with
     | _, snd_1 -> (let _x_2 = [] in
       let _x_3 = list_map_tr_loop_at_test_dogfood_scenario_todo_typed_model_spec_0 snd_1 _x_2 in
@@ -1338,19 +1338,19 @@ let test_dogfood_scenario_todo_typed_model__lam_1 (x_1 : unit) (state : int * (i
 
 (* LCNF mono: List.find?._at_.Test.Dogfood.Scenario.Todo.Typed.model.spec_1 (request : Prod Nat Bool) (x.1 : List (Prod Nat (Prod String Bool))) : Option (Prod Nat (Prod String Bool)) *)
 
-let rec list_find_opt_at_test_dogfood_scenario_todo_typed_model_spec_1 (request : int * bool) (x_1 : (int * (string * bool)) list) : (int * (string * bool)) option =
+let rec list_find_opt_at_test_dogfood_scenario_todo_typed_model_spec_1 (request : Z.t * bool) (x_1 : (Z.t * (string * bool)) list) : (Z.t * (string * bool)) option =
   match x_1 with
     | [] -> None
     | head_3 :: tail_4 -> (match head_3 with
         | fst_1, _ -> (match request with
-            | fst_2, _ -> (let _x_5 = fst_1 = fst_2 in
+            | fst_2, _ -> (let _x_5 = Z.equal fst_1 fst_2 in
               if _x_5 then Some head_3 else list_find_opt_at_test_dogfood_scenario_todo_typed_model_spec_1 request tail_4)))
 
 
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.model._lam_2 (request : Prod Nat Bool) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) (Option Test.Dogfood.Scenario.Todo.Typed.Todo)) (Prod Nat (List (Prod Nat (Prod String Bool)))) *)
 
-let test_dogfood_scenario_todo_typed_model__lam_2 (request : int * bool) (state : int * (int * (string * bool)) list) : (todo option, sql_tag * string) result * (int * (int * (string * bool)) list) =
+let test_dogfood_scenario_todo_typed_model__lam_2 (request : Z.t * bool) (state : Z.t * (Z.t * (string * bool)) list) : (todo option, sql_tag * string) result * (Z.t * (Z.t * (string * bool)) list) =
   match state with
     | fst_1, snd_1 -> (let _x_1 = list_find_opt_at_test_dogfood_scenario_todo_typed_model_spec_1 request snd_1 in
       match _x_1 with
@@ -1372,11 +1372,11 @@ let test_dogfood_scenario_todo_typed_model__lam_2 (request : int * bool) (state 
 
 (* LCNF mono: List.filterTR.loop._at_.Test.Dogfood.Scenario.Todo.Typed.model.spec_2 (id : Nat) (a.1 : List (Prod Nat (Prod String Bool))) (a.2 : List (Prod Nat (Prod String Bool))) : List (Prod Nat (Prod String Bool)) *)
 
-let rec list_filter_tr_loop_at_test_dogfood_scenario_todo_typed_model_spec_2 (id : int) (a_1 : (int * (string * bool)) list) (a_2 : (int * (string * bool)) list) : (int * (string * bool)) list =
+let rec list_filter_tr_loop_at_test_dogfood_scenario_todo_typed_model_spec_2 (id : Z.t) (a_1 : (Z.t * (string * bool)) list) (a_2 : (Z.t * (string * bool)) list) : (Z.t * (string * bool)) list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, _ -> (let _x_6 = fst_1 = id in
+        | fst_1, _ -> (let _x_6 = Z.equal fst_1 id in
           if _x_6 then list_filter_tr_loop_at_test_dogfood_scenario_todo_typed_model_spec_2 id tail_5 a_2 else (let _x_7 = head_4 :: a_2 in
             list_filter_tr_loop_at_test_dogfood_scenario_todo_typed_model_spec_2 id tail_5 _x_7)))
 
@@ -1384,7 +1384,7 @@ let rec list_filter_tr_loop_at_test_dogfood_scenario_todo_typed_model_spec_2 (id
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.model._lam_3 (id : Nat) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) Bool) (Prod Nat (List (Prod Nat (Prod String Bool)))) *)
 
-let test_dogfood_scenario_todo_typed_model__lam_3 (id : int) (state : int * (int * (string * bool)) list) : (bool, sql_tag * string) result * (int * (int * (string * bool)) list) =
+let test_dogfood_scenario_todo_typed_model__lam_3 (id : Z.t) (state : Z.t * (Z.t * (string * bool)) list) : (bool, sql_tag * string) result * (Z.t * (Z.t * (string * bool)) list) =
   match state with
     | fst_1, snd_1 -> (let _x_1 = list_any_at_test_dogfood_scenario_todo_repository_spec_0 id snd_1 in
       let _x_2 = Ok _x_1 in
@@ -1397,7 +1397,7 @@ let test_dogfood_scenario_todo_typed_model__lam_3 (id : int) (state : int * (int
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.model : Test.Dogfood.Scenario.Todo.Typed.Host (Prod Nat (List (Prod Nat (Prod String Bool)))) *)
 
-let test_dogfood_scenario_todo_typed_model : (int * (int * (string * bool)) list) host =
+let test_dogfood_scenario_todo_typed_model : (Z.t * (Z.t * (string * bool)) list) host =
   let _f_1 = test_dogfood_scenario_todo_typed_model__lam_0 in
   let _f_2 = test_dogfood_scenario_todo_typed_model__lam_1 in
   let _f_3 = test_dogfood_scenario_todo_typed_model__lam_2 in
@@ -1408,7 +1408,7 @@ let test_dogfood_scenario_todo_typed_model : (int * (int * (string * bool)) list
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.broken._lam_0 (x.1 : String) (state : Prod Nat (List (Prod Nat (Prod String Bool)))) : Prod (Except (Prod Test.Dogfood.Scenario.Todo.Typed.SqlTag String) Test.Dogfood.Scenario.Todo.Typed.Todo) (Prod Nat (List (Prod Nat (Prod String Bool)))) *)
 
-let test_dogfood_scenario_todo_typed_broken__lam_0 (x_1 : string) (state : int * (int * (string * bool)) list) : (todo, sql_tag * string) result * (int * (int * (string * bool)) list) =
+let test_dogfood_scenario_todo_typed_broken__lam_0 (x_1 : string) (state : Z.t * (Z.t * (string * bool)) list) : (todo, sql_tag * string) result * (Z.t * (Z.t * (string * bool)) list) =
   let _x_2 = SqlTag_SqlError in
   let _x_3 = "disk full" in
   let _x_4 = _x_2, _x_3 in
@@ -1419,7 +1419,7 @@ let test_dogfood_scenario_todo_typed_broken__lam_0 (x_1 : string) (state : int *
 
 (* LCNF mono: Test.Dogfood.Scenario.Todo.Typed.broken : Test.Dogfood.Scenario.Todo.Typed.Host (Prod Nat (List (Prod Nat (Prod String Bool)))) *)
 
-let test_dogfood_scenario_todo_typed_broken : (int * (int * (string * bool)) list) host =
+let test_dogfood_scenario_todo_typed_broken : (Z.t * (Z.t * (string * bool)) list) host =
   let _x_1 = test_dogfood_scenario_todo_typed_model in
   match (_x_1 : _ host) with
     | { all = all; set_done = set_done; delete = delete; _ } -> (let _f_2 = test_dogfood_scenario_todo_typed_broken__lam_0 in
@@ -1429,87 +1429,87 @@ let test_dogfood_scenario_todo_typed_broken : (int * (int * (string * bool)) lis
 
 (* LCNF mono: Test.Codegen.ConstructorLane.intOfNat (n : Nat) : Int *)
 
-let test_codegen_constructor_lane_int_of_nat (n : int) : int =
+let test_codegen_constructor_lane_int_of_nat (n : Z.t) : Z.t =
   n
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.intNegSucc (n : Nat) : Int *)
 
-let test_codegen_constructor_lane_int_neg_succ (n : int) : int =
-  0 - n - 1
+let test_codegen_constructor_lane_int_neg_succ (n : Z.t) : Z.t =
+  Z.neg (Z.succ n)
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.intMatch (x.1 : Int) : Nat *)
 
-let test_codegen_constructor_lane_int_match (x_1 : int) : int =
-  let nat_zero = 0 in
+let test_codegen_constructor_lane_int_match (x_1 : Z.t) : Z.t =
+  let nat_zero = Z.of_int 0 in
   let int_zero = nat_zero in
-  let is_neg = x_1 < int_zero in
-  if is_neg then (let abs = if x_1 < 0 then 0 - x_1 else x_1 in
-    let one = 1 in
-    let a_3 = max 0 (abs - one) in
-    let _x_4 = 100 in
-    a_3 + _x_4) else if x_1 < 0 then 0 - x_1 else x_1
+  let is_neg = Z.lt x_1 int_zero in
+  if is_neg then (let abs = Z.abs x_1 in
+    let one = Z.of_int 1 in
+    let a_3 = Lcnf_nat.sub abs one in
+    let _x_4 = Z.of_int 100 in
+    Z.add a_3 _x_4) else Z.abs x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.intMatchZero (i : Int) : Bool *)
 
-let test_codegen_constructor_lane_int_match_zero (i : int) : bool =
-  let nat_zero = 0 in
+let test_codegen_constructor_lane_int_match_zero (i : Z.t) : bool =
+  let nat_zero = Z.of_int 0 in
   let int_zero = nat_zero in
-  let is_neg = i < int_zero in
-  if is_neg then false else (let a_1 = if i < 0 then 0 - i else i in
-    a_1 = nat_zero)
+  let is_neg = Z.lt i int_zero in
+  if is_neg then false else (let a_1 = Z.abs i in
+    Z.equal a_1 nat_zero)
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.natSucc (n : Nat) : Nat *)
 
-let test_codegen_constructor_lane_nat_succ (n : int) : int =
-  let _x_1 = 1 in
-  n + _x_1
+let test_codegen_constructor_lane_nat_succ (n : Z.t) : Z.t =
+  let _x_1 = Z.of_int 1 in
+  Z.add n _x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.natZero : Nat *)
 
-let test_codegen_constructor_lane_nat_zero : int =
-  0
+let test_codegen_constructor_lane_nat_zero : Z.t =
+  Z.of_int 0
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.natMatch (x.1 : Nat) : Nat *)
 
-let test_codegen_constructor_lane_nat_match (x_1 : int) : int =
-  let zero = 0 in
-  let is_zero = x_1 = zero in
-  if is_zero then 7 else (let one = 1 in
-    max 0 (x_1 - one))
+let test_codegen_constructor_lane_nat_match (x_1 : Z.t) : Z.t =
+  let zero = Z.of_int 0 in
+  let is_zero = Z.equal x_1 zero in
+  if is_zero then Z.of_int 7 else (let one = Z.of_int 1 in
+    Lcnf_nat.sub x_1 one)
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.arrMk (l : List Nat) : Array Nat *)
 
-let test_codegen_constructor_lane_arr_mk (l : int list) : int Lcnf_array.t =
+let test_codegen_constructor_lane_arr_mk (l : Z.t list) : Z.t Lcnf_array.t =
   Lcnf_array.of_list l
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.arrToList (a : Array Nat) : List Nat *)
 
-let test_codegen_constructor_lane_arr_to_list (a : int Lcnf_array.t) : int list =
+let test_codegen_constructor_lane_arr_to_list (a : Z.t Lcnf_array.t) : Z.t list =
   Lcnf_array.to_list a
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.arrMatch (x.1 : Array Nat) : Nat *)
 
-let test_codegen_constructor_lane_arr_match (x_1 : int Lcnf_array.t) : int =
+let test_codegen_constructor_lane_arr_match (x_1 : Z.t Lcnf_array.t) : Z.t =
   let to_list_2 = Lcnf_array.to_list x_1 in
-  List.length to_list_2
+  Z.of_int (List.length to_list_2)
 
 
 
@@ -1557,7 +1557,7 @@ let test_codegen_constructor_lane_str_of_bytes (b : int Lcnf_array.t) h : string
 
 (* LCNF mono: Test.Codegen.ConstructorLane.charOfNat (n : Nat) : UInt32 *)
 
-let test_codegen_constructor_lane_char_of_nat (n : int) : int =
+let test_codegen_constructor_lane_char_of_nat (n : Z.t) : int =
   char_of_nat n
 
 
@@ -1578,123 +1578,123 @@ let test_codegen_constructor_lane_char_match (x_1 : int) : int =
 
 (* LCNF mono: Test.Codegen.ConstructorLane.u8OfBitVec (b : Nat) : UInt8 *)
 
-let test_codegen_constructor_lane_u8_of_bit_vec (b : int) : int =
-  b
+let test_codegen_constructor_lane_u8_of_bit_vec (b : Z.t) : int =
+  Z.to_int b
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.u8Match (x.1 : UInt8) : Nat *)
 
-let test_codegen_constructor_lane_u8_match (x_1 : int) : int =
-  x_1
+let test_codegen_constructor_lane_u8_match (x_1 : int) : Z.t =
+  Z.of_int x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.u16OfBitVec (b : Nat) : UInt16 *)
 
-let test_codegen_constructor_lane_u16_of_bit_vec (b : int) : int =
-  b
+let test_codegen_constructor_lane_u16_of_bit_vec (b : Z.t) : int =
+  Z.to_int b
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.u16Match (x.1 : UInt16) : Nat *)
 
-let test_codegen_constructor_lane_u16_match (x_1 : int) : int =
-  x_1
+let test_codegen_constructor_lane_u16_match (x_1 : int) : Z.t =
+  Z.of_int x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.u32OfBitVec (b : Nat) : UInt32 *)
 
-let test_codegen_constructor_lane_u32_of_bit_vec (b : int) : int =
-  b
+let test_codegen_constructor_lane_u32_of_bit_vec (b : Z.t) : int =
+  Z.to_int b
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.u32Match (x.1 : UInt32) : Nat *)
 
-let test_codegen_constructor_lane_u32_match (x_1 : int) : int =
-  x_1
+let test_codegen_constructor_lane_u32_match (x_1 : int) : Z.t =
+  Z.of_int x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.u64OfBitVec (b : Nat) : UInt64 *)
 
-let test_codegen_constructor_lane_u64_of_bit_vec (b : int) : int =
+let test_codegen_constructor_lane_u64_of_bit_vec (b : Z.t) : Z.t =
   b
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.u64Match (x.1 : UInt64) : Nat *)
 
-let test_codegen_constructor_lane_u64_match (x_1 : int) : int =
+let test_codegen_constructor_lane_u64_match (x_1 : Z.t) : Z.t =
   x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.bvMatch (x.1 : Nat) : Nat *)
 
-let test_codegen_constructor_lane_bv_match (x_1 : int) : int =
+let test_codegen_constructor_lane_bv_match (x_1 : Z.t) : Z.t =
   x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.finMk (n : Nat) (h : lcErased) : Nat *)
 
-let test_codegen_constructor_lane_fin_mk (n : int) h : int =
+let test_codegen_constructor_lane_fin_mk (n : Z.t) h : Z.t =
   n
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.finMatch (x.1 : Nat) : Nat *)
 
-let test_codegen_constructor_lane_fin_match (x_1 : int) : int =
+let test_codegen_constructor_lane_fin_match (x_1 : Z.t) : Z.t =
   x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.subMk (n : Nat) (h : lcErased) : Nat *)
 
-let test_codegen_constructor_lane_sub_mk (n : int) h : int =
+let test_codegen_constructor_lane_sub_mk (n : Z.t) h : Z.t =
   n
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.subMatch (x.1 : Nat) : Nat *)
 
-let test_codegen_constructor_lane_sub_match (x_1 : int) : int =
+let test_codegen_constructor_lane_sub_match (x_1 : Z.t) : Z.t =
   x_1
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.subVal (s : Nat) : Nat *)
 
-let test_codegen_constructor_lane_sub_val (s : int) : int =
+let test_codegen_constructor_lane_sub_val (s : Z.t) : Z.t =
   s
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.optMatch (x.1 : Option Nat) : Nat *)
 
-let test_codegen_constructor_lane_opt_match (x_1 : int option) : int =
+let test_codegen_constructor_lane_opt_match (x_1 : Z.t option) : Z.t =
   match x_1 with
-    | None -> 0
+    | None -> Z.of_int 0
     | Some val__3 -> val__3
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.listMatch (x.1 : List Nat) : Nat *)
 
-let test_codegen_constructor_lane_list_match (x_1 : int list) : int =
+let test_codegen_constructor_lane_list_match (x_1 : Z.t list) : Z.t =
   match x_1 with
-    | [] -> 0
+    | [] -> Z.of_int 0
     | head_3 :: _ -> head_3
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.prodMatch (x.1 : Prod Nat String) : Nat *)
 
-let test_codegen_constructor_lane_prod_match (x_1 : int * string) : int =
+let test_codegen_constructor_lane_prod_match (x_1 : Z.t * string) : Z.t =
   match x_1 with
     | fst_2, _ -> fst_2
 
@@ -1702,17 +1702,17 @@ let test_codegen_constructor_lane_prod_match (x_1 : int * string) : int =
 
 (* LCNF mono: Test.Codegen.ConstructorLane.exceptMatch (x.1 : Except String Nat) : Nat *)
 
-let test_codegen_constructor_lane_except_match (x_1 : (int, string) result) : int =
+let test_codegen_constructor_lane_except_match (x_1 : (Z.t, string) result) : Z.t =
   match x_1 with
-    | Error _ -> 0
+    | Error _ -> Z.of_int 0
     | Ok a_4 -> a_4
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.exceptMk (b : Bool) : Except String Nat *)
 
-let test_codegen_constructor_lane_except_mk (b : bool) : (int, string) result =
-  if b then (let _x_3 = 1 in
+let test_codegen_constructor_lane_except_mk (b : bool) : (Z.t, string) result =
+  if b then (let _x_3 = Z.of_int 1 in
     Ok _x_3) else (let _x_1 = "no" in
     Error _x_1)
 
@@ -1720,30 +1720,30 @@ let test_codegen_constructor_lane_except_mk (b : bool) : (int, string) result =
 
 (* LCNF mono: Test.Codegen.ConstructorLane.unitMatch (x.1 : PUnit) : Nat *)
 
-let test_codegen_constructor_lane_unit_match (x_1 : unit) : int =
-  3
+let test_codegen_constructor_lane_unit_match (x_1 : unit) : Z.t =
+  Z.of_int 3
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.shadeMatch (x.1 : Test.Codegen.ConstructorLane.Shade) : Nat *)
 
-let test_codegen_constructor_lane_shade_match (x_1 : shade) : int =
+let test_codegen_constructor_lane_shade_match (x_1 : shade) : Z.t =
   match (x_1 : shade) with
-    | Shade_light -> 0
+    | Shade_light -> Z.of_int 0
     | Shade_dark level_3 -> level_3
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.ptMk (x : Nat) (y : Int) : Test.Codegen.ConstructorLane.Pt *)
 
-let test_codegen_constructor_lane_pt_mk (x : int) (y : int) : pt =
+let test_codegen_constructor_lane_pt_mk (x : Z.t) (y : Z.t) : pt =
   ({ x = x; y = y } : pt)
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.ptY (p : Test.Codegen.ConstructorLane.Pt) : Int *)
 
-let test_codegen_constructor_lane_pt_y (p : pt) : int =
+let test_codegen_constructor_lane_pt_y (p : pt) : Z.t =
   match (p : pt) with
     | { y = y; _ } -> y
 
@@ -1751,29 +1751,30 @@ let test_codegen_constructor_lane_pt_y (p : pt) : int =
 
 (* LCNF mono: Test.Codegen.ConstructorLane.NatMap.empty (n : Nat) : Array (List (Prod Nat Nat)) *)
 
-let test_codegen_constructor_lane_nat_map_empty (n : int) : (int * int) list Lcnf_array.t =
-  let _x_1 = 1 in
-  let _x_2 = n + _x_1 in
+let test_codegen_constructor_lane_nat_map_empty (n : Z.t) : (Z.t * Z.t) list Lcnf_array.t =
+  let _x_1 = Z.of_int 1 in
+  let _x_2 = Z.add n _x_1 in
   let _x_3 = [] in
-  Lcnf_array.replicate _x_2 _x_3
+  Lcnf_array.replicate (Lcnf_nat.to_index_exn _x_2) _x_3
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.NatMap.slot (m : Array (List (Prod Nat Nat))) (k : Nat) : USize *)
 
-let test_codegen_constructor_lane_nat_map_slot (m : (int * int) list Lcnf_array.t) (k : int) : int =
-  let _x_1 = Lcnf_array.length m in
-  if _x_1 = 0 then k else k mod _x_1
+let test_codegen_constructor_lane_nat_map_slot (m : (Z.t * Z.t) list Lcnf_array.t) (k : Z.t) : int =
+  let _x_1 = Z.of_int (Lcnf_array.length m) in
+  let _x_2 = Lcnf_nat.rem k _x_1 in
+  Lcnf_nat.to_index_exn _x_2
 
 
 
 (* LCNF mono: List.filterTR.loop._at_.Test.Codegen.ConstructorLane.NatMap.insert.spec_0 (k : Nat) (a.1 : List (Prod Nat Nat)) (a.2 : List (Prod Nat Nat)) : List (Prod Nat Nat) *)
 
-let rec list_filter_tr_loop_at_test_codegen_constructor_lane_nat_map_insert_spec_0 (k : int) (a_1 : (int * int) list) (a_2 : (int * int) list) : (int * int) list =
+let rec list_filter_tr_loop_at_test_codegen_constructor_lane_nat_map_insert_spec_0 (k : Z.t) (a_1 : (Z.t * Z.t) list) (a_2 : (Z.t * Z.t) list) : (Z.t * Z.t) list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, _ -> (let _x_6 = fst_1 = k in
+        | fst_1, _ -> (let _x_6 = Z.equal fst_1 k in
           if _x_6 then list_filter_tr_loop_at_test_codegen_constructor_lane_nat_map_insert_spec_0 k tail_5 a_2 else (let _x_7 = head_4 :: a_2 in
             list_filter_tr_loop_at_test_codegen_constructor_lane_nat_map_insert_spec_0 k tail_5 _x_7)))
 
@@ -1781,11 +1782,11 @@ let rec list_filter_tr_loop_at_test_codegen_constructor_lane_nat_map_insert_spec
 
 (* LCNF mono: Test.Codegen.ConstructorLane.NatMap.insert (m : Array (List (Prod Nat Nat))) (k : Nat) (v : Nat) : Array (List (Prod Nat Nat)) *)
 
-let test_codegen_constructor_lane_nat_map_insert (m : (int * int) list Lcnf_array.t) (k : int) (v : int) : (int * int) list Lcnf_array.t =
+let test_codegen_constructor_lane_nat_map_insert (m : (Z.t * Z.t) list Lcnf_array.t) (k : Z.t) (v : Z.t) : (Z.t * Z.t) list Lcnf_array.t =
   let i = test_codegen_constructor_lane_nat_map_slot m k in
-  let _x_1 = i in
-  let _x_2 = Lcnf_array.length m in
-  let _x_3 = _x_1 < _x_2 in
+  let _x_1 = Z.of_int i in
+  let _x_2 = Z.of_int (Lcnf_array.length m) in
+  let _x_3 = Z.lt _x_1 _x_2 in
   if _x_3 then (let _x_4 = k, v in
     let _x_5 = Lcnf_array.get_exn m i in
     let _x_6 = [] in
@@ -1797,7 +1798,7 @@ let test_codegen_constructor_lane_nat_map_insert (m : (int * int) list Lcnf_arra
 
 (* LCNF mono: List.foldl._at_.Test.Codegen.ConstructorLane.NatMap.ofList.spec_0 (x.1 : Array (List (Prod Nat Nat))) (x.2 : List (Prod Nat Nat)) : Array (List (Prod Nat Nat)) *)
 
-let rec list_foldl_at_test_codegen_constructor_lane_nat_map_of_list_spec_0 (x_1 : (int * int) list Lcnf_array.t) (x_2 : (int * int) list) : (int * int) list Lcnf_array.t =
+let rec list_foldl_at_test_codegen_constructor_lane_nat_map_of_list_spec_0 (x_1 : (Z.t * Z.t) list Lcnf_array.t) (x_2 : (Z.t * Z.t) list) : (Z.t * Z.t) list Lcnf_array.t =
   match x_2 with
     | [] -> x_1
     | head_3 :: tail_4 -> (match head_3 with
@@ -1808,7 +1809,7 @@ let rec list_foldl_at_test_codegen_constructor_lane_nat_map_of_list_spec_0 (x_1 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.NatMap.ofList (n : Nat) (kvs : List (Prod Nat Nat)) : Array (List (Prod Nat Nat)) *)
 
-let test_codegen_constructor_lane_nat_map_of_list (n : int) (kvs : (int * int) list) : (int * int) list Lcnf_array.t =
+let test_codegen_constructor_lane_nat_map_of_list (n : Z.t) (kvs : (Z.t * Z.t) list) : (Z.t * Z.t) list Lcnf_array.t =
   let _x_1 = test_codegen_constructor_lane_nat_map_empty n in
   list_foldl_at_test_codegen_constructor_lane_nat_map_of_list_spec_0 _x_1 kvs
 
@@ -1816,22 +1817,22 @@ let test_codegen_constructor_lane_nat_map_of_list (n : int) (kvs : (int * int) l
 
 (* LCNF mono: List.lookup._at_.Test.Codegen.ConstructorLane.NatMap.find?.spec_0._redArg (x.1 : Nat) (x.2 : List (Prod Nat lcAny)) : Option lcAny *)
 
-let rec list_lookup_at_test_codegen_constructor_lane_nat_map_find_opt_spec_0 (x_1 : int) (x_2 : (int * _) list) : _ option =
+let rec list_lookup_at_test_codegen_constructor_lane_nat_map_find_opt_spec_0 (x_1 : Z.t) (x_2 : (Z.t * _) list) : _ option =
   match x_2 with
     | [] -> None
     | head_4 :: tail_5 -> (match head_4 with
-        | fst_6, snd_7 -> (let _x_8 = x_1 = fst_6 in
+        | fst_6, snd_7 -> (let _x_8 = Z.equal x_1 fst_6 in
           if _x_8 then Some snd_7 else list_lookup_at_test_codegen_constructor_lane_nat_map_find_opt_spec_0 x_1 tail_5))
 
 
 
 (* LCNF mono: Test.Codegen.ConstructorLane.NatMap.find? (m : Array (List (Prod Nat Nat))) (k : Nat) : Option Nat *)
 
-let test_codegen_constructor_lane_nat_map_find_opt (m : (int * int) list Lcnf_array.t) (k : int) : int option =
+let test_codegen_constructor_lane_nat_map_find_opt (m : (Z.t * Z.t) list Lcnf_array.t) (k : Z.t) : Z.t option =
   let i = test_codegen_constructor_lane_nat_map_slot m k in
-  let _x_1 = i in
-  let _x_2 = Lcnf_array.length m in
-  let _x_3 = _x_1 < _x_2 in
+  let _x_1 = Z.of_int i in
+  let _x_2 = Z.of_int (Lcnf_array.length m) in
+  let _x_3 = Z.lt _x_1 _x_2 in
   if _x_3 then (let _x_5 = Lcnf_array.get_exn m i in
     list_lookup_at_test_codegen_constructor_lane_nat_map_find_opt_spec_0 k _x_5) else None
 
@@ -1839,7 +1840,7 @@ let test_codegen_constructor_lane_nat_map_find_opt (m : (int * int) list Lcnf_ar
 
 (* LCNF mono: Test.Codegen.ConstructorLane.mapFind (n : Nat) (kvs : List (Prod Nat Nat)) (k : Nat) : Option Nat *)
 
-let test_codegen_constructor_lane_map_find (n : int) (kvs : (int * int) list) (k : int) : int option =
+let test_codegen_constructor_lane_map_find (n : Z.t) (kvs : (Z.t * Z.t) list) (k : Z.t) : Z.t option =
   let _x_1 = test_codegen_constructor_lane_nat_map_of_list n kvs in
   test_codegen_constructor_lane_nat_map_find_opt _x_1 k
 
@@ -1847,7 +1848,7 @@ let test_codegen_constructor_lane_map_find (n : int) (kvs : (int * int) list) (k
 
 (* LCNF mono: Test.Codegen.ConstructorLane.mapBuckets (n : Nat) (kvs : List (Prod Nat Nat)) : List (List (Prod Nat Nat)) *)
 
-let test_codegen_constructor_lane_map_buckets (n : int) (kvs : (int * int) list) : (int * int) list list =
+let test_codegen_constructor_lane_map_buckets (n : Z.t) (kvs : (Z.t * Z.t) list) : (Z.t * Z.t) list list =
   let _x_1 = test_codegen_constructor_lane_nat_map_of_list n kvs in
   Lcnf_array.to_list _x_1
 
@@ -1855,7 +1856,7 @@ let test_codegen_constructor_lane_map_buckets (n : int) (kvs : (int * int) list)
 
 (* LCNF mono: Test.Codegen.ConstructorLane.mapRetained (n : Nat) (kvs : List (Prod Nat Nat)) (k : Nat) (v : Nat) : Prod (Option Nat) (Option Nat) *)
 
-let test_codegen_constructor_lane_map_retained (n : int) (kvs : (int * int) list) (k : int) (v : int) : int option * int option =
+let test_codegen_constructor_lane_map_retained (n : Z.t) (kvs : (Z.t * Z.t) list) (k : Z.t) (v : Z.t) : Z.t option * Z.t option =
   let m = test_codegen_constructor_lane_nat_map_of_list n kvs in
   let _x_1 = test_codegen_constructor_lane_nat_map_find_opt m k in
   let _x_2 = test_codegen_constructor_lane_nat_map_insert m k v in
@@ -1866,11 +1867,11 @@ let test_codegen_constructor_lane_map_retained (n : int) (kvs : (int * int) list
 
 (* LCNF mono: Test.Codegen.ConstructorLane.mapSiblings (n : Nat) (kvs : List (Prod Nat Nat)) (k : Nat) : Prod (Option Nat) (Prod (Option Nat) (Option Nat)) *)
 
-let test_codegen_constructor_lane_map_siblings (n : int) (kvs : (int * int) list) (k : int) : int option * (int option * int option) =
+let test_codegen_constructor_lane_map_siblings (n : Z.t) (kvs : (Z.t * Z.t) list) (k : Z.t) : Z.t option * (Z.t option * Z.t option) =
   let m = test_codegen_constructor_lane_nat_map_of_list n kvs in
-  let _x_1 = 1 in
+  let _x_1 = Z.of_int 1 in
   let a = test_codegen_constructor_lane_nat_map_insert m k _x_1 in
-  let _x_2 = 2 in
+  let _x_2 = Z.of_int 2 in
   let b = test_codegen_constructor_lane_nat_map_insert m k _x_2 in
   let _x_3 = test_codegen_constructor_lane_nat_map_find_opt a k in
   let _x_4 = test_codegen_constructor_lane_nat_map_find_opt b k in
@@ -1976,25 +1977,25 @@ let test_codegen_modeled_lane_color_modeled_staged : (unit, (unit, unit) sum) su
 
 (* LCNF mono: Effect4.Store.Image.toInt (x.1 : Int) : Effect4.Store.Val *)
 
-let store_image_to_int (x_1 : int) : Val.t =
-  let nat_zero = 0 in
+let store_image_to_int (x_1 : Z.t) : Val.t =
+  let nat_zero = Z.of_int 0 in
   let int_zero = nat_zero in
-  let is_neg = x_1 < int_zero in
-  if is_neg then (let abs = if x_1 < 0 then 0 - x_1 else x_1 in
-    let one = 1 in
-    let a_4 = max 0 (abs - one) in
-    Val.NegInt a_4) else (let a_2 = if x_1 < 0 then 0 - x_1 else x_1 in
+  let is_neg = Z.lt x_1 int_zero in
+  if is_neg then (let abs = Z.abs x_1 in
+    let one = Z.of_int 1 in
+    let a_4 = Lcnf_nat.sub abs one in
+    Val.NegInt a_4) else (let a_2 = Z.abs x_1 in
     Val.Nat a_2)
 
 
 
 (* LCNF mono: Effect4.Store.Image.ofInt (x.1 : Effect4.Store.Val) : Option Int *)
 
-let store_image_of_int (x_1 : Val.t) : int option =
+let store_image_of_int (x_1 : Val.t) : Z.t option =
   match (x_1 : Val.t) with
     | Val.Nat n_2 -> (let _x_3 = n_2 in
       Some _x_3)
-    | Val.NegInt n_5 -> (let _x_6 = 0 - n_5 - 1 in
+    | Val.NegInt n_5 -> (let _x_6 = Z.neg (Z.succ n_5) in
       Some _x_6)
     | _ -> None
 
@@ -2002,7 +2003,7 @@ let store_image_of_int (x_1 : Val.t) : int option =
 
 (* LCNF mono: Effect4.Store.Image.int : Effect4.Store.Image Int *)
 
-let store_image_int : int image =
+let store_image_int : Z.t image =
   let _x_1 = store_image_to_int in
   let _x_2 = store_image_of_int in
   ({ to_val = _x_1; of_val = _x_2 } : _ image)
@@ -2031,7 +2032,7 @@ let test_codegen_modeled_lane_status_modeled_staged : (unit * unit, unit * (stri
 
 (* LCNF mono: Test.Codegen.ModeledLane.Todo.modeledStaged : Effect4.Store.Image (Prod Bool (Prod Nat (Prod String PUnit))) *)
 
-let test_codegen_modeled_lane_todo_modeled_staged : (bool * (int * (string * unit))) image =
+let test_codegen_modeled_lane_todo_modeled_staged : (bool * (Z.t * (string * unit))) image =
   let _x_1 = "done" in
   let _x_2 = store_image_bool in
   let _x_3 = "id" in
@@ -2048,7 +2049,7 @@ let test_codegen_modeled_lane_todo_modeled_staged : (bool * (int * (string * uni
 
 (* LCNF mono: Test.Codegen.ModeledLane.Item.modeledStaged : Effect4.Store.Image (Prod (Sum PUnit (Sum PUnit PUnit)) (Prod String (Prod (Option String) (Prod Int (Prod (Sum (Prod PUnit PUnit) (Prod PUnit (Prod String PUnit))) (Prod (List String) (Prod (Prod Bool (Prod Nat (Prod String PUnit))) PUnit))))))) *)
 
-let test_codegen_modeled_lane_item_modeled_staged : ((unit, (unit, unit) sum) sum * (string * (string option * (int * ((unit * unit, unit * (string * unit)) sum * (string list * ((bool * (int * (string * unit))) * unit))))))) image =
+let test_codegen_modeled_lane_item_modeled_staged : ((unit, (unit, unit) sum) sum * (string * (string option * (Z.t * ((unit * unit, unit * (string * unit)) sum * (string list * ((bool * (Z.t * (string * unit))) * unit))))))) image =
   let _x_1 = "color" in
   let _x_2 = test_codegen_modeled_lane_color_modeled_staged in
   let _x_3 = "name" in
@@ -2098,7 +2099,7 @@ let test_codegen_modeled_lane_status_modeled_of_c (c : (unit * unit, unit * (str
 
 (* LCNF mono: Test.Codegen.ModeledLane.Todo.modeledOfC (c : Prod Bool (Prod Nat (Prod String PUnit))) : Test.Codegen.ModeledLane.Todo *)
 
-let test_codegen_modeled_lane_todo_modeled_of_c (c : bool * (int * (string * unit))) : test_codegen_modeled_lane_todo =
+let test_codegen_modeled_lane_todo_modeled_of_c (c : bool * (Z.t * (string * unit))) : test_codegen_modeled_lane_todo =
   match c with
     | fst_1, snd_1 -> (match snd_1 with
         | fst_2, snd_2 -> (match snd_2 with
@@ -2119,7 +2120,7 @@ let test_codegen_modeled_lane_color_modeled_of_c (c : (unit, (unit, unit) sum) s
 
 (* LCNF mono: Test.Codegen.ModeledLane.Item.modeledOfC (c : Prod (Sum PUnit (Sum PUnit PUnit)) (Prod String (Prod (Option String) (Prod Int (Prod (Sum (Prod PUnit PUnit) (Prod PUnit (Prod String PUnit))) (Prod (List String) (Prod (Prod Bool (Prod Nat (Prod String PUnit))) PUnit))))))) : Test.Codegen.ModeledLane.Item *)
 
-let test_codegen_modeled_lane_item_modeled_of_c (c : (unit, (unit, unit) sum) sum * (string * (string option * (int * ((unit * unit, unit * (string * unit)) sum * (string list * ((bool * (int * (string * unit))) * unit))))))) : item =
+let test_codegen_modeled_lane_item_modeled_of_c (c : (unit, (unit, unit) sum) sum * (string * (string option * (Z.t * ((unit * unit, unit * (string * unit)) sum * (string list * ((bool * (Z.t * (string * unit))) * unit))))))) : item =
   match c with
     | fst_1, snd_1 -> (match snd_1 with
         | fst_2, snd_2 -> (match snd_2 with
@@ -2177,7 +2178,7 @@ let rec list_map_tr_loop_at_test_codegen_modeled_lane_item_modeled_to_c_spec_0 (
 
 (* LCNF mono: Test.Codegen.ModeledLane.Todo.modeledToC (s : Test.Codegen.ModeledLane.Todo) : Prod Bool (Prod Nat (Prod String PUnit)) *)
 
-let test_codegen_modeled_lane_todo_modeled_to_c (s : test_codegen_modeled_lane_todo) : bool * (int * (string * unit)) =
+let test_codegen_modeled_lane_todo_modeled_to_c (s : test_codegen_modeled_lane_todo) : bool * (Z.t * (string * unit)) =
   match (s : test_codegen_modeled_lane_todo) with
     | { id = id; title = title; done_ = done_ } -> (let _x_1 = () in
       let _x_2 = title, _x_1 in
@@ -2188,7 +2189,7 @@ let test_codegen_modeled_lane_todo_modeled_to_c (s : test_codegen_modeled_lane_t
 
 (* LCNF mono: Test.Codegen.ModeledLane.Item.modeledToC (s : Test.Codegen.ModeledLane.Item) : Prod (Sum PUnit (Sum PUnit PUnit)) (Prod String (Prod (Option String) (Prod Int (Prod (Sum (Prod PUnit PUnit) (Prod PUnit (Prod String PUnit))) (Prod (List String) (Prod (Prod Bool (Prod Nat (Prod String PUnit))) PUnit)))))) *)
 
-let test_codegen_modeled_lane_item_modeled_to_c (s : item) : (unit, (unit, unit) sum) sum * (string * (string option * (int * ((unit * unit, unit * (string * unit)) sum * (string list * ((bool * (int * (string * unit))) * unit)))))) =
+let test_codegen_modeled_lane_item_modeled_to_c (s : item) : (unit, (unit, unit) sum) sum * (string * (string option * (Z.t * ((unit * unit, unit * (string * unit)) sum * (string list * ((bool * (Z.t * (string * unit))) * unit)))))) =
   match (s : item) with
     | { name = name; qty = qty; tags = tags; note = note; status = status; todo = todo; color = color } -> (let _x_1 = test_codegen_modeled_lane_color_modeled_to_c color in
       let[@local always] _jp_2 = fun _y_3 -> let _x_4 = test_codegen_modeled_lane_status_modeled_to_c status in
@@ -2254,20 +2255,20 @@ let test_codegen_modeled_lane_round_trip (v : Val.t) : Val.t option =
 
 let test_codegen_modeled_lane_samples : item list =
   let _x_1 = "caf\195\169" in
-  let _x_2 = 3 in
+  let _x_2 = Z.of_int 3 in
   let _x_3 = _x_2 in
-  let _x_4 = 0 - _x_3 in
+  let _x_4 = Z.neg _x_3 in
   let _x_5 = [] in
   let _x_6 = None in
   let _x_7 = Status_pending in
-  let _x_8 = 1 in
+  let _x_8 = Z.of_int 1 in
   let _x_9 = "write the lane" in
   let _x_10 = false in
   let _x_11 = ({ id = _x_8; title = _x_9; done_ = _x_10 } : test_codegen_modeled_lane_todo) in
   let _x_12 = Color_red in
   let _x_13 = ({ name = _x_1; qty = _x_4; tags = _x_5; note = _x_6; status = _x_7; todo = _x_11; color = _x_12 } : item) in
   let _x_14 = "plain" in
-  let _x_15 = 42 in
+  let _x_15 = Z.of_int 42 in
   let _x_16 = _x_15 in
   let _x_17 = "a" in
   let _x_18 = "b" in
@@ -2277,14 +2278,14 @@ let test_codegen_modeled_lane_samples : item list =
   let _x_22 = Some _x_21 in
   let _x_23 = "done" in
   let _x_24 = Status_closed _x_23 in
-  let _x_25 = 2 in
+  let _x_25 = Z.of_int 2 in
   let _x_26 = "ship" in
   let _x_27 = true in
   let _x_28 = ({ id = _x_25; title = _x_26; done_ = _x_27 } : test_codegen_modeled_lane_todo) in
   let _x_29 = Color_blue in
   let _x_30 = ({ name = _x_14; qty = _x_16; tags = _x_20; note = _x_22; status = _x_24; todo = _x_28; color = _x_29 } : item) in
   let _x_31 = "" in
-  let _x_32 = 0 in
+  let _x_32 = Z.of_int 0 in
   let _x_33 = _x_32 in
   let _x_34 = "\195\188" in
   let _x_35 = _x_34 :: _x_5 in
@@ -2294,9 +2295,9 @@ let test_codegen_modeled_lane_samples : item list =
   let _x_39 = Color_green in
   let _x_40 = ({ name = _x_31; qty = _x_33; tags = _x_35; note = _x_36; status = _x_37; todo = _x_38; color = _x_39 } : item) in
   let _x_41 = "big" in
-  let _x_42 = 4611686018427387903 in
+  let _x_42 = Z.of_int 4611686018427387903 in
   let _x_43 = _x_42 in
-  let _x_44 = 0 - _x_43 in
+  let _x_44 = Z.neg _x_43 in
   let _x_45 = "x" in
   let _x_46 = _x_45 :: _x_5 in
   let _x_47 = "max" in

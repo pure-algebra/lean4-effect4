@@ -178,16 +178,16 @@ def mixed : Application NativeOp :=
 
 -- One above rc112's bound: `check` admits the application, and its emission refuses at the profile,
 -- with the literal.
-#guard match check (offset (rc112.natBound + 1)) with
+#guard match check (offset (safeBound + 1)) with
   | .ok b =>
     match emitTs (specOf "offset") b with
-    | .error (.emission (.outsideProfile r)) => decide (r.reason = .aboveBound (rc112.natBound + 1))
+    | .error (.emission (.outsideProfile r)) => decide (r.reason = .aboveBound (safeBound + 1))
     | _ => false
   | .error _ => false
 
 -- At the bound itself it emits: the module imports the prelude beside it, and the surface imports
 -- the module.
-#guard match check (offset rc112.natBound) with
+#guard match check (offset safeBound) with
   | .ok b =>
     match emitTs (specOf "offset") b with
     | .ok e =>
@@ -285,9 +285,9 @@ def mixed : Application NativeOp :=
 -- red: one program above rc112's bound refuses the whole group at the profile, by its name, with
 -- the literal; the program inside the bound beside it writes nothing either.
 #guard match emitGroup (specOf "bound")
-    [("inside", Wire.Corpus.p42), ("above", .succeed (.lit (.nat (rc112.natBound + 1))))] with
+    [("inside", Wire.Corpus.p42), ("above", .succeed (.lit (.nat (safeBound + 1))))] with
   | .error (.member "above" (.emission (.outsideProfile r))) =>
-    decide (r.reason = .aboveBound (rc112.natBound + 1))
+    decide (r.reason = .aboveBound (safeBound + 1))
   | _ => false
 
 /-! ## The read-back of a service module -/

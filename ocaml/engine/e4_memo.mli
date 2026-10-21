@@ -18,7 +18,7 @@
    satisfies the same signature.  Both ascriptions are checked at compile time in
    test/prop_memo.ml.
 
-   Depends on: the OCaml standard library only (Map.Make over `key`, with an EXPLICIT
+   Depends on: Zarith (Z) and the OCaml standard library (Map.Make over `key`, with an EXPLICIT
    lexicographic comparison — a concrete type and a written comparison, so
    ocaml/STANDARDS.md §4's ban on polymorphic compare over abstract types is respected).
 
@@ -40,7 +40,7 @@
        make the chain cyclic (`MemoMap.parent`, src/Effect4/Machine/Stores.lean), so the fuel
        MUST be kept: `lookup` answers None at exhaustion rather than
        looping.                                                               tested
-   MM6 bindings is in ASCENDING KEY ORDER (`compare_key`: the path lexicographic on int list,
+   MM6 bindings is in ASCENDING KEY ORDER (`compare_key`: the path lexicographic on Z.t list,
        shorter-first on a prefix, then the call, path by path), which is NOT Lean's insertion
        order.  Nothing in the run path reads entry
        order — entryAt is by key, updateEntry and deleteEntry are by key — so the difference
@@ -50,10 +50,11 @@
    MM7 agreement with the twin on random {insert, update, delete, find_opt} sequences over
        a small key universe: `find_opt` agrees at EVERY key after EVERY operation
                                                                  tested (>= 10 000 ops, LCG)
-   Bound: a path is a list of host ints; `cardinal` counts DISTINCT keys. *)
+   Bound: none; a path is a list of Lean naturals, each Zarith's `Z.t` (M4). `cardinal` counts
+   DISTINCT keys. *)
 
 (** A layer's identity: its path and the call that runs it. *)
-type key = int list * int list list
+type key = Z.t list * Z.t list list
 
 type 'a t
 
@@ -82,10 +83,10 @@ val mem : key -> 'a t -> bool
 
 (** The lexicographic order on paths, written out: element by element, and a proper prefix
     first. *)
-val compare_path : int list -> int list -> int
+val compare_path : Z.t list -> Z.t list -> int
 
 (** The order on calls: path by path with `compare_path`, a proper prefix first. *)
-val compare_call : int list list -> int list list -> int
+val compare_call : Z.t list list -> Z.t list list -> int
 
 (** The order `bindings` is sorted by: the path, then the call.  Exposed so the twin and the
     differential sort the same way. *)
@@ -97,10 +98,10 @@ val compare_key : key -> key -> int
     map with a given id wins.  Answers None at fuel exhaustion — a forged parent can make
     the chain cyclic and the fuel is what makes `lookup` total. *)
 val lookup
-  :  parent:('m -> int option)
-  -> id:('m -> int)
+  :  parent:('m -> Z.t option)
+  -> id:('m -> Z.t)
   -> entries:('m -> 'a t)
   -> 'm list
   -> key
-  -> int
-  -> (int * 'a) option
+  -> Z.t
+  -> (Z.t * 'a) option

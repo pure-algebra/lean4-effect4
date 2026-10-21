@@ -136,7 +136,7 @@ let answer (r : request) : J.t =
        in
        J.NatJson_obj
          [ "status", J.NatJson_str "paths"
-         ; "budget", J.NatJson_nat r.budget
+         ; "budget", J.NatJson_nat (Z.of_int r.budget)
          ; ( "paths"
            , J.NatJson_arr
                (List.map
@@ -164,7 +164,8 @@ let request_of_json (j : J.t) : request =
   let field k = List.assoc_opt k fields in
   let int k d =
     match field k with
-    | Some (J.NatJson_nat n) -> n
+    | Some (J.NatJson_nat n) when Z.fits_int n -> Z.to_int n
+    | Some (J.NatJson_nat _) -> input "%s is past the host's integers" k
     | None -> d
     | Some _ -> input "%s is a number" k
   in

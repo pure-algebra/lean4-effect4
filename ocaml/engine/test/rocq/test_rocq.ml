@@ -44,7 +44,7 @@ let check name ok =
     Printf.printf "FAIL %s\n%!" name)
 ;;
 
-type exit = (Val.t, Err.t, Defect.t, int, unit) Exit.t
+type exit = (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t
 
 (* R1 *)
 let rocq_exit (ex : exit) : Lane_eval.exitv = Lane_eval.of_exit ex
@@ -52,17 +52,17 @@ let rocq_exit (ex : exit) : Lane_eval.exitv = Lane_eval.of_exit ex
 type stop =
   | Finished of Lane_eval.exitv
   | Cut
-  | Waiting of int * Val.t
+  | Waiting of Z.t * Val.t
   | Refused of string
 
 type run =
-  { calls : (int * Val.t * Lane_eval.exitv) list
+  { calls : (Z.t * Val.t * Lane_eval.exitv) list
   ; cells : Val.t list
   ; stop : stop
   }
 
-let lean_run rows k (host : int -> Val.t -> 's -> (exit * 's) option) (st : 's) p : run =
-  let o = G.run_tree_probe rows k host st p in
+let lean_run rows k (host : Z.t -> Val.t -> 's -> (exit * 's) option) (st : 's) p : run =
+  let o = G.run_tree_probe rows (Z.of_int k) host st p in
   { calls =
       List.filter_map
         (function
@@ -100,7 +100,7 @@ let cells op x w (stores : G.stores) =
      | None -> Some (Val.Unit, stores))
 ;;
 
-let rocq_run k (host : int -> Val.t -> 's -> (exit * 's) option) (st : 's) p : run =
+let rocq_run k (host : Z.t -> Val.t -> 's -> (exit * 's) option) (st : 's) p : run =
   let f i v st = Option.map (fun (ex, st') -> rocq_exit ex, st') (host i v st) in
   let (steps, stop), _ = R.lane_run cells f k p G.stores_empty st in
   { calls =
@@ -137,13 +137,14 @@ let run_text (r : run) =
     (String.concat
        "; "
        (List.map
-          (fun (i, v, a) -> Printf.sprintf "%d %s -> %s" i (value_text v) (exit_text a))
+          (fun (i, v, a) ->
+             Printf.sprintf "%s %s -> %s" (Z.to_string i) (value_text v) (exit_text a))
           r.calls))
     (String.concat "; " (List.map value_text r.cells))
     (match r.stop with
      | Finished ex -> "finished " ^ exit_text ex
      | Cut -> "cut"
-     | Waiting (i, v) -> Printf.sprintf "waiting %d %s" i (value_text v)
+     | Waiting (i, v) -> Printf.sprintf "waiting %s %s" (Z.to_string i) (value_text v)
      | Refused op -> "refused " ^ op)
 ;;
 
@@ -175,14 +176,14 @@ let first_difference ?(name = "") ~upto rows host st p =
   go 0
 ;;
 
-let tape : int -> Val.t -> exit list -> (exit * exit list) option =
+let tape : Z.t -> Val.t -> exit list -> (exit * exit list) option =
   fun _ _ t ->
   match t with
   | ex :: rest -> Some (ex, rest)
   | [] -> None
 ;;
 
-let silent : int -> Val.t -> unit -> (exit * unit) option = fun _ _ () -> None
+let silent : Z.t -> Val.t -> unit -> (exit * unit) option = fun _ _ () -> None
 let unit_ok : exit = Exit.Success Val.Unit
 let units n = List.init n (fun _ -> unit_ok)
 

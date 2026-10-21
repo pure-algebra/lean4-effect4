@@ -9,7 +9,8 @@
    the pair IS OCaml5.Lib.Deque's carrier (its `toList`, Deque (git:79752b3e6^:src/OCaml5/Lib/Deque.lean)) under
    to_list (f, b) = f @ List.rev b -- so every theorem in Lib/Deque.lean is a law of this
    module, not an analogy.
-   Depends on: nothing (polymorphic in the task; Stdlib only).
+   Depends on: Zarith (Z), Stdlib; polymorphic in the task. A priority is a Lean `Nat`,
+   Zarith's `Z.t` since M4.
 
    Properties (the Lean theorem that licenses each is in
    docs/research/2026-09-08-engine-a3-queue-query.md §2.1):
@@ -46,7 +47,7 @@
    snapshot (Scheduler.ts:225-233), so a front/back pair never needs its rotation amortisation
    argument -- the drain reverses each back list exactly once. Refusal row A3-BUCKETS-DEQUEUE.
 
-   NOT refused, kept as the tripwire of R-A3-4: the Map.Make(Int) carrier is written in this
+   NOT refused, kept as the tripwire of R-A3-4: the Map.Make(Z) carrier is written in this
    file as {!Map_variant}, behind the same signature {!S}, and benched beside the default at
    p in {1, 4, 16, 256} by test_buckets.ml. Refusal row A3-BUCKETS-MAP therefore stands as a
    DEFAULT, not as an absence: if a program ever uses many priorities, the switch is one line
@@ -77,30 +78,30 @@ val disarm : 'a t -> 'a t
 (** `Dispatcher.enqueue` (Dispatcher.enqueue (src/Effect4/Machine/Fibers.lean)): append at the tail of `priority`'s queue,
     creating the bucket in ascending position if there is none, and arm. B1, B2, B5, B6.
     @raise Invalid_argument if [priority] is negative. *)
-val enqueue : 'a t -> priority:int -> 'a -> 'a t
+val enqueue : 'a t -> priority:Z.t -> 'a -> 'a t
 
 (** `Dispatcher.drain` / `runTasks` (Dispatcher.drain (src/Effect4/Machine/Fibers.lean)): the whole snapshot in ascending
     priority and FIFO within a priority, and the empty disarmed dispatcher. B3, B4. *)
 val drain : 'a t -> 'a list * 'a t
 
 (** The number of tasks a drain would deliver. O(the number of queued tasks). *)
-val length : 'a t -> int
+val length : 'a t -> Z.t
 
 (** Strictly ascending. B1. *)
-val priorities : 'a t -> int list
+val priorities : 'a t -> Z.t list
 
 (** The canonical form: ascending priority, each bucket front-to-back. This is
     `Dispatcher.bucketPairs` (bucketPairs (git:79752b3e6^:src/OCaml5/Lib/Deque.lean)) with each `Deque` read as its `toList`,
     and it is what a snapshot serialises. Two dispatchers with the same `to_list` and the same
     `armed` are equal. *)
-val to_list : 'a t -> (int * 'a list) list
+val to_list : 'a t -> (Z.t * 'a list) list
 
 (** The inverse of {!to_list}. An empty bucket is preserved, so [to_list (of_list ~armed l) = l]
     for every admissible [l].
     @raise Invalid_argument if the priorities are not strictly ascending, or if one is negative
     (the invariant is carried in the type, as `Map.wf` is in Lean; a caller that needs a
     rejection checks first -- refusal row W4-MAP-OF-ALIST-EXN). *)
-val of_list : armed:bool -> (int * 'a list) list -> 'a t
+val of_list : armed:bool -> (Z.t * 'a list) list -> 'a t
 
 (** {1 The two carriers} *)
 
@@ -114,19 +115,19 @@ module type S = sig
   val armed : 'a t -> bool
   val arm : 'a t -> 'a t
   val disarm : 'a t -> 'a t
-  val enqueue : 'a t -> priority:int -> 'a -> 'a t
+  val enqueue : 'a t -> priority:Z.t -> 'a -> 'a t
   val drain : 'a t -> 'a list * 'a t
-  val length : 'a t -> int
-  val priorities : 'a t -> int list
-  val to_list : 'a t -> (int * 'a list) list
-  val of_list : armed:bool -> (int * 'a list) list -> 'a t
+  val length : 'a t -> Z.t
+  val priorities : 'a t -> Z.t list
+  val to_list : 'a t -> (Z.t * 'a list) list
+  val of_list : armed:bool -> (Z.t * 'a list) list -> 'a t
 end
 
 (** The default carrier, and the one this module's top-level functions are (D-A3-1): the
     ascending assoc list of front/back pairs. *)
 module Assoc : S with type 'a t = 'a t
 
-(** The tripwire carrier of R-A3-4: `Map.Make(Int)` of front/back pairs. Same laws, same
+(** The tripwire carrier of R-A3-4: `Map.Make(Z)` of front/back pairs. Same laws, same
     observations -- test_buckets.ml runs every property test and the 100 000-operation
     differential against the Lean transcription over BOTH. Measured slower at every priority
     count >= 4 and every drain depth >= 8 (design §6.2), which is why it is not the default. *)

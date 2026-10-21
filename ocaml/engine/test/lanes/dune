@@ -17,4 +17,4 @@
  (flags
   (:standard -w @55))
  (no_dynlink)
- (libraries effect4_closure effect4_eff effect4_clock effect4_lcnf))
+ (libraries effect4_closure effect4_eff zarith effect4_lcnf))

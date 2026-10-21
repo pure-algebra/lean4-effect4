@@ -94,7 +94,7 @@ let rand n =
 
 (* ============================================================ frames and nodes *)
 
-let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
 
 let v_ctor i args =
@@ -446,10 +446,10 @@ module Entry_nat = struct
      node's ordinal.  The whole point of `VALUE.decode` is that it reads the PAYLOAD. *)
   let decode (s : string) : int option =
     match Eff_frame.read_ctor s 0 (String.length s) with
-    | Some (0, p, e, next) when next = String.length s ->
+    | Some (index, p, e, next) when Z.equal index Z.zero && next = String.length s ->
       (match Eff_frame.decode_nat s p e with
-       | Some (n, _) -> Some n
-       | None -> None)
+       | Some (n, _) when Z.fits_int n -> Some (Z.to_int n)
+       | Some _ | None -> None)
     | _ -> None
   ;;
 
@@ -507,7 +507,7 @@ let test_decoded (b : built) =
 open Eff_types
 
 let t_unit = Term.Lit Lit.Unit
-let t_n i = Term.Lit (Lit.Nat i)
+let t_n i = Term.Lit (Lit.Nat (Z.of_int i))
 let ea = Eff.Succeed (t_n 1)
 let eb = Eff.Succeed (t_n 2)
 

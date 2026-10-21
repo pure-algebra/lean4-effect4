@@ -81,7 +81,7 @@ def surfaceText : SurfaceRefusal → String
   | .outsideProfile why =>
     let n := match why.reason with
       | .aboveBound n => toString n
-      | .belowBound n => "-" ++ toString (n + 1)
+      | .belowBound n => "-" ++ toString n
     "the literal " ++ n ++ " at " ++ toString why.site ++ " is outside the target's safe integers"
   | .imports => "an import is not admitted"
   | .lexical => "a form the binding analysis does not read"

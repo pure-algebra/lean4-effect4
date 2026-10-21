@@ -181,7 +181,7 @@ let eff_goldens_dir () =
 
 let rec bind_tree (d : int) : Eff_codec.program =
   if d = 0
-  then Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat 1))
+  then Eff_types.Eff.Succeed (Eff_types.Term.Lit (Eff_types.Lit.Nat (Z.of_int 1)))
   else Eff_types.Eff.Bind (bind_tree (d - 1), bind_tree (d - 1))
 ;;
 
@@ -279,7 +279,7 @@ let bench_subterm () =
 
 (* ============================================================ P7-D: the dependents index *)
 
-let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits n)
+let v_nat n = Eff_frame.framed Eff_frame.tag_nat (Eff_frame.nat_digits (Z.of_int n))
 let v_bytes b = Eff_frame.framed Eff_frame.tag_bytes b
 
 let v_ctor i args =

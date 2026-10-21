@@ -19,7 +19,7 @@ type exitv =
   | Success of Val.t
   | Failure of Val.t
 
-let of_exit (ex : (Val.t, Err.t, Defect.t, int, unit) Exit.t) =
+let of_exit (ex : (Val.t, Err.t, Defect.t, Z.t, unit) Exit.t) =
   match ex with
   | Exit.Success v -> Success v
   | ex -> Failure (G.reify_exit_val ex)

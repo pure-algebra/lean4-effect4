@@ -8,7 +8,7 @@
    the host: a function of the call's row, its request and the host's state, answering a
    completion and the host's next state, as Lean's `Run.Reactor` does. Native interfaces are
    hosts (decisions row 393).
-   Depends on: E4_engine, E4_clock, Eff_types, Eff_codec.
+   Depends on: E4_engine, Lcnf_crossing, Eff_types, Eff_codec, Zarith.
 
    Properties:
    H1  The decisions are Lean's: `evaluate 0`, then per round one `answerAsync` for the first
@@ -58,8 +58,8 @@
        `driveFrom` reads no step's verdict and its naturals are unbounded:
        (a) the profile (H2, H6, H8, H9): the run is exact, and the profile is a datum it is
            checked against at ingress (D3). Ingress is Lean's profile support, lowered, which
-           `driveFrom` does not ask; a step's arithmetic crossing stays in the builtin rows
-           until M4;
+           `driveFrom` does not ask; since M4 a step's arithmetic is exact, and a crossing
+           refuses only an exponent, a shift or an index past the target's `int`;
        (b) at a refused reply `driveFrom` plays the refused rows, each changing nothing
            (`Api.Runner.step`), keeps the reactor's next state, and stops at the next round
            because the bound call is no fresh call; here the drive stops at once with the
@@ -74,7 +74,7 @@
 
 open Eff_types
 
-type completion = (Val.t, Err.t, Defect.t, int, unit) Eff_types.Completion.t
+type completion = (Val.t, Err.t, Defect.t, Z.t, unit) Eff_types.Completion.t
 
 module Types = struct
   type 'st provider = Row.t -> Val.t -> 'st -> (completion * 'st) option
@@ -144,7 +144,7 @@ module Make (E : E4_engine.ENGINE) = struct
     | Some why -> Error (Load_outside_profile (E4_engine.Unsupported why))
     | None ->
       (match E.load ~table program ~fuel with
-       | exception E4_clock.Profile_refusal why ->
+       | exception Lcnf_crossing.Refused why ->
          Error (Load_outside_profile (E4_engine.Crossing why))
        | loaded ->
          let rows = Array.of_list table in
