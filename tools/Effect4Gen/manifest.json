@@ -204,10 +204,26 @@
       ]
     },
     {
+      "Note": "Program objects and printed certificates, with the store readers' refusals. The carriers and codecs import no printer; row 439.",
+      "Name": "Object",
+      "Flags": ["--qualified-names"],
+      "Imports": "Effect4.Program.Object,Effect4.Store.Domain.Derived.Program,Effect4.Store.Domain.Read,Effect4.Store.Domain.Derived.Value",
+      "Out": "src\\Effect4\\Api\\ObjectDerived.lean",
+      "Guards": "",
+      "Kinds": ["Effect4.Program.Object=program"],
+      "Types": [
+        "Effect4.Program.SigApp",
+        "Effect4.Program.Object",
+        "Effect4.Program.Certificate",
+        "Effect4.Store.Node.ReadRefusal",
+        "Effect4.Store.ReadRefusal"
+      ]
+    },
+    {
       "Note": "The refusals an agent can be shown, as content (decisions row 17): the scope reader's, the checker's, the authoring call's, the printer's, the reader's and the build's (the eight of the row's source, scout C 3.3), with admission's and the table's, which the Runner group carried before, and the signature's that admission reports (decisions row 21). Placed before Runner, which imports it. The build refusal is declared in Effect4.Api.Author; importing it brings no keyword since the authoring syntax is scoped (seat J2). A judgment's refusal is one `Located` reason (decisions rows 414 (2) and 415 (1); move M1), so the group holds several applied `Located`, each listed after its reason; qualified names keep them apart. The host session's refusal stays in Runner.",
       "Name": "Refusals",
       "Flags": ["--qualified-names"],
-      "Imports": "Effect4.Api.Codegen,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program,Effect4.Api.Author,Effect4.Store.Domain.ShapeJson",
+      "Imports": "Effect4.Api.Codegen,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program,Effect4.Api.Author,Effect4.Store.Domain.ShapeJson,Effect4.Api.Object",
       "Out": "src\\Effect4\\Api\\RefusalsDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\refusals.lean",
       "Kinds": [],
@@ -238,6 +254,7 @@
         "Effect4.Program.TypeReason",
         "Effect4.Located@(List@Nat)@Effect4.Program.TypeReason",
         "Effect4.Program.AdmitRefusal",
+        "Effect4.Program.Object.LoadRefusal",
         "Effect4.Api.AuthorRefusal",
         "Effect4.Program.ClassRefusal",
         "Effect4.Program.PrintRefusal",
@@ -279,12 +296,11 @@
       "Note": "The checker's public data for the tool wire (seams V1, S3b): keys, verdicts, sites and explanations. No Oracle, Checked, Memo or HitRule package is encoded. Qualified names keep repeated short heads apart.",
       "Name": "Check",
       "Flags": ["--qualified-names"],
-      "Imports": "Effect4.Program.Check,Effect4.Api.RefusalsDerived",
+      "Imports": "Effect4.Program.Check,Effect4.Api.RefusalsDerived,Effect4.Api.ObjectDerived",
       "Out": "src\\Effect4\\Tool\\CheckDerived.lean",
       "Guards": "",
       "Kinds": [],
       "Types": [
-        "Effect4.Program.SigApp",
         "Effect4.Program.PartSig",
         "Effect4.Program.SigData",
         "Effect4.Program.Check.CheckInput",

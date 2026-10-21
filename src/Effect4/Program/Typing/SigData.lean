@@ -1,6 +1,5 @@
 import Effect4.Program.Typing.Source
 set_option autoImplicit false
-deriving instance DecidableEq for Effect4.Program.SigApp
 
 namespace Effect4.Program
 

@@ -43,8 +43,13 @@ structure SigApp where
   rows : RowTable := []
   services : List (ServiceKey × Ty) := []
   types : TyDecls := []
+deriving DecidableEq
 
 namespace SigApp
+
+/-- The spellings of the signature's rows, with their positions. -/
+def rowNames (app : SigApp) : List (String × Nat) :=
+  app.rows.zipIdx.map fun (row, index) => (row.spelling, index)
 
 /-- The signature of a row table alone: no service declaration and no named type. -/
 abbrev ofTable (rows : RowTable) : SigApp := { rows }
