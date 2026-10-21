@@ -155,16 +155,19 @@ mutual
       (.error "block: not an object", .error "body: not an array")
     | .arr values => (.error "block: not an object", (readValues values.toList).mapM id)
     | .obj fs =>
-      (readObject (((readFields fs.inner.inner).lookup "body").getD (.error "block: no field body")) (.obj fs),
+      (readObject ((readBody fs.inner.inner).getD (.error "block: no field body")) (.obj fs),
         .error "body: not an array")
   private def readValues : List Json → List (Except String Block)
     | [] => []
     | head :: tail => (readValue head).1 :: readValues tail
-  private def readFields : Std.DTreeMap.Internal.Impl String (fun _ => Json) →
-      List (String × Except String (List Block))
-    | .leaf => []
+  /-- Read only the first body field, in the same order as the object's field lookup. -/
+  private def readBody : Std.DTreeMap.Internal.Impl String (fun _ => Json) →
+      Option (Except String (List Block))
+    | .leaf => none
     | .inner _ key value left right =>
-      readFields left ++ [(key, (readValue value).2)] ++ readFields right
+      match readBody left with
+      | some body => some body
+      | none => if key == "body" then some (readValue value).2 else readBody right
 end
 
 /-- Read a block by the structural fold of its finite JSON value. -/
