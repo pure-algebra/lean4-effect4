@@ -669,6 +669,41 @@ cache. -/
 def calls (L : Look) (l : Laid) (dx dy : Int) (textStyle : GraphText.Style := {}) : List (Keyed Call) :=
   (callsCached L l dx dy {} textStyle).1
 
+/-! ### Rigid moves: a part laid out once, moved into place
+
+A laid graph is data, so two of them compose by a rigid move (the design's frame consistency,
+`docs/research/2026-10-09-program-graph-design.md`, D3): every place, region and mark moves by
+one offset, and the routes, which name their items by key, stay. A page that draws a program's
+definitions beside its main program lays each out alone and joins them (`Compiler.Page`). The
+keys of the parts must be distinct, as addresses are. The lanes of a back edge stand at the
+right of the whole (`routeWidth`), so a joined part's return arcs reach the joined picture's
+right side. -/
+
+/-- A laid graph moved rigidly by `(dx, dy)`. -/
+def move (dx dy : Int) (l : Laid) : Laid :=
+  { l with
+    placed := l.placed.map fun p => { p with x := p.x + dx, y := p.y + dy }
+    regions := l.regions.map fun r => { r with x := r.x + dx, y := r.y + dy }
+    marks := l.marks.map fun
+      | .bar k x0 x1 y => .bar k (x0 + dx) (x1 + dx) (y + dy)
+      | .diamond k x y => .diamond k (x + dx) (y + dy)
+    width := l.width + dx, height := l.height + dy
+    routingWidth := l.routingWidth.map (· + dx) }
+
+/-- The union of two laid graphs, as placed: `b` is moved by `(dx, dy)` first. -/
+def join (a b : Laid) (dx dy : Int) : Laid :=
+  let b := b.move dx dy
+  { placed := a.placed ++ b.placed, routes := a.routes ++ b.routes, regions := a.regions ++ b.regions,
+    marks := a.marks ++ b.marks, attachments := a.attachments ++ b.attachments,
+    width := max a.width b.width, height := max a.height b.height,
+    routingWidth := some (max a.routeWidth b.routeWidth) }
+
+/-- **Two laid graphs side by side**: `b` at the right of `a` after `gap`, their tops aligned. -/
+def beside (a b : Laid) (gap : Int := CELL * GAP) : Laid := join a b (a.width + gap) 0
+
+/-- **Two laid graphs one above the other**: `b` below `a` after `gap`, their left sides aligned. -/
+def below (a b : Laid) (gap : Int := ROWH) : Laid := join a b 0 (a.height + gap)
+
 /-- No two boxes share a pixel: a finite check of a layout. -/
 def boxesApart (l : Laid) : Bool :=
   let boxes := l.placed.toList.filter (·.node.isSome)

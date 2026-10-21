@@ -149,7 +149,8 @@ def Relations.owner (r : Relations) : Scope → String
 /-- A path in the program's generated address alphabet. -/
 def address (p : List Nat) : String := String.intercalate "." (p.map toString)
 
-private def sortName : EffFam → String
+/-- A sort's word. -/
+def sortName : EffFam → String
   | .eff => "eff" | .effs => "effs" | .stmt => "stmt" | .stmts => "stmts"
   | .action => "action" | .layer => "layer" | .layers => "layers"
 

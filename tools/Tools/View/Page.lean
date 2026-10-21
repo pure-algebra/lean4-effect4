@@ -126,10 +126,13 @@ structure Panel where
   laid : Laid
 deriving Repr
 
-/-- A panel of code beside a page's lines: its head, and its text, one line a row. -/
+/-- A panel of code beside a page's lines: its head, and its text, one line a row. A row may carry
+the key of the line it stands beside (`keys`, by row), so a relation row, its line and its mark
+share one key; the code plane carries none. -/
 structure CodePanel where
   head : String
   lines : Array String
+  keys : Array Key := #[]
 deriving Repr
 
 /-- A page: its title, the line under it, the heads of the two columns, its lines and its foot. -/
@@ -206,8 +209,8 @@ def pageSize (W : Int) (g : Page) : Int × Int :=
   | some p => (max W (p.laid.width + 2 * LEFT), graphTop g + p.laid.height + ROWH + FOOT)
 
 /-- A page's code as calls: each line at its row in the data face, past a rule from the heads to
-the foot of the body. The code carries no key yet: the map from an address to its text is the
-printer's span map, still to come. -/
+the foot of the body, under its row's key where the panel gives one. The code plane carries no key
+yet: the map from an address to its text is the printer's span map, still to come. -/
 def codeCalls (L : Look) (W : Int) (g : Page) : List (Keyed Call) :=
   match g.code with
   | none => []
@@ -215,7 +218,7 @@ def codeCalls (L : Look) (W : Int) (g : Page) : List (Keyed Call) :=
     let x := col (codeCol g)
     let room := (W - LEFT - x) / CELL
     [⟨"", .vrule .rule (col (codeCol g - CODE_RULE)) HEAD_RULE (TOP + ROWH * bodyRows g - HEAD_RULE) L.strokes.rule⟩] ++
-      c.lines.toList.zipIdx.flatMap fun (s, i) => cellsAt "" x (TOP + ROWH * i + BASE) s room
+      c.lines.toList.zipIdx.flatMap fun (s, i) => cellsAt ((c.keys[i]?).getD "") x (TOP + ROWH * i + BASE) s room
 
 /-- A graph panel prepared once, with local calls and their fitted panel origin. -/
 structure GraphDrawing where

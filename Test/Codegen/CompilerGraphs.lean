@@ -1,4 +1,5 @@
 import Compiler.Graphs
+import Compiler.Page
 import Tools.View.LayerGraph
 import Tools.View.Graph
 import Test.Api.SessionContract
@@ -186,5 +187,30 @@ def recursive : Object :=
     ((Compiler.Graphs.read b).rows.map (·.host)).foldr
       (fun name rest => .overlay (.vertex name) rest) .empty
   LayerGraph.hypergraph_merge_comm atoms (.succeed natKey (.nat 23)) (.ref [2, 0])
+
+-- Finite evaluation (the object page, `Compiler.Page`): the to-do's page opens at its rows, so no
+-- line is refused; the relation panel's rows carry the lines' keys; every placed node of the flows is
+-- a line; each body is a region keyed by its address, and the layouts joined stand apart and descend.
+#guard todoSession.any fun b =>
+  let g := Compiler.Page.page b "to-do"
+  let keys := g.lines.toList.map (·.key)
+  g.lines.all (·.state != .refused) &&
+  (g.code.map fun c => c.keys.toList == keys && c.lines.size == g.lines.size).getD false &&
+  match g.graph with
+  | some panel =>
+    panel.laid.placed.toList.all (fun p => p.node.isNone || keys.contains p.key) &&
+    (Compiler.Graphs.read b).defs.all (fun d =>
+      panel.laid.regions.toList.any (fun r => r.key == Tools.View.Program.bracket d.body ++ "/region" && r.name == d.name)) &&
+    panel.laid.boxesApart && panel.laid.edgesDescend
+  | none => false
+
+-- Control: a program with no block has one flow, and a rigid move keeps every key.
+#guard match emptyBlock.open, ({ app := {}, program := unitProgram } : Object).open with
+  | .ok a, .ok b =>
+    (Compiler.Page.flows b.program).length == 1 && (Compiler.Page.flows a.program).length == 1 &&
+    (let l := Tools.View.Flow.layout (Tools.View.Flow.ofProgram b.program)
+     (l.move 40 24).placed.toList.map (·.key) == l.placed.toList.map (·.key) &&
+     (l.beside l).placed.size == 2 * l.placed.size && (l.below l).height > l.height)
+  | _, _ => false
 
 end Test.Codegen.CompilerGraphs
