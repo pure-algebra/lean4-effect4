@@ -155,8 +155,11 @@ The shared production dispatcher and its independent route matrix establish this
 (`src/Effect4/Program/Compile.lean`; `Test/Program/InvocationContract.lean`).
 
 `adapters` names the prelude exports the eight canonical package rows are bound to
-(`src/Effect4/Program/Packages.lean`; `ts/prelude/prelude.ts`, its `Sql`, `Kv`, `SqlHandle`
-and `KvHandle` members). `imports` is that file's own import list. -/
+(`src/Effect4/Program/Packages.lean`): `Kv` and `KvHandle` of `ts/prelude/prelude.ts`, and `Sql`
+and `SqlHandle` of `ts/prelude/sql.ts`, the SQLite package's adapter. A printed module reaches
+`sql.ts` only by importing `Sql` for a SQL row (`Compiler.Prelude.closure`). `imports` is the two
+files' import lists together: `effect` and `effect/unstable/persistence` are `prelude.ts`'s, and
+`effect/unstable/reactivity/Reactivity` and `@effect/sql-sqlite-bun` are `sql.ts`'s. -/
 def rc112 : ProfileData where
   name := "effect@4.0.0-rc.112"
   natBound := some safeBound
