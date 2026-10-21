@@ -1,0 +1,94 @@
+67 rows read, 57 distinct statements
+checker-ask-value | host-session-protocol, compatibility | Effect4.Program.Check.Checked.ask_value | 
+checker-oracle-agrees | host-session-protocol, compatibility | Effect4.Program.Check.Oracle.eq_uncached | 
+run-admitted-history | host-session-protocol, compatibility | Effect4.Run.reached_history | Run×1
+keys-once | host-session-protocol, preservation | Effect4.Run.session_keys_once | Run×1
+allows-answer | host-session-protocol, preservation | Effect4.Run.allows_answer | 
+reply-commute | host-session-protocol, compatibility | Effect4.Api.HostSession.reply_commute | Session×1
+session-success-prepared-membership | host-session-protocol, preservation | Effect4.Api.HostSession.preflight_success_prepared_fits | Session×1
+reply-at-call-instance | host-session-protocol, preservation | Effect4.Program.instance_prepared_success | 
+tool-serve-appends | host-session-protocol, compatibility | Effect4.Tool.serve_appends | 
+tool-serve-refuses | host-session-protocol, preservation | Effect4.Tool.serve_refuses | 
+tool-serve-query | host-session-protocol, preservation | Effect4.Tool.serve_query | 
+tool-serve-transparent | host-session-protocol, compatibility | Effect4.Tool.serve_transparent | 
+tool-transcript-replays | host-session-protocol, compatibility | Effect4.Tool.transcript_replays | 
+tool-serve-answers | host-session-protocol, compatibility | Effect4.Tool.serve_answers | 
+workspace-load-own | host-session-protocol, compatibility | Effect4.Tool.Exchange.load_own | 
+workspace-commits-once | host-session-protocol, compatibility | Effect4.Tool.Exchange.apply_commits_once | 
+workspace-refuses | host-session-protocol, preservation | Effect4.Tool.Exchange.apply_refuses | 
+built-admission-exact | host-session-protocol, compatibility | Effect4.Api.Built.ofSketch_error_iff | 
+live-session-persists | host-session-protocol, compatibility | Effect4.LiveRecord.restore_save | Live×1
+block-call-instance | host-session-protocol, preservation | Effect4.Program.checkModule_programCallAt | 
+session-failure-shape-free | host-session-protocol, preservation | Effect4.Api.HostSession.preflight_failure_noShapeDefect | Session×1
+frontier-awaithost | host-session-protocol, inversion | Effect4.Api.observe_awaitingAsync_iff | 
+recorded-call-tree-prefix | translation-simulation, inversion | Effect4.Run.CallTree.bound_in_tree | Run×1
+session-eq-ref | translation-simulation, simulation | Effect4.Run.session_eq_ref | Run×1
+rows-denotation-session | translation-simulation, simulation | Effect4.Run.denoteRows_eq_session | Run×1
+rows-denotation-host | translation-simulation, simulation | Effect4.Run.denoteRows_eq_session_host | Run×1, Comodel×1
+rows-loop-session | translation-simulation, simulation | Effect4.Run.h8_loopedRows | Run×1
+rows-loop-host | translation-simulation, simulation | Effect4.Run.denoteRowsB_eq_session_host | Run×1, Comodel×1
+rows-block-host | translation-simulation, simulation | Effect4.Run.h9_blocks | Run×1, Comodel×1
+rows-loop-driver | translation-simulation, simulation | Effect4.Run.runWith_denotesB | Built×1, Reactor×1
+rows-loop-frontier | host-session-protocol, simulation | Effect4.Run.rows_loop_frontier | Run×1
+rows-loop-frontier-host | host-session-protocol, simulation | Effect4.Run.rows_loop_frontier_host | Run×1, Comodel×1
+rows-denotation-driver | translation-simulation, simulation | Effect4.Run.runWith_denotes | Built×1, Reactor×1
+run-controls-replay | translation-simulation, simulation | Effect4.Run.play_controls_eq_replay | Run×1
+run-tape-replay | translation-simulation, simulation | Effect4.Run.tape_replays | Run×1
+funded-run-replay | translation-simulation, simulation | Effect4.Run.funded_replays | Run×1
+journal-position-replay | translation-simulation, simulation | Effect4.Run.tapeFrom_position_replays | Run×1
+replay-at-call-instance | host-session-protocol, preservation | Effect4.Live.replay_at_call_instance | Live×1
+run-conforms-postcondition | host-session-protocol, adequacy | Effect4.Run.conforms_sat | Run×1
+run-agrees-model | translation-simulation, simulation | Effect4.Run.agrees_hostRun | Reactor×1, Run×1
+R6 top | R6 | Effect4.Program.Typed.reachable_typed | 
+R6 top | R6 | Effect4.Api.HostSession.preflight_success_prepared_fits | Session×1
+R6 top | R6 | Effect4.Api.HostSession.preflight_failure_noShapeDefect | Session×1
+R6 top | R6 | Effect4.Program.instance_prepared_success | 
+R6 top | R6 | Effect4.Run.origin_addresses_call | Run×1
+R6 top | R6 | Effect4.Run.reached_callInstance | Run×1
+R6 top | R6 | Effect4.Run.session_eq_ref | Run×1
+R6 top | R6 | Effect4.Run.denoteRows_eq_session_host | Run×1, Comodel×1
+R6 top | R6 | Effect4.Run.runWith_denotes | Built×1, Reactor×1
+R6 top | R6 | Effect4.Run.h8_loopedRows | Run×1
+R6 top | R6 | Effect4.Run.denoteRowsB_eq_session_host | Run×1, Comodel×1
+R6 top | R6 | Effect4.Run.runWith_denotesB | Built×1, Reactor×1
+R6 top | R6 | Effect4.Live.replay_at_call_instance | Live×1
+R13 top | R13 | Effect4.Run.journal_replays | Run×1
+named | - | Effect4.Run.drive_eq_play | Reactor×1, Run×1
+named | - | Effect4.Run.drive_envelope | Reactor×1, Run×1
+named | - | Effect4.Run.runWith_guarded_denotes | Built×1, Reactor×1
+named | - | Effect4.Run.runWith_host_denotes | Built×1, Comodel×1
+named | - | Effect4.Run.runWith_host_denotesB | Built×1, Comodel×1
+named | - | Effect4.Run.reactorHost_ofHost | Comodel×1
+named | - | Effect4.Run.agrees_hostRun_blocks | Reactor×1, Run×1
+named | - | Effect4.Run.conforms_sat_blocks | Run×1
+named | - | Effect4.Run.request_performed | Run×1
+named | - | Effect4.Live.journal_replays | Live×1
+named | - | Effect4.Api.Runner.replay_unique | 
+named | - | Effect4.Api.Runner.replay_append | Runner×1
+named | - | Effect4.Api.Runner.behaviour_unique | Runner×1
+statements with two or more binders over a run (Run or Live): 0
+host-session-protocol claims with no witness:
+host-progress: assumed, docs/core/host-boundary.md (Host session progress is subject to external driver execution; outside closed runtime)
+distinct statements that range over each carrier:
+Run: 25
+Live: 3
+LiveRecord: 0
+Built: 5
+Object: 0
+Session: 3
+Runner: 2
+Reactor: 7
+Comodel: 7
+Tree.Host: 0
+HostSpec: 0
+typed host record: 0
+Hosted: 0
+ran clean: probe-census.lean
+ran clean: probe-host.lean
+ran clean: probe-run.lean
+ran clean: probe-session.lean
+ran clean: probe-deploy.lean
+#axiom_audit: 187 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+ran clean: probe-guard.lean
+ran clean: probe-transcript.lean
+#axiom_audit: 49 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
