@@ -7,9 +7,3 @@ StoreCode.v
 StoreLaws.v
 StoreGrammar.v
 StoreAssumptions.v
-Denote.v
-Run.v
-Judgments.v
-Budget.v
-BudgetDefs.v
-Api.v

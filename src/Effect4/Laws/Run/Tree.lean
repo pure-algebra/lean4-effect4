@@ -15,12 +15,9 @@ fact as a planned goal, and the plan status prints its citation.
   (`rocq/SkeletonApprox.v`), over `rocq/Skeleton.v`, which `make gen-rocq` prints from this
   module's base-phase LCNF (`OCaml5.Lcnf.Gallina`). It holds for every evaluator: `Tree.Eval`
   is the functor's parameter, and its assumptions are that parameter's operations alone.
-* **Lean's tree, where Lean has one** (`ofProgram_eq_denoteRowsB`): at `Budget.v`'s fragment
-  (`Plain`), the tree is `denoteRowsB`'s, node for node. It is a planned goal: the hand
-  transcription proves it of itself (`BudgetDefs.denoteBD_same`, `rocq/BudgetDefs.v`), and no proof over
-  Lean's code states it yet.
-* **Adequacy stays Rocq's.** Lean has no interaction-tree meaning to state it against, so Lean
-  states only its budget form, which it proves (`settles_of_ends`).
+* **Lean's tree, where Lean has one** (`ofProgram_eq_denoteRowsB`): at `Plain`, the tree is `denoteRowsB`'s, node for node.
+  This remains a planned goal. No proof over Lean's generated code states it yet.
+* **Adequacy remains open for the generated tree.** `settles_of_ends` proves stability after a non-cut result, conditional on budget monotonicity.
 
 Lean proves the rest from the first fact: a run that is not cut is stable (`probe_stable`), and
 `settle` answers a probe that is not cut (`settle_sound`).
@@ -91,9 +88,8 @@ theorem runFrom_approx {σ : Type} (host : Host σ) {t t' : Tree} (h : Approx t 
 
 /-! ## The declared facts -/
 
-/-- **`Budget.v`'s fragment** (`in_fragment` there): the arms both Lean's `denoteRowsB` and the
-Rocq transcription have: `succeed`, `fail`, `sync`, `suspend`, `bind`, `select`, `iterate`, and a
-`perform` of a host row or of `Ref.make`, `Ref.get` or `Ref.set`. -/
+/-- **The fragment shared with `denoteRowsB`** (`src/Effect4/Laws/Program/DenoteRowsB.lean`):
+`succeed`, `fail`, `sync`, `suspend`, `bind`, `select`, `iterate`, and host rows or `Ref.make`, `Ref.get` and `Ref.set`. -/
 def Plain (program : NativeEff) : Bool :=
   foldMap_eff true (· && ·) program fun
     | .succeed _ | .fail _ | .sync _ | .suspend _ | .bind _ _ | .select _ _ _ _ => true
@@ -101,19 +97,11 @@ def Plain (program : NativeEff) : Bool :=
     | .perform .refMake _ | .perform .refGet _ | .perform .refSet _ | .perform (.external _) _ => true
     | _ => false
 
-/-- **The hand Rocq tree's fragment** (`denoteW` of `rocq/BudgetDefs.v`): the arms whose tree
-is this module's: `Plain`'s, the definition block, a call, a parameter's run and an invocation.
-No theorem takes it. It picks the programs of the comparison lane, which checks it
-(`ocaml/engine/test/rocq/test_rocq.ml`, R4): with Lean's evaluator in place of Rocq's, the two
-trees run alike at every budget it tries, on every program here that the checker types.
-
-Two arms of `denoteW` are outside: `provideContext` and the `context` read. Rocq's context is a
-value replaced at each `provideContext`, from `Val.unit` at the root; this tree's is the machine's
-context, merged (`Eval.provide`) from the empty one (`Eval.root`). On a program the checker
-refuses, a cell operation whose request is no cell is an event in Rocq's tree and a bad shape
-here (`Eval.cellOp`). The arms beyond (`exit`, the cause handlers, `onExit`, `failCause`, the other
-cell operations, the generator's statements and the context) are Lean's alone until the Rocq
-tree is generated from this module (`rocq/Skeleton.v`). -/
+/-- **The comparison lane's retained corpus selection** (`ocaml/engine/test/rocq/test_rocq.ml`, R4).
+It selects `Plain`'s arms, definition blocks, calls, parameter runs and invocations.
+No theorem takes it. The generated `rocq/Skeleton.v` now covers the same arms as Lean's tree.
+Item 4c retains this selection for comparison with the preceding lane's results.
+Widening the corpus and retiring this selector remain a separate follow-up. -/
 def InRocq (program : NativeEff) : Bool :=
   foldMap_eff true (· && ·) program fun
     | .succeed _ | .fail _ | .sync _ | .suspend _ | .bind _ _ | .select _ _ _ _ => true
@@ -138,7 +126,7 @@ def ofRows {table : RowTable} :
   | .vis (.inl o) next => cell o fun w => ofRows (next w)
   | .vis (.inr ⟨i, v⟩) next => call i.val v fun a => ofRows (next a)
 
-/-- **Where Lean has a tree, this is it**: on `Budget.v`'s fragment, the tree is `denoteRowsB`'s,
+/-- **Where Lean has a tree, this is it**: on `Plain`, the tree is `denoteRowsB`'s,
 node for node. A planned goal: a proof over Lean's code needs `denoteRowsB` printed too. -/
 @[semantics "translation-simulation" (requirement := R6)]
 proof_goal ofProgram_eq_denoteRowsB (table : RowTable) (k : Nat) (program : NativeEff)
@@ -154,10 +142,8 @@ theorem probe_stable {σ : Type} (table : RowTable) (host : Host σ) (state : σ
     probe table k' host state program = probe table k host state program :=
   runFrom_approx host (ofProgram_approx table hk program) _ _ _ h
 
-/-- **A run that finishes or waits at a budget is the run at every larger one.** This is all
-Lean states of adequacy: Lean has no interaction-tree meaning to state adequacy against, so the
-statement that every end of the meaning's run is found at some budget stays Rocq's
-(`BudgetDefs.adequacyD`, of the hand transcription in `rocq/BudgetDefs.v`). -/
+/-- **A run that finishes or waits at a budget is unchanged at every larger budget.**
+This follows from `ofProgram_approx`. It does not establish that every end of an interaction-tree meaning appears at some budget. -/
 theorem settles_of_ends {σ : Type} (table : RowTable) (host : Host σ) (state : σ)
     (program : NativeEff) (k : Nat)
     (h : (probe table k host state program).stop.isCut = false) :

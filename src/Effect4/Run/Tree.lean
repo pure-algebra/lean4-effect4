@@ -11,31 +11,21 @@ budget** `k`: every loop invocation tests its condition at most `k` times, and c
 definitions nest at most `k` deep. Where the budget ends, the tree has a `cut`. A cut is no exit
 and no failure. It says only that the budget found no further answer.
 
-Three facts make the budget usable as a test oracle. The Rocq development of
-`docs/research/2026-10-16-itrees/` proves each one of its transcription of this tree.
-`Effect4.Laws.Run.Tree` declares them here, as declared exceptions to the proof gates.
+The budget oracle uses `Tree.ofProgram_approx`, declared in `src/Effect4/Laws/Run/Tree.lean`.
+`Approx.ofProgram_approx` proves it over the generated control skeleton in `rocq/SkeletonApprox.v`.
+A larger budget only extends cuts, so a finish or wait stays unchanged.
+The connection to `denoteRowsB` remains the planned goal `ofProgram_eq_denoteRowsB`.
+No theorem over this generated development establishes adequacy against an interaction-tree meaning or divergence.
+A cut at one budget is a finite probe. `settle` reports it as unsettled, never as divergent.
 
-* **A larger budget only extends the tree** (`Tree.ofProgram_approx`). A cut may grow into more
-  tree, and nothing else changes. So a finish or a wait found at one budget holds at every larger
-  one.
-* **Every end of the program's run is found at some budget.** A host run that finishes or
-  waits on a call has a budget that shows that end (`adequacyD` in Rocq).
-* **Divergence is a cut at every budget.** A run that no budget settles is the interaction
-  tree `ITree.spin` of the meaning, and conversely (`divergesD_iff` in Rocq). A cut at one
-  budget is only a finite probe: `settle` reports it as unsettled, never as divergent.
+The tree extends the `denoteRowsB` arms of `src/Effect4/Laws/Program/DenoteRowsB.lean` with definitions, calls, parameters and contexts.
+A program outside its arms, such as a fork, scope, service or layer, answers `Eval.outside`.
+`covers` decides the fragment before a run, so a caller can send such a program to the machine.
 
-The tree's arms are `Laws/Program/DenoteRowsB.lean`'s `denoteRowsB` arms. Beside them it has
-the definition arms of `rocq/BudgetDefs.v`: `call`, `param`, `invoke`, the root's definition
-block, `provideContext` and the `context` read. A program outside these arms, such as a fork, a
-scope, a service or a layer, answers `Eval.outside`. `covers` decides the fragment before a run,
-so a caller can send such a program to the machine instead.
-
-The context is the machine's own (`Machine.Ctx`): the root's is `emptyCtx`, a `context` read
-answers its image (`Val.context`, `getContext`), and `provideContext` merges the provided
-services over the current ones for its body (`Env.ContextUpdate.provide`, `Ctx.withServices`,
-as `Compile.updateContextAt` updates a fiber). The Rocq transcription keeps the context as an
-opaque value; the context is a parameter of the tree that adds no node, so the facts about the
-tree's shape hold of either.
+The context is `Machine.Ctx`, initially `emptyCtx`. A context read answers its image through `Eval.contextVal`.
+`Eval.provide` merges provided services over the current context for its body.
+The generated `rocq/Skeleton.v` takes these operations as evaluator parameters.
+The comparison lane realizes every parameter with its lowered Lean definition.
 -/
 
 set_option autoImplicit false
@@ -224,8 +214,8 @@ def bodiesOf : NativeEff → List NativeEff
   | _ => []
 
 mutual
-/-- **One level of the tree** (`rocq/BudgetDefs.v`, `denoteW`). Each arm is `denoteRowsB`'s at
-the loop budget `k`, and a call, an invocation and a parameter's run go to `unfold`. A call runs
+/-- **One level of the tree**, printed as `level` in `rocq/Skeleton.v`. Each arm uses the loop budget `k`.
+A call, an invocation and a parameter's run go to `unfold`. A call runs
 the definition's body at the request alone with an empty frame pushed. An invocation pushes the
 programs it passes with its own environment. A parameter's run takes the innermost frame's
 program at that frame's environment and the request, at the stack below the frame. -/
@@ -344,15 +334,14 @@ def statements (table : RowTable) (bodies : List NativeEff) (k : Nat) (unfold : 
     | none => done Eval.badShape
 end
 
-/-- **The tree with calls unfolded `depth` levels deep** (`rocq/BudgetDefs.v`, `denoteD`). At
+/-- **The tree with calls unfolded `depth` levels deep**, printed as `unfolded` in `rocq/Skeleton.v`. At
 depth zero a call, an invocation and a parameter's run are cut. -/
 def unfolded (table : RowTable) (bodies : List NativeEff) (k : Nat) : Nat → Unfold
   | 0 => fun _ _ _ _ => cut
   | d + 1 => level table bodies k (unfolded table bodies k d)
 
 /-- **The tree of a program at the budget `k`**: loops at `k` tests, calls `k` deep, from the
-empty environment and stack, under the root's context (`emptyCtx`; `rocq/BudgetDefs.v`,
-`denoteBD`). -/
+empty environment and stack, under the root's context (`emptyCtx`). `rocq/Skeleton.v` prints this definition. -/
 def ofProgram (table : RowTable) (k : Nat) (main : NativeEff) : Tree :=
   level table (bodiesOf main) k (unfolded table (bodiesOf main) k k) main [] [] Eval.root
 

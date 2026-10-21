@@ -18,7 +18,7 @@
    With --extract it prints the inverse of step 1 as Rocq directives, one `Extract Inductive` per
    variant and per record (`E4.Eff_types.eff` is `Eff_types.Eff.t`, `Eff_succeed` is
    `Eff_types.Eff.Succeed`). Rocq code extracted over `Eff_types.v` then speaks the estate's own
-   types, so the comparison lane's runner (rocq/LaneExtract.v, `make gen-rocq-lane`) meets Lean's
+   types, so the extracted generated skeleton (rocq/LaneExtract.v, `make gen-rocq-lane`) meets Lean's
    lowered code with no second copy of a type. A type abbreviation needs no directive: Rocq unfolds
    it. A record crosses through a building function and a matching function, by the OCaml labels.
    Depends on: compiler-libs (Parse, Pprintast).

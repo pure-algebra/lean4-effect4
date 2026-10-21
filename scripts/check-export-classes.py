@@ -38,7 +38,9 @@ I = 'module I = Eff_image\n'
 cases = {
     # Api_gen: a public root and a linkage root are exported; a coverage root is hidden.
     'api-gen-public': (0, G + 'let f = G.run_tree_of_program\n', None),
-    'api-gen-linkage': (0, G + 'let s = G.stores_empty\n', None),
+    'api-gen-linkage': (0, G + 'let f = G.program_err_of\n', None),
+    # The retired hand runner no longer needs this linkage root.
+    'api-gen-retired-linkage': (2, G + 'let s = G.stores_empty\n', 'stores_empty'),
     'api-gen-coverage': (2, G + 'let f = G.dispatcher_insert\n', 'dispatcher_insert'),
     'api-gen-coverage-machine': (2, G + 'let f = G.run_machine_update\n', 'run_machine_update'),
     # A value the closure exports to the test lanes is no value of Api_gen.

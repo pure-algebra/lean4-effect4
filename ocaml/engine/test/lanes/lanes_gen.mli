@@ -556,107 +556,6 @@ and handle_kind =
   | HandleKind_scope
   | HandleKind_memoMap
   | HandleKind_external
-and sync_op =
-  Closure_gen.sync_op =
-    SyncOp_refMake of Eff_types.Val.t
-  | SyncOp_refGet of Eff_types.RefKey.t
-  | SyncOp_refSet of Eff_types.RefKey.t * Eff_types.Val.t
-  | SyncOp_refGetAndSet of Eff_types.RefKey.t * Eff_types.Val.t
-  | SyncOp_refSetAndGet of Eff_types.RefKey.t * Eff_types.Val.t
-  | SyncOp_refUpdate of Eff_types.RefKey.t * Eff_types.Term.t *
-      Eff_types.Val.t list
-  | SyncOp_refGetAndUpdate of Eff_types.RefKey.t * Eff_types.Term.t *
-      Eff_types.Val.t list
-  | SyncOp_refUpdateAndGet of Eff_types.RefKey.t * Eff_types.Term.t *
-      Eff_types.Val.t list
-  | SyncOp_refUpdateSome of Eff_types.RefKey.t * Eff_types.Term.t *
-      Eff_types.Val.t list
-  | SyncOp_refGetAndUpdateSome of Eff_types.RefKey.t * Eff_types.Term.t *
-      Eff_types.Val.t list
-  | SyncOp_refUpdateSomeAndGet of Eff_types.RefKey.t * Eff_types.Term.t *
-      Eff_types.Val.t list
-  | SyncOp_refModify of Eff_types.RefKey.t * Eff_types.Term.t *
-      Eff_types.Val.t list
-  | SyncOp_refModifySome of Eff_types.RefKey.t * Eff_types.Term.t *
-      Eff_types.Val.t list
-  | SyncOp_deferredMake
-  | SyncOp_deferredIsDone of deferred_key
-  | SyncOp_deferredPoll of deferred_key
-  | SyncOp_deferredCompleteWith of deferred_key *
-      (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
-      Eff_types.Completion.t
-  | SyncOp_deferredInterruptWith of deferred_key * fiber_id
-  | SyncOp_deferredAwaitCleanup of deferred_key * fiber_id * Z.t
-  | SyncOp_clockNow
-  | SyncOp_sleepCancel of fiber_id * Z.t
-  | SyncOp_scopeMake of Eff_types.FinalizerStrategy.t
-  | SyncOp_scopeAdd of Z.t * fin_name
-  | SyncOp_scopeRemove of Z.t * Z.t
-  | SyncOp_scopeIsClosed of Z.t
-  | SyncOp_scopeFork of Z.t * Eff_types.FinalizerStrategy.t
-  | SyncOp_memoFork of memo_map_id option
-  | SyncOp_memoGet of (Z.t list * Z.t list list) * memo_map_id
-  | SyncOp_memoBuild of (Z.t list * Z.t list list) * memo_map_id
-  | SyncOp_memoComplete of (Z.t list * Z.t list list) * memo_map_id *
-      (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
-      Eff_types.Exit.t
-  | SyncOp_memoRelease of (Z.t list * Z.t list list) * memo_map_id
-and stores =
-  Closure_gen.stores = {
-  refs : Eff_types.Val.t list;
-  deferreds :
-    (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
-    Eff_types.Completion.t deferred_store;
-  scopes : scope_store;
-  memo : memo_map list;
-  timers : timer_store;
-  next_name : Z.t;
-  externals : external_store;
-}
-and timer_store =
-  Closure_gen.timer_store = {
-  now : clock_millis;
-  wake : clock_millis wake_list;
-  target : clock_millis option;
-}
-and scope_entry =
-  Closure_gen.scope_entry = {
-  key : Z.t;
-  scope :
-    (Z.t, fin_name, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
-     fiber_id, unit)
-    scope;
-}
-and memo_map =
-  Closure_gen.memo_map = {
-  id : memo_map_id;
-  parent : memo_map_id option;
-  entries : ((Z.t list * Z.t list list) * memo_entry) list;
-}
-and memo_entry =
-  Closure_gen.memo_entry = {
-  observers : Z.t;
-  layer_scope : Z.t;
-  deferred : deferred_key;
-  finalizer : fin_name;
-}
-and fin_name =
-  Closure_gen.fin_name =
-    FinName_interruptFiber of fiber_id * bool
-  | FinName_closeChildScope of Z.t
-  | FinName_detachFromParent of Z.t * Z.t
-  | FinName_release of Z.t * bool
-  | FinName_awaitNewChildren of fiber_id list
-  | FinName_parkThen of Z.t
-  | FinName_foreign of capture
-  | FinName_closeChildOnFailure of Z.t
-  | FinName_memoEntry of (Z.t list * Z.t list list) * memo_map_id
-  | FinName_memoDone of (Z.t list * Z.t list list) * memo_map_id
-and 'k deferred_store =
-  'k Closure_gen.deferred_store = {
-  cells : 'k deferred_cell list;
-  due : 'k owed list;
-}
 and call_class =
   Closure_gen.call_class =
     CallClass_row of Eff_types.RowKind.t
@@ -883,6 +782,18 @@ and frontier_reason =
   | FrontierReason_awaitHost of key
   | FrontierReason_awaitTimer of fiber_id * clock_millis
   | FrontierReason_awaitDecision
+and stores =
+  Closure_gen.stores = {
+  refs : Eff_types.Val.t list;
+  deferreds :
+    (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+    Eff_types.Completion.t deferred_store;
+  scopes : scope_store;
+  memo : memo_map list;
+  timers : timer_store;
+  next_name : Z.t;
+  externals : external_store;
+}
 and tree =
   Closure_gen.tree =
     Tree_done of
@@ -897,6 +808,11 @@ and frame =
   Closure_gen.frame = {
   args : Eff_types.NativeOp.t Eff_types.Eff.t list;
   env : Eff_types.Val.t list;
+}
+and 'k deferred_store =
+  'k Closure_gen.deferred_store = {
+  cells : 'k deferred_cell list;
+  due : 'k owed list;
 }
 and stop =
   Closure_gen.stop =
@@ -1267,10 +1183,67 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k) with_fiber_action =
   | WithFiberAction_dropObservers of Z.t
   | WithFiberAction_cancelRace of Z.t
   | WithFiberAction_getInterruptible
+and fin_name =
+  Closure_gen.fin_name =
+    FinName_interruptFiber of fiber_id * bool
+  | FinName_closeChildScope of Z.t
+  | FinName_detachFromParent of Z.t * Z.t
+  | FinName_release of Z.t * bool
+  | FinName_awaitNewChildren of fiber_id list
+  | FinName_parkThen of Z.t
+  | FinName_foreign of capture
+  | FinName_closeChildOnFailure of Z.t
+  | FinName_memoEntry of (Z.t list * Z.t list list) * memo_map_id
+  | FinName_memoDone of (Z.t list * Z.t list list) * memo_map_id
 and scope_mode =
   Closure_gen.scope_mode =
     ScopeMode_forkIn
   | ScopeMode_fiberRunIn
+and sync_op =
+  Closure_gen.sync_op =
+    SyncOp_refMake of Eff_types.Val.t
+  | SyncOp_refGet of Eff_types.RefKey.t
+  | SyncOp_refSet of Eff_types.RefKey.t * Eff_types.Val.t
+  | SyncOp_refGetAndSet of Eff_types.RefKey.t * Eff_types.Val.t
+  | SyncOp_refSetAndGet of Eff_types.RefKey.t * Eff_types.Val.t
+  | SyncOp_refUpdate of Eff_types.RefKey.t * Eff_types.Term.t *
+      Eff_types.Val.t list
+  | SyncOp_refGetAndUpdate of Eff_types.RefKey.t * Eff_types.Term.t *
+      Eff_types.Val.t list
+  | SyncOp_refUpdateAndGet of Eff_types.RefKey.t * Eff_types.Term.t *
+      Eff_types.Val.t list
+  | SyncOp_refUpdateSome of Eff_types.RefKey.t * Eff_types.Term.t *
+      Eff_types.Val.t list
+  | SyncOp_refGetAndUpdateSome of Eff_types.RefKey.t * Eff_types.Term.t *
+      Eff_types.Val.t list
+  | SyncOp_refUpdateSomeAndGet of Eff_types.RefKey.t * Eff_types.Term.t *
+      Eff_types.Val.t list
+  | SyncOp_refModify of Eff_types.RefKey.t * Eff_types.Term.t *
+      Eff_types.Val.t list
+  | SyncOp_refModifySome of Eff_types.RefKey.t * Eff_types.Term.t *
+      Eff_types.Val.t list
+  | SyncOp_deferredMake
+  | SyncOp_deferredIsDone of deferred_key
+  | SyncOp_deferredPoll of deferred_key
+  | SyncOp_deferredCompleteWith of deferred_key *
+      (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+      Eff_types.Completion.t
+  | SyncOp_deferredInterruptWith of deferred_key * fiber_id
+  | SyncOp_deferredAwaitCleanup of deferred_key * fiber_id * Z.t
+  | SyncOp_clockNow
+  | SyncOp_sleepCancel of fiber_id * Z.t
+  | SyncOp_scopeMake of Eff_types.FinalizerStrategy.t
+  | SyncOp_scopeAdd of Z.t * fin_name
+  | SyncOp_scopeRemove of Z.t * Z.t
+  | SyncOp_scopeIsClosed of Z.t
+  | SyncOp_scopeFork of Z.t * Eff_types.FinalizerStrategy.t
+  | SyncOp_memoFork of memo_map_id option
+  | SyncOp_memoGet of (Z.t list * Z.t list list) * memo_map_id
+  | SyncOp_memoBuild of (Z.t list * Z.t list list) * memo_map_id
+  | SyncOp_memoComplete of (Z.t list * Z.t list list) * memo_map_id *
+      (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
+      Eff_types.Exit.t
+  | SyncOp_memoRelease of (Z.t list * Z.t list list) * memo_map_id
 and context_update =
   Closure_gen.context_update =
     ContextUpdate_setTo of Eff_types.Val.t context
@@ -1306,16 +1279,6 @@ and await =
   op : Eff_types.NativeOp.t;
   request : Eff_types.Val.t;
 }
-and 'k deferred_cell =
-  'k Closure_gen.deferred_cell = {
-  completion : 'k option;
-  wake : unit wake_list;
-}
-and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope =
-  ('k, 'f, 'b, 'e, 'd, 'i, 'a) Closure_gen.scope = {
-  strategy : Eff_types.FinalizerStrategy.t;
-  state : ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state;
-}
 and 'r_val_ val_algebra =
   'r_val_ Closure_gen.val_algebra = {
   val_unit : 'r_val_;
@@ -1348,11 +1311,38 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a) cont_answer =
   | ContAnswer_frame of ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim
   | ContAnswer_empty
 and arm = Closure_gen.arm = Arm_contA | Arm_contE | Arm_contAll
+and timer_store =
+  Closure_gen.timer_store = {
+  now : clock_millis;
+  wake : clock_millis wake_list;
+  target : clock_millis option;
+}
 and 'p wake_list =
   'p Closure_gen.wake_list = {
   waiters : 'p waiter list;
   batch : 'p waiter list option;
   phase : Z.t;
+}
+and scope_entry =
+  Closure_gen.scope_entry = {
+  key : Z.t;
+  scope :
+    (Z.t, fin_name, Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t,
+     fiber_id, unit)
+    scope;
+}
+and memo_map =
+  Closure_gen.memo_map = {
+  id : memo_map_id;
+  parent : memo_map_id option;
+  entries : ((Z.t list * Z.t list list) * memo_entry) list;
+}
+and memo_entry =
+  Closure_gen.memo_entry = {
+  observers : Z.t;
+  layer_scope : Z.t;
+  deferred : deferred_key;
+  finalizer : fin_name;
 }
 and sig_refusal =
   Closure_gen.sig_refusal =
@@ -1482,6 +1472,11 @@ and prog_name =
   | ProgName_closeWalk of Eff_types.FinalizerStrategy.t * fin_name list *
       (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, fiber_id, unit)
       Eff_types.Exit.t
+and 'k deferred_cell =
+  'k Closure_gen.deferred_cell = {
+  completion : 'k option;
+  wake : unit wake_list;
+}
 and 'k owed =
   'k Closure_gen.owed = {
   waiter : fiber_id;
@@ -1494,24 +1489,6 @@ and combine_mode =
     CombineMode_provide
   | CombineMode_provideMerge
 and service_universe = unit
-and 'p waiter =
-  'p Closure_gen.waiter = {
-  fiber : fiber_id;
-  token : Z.t;
-  phase : Z.t;
-  payload : 'p;
-}
-and wake_mode =
-  Closure_gen.wake_mode =
-    WakeMode_now
-  | WakeMode_scheduled of fiber_id * Z.t
-and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
-  ('k, 'f, 'b, 'e, 'd, 'i, 'a) Closure_gen.scope_state =
-    ScopeState_empty
-  | ScopeState_openEmpty
-  | ScopeState_openInline of 'k * 'f
-  | ScopeState_openMap of ('k * 'f) list
-  | ScopeState_closed of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
 and ('op, 'a) arg_reader =
   ('op, 'a) Closure_gen.arg_reader = {
   child : Z.t -> eff_fam -> 'a;
@@ -1566,6 +1543,18 @@ and ('e, 'd) squashed =
   | Squashed_interruptedWithoutError
   | Squashed_emptyCause
 and key = Closure_gen.key = { fiber : fiber_id; token : Z.t; }
+and 'p waiter =
+  'p Closure_gen.waiter = {
+  fiber : fiber_id;
+  token : Z.t;
+  phase : Z.t;
+  payload : 'p;
+}
+and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope =
+  ('k, 'f, 'b, 'e, 'd, 'i, 'a) Closure_gen.scope = {
+  strategy : Eff_types.FinalizerStrategy.t;
+  state : ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state;
+}
 and row_reason =
   Closure_gen.row_reason =
     RowReason_notExternal
@@ -1680,6 +1669,10 @@ and effect4_run_verdict =
   Closure_gen.effect4_run_verdict =
     Effect4_run_verdict_played of phase list
   | Effect4_run_verdict_unresolved of sel
+and wake_mode =
+  Closure_gen.wake_mode =
+    WakeMode_now
+  | WakeMode_scheduled of fiber_id * Z.t
 and ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
     eff_algebra =
   ('op, 'r_eff, 'r_stmt, 'r_stmts, 'r_effs, 'r_action, 'r_layer, 'r_layers)
@@ -1808,6 +1801,13 @@ and 'u service =
   key : Eff_types.ServiceKey.t;
   value : 'u;
 }
+and ('k, 'f, 'b, 'e, 'd, 'i, 'a) scope_state =
+  ('k, 'f, 'b, 'e, 'd, 'i, 'a) Closure_gen.scope_state =
+    ScopeState_empty
+  | ScopeState_openEmpty
+  | ScopeState_openInline of 'k * 'f
+  | ScopeState_openMap of ('k * 'f) list
+  | ScopeState_closed of ('b, 'e, 'd, 'i, 'a) Eff_types.Exit.t
 and record_typing_reason =
   Closure_gen.record_typing_reason =
     RecordTypingReason_duplicateDeclaration of string
@@ -2480,6 +2480,78 @@ and run_id = Z.t
 and receipt = effect4_program_edit_step list
 and 'op typed_program = Eff_types.EffTy.t
 val store_image_list : 'a Eff_image.image -> 'a list Eff_image.image
+val run_tree_eval_programs :
+  Eff_types.NativeOp.t Eff_types.Effs.t ->
+  Eff_types.NativeOp.t Eff_types.Eff.t list
+val run_tree_eval_outside :
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+  Eff_types.Exit.t
+val run_tree_eval_bad_shape :
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+  Eff_types.Exit.t
+val run_tree_eval_value :
+  Eff_types.Val.t list ->
+  Eff_types.Term.t ->
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+  Eff_types.Exit.t
+val run_tree_eval_fail :
+  Eff_types.Val.t list ->
+  Eff_types.Term.t ->
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+  Eff_types.Exit.t
+val run_tree_eval_fail_cause :
+  Eff_types.Val.t list ->
+  Eff_types.CauseTerm.t ->
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+  Eff_types.Exit.t
+val run_tree_eval_sync :
+  Eff_types.Val.t list ->
+  Eff_types.Term.t ->
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+  Eff_types.Exit.t
+val run_tree_eval_term :
+  Eff_types.Val.t list -> Eff_types.Term.t -> Eff_types.Val.t option
+val run_tree_eval_in_table : Eff_types.Row.t list -> Z.t -> bool
+val run_tree_eval_body :
+  Eff_types.NativeOp.t Eff_types.Eff.t list ->
+  Z.t -> Eff_types.NativeOp.t Eff_types.Eff.t option
+val run_tree_eval_arg :
+  Eff_types.NativeOp.t Eff_types.Eff.t list ->
+  Z.t -> Eff_types.NativeOp.t Eff_types.Eff.t option
+val run_tree_eval_push :
+  Eff_types.Val.t list -> Eff_types.Val.t -> Eff_types.Val.t list
+val run_tree_eval_cell_op :
+  Eff_types.NativeOp.t ->
+  Eff_types.Val.t list -> Eff_types.Val.t -> sync_op option option
+val run_tree_eval_choose :
+  Eff_types.Val.t list ->
+  Eff_types.Term.t ->
+  Eff_types.Decision.t -> (bool * Eff_types.Val.t option) option
+val run_tree_eval_push_all :
+  Eff_types.Val.t list -> Eff_types.Val.t option -> Eff_types.Val.t list
+val run_tree_eval_exit_val :
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+  Eff_types.Exit.t -> Eff_types.Val.t
+val run_tree_eval_cause_val :
+  (Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit) Eff_types.Reason.t list ->
+  Eff_types.Val.t
+val run_tree_eval_caught :
+  Eff_types.Val.t list ->
+  Eff_types.Term.t ->
+  (Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit) Eff_types.Reason.t list ->
+  Eff_types.Val.t option
+val run_tree_eval_restore :
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+  Eff_types.Exit.t ->
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+  Eff_types.Exit.t ->
+  (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
+  Eff_types.Exit.t
+val run_tree_eval_test :
+  Eff_types.Val.t list -> Eff_types.Term.t -> bool option
+val run_tree_eval_provide : ctx -> Eff_types.Val.t -> ctx option
+val run_tree_eval_context_val : ctx -> Eff_types.Val.t
+val run_tree_eval_root : ctx
 val store_image_equiv :
   'a Eff_image.image -> ('a -> 'b) -> ('b -> 'a) -> 'b Eff_image.image
 type 's host = {
