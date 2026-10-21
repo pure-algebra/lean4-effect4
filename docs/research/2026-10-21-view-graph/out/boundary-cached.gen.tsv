@@ -1,0 +1,14 @@
+nodes
+key	label	status	detail
+TodoRepo	TodoRepo host	host	reactor, state σ
+Session	Session host	host	reactor, state σ
+ListCache	ListCache block	handler	init once, bodies
+TodoApp	TodoApp block	handler	init once, bodies
+main	main program	user code	
+
+edges
+src	dst
+TodoRepo	TodoApp
+ListCache	TodoApp
+TodoApp	main
+Session	main

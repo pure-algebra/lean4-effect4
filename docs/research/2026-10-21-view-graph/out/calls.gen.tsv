@@ -1,0 +1,34 @@
+nodes
+key	label	status	detail
+main	main	user code	
+TodoApp_add	TodoApp_add	definition	
+TodoApp_list	TodoApp_list	definition	
+TodoApp_complete	TodoApp_complete	definition	
+TodoApp_remove	TodoApp_remove	definition	
+TodoAppContext	TodoAppContext	definition	
+Session.next	Session.next	row	
+Session.reply_add	Session.reply_add	row	
+Session.reply_list	Session.reply_list	row	
+Session.reply_complete	Session.reply_complete	row	
+Session.reply_remove	Session.reply_remove	row	
+TodoRepo.insert	TodoRepo.insert	row	
+TodoRepo.all	TodoRepo.all	row	
+TodoRepo.setDone	TodoRepo.setDone	row	
+TodoRepo.delete	TodoRepo.delete	row	
+
+edges
+src	dst
+TodoApp_add	TodoRepo.insert
+TodoApp_list	TodoRepo.all
+TodoApp_complete	TodoRepo.setDone
+TodoApp_remove	TodoRepo.delete
+main	TodoAppContext
+main	Session.next
+main	TodoApp_add
+main	Session.reply_add
+main	TodoApp_list
+main	Session.reply_list
+main	TodoApp_complete
+main	Session.reply_complete
+main	TodoApp_remove
+main	Session.reply_remove

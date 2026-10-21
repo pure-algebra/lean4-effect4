@@ -1,0 +1,18 @@
+nodes
+key	label	status	detail
+TodoRepo	TodoRepo host	host	reactor, state σ
+Session	Session host	host	reactor, state σ
+TodoRepo→TodoApp	TodoRepo	wire	a service tag
+Session→main	Session	wire	a service tag
+TodoApp	TodoApp block	handler	init once, bodies
+TodoApp→main	TodoApp	wire	a service tag
+main	main program	user code	
+
+edges
+src	dst
+TodoRepo	TodoRepo→TodoApp
+TodoApp	TodoApp→main
+Session	Session→main
+TodoRepo→TodoApp	TodoApp
+TodoApp→main	main
+Session→main	main

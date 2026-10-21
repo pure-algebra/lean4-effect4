@@ -1,0 +1,16 @@
+nodes
+key	label	status	detail
+2	provide	layer	
+2.0	effect	layer	tag 6
+2.1	merge	layer	
+2.1.0	effect	layer	tag 4
+2.1.1	fresh	layer	
+2.1.1.0	effect	layer	tag 4
+
+edges
+src	dst
+2	2.0
+2	2.1
+2.1	2.1.0
+2.1	2.1.1
+2.1.1	2.1.1.0
