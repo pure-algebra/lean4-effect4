@@ -366,10 +366,6 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine = {
   stuck : stuck option;
   forks : fork_record list;
 }
-and 'a image = {
-  to_val : 'a -> Eff_types.Val.t;
-  of_val : Eff_types.Val.t -> 'a option;
-}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp = {
   cont_a : 'nu -> 'b -> 'k;
   cont_e : 'nu -> ('e, 'd, 'i, 'a) Eff_types.Cause.t -> 'k;
@@ -2143,14 +2139,12 @@ val api_evaluate :
    Z.t, unit)
   run_decision
 val cause_fail : 'a -> ('a, 'b, 'c, 'd) Eff_types.Reason.t list
-val store_image_equiv : 'a image -> ('a -> 'b) -> ('b -> 'a) -> 'b image
-val store_image_nat : Z.t image
-val store_image_unit : unit image
-val store_image_string : string image
-val store_image_list : 'a image -> 'a list image
-val store_image_option : 'a image -> 'a option image
+val store_image_nat : Z.t Eff_image.image
+val store_image_unit : unit Eff_image.image
+val store_image_string : string Eff_image.image
+val store_image_list : 'a Eff_image.image -> 'a list Eff_image.image
+val store_image_option : 'a Eff_image.image -> 'a option Eff_image.image
 val handle_kind_byte : handle_kind -> int
-val inst_decidable_eq_list : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 val program_native_atom_eval :
   native_atom -> Eff_types.Val.t list -> Eff_types.Val.t option
 val record_build :
@@ -2166,13 +2160,14 @@ val program_native_op_sync_op_of :
 val reify_exit_val :
   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Exit.t -> Eff_types.Val.t
-val store_image_bool : bool image
+val store_image_bool : bool Eff_image.image
 val store_image_of_tuple2 :
-  'a image -> 'b image -> Eff_types.Val.t -> ('a * 'b) option
+  'a Eff_image.image ->
+  'b Eff_image.image -> Eff_types.Val.t -> ('a * 'b) option
 val sync_op_step : sync_op -> stores -> (stores * Eff_types.Val.t) option
 val exit_image :
   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
-  Eff_types.Exit.t image
+  Eff_types.Exit.t Eff_image.image
 val list_range : Z.t -> Z.t list
 val store_val__inst_decidable_eq : Eff_types.Val.t -> Eff_types.Val.t -> bool
 val program_decision_decide :
@@ -2354,13 +2349,8 @@ val run_kit_replies :
 val run_kit_explore :
   sig_app -> Z.t -> Z.t -> Eff_types.NativeOp.t Eff_types.Eff.t -> path list
 val run_kit_program_shape : shape_doc
-val run_kit_program_to_val :
-  Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t
-val run_kit_program_of_val :
-  Eff_types.Val.t -> Eff_types.NativeOp.t Eff_types.Eff.t option
 val run_kit_rows_shape : shape_doc
 val run_kit_rows_to_val : Eff_types.Row.t list -> Eff_types.Val.t
-val run_kit_rows_of_val : Eff_types.Val.t -> Eff_types.Row.t list option
 val run_kit_services_shape : shape_doc
 val run_kit_services_of_val :
   Eff_types.Val.t -> (Eff_types.ServiceKey.t * Eff_types.Ty.t) list option
@@ -2734,6 +2724,13 @@ val program_profile_data_literal_refusal :
 val program_answer_tree :
   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Completion.t -> Eff_types.Val.t
+val run_kit_program_to_val :
+  Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t
+val run_kit_program_of_val :
+  Eff_types.Val.t -> Eff_types.NativeOp.t Eff_types.Eff.t option
+val run_kit_rows_of_val : Eff_types.Val.t -> Eff_types.Row.t list option
+val store_image_equiv :
+  'a Eff_image.image -> ('a -> 'b) -> ('b -> 'a) -> 'b Eff_image.image
 val program_check_run : check_input -> verdict
 val program_check_oracle_uncached : oracle
 val program_check_checked_pure' : 'a0 -> 'a0 checked

@@ -5,7 +5,9 @@ The recipe (ocaml/gen/roots.json, read by OCaml5.Lcnf.Export) gives each root on
 An artifact's interface exports its public and linkage roots and hides its internal and
 coverage roots. The api artifact compiles its closure once, in Closure_gen (D1): the
 closure's interface adds the values the test lanes call, and Api_gen, the facade over it,
-exports the public and linkage roots alone. Each case below compiles one client with ocamlc.
+exports the public and linkage roots alone. The api artifact uses Eff_image (4b): Eff_image's
+interface adds what the closure links, and a node no artifact links stays hidden. Each case
+below compiles one client with ocamlc.
 A positive case must compile. A red case must fail with OCaml's own error, and the error must
 name the refused value. The OCaml project must already be built (make check-ocaml builds it).
 These finite controls establish interface scope only: no behaviour and no lowering.
@@ -31,6 +33,7 @@ for directory in includes:
 G = 'module G = Effect4_gen.Api_gen\n'
 C = 'module C = Closure_gen\n'
 E = 'module E = Effect4_engine.Api_engine_inst\n'
+I = 'module I = Eff_image\n'
 # name: (expected exit, client source, the text a refusal must name)
 cases = {
     # Api_gen: a public root and a linkage root are exported; a coverage root is hidden.
@@ -44,6 +47,13 @@ cases = {
     # coverage root stays hidden by the closure's own interface too.
     'closure-lane-value': (0, C + 'let f = C.store_image_equiv\n', None),
     'closure-coverage': (2, C + 'let f = C.dispatcher_insert\n', 'dispatcher_insert'),
+    # Linkage (4b): Eff_image exports a node the closure links, and hides one no artifact links;
+    # Api_gen's public codec root is Eff_image's binding, so the two have one type.
+    'image-linked-node': (0, I + 'let f = I.store_program_gen_ty_c_to_val_ty\n', None),
+    'image-unlinked-node': (2, I + 'let f = I.store_program_gen_eff_ty_c_of_val\n',
+                            'store_program_gen_eff_ty_c_of_val'),
+    'api-gen-codec-is-image': (0, G + I + 'let same = G.run_kit_program_to_val == I.run_kit_program_to_val\n',
+                               None),
     # Api_engine, through the instance whose interface includes the functor's result: a linkage
     # root is exported; an internal root (called by the prelude only) and a coverage root are not.
     'engine-linkage': (0, E + 'let c = E.empty_ctx\n', None),

@@ -19,7 +19,8 @@ other before any artifact is made.
 
 A root's identity includes its artifact: the same Lean name in two artifacts is two specialised
 nodes (R6.1: "Specialization ... remain part of a node's identity"), so `Effect4.Api.run` may be
-public in `Api_gen` and linkage in `Api_engine`. Within one artifact a root has one class.
+public in `Api_gen` and linkage in `Api_engine`, unless one artifact uses the other (below).
+Within one artifact a root has one class.
 
 **Consumers (R6.1, step 3).** An artifact may serve several consumers, each through a facade of
 its own: the entry's `consumers` list names each facade's file and the `linkage` roots it
@@ -35,6 +36,15 @@ its `out` unit is a facade over it, and the nodes only its consumers reach in a 
 consumer's root is then exported by the tests unit's interface, not by `out`'s: its consumers are
 the tests unit and the facade. A root the entry lists itself stays exported by `out` when a
 consumer names it too. `tests` needs `closure` and at least one consumer.
+
+**Uses (4b, decisions row 428 (5)).** An artifact may name the artifacts it uses (`uses`, each by
+its module and its output, as `open` names the type owner). Its walk stops at every declaration
+that a used artifact's walk lowers, and writes that artifact's binding by its module
+(`OCaml5.Lcnf.Gen`, `--use`), so a Lean declaration is lowered into one artifact. A root both
+list is one node, lowered in the used artifact, with a class in each, and the user binds it by
+name. A use names an earlier artifact, which the user walks as that artifact walks itself. So
+both lower flat, and the used artifact is one unit that walks its own roots, over its user's type
+owner and within its user's cap (`unusableWhy`).
 
 **Depends on.** `Lean.Json`, `Lean.Name`, `OCaml5.Lcnf.Naming` (`capital`, for a unit's module name).
 
@@ -56,6 +66,10 @@ consumer names it too. `tests` needs `closure` and at least one consumer.
   consumer, every unit name stays unique across `out`, `closure`, `tests`, the consumers and the
   public facade, and with a tests unit a consumer's root is no root of `out`'s interface —
   *tested*.
+* **A use names one flat walk.** The checker refuses a use of no earlier artifact, a use under a
+  module that is not its artifact's unit, and a use with a misspelt key. A use across two profiles
+  is refused too, naming a root both list with its class in each. So is a used artifact that its
+  user cannot walk as it walks itself — *tested*.
 -/
 
 namespace OCaml5.Lcnf.Export
@@ -106,6 +120,14 @@ structure ExportRoot where
   consumers : List String
 deriving Repr, Inhabited
 
+/-- One artifact another uses (an entry's `uses`): the user's unit, and the used artifact's module
+and output, as the recipe names them (`Api_gen` uses `Eff_image`, `ocaml/eff/eff_image.ml`). -/
+structure Use where
+  user : String
+  unit : String
+  artifact : String
+deriving Repr, Inhabited, BEq
+
 /-- The typed recipe: the roots of every artifact, each in one class, and the public facade's
 module. -/
 structure ExportPlan where
@@ -115,6 +137,8 @@ structure ExportPlan where
   /-- Each artifact that compiles its consumers' nodes in a tests unit of their own: its unit and
   that tests unit's module (`("Api_gen", "Lanes_gen")`). -/
   tests : List (String × String) := []
+  /-- Each use of one artifact by a later one, in recipe order. -/
+  uses : List Use := []
 deriving Repr, Inhabited
 
 namespace ExportPlan
@@ -187,6 +211,16 @@ inductive PlanRefusal where
   | unresolved (consumer : String) (source : Name)
   /-- A coverage-only root that reaches the public facade (`public_excludes_coverage`). -/
   | coverageInFacade (source : Name)
+  /-- An artifact uses one that is no earlier artifact of the recipe. -/
+  | useUnknown (user artifact : String)
+  /-- A use names a module that is not its artifact's unit. -/
+  | useModule (user unit artifact : String)
+  /-- A used artifact and its user lower over two profiles, so a root both list is two specialised
+  nodes: of class `first` in the user and `second` in the used artifact. -/
+  | specialisedTwice (user used : String) (source : Name) (first second : ExportClass)
+  /-- A used artifact that is no flat walk of its own roots, over its user's type owner and within
+  its user's cap: the user could not walk it as it walks itself. -/
+  | unusable (user used why : String)
 deriving Repr, Inhabited, BEq
 
 /-- The refusal as one line of the generator's report. -/
@@ -203,6 +237,12 @@ def PlanRefusal.message : PlanRefusal → String
   | .unresolved c n => s!"export plan: the facade of {c} does not resolve {n} to itself (facade_resolves)"
   | .coverageInFacade n =>
     s!"export plan: coverage root {n} reaches the public facade (public_excludes_coverage)"
+  | .useUnknown u a => s!"export plan: {u} uses {a}, which is no earlier artifact of the recipe"
+  | .useModule u m a => s!"export plan: {u} uses {a} as the module {m}, which is not that artifact's unit"
+  | .specialisedTwice u v n a b =>
+    s!"export plan: {u} uses {v}, which lowers over another profile: {n} would be `{a.key}` in {u} \
+      and `{b.key}` in {v}, two specialised nodes; keep the two artifacts apart"
+  | .unusable u v why => s!"export plan: {u} uses {v}, which {why}"
 
 /-- The refusals the plan checker finds, in plan order: one class per root of an artifact, every
 public root in one artifact, then the two finite checks. Empty means the plan is admitted. -/
@@ -256,7 +296,10 @@ def recipeFormat : String := "effect4-lcnf-roots-v3"
 /-- The keys a recipe entry may hold besides the export classes. -/
 def entryOptions : List String :=
   ["out", "closure", "tests", "import", "cap", "types", "modules", "nominal", "abstract", "externs",
-   "prelude", "open", "consumers"]
+   "prelude", "open", "consumers", "uses"]
+
+/-- The keys a use of an entry holds: the used artifact's module and its output. -/
+def useKeys : List String := ["module", "artifact"]
 
 /-- The keys a consumer of an entry may hold: its facade's file and the roots the facade
 re-exports. -/
@@ -283,6 +326,44 @@ def consumersOf (entry : Json) : Except PlanRefusal (List (String × Json)) :=
     | .ok o => .ok (o, c)
     | .error e => .error (.malformed s!"a consumer without `out`: {e}")
   | .ok _ => .error (.malformed "`consumers` is no list")
+
+/-- An entry's uses, in the order listed, each as the used artifact's module and output. -/
+def usesOf (entry : Json) : Except PlanRefusal (List (String × String)) :=
+  match entry.getObjVal? "uses" with
+  | .error _ => .ok []
+  | .ok (.arr us) => us.toList.mapM fun u => do
+    let keys ← match u.getObj? with
+      | .ok fs => pure fs.keys
+      | .error e => throw (.malformed s!"a use is no object: {e}")
+    for k in keys do
+      unless useKeys.contains k do throw (.malformed s!"a use holds `{k}`, which is neither `module` nor `artifact`")
+    match u.getObjValAs? String "module", u.getObjValAs? String "artifact" with
+    | .ok m, .ok a => pure (m, a)
+    | _, _ => throw (.malformed "a use names its `module` and its `artifact`")
+  | .ok _ => .error (.malformed "`uses` is no list")
+
+/-- Whether an entry lowers flat: no extern table and no prelude, the profile every use links. -/
+def lowersFlat (entry : Json) : Bool :=
+  !(entry.getObjVal? "externs").isOk && !(entry.getObjVal? "prelude").isOk
+
+/-- Why `used` cannot be used by `user`, or `none`. A user walks a used artifact as that artifact
+walks itself (`OCaml5.Lcnf.Gen`, `--use`), so a used artifact is one unit that walks its own roots
+and names no type beyond them: not the type owner, no scope or consumer, no requested, sealed or
+nominal type, and no use of its own. It opens its user's type owner, so the two spell every
+program type alike, and it walks within its user's cap. -/
+def unusableWhy (user used : Json) : Option String :=
+  let has (k : String) : Bool := (used.getObjVal? k).isOk
+  let ownerOf (e : Json) : Option String := (e.getObjVal? "open" >>= (·.getObjValAs? String "module")).toOption
+  let capOf (e : Json) : Nat := (e.getObjValAs? Nat "cap").toOption.getD 0
+  if has "modules" then some "is the type owner, which `open` names"
+  else if has "closure" || has "tests" || has "consumers" then
+    some "compiles its walk in more than one unit or serves consumers; a used artifact is one unit"
+  else if has "types" || has "abstract" || has "nominal" then
+    some "requests types beyond its walk (`types`, `abstract` or `nominal`)"
+  else if has "uses" then some "uses an artifact itself; a used artifact links none"
+  else if ownerOf used != ownerOf user then some "opens another type owner than its user"
+  else if capOf used > capOf user then some "walks at a larger cap than its user"
+  else none
 
 /-- `roots` with root `n` of artifact `unit` re-exported by the facade `facade`, as a `linkage`
 root. A root the entry lists under another class, or one this facade names twice, is appended
@@ -372,7 +453,32 @@ def ExportPlan.ofRecipe (recipe : Json) : Except PlanRefusal ExportPlan := do
     match e.getObjValAs? String "out", e.getObjValAs? String "tests" with
     | .ok o, .ok t => some (unitOf o, unitOf t)
     | _, _ => none
-  return { facadeModule := facade, roots := roots, tests := tests }
+  -- the uses: each names an earlier artifact by its module and its output; the two lower flat, and
+  -- the used one is a walk of its own roots that its user can walk as it walks itself
+  let outOf (e : Json) : String := (e.getObjValAs? String "out").toOption.getD ""
+  let mut uses : List Use := []
+  for i in [:entries.size] do
+    let e := entries[i]!
+    let user := unitOf (outOf e)
+    for (m, a) in ← usesOf e do
+      let some j := (entries.findIdx? (outOf · == a)).filter (· < i)
+        | throw (.useUnknown user a)
+      unless unitOf a == m do throw (.useModule user m a)
+      if uses.any (fun u => u.user == user && u.artifact == a) then
+        throw (.malformed s!"{user} uses {a} twice")
+      let used := entries[j]!
+      -- a root both list, lowered over two profiles, would be two specialised nodes: named
+      unless lowersFlat e && lowersFlat used do
+        let shared := (roots.filter (·.unit == user)).findSome? fun r =>
+          (roots.find? fun s => s.unit == m && s.source == r.source).map fun s => (r.source, r.cls, s.cls)
+        match shared with
+        | some (n, mine, theirs) => throw (.specialisedTwice user m n mine theirs)
+        | none => throw (.unusable user m
+            "lowers over another profile than its user (an extern table or a prelude); a use links flat units")
+      unless roots.any (·.unit == m) do throw (.unusable user m "has no roots")
+      if let some why := unusableWhy e used then throw (.unusable user m why)
+      uses := uses ++ [{ user := user, unit := m, artifact := a }]
+  return { facadeModule := facade, roots := roots, tests := tests, uses := uses }
 
 /-- The recipe read and checked: what the generator makes artifacts from. -/
 def readChecked (recipe : Json) : Except PlanRefusal CheckedPlan := do
@@ -396,6 +502,16 @@ def CheckedPlan.ownRootsOf (p : CheckedPlan) (unit : String) (cls : ExportClass)
 /-- The roots a consumer's facade re-exports from an artifact, in plan order. -/
 def CheckedPlan.consumerRoots (p : CheckedPlan) (unit facade : String) : List Name :=
   (p.plan.roots.filter fun r => r.unit == unit && r.consumers.contains facade).map (·.source)
+
+/-- The artifacts one artifact uses, in the order its entry lists them: each used artifact's
+module and output. -/
+def CheckedPlan.usesOf (p : CheckedPlan) (unit : String) : List (String × String) :=
+  (p.plan.uses.filter (·.user == unit)).map fun u => (u.unit, u.artifact)
+
+/-- An artifact's own roots in the order its walk starts from them, class by class
+(`ExportClass.all`): what a user of the artifact walks to reach what it lowers. -/
+def CheckedPlan.walkRootsOf (p : CheckedPlan) (unit : String) : List Name :=
+  ExportClass.all.flatMap (p.ownRootsOf unit ·)
 
 /-! ## Controls
 
@@ -523,6 +639,51 @@ private def scopedLanes : Json := scopedEntry
 #guard match refusalOf (recipe "{\"out\": \"a/api_gen.ml\", \"closure\": \"a/closure_gen.ml\", \
     \"tests\": \"t/closure_gen.ml\", \"consumers\": [{\"out\": \"t/todo/todo_gen.ml\", \"linkage\": [\"T.serve\"]}]}") with
   | some (.malformed _) => true
+  | _ => false
+
+-- Uses (4b): an artifact links an earlier artifact's lowered declarations. A root both list is one
+-- node, lowered in the used artifact, with a class in each; the plan answers which artifacts each
+-- one uses, and the used artifact's roots in the order its walk starts from them.
+private def ownerSpec : String := "\"open\": {\"module\": \"Eff_types\", \"artifact\": \"e/eff_types.ml\"}"
+private def usedImage (rest : String) : Json := recipe
+  ("{\"out\": \"e/eff_image.ml\", \"cap\": 300, " ++ ownerSpec ++
+    ", \"linkage\": [\"K.enc\", \"K.dec\"], \"coverage\": [\"K.walk\"]}, " ++ rest)
+private def userOf (cap : Nat) (uses : String) : String :=
+  "{\"out\": \"g/api_gen.ml\", \"cap\": " ++ toString cap ++ ", " ++ ownerSpec ++
+    ", \"public\": [\"K.enc\", \"A.run\"], \"uses\": [" ++ uses ++ "]}"
+private def imageUse : String := "{\"module\": \"Eff_image\", \"artifact\": \"e/eff_image.ml\"}"
+#guard (refusalOf (usedImage (userOf 4000 imageUse))).isNone
+#guard match readChecked (usedImage (userOf 4000 imageUse)) with
+  | .ok p => p.usesOf "Api_gen" == [("Eff_image", "e/eff_image.ml")] && p.usesOf "Eff_image" == []
+      && p.walkRootsOf "Eff_image" == [`K.enc, `K.dec, `K.walk]
+      && p.rootsOf "Api_gen" .«public» == [`K.enc, `A.run] && p.rootsOf "Eff_image" .linkage == [`K.enc, `K.dec]
+  | .error _ => false
+-- red: a use of a later artifact, and a use whose module is not its artifact's unit
+#guard match refusalOf (recipe (userOf 4000 imageUse ++ ", {\"out\": \"e/eff_image.ml\", \"linkage\": [\"K.enc\"]}")) with
+  | some (.useUnknown u a) => u == "Api_gen" && a == "e/eff_image.ml"
+  | _ => false
+#guard match refusalOf (usedImage (userOf 4000 "{\"module\": \"Eff_types\", \"artifact\": \"e/eff_image.ml\"}")) with
+  | some (.useModule u m a) => u == "Api_gen" && m == "Eff_types" && a == "e/eff_image.ml"
+  | _ => false
+-- red: a misspelt key of a use hides nothing
+#guard match refusalOf (usedImage (userOf 4000 "{\"module\": \"Eff_image\", \"path\": \"e/eff_image.ml\"}")) with
+  | some (.malformed _) => true
+  | _ => false
+-- red: an artifact lowered over another profile is no use; a root both list would be two
+-- specialised nodes, named with its class in each artifact
+#guard match refusalOf (recipe ("{\"out\": \"e/api_engine.ml\", \"externs\": \"x.txt\", \"linkage\": [\"A.run\"]}, " ++
+    "{\"out\": \"g/api_gen.ml\", \"public\": [\"A.run\"], \
+      \"uses\": [{\"module\": \"Api_engine\", \"artifact\": \"e/api_engine.ml\"}]}")) with
+  | some (.specialisedTwice u v n mine theirs) =>
+    u == "Api_gen" && v == "Api_engine" && n == `A.run && mine == .«public» && theirs == .linkage
+  | _ => false
+-- red: a used artifact its user cannot walk as it walks itself: a larger cap, a scope of its own
+#guard match refusalOf (usedImage (userOf 200 imageUse)) with
+  | some (.unusable u v _) => u == "Api_gen" && v == "Eff_image"
+  | _ => false
+#guard match refusalOf (recipe ("{\"out\": \"e/eff_image.ml\", \"closure\": \"e/image_closure.ml\", " ++
+    ownerSpec ++ ", \"linkage\": [\"K.enc\"]}, " ++ userOf 4000 imageUse)) with
+  | some (.unusable u v _) => u == "Api_gen" && v == "Eff_image"
   | _ => false
 
 -- `public_excludes_coverage`, red: a hand-built plan whose coverage root names the public facade

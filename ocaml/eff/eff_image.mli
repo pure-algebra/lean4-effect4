@@ -5,8 +5,55 @@ type 'a image = {
   to_val : 'a -> Eff_types.Val.t;
   of_val : Eff_types.Val.t -> 'a option;
 }
+val store_program_gen_lit_c_to_val : Eff_types.Lit.t -> Eff_types.Val.t
+val store_program_gen_service_type_code_c_to_val : Z.t -> Eff_types.Val.t
+val store_program_gen_service_key_c_to_val :
+  Eff_types.ServiceKey.t -> Eff_types.Val.t
+val list_map_tr_loop_at_store_canonical_image_at_store_row_image_at_store_program_gen_ty_c_to_val_ty_spec_0_spec_4_spec_5 :
+  Eff_types.ServiceKey.t list -> Eff_types.Val.t list -> Eff_types.Val.t list
+val store_program_gen_service_key_c_of_val :
+  Eff_types.Val.t -> Eff_types.ServiceKey.t option
+val inst_decidable_lt_service_key__aux_1 :
+  Eff_types.ServiceKey.t -> Eff_types.ServiceKey.t -> bool
+val list_inst_decidable_pairwise : ('a -> 'a -> bool) -> 'a list -> bool
+val store_image_equiv : 'a image -> ('a -> 'b) -> ('b -> 'a) -> 'b image
+val store_row_image_at_store_program_gen_ty_c_to_val_ty_spec_0 :
+  Eff_types.ServiceKey.t list image
+val store_program_gen_ty_c_to_val_ty : Eff_types.Ty.t -> Eff_types.Val.t
+val list_map_tr_loop_at_store_program_gen_term_c_to_val_term_spec_1 :
+  string list -> Eff_types.Val.t list -> Eff_types.Val.t list
+val store_program_gen_term_c_to_val_term :
+  Eff_types.Term.t -> Eff_types.Val.t
+val store_program_gen_cause_term_c_to_val_cause_term :
+  Eff_types.CauseTerm.t -> Eff_types.Val.t
+val store_program_gen_finalizer_strategy_c_to_val :
+  Eff_types.FinalizerStrategy.t -> Eff_types.Val.t
+val store_program_gen_native_op_c_to_val :
+  Eff_types.NativeOp.t -> Eff_types.Val.t
+val list_map_tr_loop_at_store_program_gen_eff_c_to_val_layer_term_spec_3 :
+  Z.t list -> Eff_types.Val.t list -> Eff_types.Val.t list
+val store_program_gen_decision_c_to_val :
+  Eff_types.Decision.t -> Eff_types.Val.t
+val list_map_tr_loop_at_store_program_gen_def_decl_c_to_val_spec_0 :
+  Eff_types.ParamDecl.t list -> Eff_types.Val.t list -> Eff_types.Val.t list
+val list_map_tr_loop_at_store_program_gen_eff_c_to_val_eff_spec_0 :
+  Eff_types.DefDecl.t list -> Eff_types.Val.t list -> Eff_types.Val.t list
+val store_program_gen_eff_c_to_val_eff :
+  Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t
 val run_kit_program_to_val :
   Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t
+val store_program_gen_ty_c_raw_ty : Eff_types.Val.t -> Eff_types.Ty.t option
+val inst_decidable_eq_list : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
+val store_val__beq : Eff_types.Val.t -> Eff_types.Val.t -> bool
+val store_guarded :
+  ('a -> Eff_types.Val.t) ->
+  (Eff_types.Val.t -> 'a option) -> Eff_types.Val.t -> 'a option
+val list_map_m_loop_at_store_program_gen_eff_c_raw_layer_term_spec_3 :
+  Eff_types.Val.t list -> Z.t list -> Z.t list option
+val store_program_gen_native_op_c_of_val :
+  Eff_types.Val.t -> Eff_types.NativeOp.t option
+val store_program_gen_eff_c_raw_eff :
+  Eff_types.Val.t -> Eff_types.NativeOp.t Eff_types.Eff.t option
 val run_kit_program_of_val :
   Eff_types.Val.t -> Eff_types.NativeOp.t Eff_types.Eff.t option
 val run_kit_stmts_to_val :
@@ -21,5 +68,17 @@ val run_kit_layer_to_val :
   Eff_types.NativeOp.t Eff_types.LayerTerm.t -> Eff_types.Val.t
 val run_kit_layers_to_val :
   Eff_types.NativeOp.t Eff_types.LayerTerms.t -> Eff_types.Val.t
+val store_program_gen_row_shape_c_to_val :
+  Eff_types.RowShape.t -> Eff_types.Val.t
+val store_program_gen_row_arg_c_to_val :
+  Eff_types.RowArg.t -> Eff_types.Val.t
+val store_program_gen_row_kind_c_to_val :
+  Eff_types.RowKind.t -> Eff_types.Val.t
+val store_program_gen_registration_c_to_val :
+  Eff_types.Registration.t -> Eff_types.Val.t
+val store_program_gen_row_c_of_val :
+  Eff_types.Val.t -> Eff_types.Row.t option
+val list_map_m_loop_at_store_runner_gen_header_c_of_val_spec_0 :
+  Eff_types.Val.t list -> Eff_types.Row.t list -> Eff_types.Row.t list option
 val run_kit_rows_of_val : Eff_types.Val.t -> Eff_types.Row.t list option
 val run_kit_eff_ty_of_val : Eff_types.Val.t -> Eff_types.EffTy.t option

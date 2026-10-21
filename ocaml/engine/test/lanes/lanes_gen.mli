@@ -408,11 +408,6 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine =
   stuck : stuck option;
   forks : fork_record list;
 }
-and 'a image =
-  'a Closure_gen.image = {
-  to_val : 'a -> Eff_types.Val.t;
-  of_val : Eff_types.Val.t -> 'a option;
-}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp =
   ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) Closure_gen.prim_interp = {
   cont_a : 'nu -> 'b -> 'k;
@@ -2484,8 +2479,9 @@ and external_store = string list
 and run_id = Z.t
 and receipt = effect4_program_edit_step list
 and 'op typed_program = Eff_types.EffTy.t
-val store_image_equiv : 'a image -> ('a -> 'b) -> ('b -> 'a) -> 'b image
-val store_image_list : 'a image -> 'a list image
+val store_image_list : 'a Eff_image.image -> 'a list Eff_image.image
+val store_image_equiv :
+  'a Eff_image.image -> ('a -> 'b) -> ('b -> 'a) -> 'b Eff_image.image
 type 's host = {
   insert : string -> 's -> (todo, sql_tag * string) result * 's;
   all : unit -> 's -> (todo list, sql_tag * string) result * 's;
@@ -2549,7 +2545,7 @@ val test_dogfood_scenario_todo_forgetful :
 val test_dogfood_scenario_todo_host_serve_built_forgetful_val :
   built -> Z.t * (Z.t * (string * bool)) list -> Eff_types.Val.t
 val test_dogfood_scenario_todo_typed_todo_modeled_staged :
-  (bool * (Z.t * (string * unit))) image
+  (bool * (Z.t * (string * unit))) Eff_image.image
 val test_dogfood_scenario_todo_typed_todo_modeled_of_c :
   bool * (Z.t * (string * unit)) -> todo
 val test_dogfood_scenario_todo_typed_todo_modeled_to_c :

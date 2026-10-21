@@ -338,10 +338,6 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine = {
   stuck : stuck option;
   forks : fork_record list;
 }
-and 'a image = {
-  to_val : 'a -> Eff_types.Val.t;
-  of_val : Eff_types.Val.t -> 'a option;
-}
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp = {
   cont_a : 'nu -> 'b -> 'k;
   cont_e : 'nu -> ('e, 'd, 'i, 'a) Eff_types.Cause.t -> 'k;
@@ -2303,13 +2299,8 @@ val run_kit_replies :
 val run_kit_explore :
   sig_app -> Z.t -> Z.t -> Eff_types.NativeOp.t Eff_types.Eff.t -> path list
 val run_kit_program_shape : shape_doc
-val run_kit_program_to_val :
-  Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t
-val run_kit_program_of_val :
-  Eff_types.Val.t -> Eff_types.NativeOp.t Eff_types.Eff.t option
 val run_kit_rows_shape : shape_doc
 val run_kit_rows_to_val : Eff_types.Row.t list -> Eff_types.Val.t
-val run_kit_rows_of_val : Eff_types.Val.t -> Eff_types.Row.t list option
 val run_kit_services_shape : shape_doc
 val run_kit_services_of_val :
   Eff_types.Val.t -> (Eff_types.ServiceKey.t * Eff_types.Ty.t) list option
@@ -2663,6 +2654,11 @@ val program_profile_data_literal_refusal :
 val program_answer_tree :
   (Eff_types.Val.t, Eff_types.Err.t, Eff_types.Defect.t, Z.t, unit)
   Eff_types.Completion.t -> Eff_types.Val.t
+val run_kit_program_to_val :
+  Eff_types.NativeOp.t Eff_types.Eff.t -> Eff_types.Val.t
+val run_kit_program_of_val :
+  Eff_types.Val.t -> Eff_types.NativeOp.t Eff_types.Eff.t option
+val run_kit_rows_of_val : Eff_types.Val.t -> Eff_types.Row.t list option
 val program_check_run : check_input -> verdict
 val program_check_oracle_uncached : oracle
 val program_check_checked_pure' : 'a0 -> 'a0 checked
