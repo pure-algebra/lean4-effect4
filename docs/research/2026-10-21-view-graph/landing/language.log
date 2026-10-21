@@ -1,0 +1,1 @@
+PASS check-language: no finding in docs/research/2026-10-21-view-graph/README.md, docs/GENERATED.md, generated/graphs/todo.gen.md; the other documents carry 1750 finding(s) (report: python3 scripts/check-language.py)

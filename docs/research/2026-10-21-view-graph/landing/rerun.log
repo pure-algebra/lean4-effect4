@@ -1,0 +1,6 @@
++ lake build effect4
+Build completed successfully (1870 jobs).
++ lake exe effect4 inspect --group todo --session TodoApp --what relations --form md --out /private/tmp/view-graph-final-rerun/generated/graphs
++ lake exe effect4 inspect --group todo --session TodoApp --what relations --form json --out /private/tmp/view-graph-final-rerun/generated/graphs
++ lake exe effect4 inspect --group todo --session TodoApp --what relations --form tsv --out /private/tmp/view-graph-final-rerun/generated/graphs
+PASS generate: requested producers ran in dependency order

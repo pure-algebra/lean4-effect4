@@ -1,0 +1,62 @@
+ℹ [1367/1891] Replayed Test.Codegen.CompilerGraphs
+info: Test/Codegen/CompilerGraphs.lean:92:0: fun sourceExists sessionExists =>
+  Built.session_ok_iff (todoBuilt.get sourceExists) "TodoApp"
+    (todoSession.get
+      sessionExists) : ∀ (sourceExists : todoBuilt.isSome = true) (sessionExists : todoSession.isSome = true),
+  (todoBuilt.get sourceExists).session "TodoApp" = Except.ok (todoSession.get sessionExists) ↔
+    ∃ object,
+      (Object.ofBuilt (todoBuilt.get sourceExists)).session "TodoApp" = Except.ok object ∧
+        object.open = Except.ok (todoSession.get sessionExists) ∧
+          ServiceSession.foreign (todoSession.get sessionExists) = []
+info: Test/Codegen/CompilerGraphs.lean:108:0: Graph.ranks_forward
+  { nodes := #[{ key := "source", line1 := "source" }, { key := "target", line1 := "target" }],
+    edges := #[{ key := "edge", src := 0, dst := 1 }] }
+  { key := "edge", src := 0, dst := 1 } (List.mem_singleton_self { key := "edge", src := 0, dst := 1 })
+  (of_decide_eq_true (id (Eq.refl true)))
+  (of_decide_eq_true
+    (id
+      (Eq.refl
+        true))) : { nodes := #[{ key := "source", line1 := "source" }, { key := "target", line1 := "target" }],
+          edges := #[{ key := "edge", src := 0, dst := 1 }] }.ranks.getD
+    { key := "edge", src := 0, dst := 1 }.src 0 <
+  { nodes := #[{ key := "source", line1 := "source" }, { key := "target", line1 := "target" }],
+          edges := #[{ key := "edge", src := 0, dst := 1 }] }.ranks.getD
+    { key := "edge", src := 0, dst := 1 }.dst 0
+info: Test/Codegen/CompilerGraphs.lean:168:0: fun present =>
+  let b := todoSession.get present;
+  let atoms :=
+    EffAlgebra.ofLayer fun x x_1 x_2 =>
+      List.foldr (fun name rest => (AGraph.vertex name).overlay rest) AGraph.empty
+        (List.map (fun row => text (row[2]?.getD [])) (records (Compiler.Graphs.read b).rows));
+  LayerGraph.hypergraph_provide atoms (LayerTerm.succeed natKey (Lit.nat 23))
+    (LayerTerm.ref [2, 0]) : ∀ (present : todoSession.isSome = true),
+  let b := todoSession.get present;
+  let atoms :=
+    EffAlgebra.ofLayer fun x x_1 x_2 =>
+      List.foldr (fun name rest => (AGraph.vertex name).overlay rest) AGraph.empty
+        (List.map (fun row => text (row[2]?.getD [])) (records (Compiler.Graphs.read b).rows));
+  LayerGraph.hypergraph atoms ((LayerTerm.succeed natKey (Lit.nat 23)).provide (LayerTerm.ref [2, 0])) =
+    (LayerGraph.hypergraph atoms (LayerTerm.succeed natKey (Lit.nat 23))).overlay
+      (LayerGraph.hypergraph atoms (LayerTerm.ref [2, 0]))
+info: Test/Codegen/CompilerGraphs.lean:175:0: fun present =>
+  let b := todoSession.get present;
+  let atoms :=
+    EffAlgebra.ofLayer fun x x_1 x_2 =>
+      List.foldr (fun name rest => (AGraph.vertex name).overlay rest) AGraph.empty
+        (List.map (fun row => text (row[2]?.getD [])) (records (Compiler.Graphs.read b).rows));
+  LayerGraph.hypergraph_merge_comm atoms (LayerTerm.succeed natKey (Lit.nat 23))
+    (LayerTerm.ref [2, 0]) : ∀ (present : todoSession.isSome = true),
+  let b := todoSession.get present;
+  let atoms :=
+    EffAlgebra.ofLayer fun x x_1 x_2 =>
+      List.foldr (fun name rest => (AGraph.vertex name).overlay rest) AGraph.empty
+        (List.map (fun row => text (row[2]?.getD [])) (records (Compiler.Graphs.read b).rows));
+  (LayerGraph.hypergraph atoms ((LayerTerm.succeed natKey (Lit.nat 23)).merge (LayerTerm.ref [2, 0]))).denote =
+    (LayerGraph.hypergraph atoms ((LayerTerm.ref [2, 0]).merge (LayerTerm.succeed natKey (Lit.nat 23)))).denote
+✔ [1882/1891] Built Compiler.InspectDocument (4.2s)
+✔ [1884/1891] Built Compiler.Main (6.6s)
+✔ [1886/1891] Built Compiler.Groups (3.6s)
+✔ [1888/1891] Built Compiler.Exe (1.9s)
+✔ [1890/1891] Built effect4:exe (2.7s)
+✔ [1891/1891] Built Test.Codegen.CompilerEmit (5.1s)
+Build completed successfully (1891 jobs).

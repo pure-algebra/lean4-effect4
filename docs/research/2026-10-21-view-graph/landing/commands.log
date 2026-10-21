@@ -1,0 +1,34 @@
+PASS 0 effect4 inspect --group todo --session TodoApp --what relations --form md --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/relations/md
+PASS 0 effect4 inspect --group todo --session TodoApp --what relations --form json --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/relations/json
+PASS 0 effect4 inspect --group todo --session TodoApp --what relations --form svg --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/relations/svg
+PASS 0 effect4 inspect --group todo --session TodoApp --what relations --form tsv --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/relations/tsv
+PASS 0 effect4 inspect --group todo --session TodoApp --what boundary --form md --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/boundary/md
+PASS 0 effect4 inspect --group todo --session TodoApp --what boundary --form json --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/boundary/json
+PASS 0 effect4 inspect --group todo --session TodoApp --what boundary --form svg --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/boundary/svg
+PASS 0 effect4 inspect --group todo --session TodoApp --what boundary --form tsv --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/boundary/tsv
+PASS 0 effect4 inspect --group todo --session TodoApp --what calls --form md --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/calls/md
+PASS 0 effect4 inspect --group todo --session TodoApp --what calls --form json --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/calls/json
+PASS 0 effect4 inspect --group todo --session TodoApp --what calls --form svg --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/calls/svg
+PASS 0 effect4 inspect --group todo --session TodoApp --what calls --form tsv --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/calls/tsv
+PASS 0 effect4 inspect --group todo --session TodoApp --what layers --form md --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/layers/md
+PASS 0 effect4 inspect --group todo --session TodoApp --what layers --form json --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/layers/json
+PASS 0 effect4 inspect --group todo --session TodoApp --what layers --form svg --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/layers/svg
+PASS 0 effect4 inspect --group todo --session TodoApp --what layers --form tsv --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/layers/tsv
+PASS 2 effect4 inspect --group todo --what relations --form png
+PASS 2 effect4 inspect --group todo --what relations --form svg
+PASS 2 effect4 inspect --group todo --what relations --form tsv
+PASS 2 effect4 inspect --group todo --what relations --form
+PASS 2 effect4 inspect --group todo --what relations --json --form md
+PASS 2 effect4 inspect --group todo --what relations --out --form md
+PASS 2 effect4 inspect --group todo --what relations --session
+PASS 2 effect4 inspect --group todo --what graph --form svg
+PASS 1 effect4 inspect --group todo --what relations --form json --session missing --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/refused
+PASS 0 effect4 inspect --group todo --session TodoApp --what boundary --form svg --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/stale
+PASS 0 effect4 inspect --group todo --session TodoApp --what layers --form svg --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/stale
+PASS 1 effect4 inspect --group todo --what layers --form svg --session missing --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/stale
+PASS 2 effect4 inspect --group corpus --what relations --form json
+PASS 0 effect4 inspect --group todo --what graph --json
+PASS document selections/forms, SVG XML, usage refusals, session refusal without writes, legacy JSON
+PASS JSON/TSV relation equality: [70, 5, 9, 14]
+PASS 0 effect4 inspect --group corpus --what relations --form json --out /Users/pooks/.codex/worktrees/view-graph/lean4-effect4/.lake/view-graph-command/commands-final/corpus
+PASS eight separate corpus documents
