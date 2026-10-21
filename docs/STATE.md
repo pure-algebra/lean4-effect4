@@ -75,6 +75,7 @@ and a document are each a state reached by its journal. The dictionary
   declaration lowered twice. The entry point's fourth slice, part a, landed (row 435). It brought
   `inspect`, the manifest's inputs with the module closure's address, and the SQL adapter by the
   module's imports.
+- The Rocq comparison lane now extracts the generated development (row 436). The six hand copies and their evaluator adapter retire.
 
 ## Next, in order
 
@@ -85,7 +86,7 @@ Done on 2026-10-20: the to-do as a user's project (`research/2026-10-19-todo-as-
 M1, M2, M3, C1 and the compiler's entry point in three slices
 (`research/2026-10-20-compiler-entry/README.md` §7). M4 landed in both halves (rows 431 and 433). Naturals and integers are exact in OCaml, and the
 Rocq comparison lane's producer is in the tree. The user-side pass (row 432), value linkage (row 434) and the entry point's fourth slice,
-part a (row 435), landed. Next: 4c, the entry point's OCaml target (E2), then M8 as amended. The
+part a (row 435), landed. Item 4c also landed (row 436). Next: the entry point's OCaml target (E2), then M8 as amended. The
 handoff of 2026-10-20 (`research/2026-10-20-handoff-codex/README.md`) names the heads, the
 order, the rules and the three briefs.
 
@@ -94,7 +95,7 @@ order, the rules and the three briefs.
 3. M3, one program codec, lowered: landed.
 4. M4, one type spelling, then E6: landed (rows 431, 433).
 4b. Value linkage between artifacts: a Lean declaration is lowered into one artifact: landed.
-4c. The comparison lane over the generated `rocq/Skeleton.v`; the study's six hand files retire.
+4c. The comparison lane over the generated `rocq/Skeleton.v`: landed (row 436).
 5. M8, one observation, one check, the kit's commands as queries (row 414 (3); amended, row 428).
 6. M9, the typing rule as two tables, in three stages.
 7. M7's rest: the old readers go, then a fold for `Shape`.
@@ -103,13 +104,15 @@ order, the rules and the three briefs.
 10. A public-name manifest for Lean.
 11. M10, carriers as rows, one machine, then the run layer over it.
 
+A fresh native build of the external to-do fails against the exact integer representation.
+The next compiler slice regenerates its output and removes its stale clock dependency.
+
 Deferred (`coherence.md` §9.2): the host protocol and the cross-runtime test, the store and the
 log, the carrier packages, and the exchange.
 
 ## What the owner must decide
 
 - **Before the moves that need them** (`coherence.md` §10):
-  - D3, the native profile, before item 2;
   - S-2, whether the generated host interface is public, before item 9.
 - **With the deferred work** (rows 418 (5) and 420 (5)):
   - D1 and S-1, on the store and the log;
@@ -125,7 +128,8 @@ log, the carrier packages, and the exchange.
 
 - A landing owes the narrow build of what it touches, `#axiom_audit` over its modules, and the
   behaviour gate it reaches (`make check-ts` or `make check-ocaml`). Batteries run as
-  `make batteries-touched BASE=<rev>`, never as `lake build Test`.
+  `make batteries-touched BASE=<rev>` by default. The full suite runs when a required gate needs it (row 437).
+  Avoid unnecessary repeat runs.
 - Semantics generation is paused while the concepts change (row 418 (6)): `make gen-semantics`
   does not run.
 - Run one `lake` at a time. Commit by explicit paths. Nothing is pushed without the owner.
