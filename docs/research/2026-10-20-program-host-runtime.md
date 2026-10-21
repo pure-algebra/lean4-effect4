@@ -636,3 +636,118 @@ One more decision for §12:
 8. The prelude becomes a pinned package (`@effect4/prelude`), the runtime's TypeScript half,
    supplied by assembly, instead of a copied folder in the bundle. Recommended: yes; the bundle's
    key then names the pin, not 847 lines of bytes.
+
+## 14. Start clean: the program domain alone
+
+The owner, 2026-10-21: "we've been getting ahead of ourselves trying to generate all artifacts
+at once. Start clean and just get the program and typing semantics down." This section supersedes
+§10's slice 1. Everything about hosts, runtimes, emission and assembly waits until the program
+domain stands on its own.
+
+### 14.1 What the program domain is
+
+The program domain is a closed world of data and the judgments over that data. No host, no
+machine, no tape, no target. Its data:
+
+| Datum | Owner | What it is |
+| --- | --- | --- |
+| the tree | `Eff NativeOp` (`Program/Eff.lean`) | the program, a first-order tree; a definition block at its root when it has definitions |
+| the types | `Ty`, `TyDecls` (`Program/TyCore.lean`, `TyExpand.lean`) | the type language and the application's named types |
+| the signature | `SigApp` (`Program/SigApp.lean`): `rows`, `services`, `types` | what the tree is read against: the host rows by position, the service declarations, the named types |
+| the names | `rowNames`, `argNames` | metadata the tree does not keep: each row's spelling, each method's argument names |
+
+Together these are the **object** (§3.1): the one complete datum of the domain. A program with
+no signature cannot be checked; a signature with no program is a declaration. The object is
+both, with a version.
+
+Its judgments, each an existing function with its completeness law:
+
+| Judgment | Function | Law | Answers |
+| --- | --- | --- | --- |
+| signature admission | `admitSig app` | `admitSig_ok_iff` | are the rows well scoped, the services flat, the named types expandable |
+| formation | `Formation.checkInput program rows services` | `checkInput_eq_none_iff` | is the tree well formed under its names and rules |
+| typing | `typeOfProgram sig program`, its located refusal `Api.explain` | `explain_none_iff`, `programRefusal_none_iff` | what type the tree has at the signature, or where and why it has none |
+| the column scan | `findEmptyColumnInEffTy app.types ty` | by definition | does an inferred column name an empty type |
+| canonical form | `Canonical.encode`, `Wire.decodeProgram`; the address `sha256` of the bytes | `decode_encode`, `decode_exact` | the one spelling of the tree, and its name |
+| the service view | `servicesOf`, `methodArgs`, `serviceFault` | by definition | is the block one service, and what are its methods |
+| the address table | `Program.annotate` | `annotate_eq_table`, `refusals_nil_iff` (R14) | the type at every address, and the first refusal |
+| profile support | `ProfileData.literalRefusal` | `literalRefusal_eq_none_iff` | are the tree's literals inside a profile's bound (a judgment over the data, asked by a target) |
+
+Admission is the first four in that order (`admitProgram`), and its certificate is `Built`.
+
+What is out of the domain, and waits: a run (the machine, the budget, the tape), a host (the
+reactor, the envelope), a target's print (the TypeScript module and its read-back), emission,
+assembly, and the session program of §6, which is a program-to-program derivation but needs the
+session rows and the lifetime's semantics to be worth stating.
+
+### 14.2 What to implement, and nothing else
+
+One library module, one law module, and the compiler's `check` and `inspect` over the object.
+
+`src/Effect4/Api/Object.lean`:
+
+```lean
+structure Object where
+  version  : Nat := Object.currentVersion
+  app      : SigApp
+  program  : Program
+  rowNames : List (String × Nat)
+  argNames : List (String × List String) := []
+  deriving Canonical                       -- the generator's codec; bytes, JSON print, digest
+
+def Object.ofBuilt (b : Built) (argNames := []) : Object
+def Object.open (o : Object) : Except Object.Refusal Built      -- the version, then Built.ofProgram
+def Object.address (o : Object) : Digest := Canonical.digest o   -- the name of the whole datum
+def Object.service (o : Object) : Except PrintRefusal Service    -- servicesOf, checked by serviceFault
+def Object.types (o : Object) : List (Address × Except TypeRefusal EffTy)   -- the address table
+
+structure Certificate where                                       -- what check prints; a carrier, not hand JSON
+  answer error : Ty; requires : List ServiceKey
+  rows : RowTable; services : List (ServiceKey × String); declarations : List DefDecl
+  deriving Canonical
+def Built.certificate (b : Built) : Certificate
+```
+
+`src/Effect4/Laws/Api/Object.lean`:
+
+- `open_ofBuilt : (open (ofBuilt b names)).map (ofBuilt · names) = .ok (ofBuilt b names)`;
+- `open_exact : open o = .ok b → ofBuilt b o.argNames = o`;
+- `address_injective`, from `encode_injective` under `WF`;
+- `LiveRecord` over the object, `restore_save` restated with its content unchanged.
+
+`tools/Compiler/`:
+
+- `check` builds the object from the application and prints its certificate; `check --out
+  FILE.obj` writes the object's bytes, `--json` its print;
+- `open FILE.obj` (new; on `lake exe effect4` too, which has no application): reads an object,
+  opens it, prints its certificate. This is the program-as-data demonstration: a saved program is
+  re-checked with no Lean source present;
+- `inspect` reads the object: `rows` and `types` from it directly, `graph` its tree, `surface` as
+  today.
+
+Deleted in the same slice: `Compiler.certificate`'s hand-built `NatJson` (the carrier prints it),
+`certificateLines`' ad-hoc layout where the carrier's print serves, and `LiveRecord`'s four
+duplicated fields.
+
+Not in the slice: `emit`, `Compiler.Native`, the prelude, `run`, `Hosted`, `Request`, the session
+program, `eff_rows`' generated host record, every TypeScript or OCaml file. They stay exactly as
+they are today, and the to-do's `ts/` and `ocaml/` folders are untouched.
+
+### 14.3 Acceptance
+
+1. `lake exe todo check --out todo.obj`, then `lake exe effect4 open todo.obj`, prints the same
+   certificate as `lake exe todo check`; the object's bytes read back to the same object
+   (`decode_encode`), and a second write is byte-identical.
+2. An object with `version := 2` refuses with `unsupportedVersion 2`; an object whose program
+   does not type at its signature refuses with the located typing refusal, at the same site
+   `check` reports.
+3. `inspect --what rows|types|graph|surface` prints what it prints today, read from the object.
+4. The two laws proved; `#axiom_audit` of the touched modules within `[propext, Quot.sound]`;
+   `make batteries-touched` green; `check-ts` unchanged, since no emitted byte changes.
+
+### 14.4 What comes after, in this order
+
+The domain next door is the target's print of the program (the TypeScript module, the
+read-back law), then the host interface derived from the rows, then the session program. Each is
+a view or a derivation of the object, so each starts from `Object` and adds one function. None
+of them is started before 14.3 holds.
