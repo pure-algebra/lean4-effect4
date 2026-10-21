@@ -118,21 +118,13 @@ and sketch = { program : NativeOp.t Eff.t; holes : Row.t list }
 and 'a checked = { value : 'a; trace : (check_input * verdict) list }
 and live_record = {
   version : Z.t;
-  app : sig_app;
-  program : NativeOp.t Eff.t;
+  object_ : object_;
   session : string;
   binding : string;
   budget : budget;
   journal : command list;
-  row_names : (string * Z.t) list;
 }
 and effect4_live_record_refusal = Effect4_live_record_refusal_unsupportedVersion of Z.t | Effect4_live_record_refusal_admission of admit_refusal
-and built = {
-  app : sig_app;
-  program : NativeOp.t Eff.t;
-  admitted : admitted_program;
-  row_names : (string * Z.t) list;
-}
 and run = {
   built : built;
   budget : budget;
@@ -644,6 +636,7 @@ and 'op signature = {
 and layer_ty = { out : ServiceKey.t Effect4_row.t; error : Ty.t; requires : ServiceKey.t Effect4_row.t }
 and dep_role = DepRole_body of Z.t | DepRole_main | DepRole_layers
 and dep = { role : dep_role; base : Z.t list; input : check_input }
+and built = { app : sig_app; program : NativeOp.t Eff.t; admitted : admitted_program }
 and budget = { fuel : Z.t; compile_fuel : Z.t }
 and header = {
   version : Z.t;
@@ -664,6 +657,7 @@ and session = {
   calls : (Z.t list * NativeOp.t call_instance) list;
   funded : bool;
 }
+and object_ = { app : sig_app; program : NativeOp.t Eff.t }
 and event =
   | Event_control of (eff_name, eff_thunk, Val.t, Err.t, Defect.t, fiber_id, unit) run_decision
   | Event_hold of sel
@@ -1646,13 +1640,13 @@ and fiber_id = Z.t
 and clock_millis = Z.t
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) dispatcher = ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket list
 and row_def = Row.t
-and admitted_program = NativeOp.t typed_program
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) fiber_evaluator = ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp -> ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine -> ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber -> bool -> ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) iter
 and deferred_key = Z.t
 and memo_map_id = Z.t
 and 'u context = 'u service list
 and scope_store = scope_entry list
 and external_store = string list
+and admitted_program = NativeOp.t typed_program
 and run_id = Z.t
 and receipt = effect4_program_edit_step list
 and 'op typed_program = EffTy.t
@@ -29141,7 +29135,7 @@ let program_row_checks (r : Row.t) : (bool * row_reason) list =
       let _x_20 = RowReason_emptyColumn _x_19 in
       let _x_21 = _x_18, _x_20 in
       let _x_22 = program_admit_row_column answer in
-      let _x_23 = RowReason_emptyColumn _y_12 in
+      let _x_23 = RowReason_emptyColumn _y_13 in
       let _x_24 = _x_22, _x_23 in
       let _x_25 = program_admit_row_column error in
       let _x_26 = RowReason_emptyColumn _x_15 in
@@ -29150,7 +29144,7 @@ let program_row_checks (r : Row.t) : (bool * row_reason) list =
       let _x_29 = RowReason_templateNotAdmissible _x_19 in
       let _x_30 = _x_28, _x_29 in
       let _x_31 = program_ty_template_admissible answer in
-      let _x_32 = RowReason_templateNotAdmissible _y_12 in
+      let _x_32 = RowReason_templateNotAdmissible _y_13 in
       let _x_33 = _x_31, _x_32 in
       let _x_34 = program_ty_template_admissible error in
       let _x_35 = RowReason_templateNotAdmissible _x_15 in
@@ -29167,29 +29161,29 @@ let program_row_checks (r : Row.t) : (bool * row_reason) list =
       let _x_46 = _x_24 :: _x_45 in
       let _x_47 = _x_21 :: _x_46 in
       let _x_48 = _x_17 :: _x_47 in
-      let _x_49 = _y_10 :: _x_48 in
-      let _x_50 = _y_13 :: _x_49 in
-      let _x_51 = _y_11 :: _x_50 in
+      let _x_49 = _y_12 :: _x_48 in
+      let _x_50 = _y_11 :: _x_49 in
+      let _x_51 = _y_10 :: _x_50 in
       let _x_52 = _x_8 :: _x_51 in
       _x_4 :: _x_52 in
       let[@local always] _jp_54 = fun _y_55 _y_56 _y_57 _y_58 -> let _x_59 = "answer" in
       let _x_60 = RowReason_internalHandle _x_59 in
       let _x_61 = _y_58, _x_60 in
-      let _x_62 = program_find_internal_handle _y_55 error in
+      let _x_62 = program_find_internal_handle _y_56 error in
       match _x_62 with
         | None -> (let _x_63 = true in
-          _jp_9 _x_61 _y_56 _x_59 _y_57 _x_63)
+          _jp_9 _y_55 _y_57 _x_61 _x_59 _x_63)
         | Some _ -> (let _x_65 = false in
-          _jp_9 _x_61 _y_56 _x_59 _y_57 _x_65) in
+          _jp_9 _y_55 _y_57 _x_61 _x_59 _x_65) in
       let[@local always] _jp_66 = fun _y_67 _y_68 -> let _x_69 = RowReason_valueRowTrailing in
       let _x_70 = _y_68, _x_69 in
       let _x_71 = [] in
       let _x_72 = program_find_internal_handle _x_71 answer in
       match _x_72 with
         | None -> (let _x_73 = true in
-          _jp_54 _x_71 _y_67 _x_70 _x_73)
+          _jp_54 _y_67 _x_71 _x_70 _x_73)
         | Some _ -> (let _x_75 = false in
-          _jp_54 _x_71 _y_67 _x_70 _x_75) in
+          _jp_54 _y_67 _x_71 _x_70 _x_75) in
       let[@local always] _jp_76 = fun _y_77 -> let _x_78 = RowReason_builtinCollision in
       let _x_79 = _y_77, _x_78 in
       let _x_80 = RowShape.Value in
@@ -34570,14 +34564,14 @@ let store_program_gen_row_c_to_val (x_1 : Row.t) : Val.t =
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.RunnerGen.HeaderC.toVal.spec_0 (a.1 : List Effect4.Program.Row) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.toVal.spec_0 (a.1 : List Effect4.Program.Row) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_runner_gen_header_c_to_val_spec_0 (a_1 : Row.t list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 (a_1 : Row.t list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _x_6 = store_program_gen_row_c_to_val head_4 in
       let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_runner_gen_header_c_to_val_spec_0 tail_5 _x_7)
+      list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 tail_5 _x_7)
 
 
 
@@ -34585,7 +34579,7 @@ let rec list_map_tr_loop_at_store_runner_gen_header_c_to_val_spec_0 (a_1 : Row.t
 
 let run_kit_rows_to_val (rows : Row.t list) : Val.t =
   let _x_1 = [] in
-  let _x_2 = list_map_tr_loop_at_store_runner_gen_header_c_to_val_spec_0 rows _x_1 in
+  let _x_2 = list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 rows _x_1 in
   Val.List _x_2
 
 
@@ -34605,9 +34599,9 @@ let run_kit_services_shape : shape_doc =
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Run.Kit.servicesOfVal.spec_0 (x.1 : List Effect4.Store.Val) (x.2 : List (Prod Effect4.ServiceKey Effect4.Program.Ty)) : Option (List (Prod Effect4.ServiceKey Effect4.Program.Ty)) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.ofVal.spec_1 (x.1 : List Effect4.Store.Val) (x.2 : List (Prod Effect4.ServiceKey Effect4.Program.Ty)) : Option (List (Prod Effect4.ServiceKey Effect4.Program.Ty)) *)
 
-let rec list_map_m_loop_at_run_kit_services_of_val_spec_0 (x_1 : Val.t list) (x_2 : (ServiceKey.t * Ty.t) list) : (ServiceKey.t * Ty.t) list option =
+let rec list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_1 (x_1 : Val.t list) (x_2 : (ServiceKey.t * Ty.t) list) : (ServiceKey.t * Ty.t) list option =
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Some _x_3)
@@ -34620,7 +34614,7 @@ let rec list_map_m_loop_at_run_kit_services_of_val_spec_0 (x_1 : Val.t list) (x_
               match _x_13 with
                 | Some val__14 -> (let _x_15 = val__10, val__14 in
                   let _x_16 = _x_15 :: x_2 in
-                  list_map_m_loop_at_run_kit_services_of_val_spec_0 tail_6 _x_16)
+                  list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_1 tail_6 _x_16)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
@@ -34632,7 +34626,7 @@ let rec list_map_m_loop_at_run_kit_services_of_val_spec_0 (x_1 : Val.t list) (x_
 let run_kit_services_of_val (v : Val.t) : (ServiceKey.t * Ty.t) list option =
   match (v : Val.t) with
     | Val.List xs_1 -> (let _x_2 = [] in
-      list_map_m_loop_at_run_kit_services_of_val_spec_0 xs_1 _x_2)
+      list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_1 xs_1 _x_2)
     | _ -> None
 
 
@@ -38548,34 +38542,34 @@ let program_inst_decidable_eq_row (x_1 : Row.t) (x_2 : Row.t) : bool =
 
 
 
-(* LCNF mono: instDecidableEqSigApp.decEq._lam_0 (a : Prod Effect4.ServiceKey Effect4.Program.Ty) (b : Prod Effect4.ServiceKey Effect4.Program.Ty) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqSigApp.decEq._lam_0 (a : Prod Effect4.ServiceKey Effect4.Program.Ty) (b : Prod Effect4.ServiceKey Effect4.Program.Ty) : Bool *)
 
-let inst_decidable_eq_sig_app_dec_eq__lam_0 (a : ServiceKey.t * Ty.t) (b : ServiceKey.t * Ty.t) : bool =
+let program_inst_decidable_eq_sig_app_dec_eq__lam_0 (a : ServiceKey.t * Ty.t) (b : ServiceKey.t * Ty.t) : bool =
   let _x_1 = inst_decidable_eq_service_key in
   let _x_2 = program_inst_decidable_eq_ty in
   inst_decidable_eq_prod _x_1 _x_2 a b
 
 
 
-(* LCNF mono: instDecidableEqSigApp.decEq._lam_1 (a : Prod String Effect4.Program.Ty) (b : Prod String Effect4.Program.Ty) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqSigApp.decEq._lam_1 (a : Prod String Effect4.Program.Ty) (b : Prod String Effect4.Program.Ty) : Bool *)
 
-let inst_decidable_eq_sig_app_dec_eq__lam_1 (a : string * Ty.t) (b : string * Ty.t) : bool =
+let program_inst_decidable_eq_sig_app_dec_eq__lam_1 (a : string * Ty.t) (b : string * Ty.t) : bool =
   let _x_1 = fun _b1 _b2 -> _b1 = _b2 in
   let _x_2 = program_inst_decidable_eq_ty in
   inst_decidable_eq_prod _x_1 _x_2 a b
 
 
 
-(* LCNF mono: instDecidableEqSigApp.decEq (x.1 : Effect4.Program.SigApp) (x.2 : Effect4.Program.SigApp) : Bool *)
+(* LCNF mono: Effect4.Program.instDecidableEqSigApp.decEq (x.1 : Effect4.Program.SigApp) (x.2 : Effect4.Program.SigApp) : Bool *)
 
-let inst_decidable_eq_sig_app_dec_eq (x_1 : sig_app) (x_2 : sig_app) : bool =
+let program_inst_decidable_eq_sig_app_dec_eq (x_1 : sig_app) (x_2 : sig_app) : bool =
   match (x_1 : sig_app) with
     | { rows = rows_3; services = services_4; types = types_5 } -> (match (x_2 : sig_app) with
         | { rows = rows_6; services = services_7; types = types_8 } -> (let _x_9 = program_inst_decidable_eq_row in
           let _x_10 = Eff_image.inst_decidable_eq_list _x_9 rows_3 rows_6 in
-          if _x_10 then (let _f_11 = inst_decidable_eq_sig_app_dec_eq__lam_0 in
+          if _x_10 then (let _f_11 = program_inst_decidable_eq_sig_app_dec_eq__lam_0 in
             let _x_12 = Eff_image.inst_decidable_eq_list _f_11 services_4 services_7 in
-            if _x_12 then (let _f_13 = inst_decidable_eq_sig_app_dec_eq__lam_1 in
+            if _x_12 then (let _f_13 = program_inst_decidable_eq_sig_app_dec_eq__lam_1 in
               Eff_image.inst_decidable_eq_list _f_13 types_5 types_8) else _x_12) else _x_10))
 
 
@@ -39266,7 +39260,7 @@ let program_inst_decidable_eq_part_sig_dec_eq (x_1 : part_sig) (x_2 : part_sig) 
 let program_inst_decidable_eq_sig_data_dec_eq (x_1 : sig_data) (x_2 : sig_data) : bool =
   match (x_1 : sig_data) with
     | { app = app_3; holes = holes_4; part = part_5 } -> (match (x_2 : sig_data) with
-        | { app = app_6; holes = holes_7; part = part_8 } -> (let _x_9 = inst_decidable_eq_sig_app_dec_eq app_3 app_6 in
+        | { app = app_6; holes = holes_7; part = part_8 } -> (let _x_9 = program_inst_decidable_eq_sig_app_dec_eq app_3 app_6 in
           if _x_9 then (let _x_10 = program_inst_decidable_eq_row in
             let _x_11 = Eff_image.inst_decidable_eq_list _x_10 holes_4 holes_7 in
             if _x_11 then program_inst_decidable_eq_part_sig_dec_eq part_5 part_8 else _x_11) else _x_9))
@@ -39278,7 +39272,7 @@ let program_inst_decidable_eq_sig_data_dec_eq (x_1 : sig_data) (x_2 : sig_data) 
 let program_check_inst_decidable_eq_check_input_dec_eq (x_1 : check_input) (x_2 : check_input) : bool =
   match (x_1 : check_input) with
     | CheckInput_module (app_3, holes_4, program_5) -> (match (x_2 : check_input) with
-        | CheckInput_module (app_6, holes_7, program_8) -> (let _x_9 = inst_decidable_eq_sig_app_dec_eq app_3 app_6 in
+        | CheckInput_module (app_6, holes_7, program_8) -> (let _x_9 = program_inst_decidable_eq_sig_app_dec_eq app_3 app_6 in
           if _x_9 then (let _x_10 = program_inst_decidable_eq_row in
             let _x_11 = Eff_image.inst_decidable_eq_list _x_10 holes_4 holes_7 in
             if _x_11 then (let _x_12 = program_inst_decidable_eq_native_op in
@@ -40605,32 +40599,14 @@ let program_admit_program (program : NativeOp.t Eff.t) (app : sig_app) : (EffTy.
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Api.Built.ofProgram.spec_0 (a.1 : List (Prod Effect4.Program.Row Nat)) (a.2 : List (Prod String Nat)) : List (Prod String Nat) *)
-
-let rec list_map_tr_loop_at_api_built_of_program_spec_0 (a_1 : (Row.t * Z.t) list) (a_2 : (string * Z.t) list) : (string * Z.t) list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (match head_4 with
-        | fst_6, snd_7 -> (match (fst_6 : Row.t) with
-            | { Row.spelling = spelling; _ } -> (let _x_8 = spelling, snd_7 in
-              let _x_9 = _x_8 :: a_2 in
-              list_map_tr_loop_at_api_built_of_program_spec_0 tail_5 _x_9)))
-
-
-
 (* LCNF mono: Effect4.Api.Built.ofProgram (app : Effect4.Program.SigApp) (program : Effect4.Program.Eff Effect4.Program.NativeOp) : Except Effect4.Program.AdmitRefusal Effect4.Api.Built *)
 
 let api_built_of_program (app : sig_app) (program : NativeOp.t Eff.t) : (built, admit_refusal) result =
   let _x_1 = program_admit_program program app in
   match _x_1 with
     | Error a_2 -> Error a_2
-    | Ok a_4 -> (match (app : sig_app) with
-        | { rows = rows; _ } -> (let _x_5 = Z.of_int 0 in
-          let _x_6 = list_zip_idx_tr rows _x_5 in
-          let _x_7 = [] in
-          let _x_8 = list_map_tr_loop_at_api_built_of_program_spec_0 _x_6 _x_7 in
-          let _x_9 = ({ app = app; program = program; admitted = a_4; row_names = _x_8 } : built) in
-          Ok _x_9))
+    | Ok a_4 -> (let _x_5 = ({ app = app; program = program; admitted = a_4 } : built) in
+      Ok _x_5)
 
 
 
@@ -41439,7 +41415,7 @@ let api_host_session_call_table (program : NativeOp.t Eff.t) (app : sig_app) : (
 
 let run_open_ (b : built) (id : string) (budget : budget) (binding : string) : run =
   match (b : built) with
-    | { app = app; program = program; admitted = admitted; _ } -> (match (app : sig_app) with
+    | { app = app; program = program; admitted = admitted } -> (match (app : sig_app) with
         | { rows = rows; _ } -> (match (budget : budget) with
             | { compile_fuel = compile_fuel; _ } -> (let _x_1 = api_host_session_version in
               let _x_2 = ({ version = _x_1; session = id; binding = binding; table = rows } : header) in
@@ -41457,6 +41433,14 @@ let run_open_ (b : built) (id : string) (budget : budget) (binding : string) : r
 
 let live_open_ (b : built) (id : string) (budget : budget) (binding : string) : run =
   run_open_ b id budget binding
+
+
+
+(* LCNF mono: Effect4.Program.Object.open (o : Effect4.Program.Object) : Except Effect4.Program.AdmitRefusal Effect4.Api.Built *)
+
+let program_object__open_ (o : object_) : (built, admit_refusal) result =
+  match (o : object_) with
+    | { app = app; program = program } -> api_built_of_program app program
 
 
 
@@ -42617,20 +42601,26 @@ let rec list_foldl_at_live_feed_all_spec_0 (x_1 : run) (x_2 : event list) : run 
 
 let live_record_restore (r : live_record) : (run, effect4_live_record_refusal) result =
   match (r : live_record) with
-    | { version = version; app = app; program = program; session = session; binding = binding; budget = budget; journal = journal; row_names = row_names } -> (let _x_1 = Z.of_int 1 in
+    | { version = version; object_ = object_; session = session; binding = binding; budget = budget; journal = journal } -> (let _x_1 = Z.of_int 1 in
       let _x_2 = Z.equal version _x_1 in
-      if _x_2 then (let _x_5 = api_built_of_program app program in
+      if _x_2 then (let _x_5 = program_object__open_ object_ in
         match _x_5 with
           | Error a_6 -> (let _x_7 = Effect4_live_record_refusal_admission a_6 in
             Error _x_7)
-          | Ok a_9 -> (match (a_9 : built) with
-              | { app = app_1; program = program_1; admitted = admitted; _ } -> (let _x_10 = ({ app = app_1; program = program_1; admitted = admitted; row_names = row_names } : built) in
-                let _x_11 = run_open_ _x_10 session budget binding in
-                let _x_12 = [] in
-                let _x_13 = list_map_tr_loop_at_live_record_restore_spec_0 journal _x_12 in
-                let _x_14 = list_foldl_at_live_feed_all_spec_0 _x_11 _x_13 in
-                Ok _x_14))) else (let _x_3 = Effect4_live_record_refusal_unsupportedVersion version in
+          | Ok a_9 -> (let _x_10 = run_open_ a_9 session budget binding in
+            let _x_11 = [] in
+            let _x_12 = list_map_tr_loop_at_live_record_restore_spec_0 journal _x_11 in
+            let _x_13 = list_foldl_at_live_feed_all_spec_0 _x_10 _x_12 in
+            Ok _x_13)) else (let _x_3 = Effect4_live_record_refusal_unsupportedVersion version in
         Error _x_3))
+
+
+
+(* LCNF mono: Effect4.Program.Object.ofBuilt (b : Effect4.Api.Built) : Effect4.Program.Object *)
+
+let program_object__of_built (b : built) : object_ =
+  match (b : built) with
+    | { app = app; program = program; _ } -> ({ app = app; program = program } : object_)
 
 
 
@@ -42648,11 +42638,11 @@ let run_profile (s : run) : string =
 
 let live_record_save (l : run) : live_record =
   match (l : run) with
-    | { built = built; budget = budget; journal = journal; _ } -> (match (built : built) with
-        | { app = app; program = program; row_names = row_names; _ } -> (let _x_1 = Z.of_int 1 in
-          let _x_2 = run_id l in
-          let _x_3 = run_profile l in
-          ({ version = _x_1; app = app; program = program; session = _x_2; binding = _x_3; budget = budget; journal = journal; row_names = row_names } : live_record)))
+    | { built = built; budget = budget; journal = journal; _ } -> (let _x_1 = Z.of_int 1 in
+      let _x_2 = program_object__of_built built in
+      let _x_3 = run_id l in
+      let _x_4 = run_profile l in
+      ({ version = _x_1; object_ = _x_2; session = _x_3; binding = _x_4; budget = budget; journal = journal } : live_record))
 
 
 
@@ -43207,6 +43197,24 @@ let rec list_is_prefix_of_at_program_sig_data_extends_b_spec_0 (x_1 : Row.t list
 
 
 
+(* LCNF mono: Effect4.Program.SigData.extendsB._lam_0 (a : Prod Effect4.ServiceKey Effect4.Program.Ty) (b : Prod Effect4.ServiceKey Effect4.Program.Ty) : Bool *)
+
+let program_sig_data_extends_b__lam_0 (a : ServiceKey.t * Ty.t) (b : ServiceKey.t * Ty.t) : bool =
+  let _x_1 = inst_decidable_eq_service_key in
+  let _x_2 = program_inst_decidable_eq_ty in
+  inst_decidable_eq_prod _x_1 _x_2 a b
+
+
+
+(* LCNF mono: Effect4.Program.SigData.extendsB._lam_1 (a : Prod String Effect4.Program.Ty) (b : Prod String Effect4.Program.Ty) : Bool *)
+
+let program_sig_data_extends_b__lam_1 (a : string * Ty.t) (b : string * Ty.t) : bool =
+  let _x_1 = fun _b1 _b2 -> _b1 = _b2 in
+  let _x_2 = program_inst_decidable_eq_ty in
+  inst_decidable_eq_prod _x_1 _x_2 a b
+
+
+
 (* LCNF mono: Effect4.Program.SigData.extendsB (a : Effect4.Program.SigData) (b : Effect4.Program.SigData) : Bool *)
 
 let program_sig_data_extends_b (a : sig_data) (b : sig_data) : bool =
@@ -43218,9 +43226,9 @@ let program_sig_data_extends_b (a : sig_data) (b : sig_data) : bool =
                   let _x_5 = program_sig_data_all_rows b in
                   list_is_prefix_of_at_program_sig_data_extends_b_spec_0 _x_4 _x_5) else _x_3) else _y_2 in
               match (app_1 : sig_app) with
-                | { services = services_1; types = types_1; _ } -> (let _f_7 = inst_decidable_eq_sig_app_dec_eq__lam_0 in
+                | { services = services_1; types = types_1; _ } -> (let _f_7 = program_sig_data_extends_b__lam_0 in
                   let _x_8 = Eff_image.inst_decidable_eq_list _f_7 services services_1 in
-                  if _x_8 then (let _f_9 = inst_decidable_eq_sig_app_dec_eq__lam_1 in
+                  if _x_8 then (let _f_9 = program_sig_data_extends_b__lam_1 in
                     let _x_10 = Eff_image.inst_decidable_eq_list _f_9 types types_1 in
                     _jp_1 _x_10) else _jp_1 _x_8))))
 
@@ -44131,20 +44139,9 @@ let tool_native_rule : check_input -> check_input * verdict -> bool =
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.toVal.spec_0 (a.1 : List Effect4.Program.Row) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.toVal.spec_1 (a.1 : List (Prod Effect4.ServiceKey Effect4.Program.Ty)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 (a_1 : Row.t list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = store_program_gen_row_c_to_val head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 tail_5 _x_7)
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.toVal.spec_1 (a.1 : List (Prod Effect4.ServiceKey Effect4.Program.Ty)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_1 (a_1 : (ServiceKey.t * Ty.t) list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_1 (a_1 : (ServiceKey.t * Ty.t) list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
@@ -44152,13 +44149,13 @@ let rec list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_
           let _x_7 = Eff_image.store_program_gen_ty_c_to_val_ty snd_1 in
           let _x_8 = Val.Pair (_x_6, _x_7) in
           let _x_9 = _x_8 :: a_2 in
-          list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_1 tail_5 _x_9))
+          list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_1 tail_5 _x_9))
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.toVal.spec_2 (a.1 : List (Prod String Effect4.Program.Ty)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.toVal.spec_2 (a.1 : List (Prod String Effect4.Program.Ty)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
 
-let rec list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_2 (a_1 : (string * Ty.t) list) (a_2 : Val.t list) : Val.t list =
+let rec list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_2 (a_1 : (string * Ty.t) list) (a_2 : Val.t list) : Val.t list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
@@ -44166,21 +44163,21 @@ let rec list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_
           let _x_7 = Eff_image.store_program_gen_ty_c_to_val_ty snd_1 in
           let _x_8 = Val.Pair (_x_6, _x_7) in
           let _x_9 = _x_8 :: a_2 in
-          list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_2 tail_5 _x_9))
+          list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_2 tail_5 _x_9))
 
 
 
-(* LCNF mono: Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.toVal (x.1 : Effect4.Program.SigApp) : Effect4.Store.Val *)
+(* LCNF mono: Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.toVal (x.1 : Effect4.Program.SigApp) : Effect4.Store.Val *)
 
-let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val (x_1 : sig_app) : Val.t =
+let store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val (x_1 : sig_app) : Val.t =
   match (x_1 : sig_app) with
     | { rows = rows_2; services = services_3; types = types_4 } -> (let _x_5 = Z.of_int 0 in
       let _x_6 = [] in
-      let _x_7 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 rows_2 _x_6 in
+      let _x_7 = list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 rows_2 _x_6 in
       let _x_8 = Val.List _x_7 in
-      let _x_9 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_1 services_3 _x_6 in
+      let _x_9 = list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_1 services_3 _x_6 in
       let _x_10 = Val.List _x_9 in
-      let _x_11 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_2 types_4 _x_6 in
+      let _x_11 = list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_2 types_4 _x_6 in
       let _x_12 = Val.List _x_11 in
       let _x_13 = _x_12 :: _x_6 in
       let _x_14 = _x_10 :: _x_13 in
@@ -44196,7 +44193,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_sketch_c_to_val (x_1 :
     | { program = program_2; holes = holes_3 } -> (let _x_4 = Z.of_int 0 in
       let _x_5 = Eff_image.store_program_gen_eff_c_to_val_eff program_2 in
       let _x_6 = [] in
-      let _x_7 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 holes_3 _x_6 in
+      let _x_7 = list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 holes_3 _x_6 in
       let _x_8 = Val.List _x_7 in
       let _x_9 = _x_8 :: _x_6 in
       let _x_10 = _x_5 :: _x_9 in
@@ -44377,6 +44374,20 @@ let store_tool_gen_t_95_root_95__46_effect4_46_api_46_budget_c_to_val (x_1 : bud
 
 
 
+(* LCNF mono: Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_ObjectC.toVal (x.1 : Effect4.Program.Object) : Effect4.Store.Val *)
+
+let store_object_gen_t_95_root_95__46_effect4_46_program_46_object_c_to_val (x_1 : object_) : Val.t =
+  match (x_1 : object_) with
+    | { app = app_2; program = program_3 } -> (let _x_4 = Z.of_int 0 in
+      let _x_5 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val app_2 in
+      let _x_6 = Eff_image.store_program_gen_eff_c_to_val_eff program_3 in
+      let _x_7 = [] in
+      let _x_8 = _x_6 :: _x_7 in
+      let _x_9 = _x_5 :: _x_8 in
+      Val.Ctor (_x_4, _x_9))
+
+
+
 (* LCNF mono: Effect4.Store.RunnerGen.CallC.toVal (x.1 : Effect4.Api.HostSession.Call) : Effect4.Store.Val *)
 
 let store_runner_gen_call_c_to_val (x_1 : call) : Val.t =
@@ -44385,7 +44396,7 @@ let store_runner_gen_call_c_to_val (x_1 : call) : Val.t =
       let _x_10 = Val.Nat version_2 in
       let _x_11 = Val.Str session_3 in
       let _x_12 = [] in
-      let _x_13 = list_map_tr_loop_at_store_runner_gen_header_c_to_val_spec_0 table_4 _x_12 in
+      let _x_13 = list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 table_4 _x_12 in
       let _x_14 = Val.List _x_13 in
       let _x_15 = Val.Nat call_id_5 in
       let _x_16 = store_api_gen_fiber_id_c_to_val fiber_6 in
@@ -44572,45 +44583,26 @@ let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_reco
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_LiveRecordC.toVal.spec_1 (a.1 : List (Prod String Nat)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
-
-let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_1 (a_1 : (string * Z.t) list) (a_2 : Val.t list) : Val.t list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, snd_1 -> (let _x_6 = Val.Str fst_1 in
-          let _x_7 = Val.Nat snd_1 in
-          let _x_8 = Val.Pair (_x_6, _x_7) in
-          let _x_9 = _x_8 :: a_2 in
-          list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_1 tail_5 _x_9))
-
-
-
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_LiveRecordC.toVal (x.1 : Effect4.LiveRecord) : Effect4.Store.Val *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val (x_1 : live_record) : Val.t =
   match (x_1 : live_record) with
-    | { version = version_2; app = app_3; program = program_4; session = session_5; binding = binding_6; budget = budget_7; journal = journal_8; row_names = row_names_9 } -> (let _x_10 = Z.of_int 0 in
-      let _x_11 = Val.Nat version_2 in
-      let _x_12 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val app_3 in
-      let _x_13 = Eff_image.store_program_gen_eff_c_to_val_eff program_4 in
-      let _x_14 = Val.Str session_5 in
-      let _x_15 = Val.Str binding_6 in
-      let _x_16 = store_tool_gen_t_95_root_95__46_effect4_46_api_46_budget_c_to_val budget_7 in
-      let _x_17 = [] in
-      let _x_18 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_0 journal_8 _x_17 in
-      let _x_19 = Val.List _x_18 in
-      let _x_20 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_1 row_names_9 _x_17 in
-      let _x_21 = Val.List _x_20 in
-      let _x_22 = _x_21 :: _x_17 in
-      let _x_23 = _x_19 :: _x_22 in
-      let _x_24 = _x_16 :: _x_23 in
-      let _x_25 = _x_15 :: _x_24 in
-      let _x_26 = _x_14 :: _x_25 in
-      let _x_27 = _x_13 :: _x_26 in
-      let _x_28 = _x_12 :: _x_27 in
-      let _x_29 = _x_11 :: _x_28 in
-      Val.Ctor (_x_10, _x_29))
+    | { version = version_2; object_ = object__3; session = session_4; binding = binding_5; budget = budget_6; journal = journal_7 } -> (let _x_8 = Z.of_int 0 in
+      let _x_9 = Val.Nat version_2 in
+      let _x_10 = store_object_gen_t_95_root_95__46_effect4_46_program_46_object_c_to_val object__3 in
+      let _x_11 = Val.Str session_4 in
+      let _x_12 = Val.Str binding_5 in
+      let _x_13 = store_tool_gen_t_95_root_95__46_effect4_46_api_46_budget_c_to_val budget_6 in
+      let _x_14 = [] in
+      let _x_15 = list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_to_val_spec_0 journal_7 _x_14 in
+      let _x_16 = Val.List _x_15 in
+      let _x_17 = _x_16 :: _x_14 in
+      let _x_18 = _x_13 :: _x_17 in
+      let _x_19 = _x_12 :: _x_18 in
+      let _x_20 = _x_11 :: _x_19 in
+      let _x_21 = _x_10 :: _x_20 in
+      let _x_22 = _x_9 :: _x_21 in
+      Val.Ctor (_x_8, _x_22))
 
 
 
@@ -44698,7 +44690,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_action_c_to_val (x_1 : ac
   match (x_1 : action) with
     | Action_open_ (name_2, app_3, sketch_4) -> (let _x_5 = Z.of_int 0 in
       let _x_6 = Val.Str name_2 in
-      let _x_7 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val app_3 in
+      let _x_7 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val app_3 in
       let _x_8 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_sketch_c_to_val sketch_4 in
       let _x_9 = [] in
       let _x_10 = _x_8 :: _x_9 in
@@ -45292,7 +45284,7 @@ let store_runner_gen_call_c_of_val (x_1 : Val.t) : call option =
                                           | Val.Nat n_35 -> (match (head_9 : Val.t) with
                                               | Val.Str s_36 -> (match (head_11 : Val.t) with
                                                   | Val.List xs_37 -> (let _x_38 = [] in
-                                                    let _x_39 = Eff_image.list_map_m_loop_at_store_runner_gen_header_c_of_val_spec_0 xs_37 _x_38 in
+                                                    let _x_39 = Eff_image.list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 xs_37 _x_38 in
                                                     match _x_39 with
                                                       | Some val__40 -> (match (head_13 : Val.t) with
                                                           | Val.Nat n_41 -> (let _x_42 = store_api_gen_fiber_id_c_of_val head_29 in
@@ -45518,45 +45510,9 @@ let rec list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_ac
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.ofVal.spec_0 (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Program.Row) : Option (List Effect4.Program.Row) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.ofVal.spec_2 (x.1 : List Effect4.Store.Val) (x.2 : List (Prod String Effect4.Program.Ty)) : Option (List (Prod String Effect4.Program.Ty)) *)
 
-let rec list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 (x_1 : Val.t list) (x_2 : Row.t list) : Row.t list option =
-  match x_1 with
-    | [] -> (let _x_3 = List.rev x_2 in
-      Some _x_3)
-    | head_5 :: tail_6 -> (let _x_7 = Eff_image.store_program_gen_row_c_of_val head_5 in
-      match _x_7 with
-        | None -> None
-        | Some val__9 -> (let _x_10 = val__9 :: x_2 in
-          list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 tail_6 _x_10))
-
-
-
-(* LCNF mono: List.mapM.loop._at_.Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.ofVal.spec_1 (x.1 : List Effect4.Store.Val) (x.2 : List (Prod Effect4.ServiceKey Effect4.Program.Ty)) : Option (List (Prod Effect4.ServiceKey Effect4.Program.Ty)) *)
-
-let rec list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_1 (x_1 : Val.t list) (x_2 : (ServiceKey.t * Ty.t) list) : (ServiceKey.t * Ty.t) list option =
-  match x_1 with
-    | [] -> (let _x_3 = List.rev x_2 in
-      Some _x_3)
-    | head_5 :: tail_6 -> (match (head_5 : Val.t) with
-        | Val.Pair (a_7, b_8) -> (let _x_9 = Eff_image.store_program_gen_service_key_c_of_val a_7 in
-          match _x_9 with
-            | Some val__10 -> (let _x_11 = Eff_image.store_program_gen_ty_c_to_val_ty in
-              let _x_12 = Eff_image.store_program_gen_ty_c_raw_ty in
-              let _x_13 = Eff_image.store_guarded _x_11 _x_12 b_8 in
-              match _x_13 with
-                | Some val__14 -> (let _x_15 = val__10, val__14 in
-                  let _x_16 = _x_15 :: x_2 in
-                  list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_1 tail_6 _x_16)
-                | _ -> None)
-            | _ -> None)
-        | _ -> None)
-
-
-
-(* LCNF mono: List.mapM.loop._at_.Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.ofVal.spec_2 (x.1 : List Effect4.Store.Val) (x.2 : List (Prod String Effect4.Program.Ty)) : Option (List (Prod String Effect4.Program.Ty)) *)
-
-let rec list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_2 (x_1 : Val.t list) (x_2 : (string * Ty.t) list) : (string * Ty.t) list option =
+let rec list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_2 (x_1 : Val.t list) (x_2 : (string * Ty.t) list) : (string * Ty.t) list option =
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Some _x_3)
@@ -45568,16 +45524,16 @@ let rec list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_4
               match _x_12 with
                 | Some val__13 -> (let _x_14 = s_9, val__13 in
                   let _x_15 = _x_14 :: x_2 in
-                  list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_2 tail_6 _x_15)
+                  list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_2 tail_6 _x_15)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
 
 
 
-(* LCNF mono: Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.ofVal (x.1 : Effect4.Store.Val) : Option Effect4.Program.SigApp *)
+(* LCNF mono: Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.ofVal (x.1 : Effect4.Store.Val) : Option Effect4.Program.SigApp *)
 
-let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val (x_1 : Val.t) : sig_app option =
+let store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val (x_1 : Val.t) : sig_app option =
   match (x_1 : Val.t) with
     | Val.Ctor (index_2, args_3) -> (let _x_4 = Z.of_int 0 in
       let _x_5 = Z.equal index_2 _x_4 in
@@ -45596,13 +45552,13 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val (x_1
                     match tail_12 with
                       | [] -> (match (head_7 : Val.t) with
                           | Val.List xs_23 -> (let _x_24 = [] in
-                            let _x_25 = list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 xs_23 _x_24 in
+                            let _x_25 = Eff_image.list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 xs_23 _x_24 in
                             match _x_25 with
                               | Some val__26 -> (match (head_9 : Val.t) with
-                                  | Val.List xs_27 -> (let _x_28 = list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_1 xs_27 _x_24 in
+                                  | Val.List xs_27 -> (let _x_28 = list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_1 xs_27 _x_24 in
                                     match _x_28 with
                                       | Some val__29 -> (match (head_11 : Val.t) with
-                                          | Val.List xs_30 -> (let _x_31 = list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_2 xs_30 _x_24 in
+                                          | Val.List xs_30 -> (let _x_31 = list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_2 xs_30 _x_24 in
                                             match _x_31 with
                                               | Some val__32 -> (let _x_33 = ({ rows = val__26; services = val__29; types = val__32 } : sig_app) in
                                                 Some _x_33)
@@ -45612,6 +45568,32 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val (x_1
                                   | _ -> _jp_13 ())
                               | _ -> _jp_21 ())
                           | _ -> _jp_21 ())
+                      | _ -> None)
+                  | _ -> None)
+              | _ -> None)
+          | _ -> None) else None)
+    | _ -> None
+
+
+
+(* LCNF mono: Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_ObjectC.ofVal (x.1 : Effect4.Store.Val) : Option Effect4.Program.Object *)
+
+let store_object_gen_t_95_root_95__46_effect4_46_program_46_object_c_of_val (x_1 : Val.t) : object_ option =
+  match (x_1 : Val.t) with
+    | Val.Ctor (index_2, args_3) -> (let _x_4 = Z.of_int 0 in
+      let _x_5 = Z.equal index_2 _x_4 in
+      if _x_5 then (match args_3 with
+          | head_7 :: tail_8 -> (match tail_8 with
+              | head_9 :: tail_10 -> (match tail_10 with
+                  | [] -> (let _x_11 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val head_7 in
+                    match _x_11 with
+                      | Some val__12 -> (let _x_13 = Eff_image.store_program_gen_eff_c_to_val_eff in
+                        let _x_14 = Eff_image.store_program_gen_eff_c_raw_eff in
+                        let _x_15 = Eff_image.store_guarded _x_13 _x_14 head_9 in
+                        match _x_15 with
+                          | Some val__16 -> (let _x_17 = ({ app = val__12; program = val__16 } : object_) in
+                            Some _x_17)
+                          | _ -> None)
                       | _ -> None)
                   | _ -> None)
               | _ -> None)
@@ -45660,24 +45642,6 @@ let rec list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_recor
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_LiveRecordC.ofVal.spec_1 (x.1 : List Effect4.Store.Val) (x.2 : List (Prod String Nat)) : Option (List (Prod String Nat)) *)
-
-let rec list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_1 (x_1 : Val.t list) (x_2 : (string * Z.t) list) : (string * Z.t) list option =
-  match x_1 with
-    | [] -> (let _x_3 = List.rev x_2 in
-      Some _x_3)
-    | head_5 :: tail_6 -> (match (head_5 : Val.t) with
-        | Val.Pair (a_7, b_8) -> (match (a_7 : Val.t) with
-            | Val.Str s_9 -> (match (b_8 : Val.t) with
-                | Val.Nat n_10 -> (let _x_11 = s_9, n_10 in
-                  let _x_12 = _x_11 :: x_2 in
-                  list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_1 tail_6 _x_12)
-                | _ -> None)
-            | _ -> None)
-        | _ -> None)
-
-
-
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_LiveRecordC.ofVal (x.1 : Effect4.Store.Val) : Option Effect4.LiveRecord *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val (x_1 : Val.t) : live_record option =
@@ -45690,95 +45654,52 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val (x_1 : Val.t
                   | head_11 :: tail_12 -> (match tail_12 with
                       | head_13 :: tail_14 -> (match tail_14 with
                           | head_15 :: tail_16 -> (match tail_16 with
-                              | head_17 :: tail_18 -> (match tail_18 with
-                                  | head_19 :: tail_20 -> (match tail_20 with
-                                      | head_21 :: tail_22 -> (let[@local always] _jp_23 = fun () -> match (head_21 : Val.t) with
-                                          | Val.List _ -> None
-                                          | _ -> None in
-                                        let[@local always] _jp_27 = fun () -> match (head_19 : Val.t) with
-                                          | Val.List _ -> _jp_23 ()
-                                          | _ -> _jp_23 () in
-                                        let[@local always] _jp_29 = fun () -> match (head_15 : Val.t) with
-                                          | Val.Str _ -> _jp_27 ()
-                                          | _ -> _jp_27 () in
-                                        let[@local always] _jp_31 = fun () -> match (head_21 : Val.t) with
-                                          | Val.List _ -> None
-                                          | _ -> None in
-                                        let[@local always] _jp_35 = fun () -> match (head_19 : Val.t) with
-                                          | Val.List _ -> _jp_31 ()
-                                          | _ -> _jp_31 () in
-                                        let[@local always] _jp_37 = fun () -> match (head_15 : Val.t) with
-                                          | Val.Str _ -> _jp_35 ()
-                                          | _ -> _jp_35 () in
-                                        let[@local always] _jp_39 = fun () -> match (head_21 : Val.t) with
-                                          | Val.List _ -> None
-                                          | _ -> None in
-                                        let[@local always] _jp_43 = fun () -> match (head_19 : Val.t) with
-                                          | Val.List _ -> _jp_39 ()
-                                          | _ -> _jp_39 () in
-                                        let[@local always] _jp_45 = fun () -> match (head_15 : Val.t) with
-                                          | Val.Str _ -> _jp_43 ()
-                                          | _ -> _jp_43 () in
-                                        let[@local always] _jp_47 = fun () -> match (head_21 : Val.t) with
-                                          | Val.List _ -> None
-                                          | _ -> None in
-                                        let[@local always] _jp_51 = fun () -> match (head_19 : Val.t) with
-                                          | Val.List _ -> _jp_47 ()
-                                          | _ -> _jp_47 () in
-                                        let[@local always] _jp_53 = fun () -> match (head_21 : Val.t) with
-                                          | Val.List _ -> None
-                                          | _ -> None in
-                                        let[@local always] _jp_57 = fun () -> match (head_21 : Val.t) with
-                                          | Val.List _ -> None
-                                          | _ -> None in
-                                        let[@local always] _jp_61 = fun () -> match (head_21 : Val.t) with
-                                          | Val.List _ -> None
-                                          | _ -> None in
-                                        match tail_22 with
-                                          | [] -> (match (head_7 : Val.t) with
-                                              | Val.Nat n_65 -> (let _x_66 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val head_9 in
-                                                match _x_66 with
-                                                  | Some val__67 -> (let _x_68 = Eff_image.store_program_gen_eff_c_to_val_eff in
-                                                    let _x_69 = Eff_image.store_program_gen_eff_c_raw_eff in
-                                                    let _x_70 = Eff_image.store_guarded _x_68 _x_69 head_11 in
-                                                    match _x_70 with
-                                                      | Some val__71 -> (match (head_13 : Val.t) with
-                                                          | Val.Str s_72 -> (match (head_15 : Val.t) with
-                                                              | Val.Str s_73 -> (let _x_74 = store_tool_gen_t_95_root_95__46_effect4_46_api_46_budget_c_of_val head_17 in
-                                                                match _x_74 with
-                                                                  | Some val__75 -> (match (head_19 : Val.t) with
-                                                                      | Val.List xs_76 -> (let _x_77 = [] in
-                                                                        let _x_78 = list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_0 xs_76 _x_77 in
-                                                                        match _x_78 with
-                                                                          | Some val__79 -> (match (head_21 : Val.t) with
-                                                                              | Val.List xs_80 -> (let _x_81 = list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_1 xs_80 _x_77 in
-                                                                                match _x_81 with
-                                                                                  | Some val__82 -> (let _x_83 = ({ version = n_65; app = val__67; program = val__71; session = s_72; binding = s_73; budget = val__75; journal = val__79; row_names = val__82 } : live_record) in
-                                                                                    Some _x_83)
-                                                                                  | _ -> None)
-                                                                              | _ -> None)
-                                                                          | _ -> _jp_61 ())
-                                                                      | _ -> _jp_61 ())
-                                                                  | _ -> (match (head_19 : Val.t) with
-                                                                      | Val.List _ -> _jp_57 ()
-                                                                      | _ -> _jp_57 ()))
-                                                              | _ -> (match (head_19 : Val.t) with
-                                                                  | Val.List _ -> _jp_53 ()
-                                                                  | _ -> _jp_53 ()))
-                                                          | _ -> (match (head_15 : Val.t) with
-                                                              | Val.Str _ -> _jp_51 ()
-                                                              | _ -> _jp_51 ()))
-                                                      | _ -> (match (head_13 : Val.t) with
-                                                          | Val.Str _ -> _jp_45 ()
-                                                          | _ -> _jp_45 ()))
-                                                  | _ -> (match (head_13 : Val.t) with
-                                                      | Val.Str _ -> _jp_37 ()
-                                                      | _ -> _jp_37 ()))
+                              | head_17 :: tail_18 -> (let[@local always] _jp_19 = fun () -> match (head_17 : Val.t) with
+                                  | Val.List _ -> None
+                                  | _ -> None in
+                                let[@local always] _jp_23 = fun () -> match (head_13 : Val.t) with
+                                  | Val.Str _ -> _jp_19 ()
+                                  | _ -> _jp_19 () in
+                                let[@local always] _jp_25 = fun () -> match (head_17 : Val.t) with
+                                  | Val.List _ -> None
+                                  | _ -> None in
+                                let[@local always] _jp_29 = fun () -> match (head_13 : Val.t) with
+                                  | Val.Str _ -> _jp_25 ()
+                                  | _ -> _jp_25 () in
+                                let[@local always] _jp_31 = fun () -> match (head_17 : Val.t) with
+                                  | Val.List _ -> None
+                                  | _ -> None in
+                                match tail_18 with
+                                  | [] -> (match (head_7 : Val.t) with
+                                      | Val.Nat n_35 -> (let _x_36 = store_object_gen_t_95_root_95__46_effect4_46_program_46_object_c_of_val head_9 in
+                                        match _x_36 with
+                                          | Some val__37 -> (match (head_11 : Val.t) with
+                                              | Val.Str s_38 -> (match (head_13 : Val.t) with
+                                                  | Val.Str s_39 -> (let _x_40 = store_tool_gen_t_95_root_95__46_effect4_46_api_46_budget_c_of_val head_15 in
+                                                    match _x_40 with
+                                                      | Some val__41 -> (match (head_17 : Val.t) with
+                                                          | Val.List xs_42 -> (let _x_43 = [] in
+                                                            let _x_44 = list_map_m_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_of_val_spec_0 xs_42 _x_43 in
+                                                            match _x_44 with
+                                                              | Some val__45 -> (let _x_46 = ({ version = n_35; object_ = val__37; session = s_38; binding = s_39; budget = val__41; journal = val__45 } : live_record) in
+                                                                Some _x_46)
+                                                              | _ -> None)
+                                                          | _ -> None)
+                                                      | _ -> (match (head_17 : Val.t) with
+                                                          | Val.List _ -> None
+                                                          | _ -> None))
+                                                  | _ -> (match (head_17 : Val.t) with
+                                                      | Val.List _ -> None
+                                                      | _ -> None))
                                               | _ -> (match (head_13 : Val.t) with
-                                                  | Val.Str _ -> _jp_29 ()
-                                                  | _ -> _jp_29 ()))
-                                          | _ -> None)
-                                      | _ -> None)
+                                                  | Val.Str _ -> _jp_31 ()
+                                                  | _ -> _jp_31 ()))
+                                          | _ -> (match (head_11 : Val.t) with
+                                              | Val.Str _ -> _jp_29 ()
+                                              | _ -> _jp_29 ()))
+                                      | _ -> (match (head_11 : Val.t) with
+                                          | Val.Str _ -> _jp_23 ()
+                                          | _ -> _jp_23 ()))
                                   | _ -> None)
                               | _ -> None)
                           | _ -> None)
@@ -46092,7 +46013,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_sketch_c_of_val (x_1 :
                     match _x_13 with
                       | Some val__14 -> (match (head_9 : Val.t) with
                           | Val.List xs_15 -> (let _x_16 = [] in
-                            let _x_17 = list_map_m_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 xs_15 _x_16 in
+                            let _x_17 = Eff_image.list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 xs_15 _x_16 in
                             match _x_17 with
                               | Some val__18 -> (let _x_19 = ({ program = val__14; holes = val__18 } : sketch) in
                                 Some _x_19)
@@ -46119,7 +46040,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_action_c_of_val (x_1 : Va
               | head_116 :: tail_117 -> (match tail_117 with
                   | head_118 :: tail_119 -> (match tail_119 with
                       | [] -> (match (head_114 : Val.t) with
-                          | Val.Str s_120 -> (let _x_121 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val head_116 in
+                          | Val.Str s_120 -> (let _x_121 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val head_116 in
                             match _x_121 with
                               | Some val__122 -> (let _x_123 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_sketch_c_of_val head_118 in
                                 match _x_123 with
@@ -47289,9 +47210,9 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_part_sig_c_to_val (x_
 let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_data_c_to_val (x_1 : sig_data) : Val.t =
   match (x_1 : sig_data) with
     | { app = app_2; holes = holes_3; part = part_4 } -> (let _x_5 = Z.of_int 0 in
-      let _x_6 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val app_2 in
+      let _x_6 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val app_2 in
       let _x_7 = [] in
-      let _x_8 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 holes_3 _x_7 in
+      let _x_8 = list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 holes_3 _x_7 in
       let _x_9 = Val.List _x_8 in
       let _x_10 = store_check_gen_t_95_root_95__46_effect4_46_program_46_part_sig_c_to_val part_4 in
       let _x_11 = _x_10 :: _x_7 in
@@ -47389,18 +47310,18 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val (x_1 
       let _x_12 = Eff_image.store_program_gen_eff_c_to_val_eff expected_3 in
       let _x_13 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_data_c_to_val context_4 in
       let[@local always] _jp_14 = fun _y_15 _y_16 _y_17 -> let _x_18 = _y_17 :: _x_9 in
-      let _x_19 = _y_15 :: _x_18 in
-      let _x_20 = _y_16 :: _x_19 in
+      let _x_19 = _y_16 :: _x_18 in
+      let _x_20 = _y_15 :: _x_19 in
       let _x_21 = _x_13 :: _x_20 in
       let _x_22 = _x_12 :: _x_21 in
       let _x_23 = _x_11 :: _x_22 in
       Val.Ctor (_x_8, _x_23) in
       let[@local always] _jp_25 = fun _y_26 _y_27 -> match refusal_7 with
         | None -> (let _x_28 = Val.None in
-          _jp_14 _y_27 _y_26 _x_28)
+          _jp_14 _y_26 _y_27 _x_28)
         | Some val__29 -> (let _x_30 = store_refusals_gen_t_64__95_root_95__46_effect4_46_located_32__40__64__95_root_95__46_list_32__40__95_root_95__46_nat_41__41__32__40__95_root_95__46_effect4_46_program_46_type_reason_41_c_to_val val__29 in
           let _x_31 = Val.Some _x_30 in
-          _jp_14 _y_27 _y_26 _x_31) in
+          _jp_14 _y_26 _y_27 _x_31) in
       let[@local always] _jp_32 = fun _y_33 -> match entry_6 with
         | None -> (let _x_34 = Val.None in
           _jp_25 _y_33 _x_34)
@@ -47422,11 +47343,11 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val (x_1 : 
   match (x_1 : doc_view) with
     | { snap = snap_2; type_ = type__3; refusals = refusals_4; holes = holes_5; declared = declared_6; inspection = inspection_7 } -> (let _x_8 = Z.of_int 0 in
       let _x_9 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_to_val snap_2 in
-      let[@local always] _jp_10 = fun _y_11 _y_12 _y_13 _y_14 _y_15 _y_16 -> let _x_17 = _y_16 :: _y_11 in
-      let _x_18 = _y_12 :: _x_17 in
-      let _x_19 = _y_14 :: _x_18 in
-      let _x_20 = _y_15 :: _x_19 in
-      let _x_21 = _y_13 :: _x_20 in
+      let[@local always] _jp_10 = fun _y_11 _y_12 _y_13 _y_14 _y_15 _y_16 -> let _x_17 = _y_16 :: _y_15 in
+      let _x_18 = _y_13 :: _x_17 in
+      let _x_19 = _y_12 :: _x_18 in
+      let _x_20 = _y_14 :: _x_19 in
+      let _x_21 = _y_11 :: _x_20 in
       let _x_22 = _x_9 :: _x_21 in
       Val.Ctor (_x_8, _x_22) in
       let[@local always] _jp_24 = fun _y_25 -> let _x_26 = [] in
@@ -47438,10 +47359,10 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_doc_view_c_to_val (x_1 : 
       let _x_32 = Val.List _x_31 in
       match inspection_7 with
         | None -> (let _x_33 = Val.None in
-          _jp_10 _x_26 _x_32 _y_25 _x_30 _x_28 _x_33)
+          _jp_10 _y_25 _x_30 _x_32 _x_28 _x_26 _x_33)
         | Some val__34 -> (let _x_35 = store_tool_gen_t_95_root_95__46_effect4_46_tool_46_inspection_c_to_val val__34 in
           let _x_36 = Val.Some _x_35 in
-          _jp_10 _x_26 _x_32 _y_25 _x_30 _x_28 _x_36) in
+          _jp_10 _y_25 _x_30 _x_32 _x_28 _x_26 _x_36) in
       match type__3 with
         | None -> (let _x_37 = Val.None in
           _jp_24 _x_37)
@@ -47585,7 +47506,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_origin_c_to_val (x_1 : or
   match (x_1 : origin) with
     | Origin_snapshot (snap_2, app_3, sketch_4) -> (let _x_5 = Z.of_int 0 in
       let _x_6 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_to_val snap_2 in
-      let _x_7 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val app_3 in
+      let _x_7 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val app_3 in
       let _x_8 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_sketch_c_to_val sketch_4 in
       let _x_9 = [] in
       let _x_10 = _x_8 :: _x_9 in
@@ -47778,16 +47699,16 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_46_call_view_c_to_val (x_1 :
       let _x_7 = store_runner_gen_await_c_to_val await_2 in
       let[@local always] _jp_8 = fun _y_9 _y_10 _y_11 -> let _x_12 = [] in
       let _x_13 = _y_11 :: _x_12 in
-      let _x_14 = _y_10 :: _x_13 in
-      let _x_15 = _y_9 :: _x_14 in
+      let _x_14 = _y_9 :: _x_13 in
+      let _x_15 = _y_10 :: _x_14 in
       let _x_16 = _x_7 :: _x_15 in
       Val.Ctor (_x_6, _x_16) in
       let[@local always] _jp_18 = fun _y_19 _y_20 -> match held_5 with
         | None -> (let _x_21 = Val.None in
-          _jp_8 _y_19 _y_20 _x_21)
+          _jp_8 _y_20 _y_19 _x_21)
         | Some val__22 -> (let _x_23 = store_tool_gen_t_95_root_95__46_effect4_46_live_46_held_call_c_to_val val__22 in
           let _x_24 = Val.Some _x_23 in
-          _jp_8 _y_19 _y_20 _x_24) in
+          _jp_8 _y_20 _y_19 _x_24) in
       let[@local always] _jp_25 = fun _y_26 -> match checked_4 with
         | None -> (let _x_27 = Val.None in
           _jp_18 _y_26 _x_27)
@@ -48227,9 +48148,9 @@ let rec list_map_tr_loop_at_store_tool_gen_t_95_root_95__46_effect4_46_tool_46_a
 let store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_to_val (x_1 : check_input) : Val.t =
   match (x_1 : check_input) with
     | CheckInput_module (app_2, holes_3, program_4) -> (let _x_5 = Z.of_int 0 in
-      let _x_6 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val app_2 in
+      let _x_6 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val app_2 in
       let _x_7 = [] in
-      let _x_8 = list_map_tr_loop_at_store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 holes_3 _x_7 in
+      let _x_8 = list_map_tr_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_to_val_spec_0 holes_3 _x_7 in
       let _x_9 = Val.List _x_8 in
       let _x_10 = Eff_image.store_program_gen_eff_c_to_val_eff program_4 in
       let _x_11 = _x_10 :: _x_7 in
@@ -49020,16 +48941,16 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_slot_view_c_to_val (x_1 :
       let _x_7 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_ext_slot_c_to_val slot_2 in
       let[@local always] _jp_8 = fun _y_9 _y_10 _y_11 -> let _x_12 = [] in
       let _x_13 = _y_11 :: _x_12 in
-      let _x_14 = _y_9 :: _x_13 in
-      let _x_15 = _y_10 :: _x_14 in
+      let _x_14 = _y_10 :: _x_13 in
+      let _x_15 = _y_9 :: _x_14 in
       let _x_16 = _x_7 :: _x_15 in
       Val.Ctor (_x_6, _x_16) in
       let[@local always] _jp_18 = fun _y_19 _y_20 -> match ty_5 with
         | None -> (let _x_21 = Val.None in
-          _jp_8 _y_20 _y_19 _x_21)
+          _jp_8 _y_19 _y_20 _x_21)
         | Some val__22 -> (let _x_23 = Eff_image.store_program_gen_ty_c_to_val_ty val__22 in
           let _x_24 = Val.Some _x_23 in
-          _jp_8 _y_20 _y_19 _x_24) in
+          _jp_8 _y_19 _y_20 _x_24) in
       let[@local always] _jp_25 = fun _y_26 -> match env_4 with
         | None -> (let _x_27 = Val.None in
           _jp_18 _y_26 _x_27)
@@ -54990,9 +54911,9 @@ let tool_native_serve_uncached (workspace : workspace) (v : Val.t) : (Val.t * wo
 
 
 
-(* LCNF mono: Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.shapeDoc : Effect4.Store.ShapeDoc *)
+(* LCNF mono: Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.shapeDoc : Effect4.Store.ShapeDoc *)
 
-let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc : shape_doc =
+let store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc : shape_doc =
   let _x_1 = store_program_gen_row_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_program_gen_service_key_c_shape_doc in
@@ -55285,6 +55206,28 @@ let store_tool_gen_t_95_root_95__46_effect4_46_api_46_budget_c_shape_doc : shape
   let _x_9 = _x_5 :: _x_8 in
   let _x_10 = Shape_struct (_x_1, _x_9) in
   ({ root = _x_10; defs = _x_4 } : shape_doc)
+
+
+
+(* LCNF mono: Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_ObjectC.shapeDoc : Effect4.Store.ShapeDoc *)
+
+let store_object_gen_t_95_root_95__46_effect4_46_program_46_object_c_shape_doc : shape_doc =
+  let _x_1 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc in
+  match (_x_1 : shape_doc) with
+    | { root = root; defs = defs } -> (let _x_2 = "Effect4.Program.Object" in
+      let _x_3 = "app" in
+      let _x_4 = _x_3, root in
+      let _x_5 = "program" in
+      let _x_6 = "Eff" in
+      let _x_7 = Shape_named _x_6 in
+      let _x_8 = store_program_gen_eff_c_defs in
+      let _x_9 = _x_5, _x_7 in
+      let _x_10 = [] in
+      let _x_11 = _x_9 :: _x_10 in
+      let _x_12 = _x_4 :: _x_11 in
+      let _x_13 = Shape_struct (_x_2, _x_12) in
+      let _x_14 = defs @ _x_8 in
+      ({ root = _x_13; defs = _x_14 } : shape_doc))
 
 
 
@@ -55612,7 +55555,7 @@ let store_runner_gen_command_c_shape_doc : shape_doc =
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_LiveRecordC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_shape_doc : shape_doc =
-  let _x_1 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc in
+  let _x_1 = store_object_gen_t_95_root_95__46_effect4_46_program_46_object_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_api_46_budget_c_shape_doc in
       match (_x_2 : shape_doc) with
@@ -55626,41 +55569,27 @@ let store_tool_gen_t_95_root_95__46_effect4_46_live_record_c_shape_doc : shape_d
               let _x_9 = "version" in
               let _x_10 = Shape_nat in
               let _x_11 = _x_9, _x_10 in
-              let _x_12 = "app" in
+              let _x_12 = "object" in
               let _x_13 = _x_12, root in
-              let _x_14 = "program" in
-              let _x_15 = "Eff" in
-              let _x_16 = Shape_named _x_15 in
-              let _x_17 = store_program_gen_eff_c_defs in
-              let _x_18 = _x_14, _x_16 in
-              let _x_19 = "binding" in
-              let _x_20 = _x_19, _x_6 in
-              let _x_21 = "budget" in
-              let _x_22 = _x_21, root_1 in
-              let _x_23 = "journal" in
-              let _x_24 = Shape_list root_2 in
-              let _x_25 = _x_23, _x_24 in
-              let _x_26 = "rowNames" in
-              let _x_27 = Shape_pair (_x_6, _x_10) in
-              let _x_28 = _x_3 @ _x_3 in
-              let _x_29 = Shape_list _x_27 in
-              let _x_30 = _x_26, _x_29 in
-              let _x_31 = _x_30 :: _x_3 in
-              let _x_32 = _x_25 :: _x_31 in
-              let _x_33 = _x_22 :: _x_32 in
-              let _x_34 = _x_20 :: _x_33 in
-              let _x_35 = _x_7 :: _x_34 in
-              let _x_36 = _x_18 :: _x_35 in
-              let _x_37 = _x_13 :: _x_36 in
-              let _x_38 = _x_11 :: _x_37 in
-              let _x_39 = Shape_struct (_x_8, _x_38) in
-              let _x_40 = _x_3 @ defs in
-              let _x_41 = _x_40 @ _x_17 in
-              let _x_42 = _x_41 @ _x_3 in
-              let _x_43 = _x_42 @ _x_3 in
-              let _x_44 = _x_43 @ defs_1 in
-              let _x_45 = _x_44 @ _x_28 in
-              ({ root = _x_39; defs = _x_45 } : shape_doc))))
+              let _x_14 = "binding" in
+              let _x_15 = _x_14, _x_6 in
+              let _x_16 = "budget" in
+              let _x_17 = _x_16, root_1 in
+              let _x_18 = "journal" in
+              let _x_19 = Shape_list root_2 in
+              let _x_20 = _x_18, _x_19 in
+              let _x_21 = _x_20 :: _x_3 in
+              let _x_22 = _x_17 :: _x_21 in
+              let _x_23 = _x_15 :: _x_22 in
+              let _x_24 = _x_7 :: _x_23 in
+              let _x_25 = _x_13 :: _x_24 in
+              let _x_26 = _x_11 :: _x_25 in
+              let _x_27 = Shape_struct (_x_8, _x_26) in
+              let _x_28 = _x_3 @ defs in
+              let _x_29 = _x_28 @ _x_3 in
+              let _x_30 = _x_29 @ _x_3 in
+              let _x_31 = _x_30 @ defs_1 in
+              ({ root = _x_27; defs = _x_31 } : shape_doc))))
 
 
 
@@ -55780,7 +55709,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_run_46_event_c_shape_doc : shape_
 (* LCNF mono: Effect4.Store.ToolGen.T_95_root_95__46_Effect4_46_Tool_46_ActionC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_action_c_shape_doc : shape_doc =
-  let _x_1 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc in
+  let _x_1 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_sketch_c_shape_doc in
       match (_x_2 : shape_doc) with
@@ -56747,7 +56676,7 @@ let store_check_gen_t_95_root_95__46_effect4_46_program_46_part_sig_c_shape_doc 
 (* LCNF mono: Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_SigDataC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_data_c_shape_doc : shape_doc =
-  let _x_1 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc in
+  let _x_1 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_program_gen_row_c_shape_doc in
       match (_x_2 : shape_doc) with
@@ -57144,7 +57073,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_program_46_add_outcome_c_shape_do
 let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_origin_c_shape_doc : shape_doc =
   let _x_1 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_snap_c_shape_doc in
   match (_x_1 : shape_doc) with
-    | { root = root; defs = defs } -> (let _x_2 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc in
+    | { root = root; defs = defs } -> (let _x_2 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc in
       match (_x_2 : shape_doc) with
         | { root = root_1; defs = defs_1 } -> (let _x_3 = store_tool_gen_t_95_root_95__46_effect4_46_program_46_sketch_c_shape_doc in
           match (_x_3 : shape_doc) with
@@ -57966,7 +57895,7 @@ let store_tool_gen_t_95_root_95__46_effect4_46_tool_46_action_answer_c_shape_doc
 (* LCNF mono: Effect4.Store.CheckGen.T_95_root_95__46_Effect4_46_Program_46_Check_46_CheckInputC.shapeDoc : Effect4.Store.ShapeDoc *)
 
 let store_check_gen_t_95_root_95__46_effect4_46_program_46_check_46_check_input_c_shape_doc : shape_doc =
-  let _x_1 = store_check_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc in
+  let _x_1 = store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_shape_doc in
   match (_x_1 : shape_doc) with
     | { root = root; defs = defs } -> (let _x_2 = store_program_gen_row_c_shape_doc in
       match (_x_2 : shape_doc) with

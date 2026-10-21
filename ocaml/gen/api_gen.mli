@@ -189,18 +189,15 @@ and sketch = {
 and +!'a checked
 and live_record = {
   version : Z.t;
-  app : sig_app;
-  program : Eff_types.NativeOp.t Eff_types.Eff.t;
+  object_ : object_;
   session : string;
   binding : string;
   budget : budget;
   journal : command list;
-  row_names : (string * Z.t) list;
 }
 and effect4_live_record_refusal =
     Effect4_live_record_refusal_unsupportedVersion of Z.t
   | Effect4_live_record_refusal_admission of admit_refusal
-and built
 and run = {
   built : built;
   budget : budget;
@@ -816,6 +813,7 @@ and layer_ty = {
 }
 and dep_role = DepRole_body of Z.t | DepRole_main | DepRole_layers
 and dep = { role : dep_role; base : Z.t list; input : check_input; }
+and built
 and budget = { fuel : Z.t; compile_fuel : Z.t; }
 and header = {
   version : Z.t;
@@ -847,6 +845,10 @@ and session = {
   retired : retired_call list;
   calls : (Z.t list * Eff_types.NativeOp.t call_instance) list;
   funded : bool;
+}
+and object_ = {
+  app : sig_app;
+  program : Eff_types.NativeOp.t Eff_types.Eff.t;
 }
 and event =
     Event_control of
@@ -2092,7 +2094,6 @@ and clock_millis = Z.t
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) dispatcher =
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket list
 and row_def = Eff_types.Row.t
-and admitted_program = Eff_types.NativeOp.t typed_program
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) fiber_evaluator =
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp ->
     ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine ->
@@ -2103,6 +2104,7 @@ and memo_map_id = Z.t
 and 'u context = 'u service list
 and scope_store = scope_entry list
 and external_store = string list
+and admitted_program = Eff_types.NativeOp.t typed_program
 and run_id = Z.t
 and receipt = effect4_program_edit_step list
 and 'op typed_program = Eff_types.EffTy.t

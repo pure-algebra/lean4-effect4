@@ -69,16 +69,12 @@ let () =
     (refused (A.api_built_of_sketch app { program = malformed; holes = [] }));
   check
     "duplicate-field-restore-refused"
-    (refused (A.live_record_restore { record with program = malformed }));
-  let unnamed =
-    get
-      (A.live_record_restore
-         { record with session = ""; row_names = [ "stored", Z.of_int 9 ] })
-  in
+    (refused
+       (A.live_record_restore
+          { record with object_ = { record.object_ with program = malformed } }));
+  let unnamed = get (A.live_record_restore { record with session = "" }) in
   let retained = A.live_record_save unnamed in
-  check
-    "restore-stored-names-and-empty-session"
-    (retained.session = "" && retained.row_names = [ "stored", Z.of_int 9 ]);
+  check "restore-empty-session" (retained.session = "");
   check
     "unadmitted-call-refused"
     (refused

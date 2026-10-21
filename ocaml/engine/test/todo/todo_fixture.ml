@@ -9,7 +9,8 @@
    Properties:
    F1  Each input crosses as its canonical bytes and is read exactly: Lean's readings of a
        program, a row table and a type, lowered (Eff_codec), and Eff_val for values. A block that does not read, and a line this
-       reader does not know, raise Failure, never a skip.                  by construction *)
+       reader does not know, raise Failure, never a skip.                  by construction
+   F2  The fixture's row names equal the projection from its rows.          tested: test_todo *)
 
 open Eff_types
 
@@ -123,17 +124,24 @@ let names_of (v : Val.t) : (string * Z.t) list =
 ;;
 
 let built_of (r : request) : Todo_gen.built =
-  { Todo_gen.app =
-      { Todo_gen.rows =
-          (match Eff_codec.decode_rows (List.map (bytes_of_hex "a row") r.rows) with
-           | Some rows -> rows
-           | None -> failwith "fixture: the rows do not read exactly")
-      ; services = []
-      ; types = []
-      }
+  let rows =
+    match Eff_codec.decode_rows (List.map (bytes_of_hex "a row") r.rows) with
+    | Some rows -> rows
+    | None -> failwith "fixture: the rows do not read exactly"
+  in
+  let names = names_of (exactly "the row names" Eff_val.decode_exact r.names) in
+  let projected = List.mapi (fun i (row : Row.t) -> row.spelling, Z.of_int i) rows in
+  if
+    not
+      (List.equal
+         (fun (name, index) (other, position) ->
+            String.equal name other && Z.equal index position)
+         names
+         projected)
+  then failwith "fixture: the row names disagree with the rows";
+  { Todo_gen.app = { Todo_gen.rows; services = []; types = [] }
   ; program = exactly "the program" Eff_codec.decode_program r.program
   ; admitted = exactly "the type" Eff_codec.decode_eff_ty r.typed
-  ; row_names = names_of (exactly "the row names" Eff_val.decode_exact r.names)
   }
 ;;
 

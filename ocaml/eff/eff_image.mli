@@ -78,7 +78,7 @@ val store_program_gen_registration_c_to_val :
   Eff_types.Registration.t -> Eff_types.Val.t
 val store_program_gen_row_c_of_val :
   Eff_types.Val.t -> Eff_types.Row.t option
-val list_map_m_loop_at_store_runner_gen_header_c_of_val_spec_0 :
+val list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 :
   Eff_types.Val.t list -> Eff_types.Row.t list -> Eff_types.Row.t list option
 val run_kit_rows_of_val : Eff_types.Val.t -> Eff_types.Row.t list option
 val run_kit_eff_ty_of_val : Eff_types.Val.t -> Eff_types.EffTy.t option

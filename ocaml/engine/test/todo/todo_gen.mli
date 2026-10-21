@@ -12,7 +12,6 @@ and built =
   app : sig_app;
   program : Eff_types.NativeOp.t Eff_types.Eff.t;
   admitted : admitted_program;
-  row_names : (string * Z.t) list;
 }
 and fiber_id = Z.t
 and admitted_program = Eff_types.NativeOp.t typed_program

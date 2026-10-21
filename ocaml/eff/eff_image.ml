@@ -4203,9 +4203,9 @@ let store_program_gen_row_c_of_val (x_1 : Val.t) : Row.t option =
 
 
 
-(* LCNF mono: List.mapM.loop._at_.Effect4.Store.RunnerGen.HeaderC.ofVal.spec_0 (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Program.Row) : Option (List Effect4.Program.Row) *)
+(* LCNF mono: List.mapM.loop._at_.Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_SigAppC.ofVal.spec_0 (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Program.Row) : Option (List Effect4.Program.Row) *)
 
-let rec list_map_m_loop_at_store_runner_gen_header_c_of_val_spec_0 (x_1 : Val.t list) (x_2 : Row.t list) : Row.t list option =
+let rec list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 (x_1 : Val.t list) (x_2 : Row.t list) : Row.t list option =
   match x_1 with
     | [] -> (let _x_3 = List.rev x_2 in
       Some _x_3)
@@ -4213,7 +4213,7 @@ let rec list_map_m_loop_at_store_runner_gen_header_c_of_val_spec_0 (x_1 : Val.t 
       match _x_7 with
         | None -> None
         | Some val__9 -> (let _x_10 = val__9 :: x_2 in
-          list_map_m_loop_at_store_runner_gen_header_c_of_val_spec_0 tail_6 _x_10))
+          list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 tail_6 _x_10))
 
 
 
@@ -4222,7 +4222,7 @@ let rec list_map_m_loop_at_store_runner_gen_header_c_of_val_spec_0 (x_1 : Val.t 
 let run_kit_rows_of_val (v : Val.t) : Row.t list option =
   match (v : Val.t) with
     | Val.List xs_1 -> (let _x_2 = [] in
-      list_map_m_loop_at_store_runner_gen_header_c_of_val_spec_0 xs_1 _x_2)
+      list_map_m_loop_at_store_object_gen_t_95_root_95__46_effect4_46_program_46_sig_app_c_of_val_spec_0 xs_1 _x_2)
     | _ -> None
 
 
