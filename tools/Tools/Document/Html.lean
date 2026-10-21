@@ -101,7 +101,8 @@ def algebra (target : String → String := fragment) : Algebra (Nat → List Raw
       let body := el "tbody" (rs.map fun r => el "tr" (r.map fun c => el "td" (line target c)))
       [regionRaw (.label ("Table: " ++ ", ".intercalate hs)) [el "table" [head, body]] (some "scroll")]
   graph k caption ns es _ :=
-    let pic := (Figure.picture (fun r => some (target r)) ns es).toRaw
+    -- a node's anchor, the figure's key before its own: one id a page, however many figures draw it
+    let pic := (Figure.picture (fun r => some (target r)) (fun key => some (Figure.anchorIn k key)) ns es).toRaw
     let name (n : GraphNode) : RawNode := match n.ref with
       | some r => el "a" [.text n.label] [("href", target r)]
       | none => .text n.label

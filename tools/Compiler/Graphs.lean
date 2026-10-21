@@ -4,6 +4,7 @@ import Effect4.Program.Typing.Table
 import Effect4.Program.Authoring
 import Effect4.Store.Carrier.Utf8
 import Tools.Document
+import Tools.Document.Figure
 import Tools.View.Glyph
 import Tools.View.Flow
 
@@ -233,17 +234,23 @@ def read (b : Api.Built) : Relations :=
 private def cell (s : String) : Line := [.text s]
 private def cells (ss : List String) : List Line := ss.map cell
 
-/-- A scope's cell: its key as code, then its label linked to the drawn node of that key
-(`#node:` is the key the figures' nodes carry). -/
+/-- A relation row reaches its mark: the anchor of its node in the inside figure (`calls`), which
+draws every definition, row, main and module layers in its form (`Tools.Document.Figure.anchorIn`). -/
+private def anchor (key : String) : String := "#" ++ Tools.Document.Figure.anchorIn "calls" key
+
+/-- A scope's cell: its key as code, then its label linked to its node. The block's root and the
+definitions' spine are no node of a figure, so their labels link nowhere. -/
 private def scopeCell (r : Relations) (s : Scope) : Line :=
-  [.code s.key, .text " ", .link ("#node:" ++ s.key) (r.scopeLabel s)]
+  match s with
+  | .block | .defs => [.code s.key, .text " ", .text (r.scopeLabel s)]
+  | _ => [.code s.key, .text " ", .link (anchor s.key) (r.scopeLabel s)]
 
 /-- A target's cell: its key as code, then its name linked to the drawn node. -/
 private def targetCell (r : Relations) (t : Target) : Line :=
   let name := match t with
     | .def_ k => ((r.def? k).map (·.name)).getD (toString k)
     | .row i => ((r.row? i).map (·.spelling)).getD (toString i)
-  [.code t.key, .text " ", .link ("#node:" ++ t.key) name]
+  [.code t.key, .text " ", .link (anchor t.key) name]
 
 private def roleLine : DefRole → Line
   | .plain => [.text "plain"]
@@ -288,6 +295,11 @@ private def figure (key caption : String) (ns : List GraphNode) (es : List (Stri
   let edges := es.eraseDups
   .graph key caption (ordered ns edges) edges
 
+/-- The relation a node that stands for a relation row opens, when the document holds the relations
+(`opens`): a definition opens the definitions, a row the rows, main and the module layers the nodes. -/
+private def opening (opens : Bool) (relation : String) : Option String :=
+  if opens then some ("relation-" ++ relation) else none
+
 /-- The mark and word of the node at an address. -/
 private def constructor (r : Relations) (p : List Nat) : String × String :=
   ((r.node? p).map (·.glyph)).getD ("·", "")
@@ -296,25 +308,31 @@ private def constructor (r : Relations) (p : List Nat) : String × String :=
 private def mainAddress (r : Relations) : List Nat :=
   if (r.nodes.head?.map (·.ctor)) == some "defs" then [1] else []
 
-private def definitionNodes (r : Relations) : List GraphNode :=
-  r.defs.map fun d =>
-    let g := constructor r d.body
-    { key := (Scope.def_ d.k).key, label := d.name, status := "definition " ++ g.1, detail := g.2 }
+private def definitionNode (r : Relations) (opens : Bool) (d : DefRow) : GraphNode :=
+  let g := constructor r d.body
+  { key := (Scope.def_ d.k).key, label := d.name, status := "definition " ++ g.1, detail := g.2,
+    ref := opening opens "defs" }
 
-private def mainNode (r : Relations) : GraphNode :=
+private def definitionNodes (r : Relations) (opens : Bool) : List GraphNode :=
+  r.defs.map (definitionNode r opens)
+
+private def mainNode (r : Relations) (opens : Bool) : GraphNode :=
   let g := constructor r (mainAddress r)
-  { key := Scope.main.key, label := "main", status := "eff " ++ g.1, detail := g.2 }
+  { key := Scope.main.key, label := "main", status := "eff " ++ g.1, detail := g.2, ref := opening opens "nodes" }
 
-private def moduleNodes (r : Relations) : List GraphNode :=
+private def moduleNodes (r : Relations) (opens : Bool) : List GraphNode :=
   if r.calls.any (·.scope == .layers) then
     let g := constructor r [2]
-    [{ key := Scope.layers.key, label := "module layers", status := "layers " ++ g.1, detail := g.2 }]
+    [{ key := Scope.layers.key, label := "module layers", status := "layers " ++ g.1, detail := g.2,
+       ref := opening opens "nodes" }]
   else []
 
-/-- Definition and host-row calls, joined by positions, never by display names. -/
-def calls (r : Relations) : Block :=
-  let ns := mainNode r :: definitionNodes r ++ moduleNodes r ++ r.rows.map fun h =>
-    { key := (Target.row h.i).key, label := h.spelling, status := "row " ++ (glyph .eff "perform").1, form := .port }
+/-- Definition and host-row calls, joined by positions, never by display names. With `opens`, each
+node opens its relation. -/
+def calls (r : Relations) (opens : Bool := false) : Block :=
+  let ns := mainNode r opens :: definitionNodes r opens ++ moduleNodes r opens ++ r.rows.map fun h =>
+    { key := (Target.row h.i).key, label := h.spelling, status := "row " ++ (glyph .eff "perform").1, form := .port,
+      ref := opening opens "rows" }
   let es := r.calls.map fun c => (c.scope.key, c.target.key)
   figure "calls" "Calls from definitions and main to definitions and host rows." ns es
 
@@ -327,13 +345,11 @@ def services (r : Relations) : List String := (r.defs.filterMap (roleService ·.
 private def hostKey (name : String) : String := "host:" ++ name
 private def serviceKey (name : String) : String := "service:" ++ name
 
-private def boundaryNodes (r : Relations) : List GraphNode :=
+private def boundaryNodes (r : Relations) (opens : Bool) : List GraphNode :=
   (hosts r).map (fun name => { key := hostKey name, label := name, status := "host " ++ (glyph .eff "perform").1 }) ++
   (services r).map (fun name => { key := serviceKey name, label := name, status := "service " ++ (glyph .eff "defs").1 }) ++
-  (r.defs.filter fun d => (roleService d.role).isNone).map (fun d =>
-    let g := constructor r d.body
-    { key := (Scope.def_ d.k).key, label := d.name, status := "definition " ++ g.1, detail := g.2 }) ++
-  moduleNodes r ++ [mainNode r]
+  (r.defs.filter fun d => (roleService d.role).isNone).map (definitionNode r opens) ++
+  moduleNodes r opens ++ [mainNode r opens]
 
 /-- The provider-to-consumer pairs: a call's row gives its host; a call's definition gives its
 owner; the call's own scope gives the consumer. A call inside its own provider gives none. -/
@@ -346,10 +362,10 @@ def dependencies (r : Relations) : List (String × String) :=
     if src == dst then none else some (src, dst)).eraseDups
 
 /-- One wire per provider identity. Multiple consumers meet the same wire. -/
-def boundary (r : Relations) : Block :=
+def boundary (r : Relations) (opens : Bool := false) : Block :=
   let ds := dependencies r
   let providers := (ds.map Prod.fst).eraseDups
-  let boxes := boundaryNodes r
+  let boxes := boundaryNodes r opens
   let wires := providers.map fun key =>
     { key := "wire:" ++ key, label := (boxes.find? (·.key == key)).map (·.label) |>.getD key
       status := "wire " ++ (glyph .eff "service").1, form := .wire }
@@ -357,8 +373,8 @@ def boundary (r : Relations) : Block :=
   figure "boundary" "Boundary incidence: shared service wires join providers to consumers; no execution order is claimed." (boxes ++ wires) es
 
 /-- Contract every wire in the boundary by joining each incoming edge to each outgoing edge. -/
-def boxes (r : Relations) : Block :=
-  match boundary r with
+def boxes (r : Relations) (opens : Bool := false) : Block :=
+  match boundary r opens with
   | .graph _ _ ns es =>
     let wires := ns.filter (·.form == .wire)
     let contracted := wires.flatMap fun wire =>
@@ -369,11 +385,12 @@ def boxes (r : Relations) : Block :=
 
 /-- Layer constructors and their nearest enclosing layer constructor, by address.
 The node relation's generated fold enters layers through `cata_layer`; lists are transparent here. -/
-def layers (r : Relations) : Block :=
+def layers (r : Relations) (opens : Bool := false) : Block :=
   let rs := r.nodes.filter (·.sort == .layer)
   let key (n : NodeRow) : String := "layer:" ++ address n.address
   let ns := rs.map fun n =>
-    { key := key n, label := n.glyph.2, status := "layer " ++ n.glyph.1, detail := r.namesText n.names }
+    { key := key n, label := n.glyph.2, status := "layer " ++ n.glyph.1, detail := r.namesText n.names,
+      ref := opening opens "nodes" }
   let es := rs.filterMap fun n =>
     let ancestors := rs.filter fun a => a.address.length < n.address.length && a.address.isPrefixOf n.address
     match ancestors with
@@ -404,10 +421,11 @@ def mapping (r : Relations) : Block :=
 def document (b : Api.Built) (what : String) : Tools.Document.Document :=
   let r := read b
   let mappingPart := Block.part "mapping" "The program and its boundary" [mapping r]
+  let opens := what == "relations"
   let figures := if what == "boundary" then [boundary r, boxes r]
     else if what == "calls" then [calls r]
     else if what == "layers" then [layers r]
-    else [boundary r, boxes r, calls r, layers r]
+    else [boundary r opens, boxes r opens, calls r opens, layers r opens]
   let tables := if what == "relations" then
     [Block.part "relation-nodes" "Nodes" [nodesTable r], .part "relation-defs" "Definitions" [defsTable r],
      .part "relation-rows" "Rows" [rowsTable r], .part "relation-calls" "Calls" [callsTable r]] else []

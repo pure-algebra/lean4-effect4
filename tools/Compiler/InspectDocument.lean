@@ -71,7 +71,7 @@ def graph (j : Json) : Except String (String × String) := do
 private def svgAlgebra : Algebra (List (String × Except String String)) :=
   { Algebra.collect (fun _ => []) with
     graph := fun k _ ns es => [(k, (Tools.View.SvgOut.fileText
-      (Figure.picture (fun _ => none) ns es)).mapError toString)] }
+      (Figure.picture (fun _ => none) (fun key => some (Figure.anchorIn k key)) ns es)).mapError toString)] }
 
 private def tsvAlgebra : Algebra (List (String × Except String String)) :=
   { Algebra.collect (fun _ => []) (fun key _ body => body.map fun (name, value) =>

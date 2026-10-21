@@ -132,27 +132,31 @@ def picture (L : Look) (W H ratio : Nat) (calls : List (Keyed Dev)) : SvgNode :=
 
 /-! ## A picture whose marks link -/
 
-/-- A group of a linked picture: a cut, or a link to `href`. -/
-abbrev Group := Sum Cut String
+/-- A group of a linked picture: a cut, or a node's group: its link, if it has one, and its anchor, the
+`id` a fragment link lands on, if it has one. -/
+abbrev Group := Sum Cut (Option String × Option String)
 
-/-- The marks of a list of device calls, each run of marks of one linked key inside one SVG `a`
-(the figure's nodes, `Tools.Document.Figure`). A cut's start or end closes an open link first, so
-a link never crosses a clip group. -/
-def linkedMarks (L : Look) (ratio : Nat) (link : Key → Option String) (calls : List (Keyed Dev)) :
+/-- The marks of a list of device calls, each run of marks of one linked or anchored key inside
+one group: an SVG `a` to its link, with its anchor as its `id`; or a `g` with the `id` alone (the
+figure's nodes, `Tools.Document.Figure`). A cut's start or end closes an open group first, so a
+group never crosses a clip group. -/
+def linkedMarks (L : Look) (ratio : Nat) (link anchor : Key → Option String) (calls : List (Keyed Dev)) :
     List SvgNode := Id.run do
   let mut out : Array (SvgNode.Flat Group) := #[]
   let mut opened : Option Key := none
   for (d, i) in calls.zipIdx do
     let f := flat L ratio (d, i)
-    let want := match f with
-      | .leaf _ => (link d.key).map fun href => (d.key, href)
+    let want : Option (Key × Option String × Option String) := match f with
+      | .leaf _ => match link d.key, anchor d.key with
+        | none, none => none
+        | href, id => some (d.key, href, id)
       | _ => none
     if opened.isSome && opened != want.map (·.1) then
       out := out.push .leave
       opened := none
     if opened.isNone then
-      if let some (k, href) := want then
-        out := out.push (.enter (.inr href))
+      if let some (k, href, id) := want then
+        out := out.push (.enter (.inr (href, id)))
         opened := some k
     out := out.push (match f with
       | .leaf n => .leaf n
@@ -161,14 +165,16 @@ def linkedMarks (L : Look) (ratio : Nat) (link : Key → Option String) (calls :
   if opened.isSome then out := out.push .leave
   return SvgNode.nest (fun
     | .inl c => cutNodes ratio c
-    | .inr href => fun children => [Svg.link href children]) out.toList
+    | .inr (some href, id) => fun children => [Svg.link href children (id.map SvgAttr.ident).toList]
+    | .inr (none, some id) => fun children => [Svg.g [SvgAttr.ident id] children]
+    | .inr (none, none) => fun children => children) out.toList
 
-/-- **A picture whose nodes link**: `picture`, with each run of marks of a key that `link` answers
-inside a link to it. -/
-def linkedPicture (L : Look) (W H ratio : Nat) (link : Key → Option String) (calls : List (Keyed Dev)) :
+/-- **A picture whose nodes link and anchor**: `picture`, with each run of marks of a key that
+`link` answers inside a link to it, and of a key that `anchor` answers under that `id`. -/
+def linkedPicture (L : Look) (W H ratio : Nat) (link anchor : Key → Option String) (calls : List (Keyed Dev)) :
     SvgNode :=
   Svg.Frame.svg { width := W, height := H, ratio := ratio }
-    [.className "e4-view", .data "look" L.name] (linkedMarks L ratio link calls)
+    [.className "e4-view", .data "look" L.name] (linkedMarks L ratio link anchor calls)
 
 /-- The text of a picture as a file, or why it is refused: the content model where a figure
 stands (flow content), by its located refusal, then XML's characters and names. -/

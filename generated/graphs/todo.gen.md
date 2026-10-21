@@ -9,76 +9,76 @@ Node addresses name stored syntax. Call addresses name the checked expansion; or
 
 | address | in | sort | mark | word | names | constructor |
 | --- | --- | --- | --- | --- | --- | --- |
-|  | `block` [block](#node:block) | eff | ❏ | define |  | defs |
-| 0 | `defs` [definitions](#node:defs) | effs | · | cons |  | cons |
-| 0.0 | `def:0` [TodoAppContext](#node:def:0) | eff | ⌕ | read |  | withFiber |
-| 0.0.0 | `def:0` [TodoAppContext](#node:def:0) | action | ⌕ | read |  | context |
-| 0.1 | `defs` [definitions](#node:defs) | effs | · | cons |  | cons |
-| 0.1.0 | `def:1` [TodoApp_add](#node:def:1) | eff | ⌜ ⌟ | provide |  | provideContext |
-| 0.1.0.0 | `def:1` [TodoApp_add](#node:def:1) | eff | ─▶ | bind |  | bind |
-| 0.1.0.0.0 | `def:1` [TodoApp_add](#node:def:1) | eff | ─● | succeed |  | succeed |
-| 0.1.0.0.1 | `def:1` [TodoApp_add](#node:def:1) | eff | ⑂ | select |  | select |
-| 0.1.0.0.1.0 | `def:1` [TodoApp_add](#node:def:1) | eff | × | fail |  | fail |
-| 0.1.0.0.1.1 | `def:1` [TodoApp_add](#node:def:1) | eff | !? | perform | row TodoRepo.insert | perform |
-| 0.1.1 | `defs` [definitions](#node:defs) | effs | · | cons |  | cons |
-| 0.1.1.0 | `def:2` [TodoApp_list](#node:def:2) | eff | ⌜ ⌟ | provide |  | provideContext |
-| 0.1.1.0.0 | `def:2` [TodoApp_list](#node:def:2) | eff | !? | perform | row TodoRepo.all | perform |
-| 0.1.1.1 | `defs` [definitions](#node:defs) | effs | · | cons |  | cons |
-| 0.1.1.1.0 | `def:3` [TodoApp_complete](#node:def:3) | eff | ⌜ ⌟ | provide |  | provideContext |
-| 0.1.1.1.0.0 | `def:3` [TodoApp_complete](#node:def:3) | eff | ─▶ | bind |  | bind |
-| 0.1.1.1.0.0.0 | `def:3` [TodoApp_complete](#node:def:3) | eff | ─● | succeed |  | succeed |
-| 0.1.1.1.0.0.1 | `def:3` [TodoApp_complete](#node:def:3) | eff | ─▶ | bind |  | bind |
-| 0.1.1.1.0.0.1.0 | `def:3` [TodoApp_complete](#node:def:3) | eff | !? | perform | row TodoRepo.setDone | perform |
-| 0.1.1.1.0.0.1.1 | `def:3` [TodoApp_complete](#node:def:3) | eff | ⑂ | select |  | select |
-| 0.1.1.1.0.0.1.1.0 | `def:3` [TodoApp_complete](#node:def:3) | eff | × | fail |  | fail |
-| 0.1.1.1.0.0.1.1.1 | `def:3` [TodoApp_complete](#node:def:3) | eff | ─● | succeed |  | succeed |
-| 0.1.1.1.1 | `defs` [definitions](#node:defs) | effs | · | cons |  | cons |
-| 0.1.1.1.1.0 | `def:4` [TodoApp_remove](#node:def:4) | eff | ⌜ ⌟ | provide |  | provideContext |
-| 0.1.1.1.1.0.0 | `def:4` [TodoApp_remove](#node:def:4) | eff | ─▶ | bind |  | bind |
-| 0.1.1.1.1.0.0.0 | `def:4` [TodoApp_remove](#node:def:4) | eff | ─● | succeed |  | succeed |
-| 0.1.1.1.1.0.0.1 | `def:4` [TodoApp_remove](#node:def:4) | eff | ─▶ | bind |  | bind |
-| 0.1.1.1.1.0.0.1.0 | `def:4` [TodoApp_remove](#node:def:4) | eff | !? | perform | row TodoRepo.delete | perform |
-| 0.1.1.1.1.0.0.1.1 | `def:4` [TodoApp_remove](#node:def:4) | eff | ⑂ | select |  | select |
-| 0.1.1.1.1.0.0.1.1.0 | `def:4` [TodoApp_remove](#node:def:4) | eff | ─● | succeed |  | succeed |
-| 0.1.1.1.1.0.0.1.1.1 | `def:4` [TodoApp_remove](#node:def:4) | eff | × | fail |  | fail |
-| 0.1.1.1.1.1 | `defs` [definitions](#node:defs) | effs | · | nil |  | nil |
-| 1 | `main` [main](#node:main) | eff | ─▶ | bind |  | bind |
-| 1.0 | `main` [main](#node:main) | eff | !? | perform | call TodoAppContext | perform |
-| 1.1 | `main` [main](#node:main) | eff | ↺ | iterate |  | iterate |
-| 1.1.0 | `main` [main](#node:main) | eff | ─▶ | bind |  | bind |
-| 1.1.0.0 | `main` [main](#node:main) | eff | !? | perform | row Session.next | perform |
-| 1.1.0.1 | `main` [main](#node:main) | eff | ⑂ | select |  | select |
-| 1.1.0.1.0 | `main` [main](#node:main) | eff | ─● | succeed |  | succeed |
-| 1.1.0.1.1 | `main` [main](#node:main) | eff | ⑂ | select |  | select |
-| 1.1.0.1.1.0 | `main` [main](#node:main) | eff | ─▶ | bind |  | bind |
-| 1.1.0.1.1.0.0 | `main` [main](#node:main) | eff | ‖ | exit |  | exit |
-| 1.1.0.1.1.0.0.0 | `main` [main](#node:main) | eff | !? | perform | call TodoApp_add | perform |
-| 1.1.0.1.1.0.1 | `main` [main](#node:main) | eff | ─▶ | bind |  | bind |
-| 1.1.0.1.1.0.1.0 | `main` [main](#node:main) | eff | !? | perform | row Session.reply_add | perform |
-| 1.1.0.1.1.0.1.1 | `main` [main](#node:main) | eff | ─● | succeed |  | succeed |
-| 1.1.0.1.1.1 | `main` [main](#node:main) | eff | ⑂ | select |  | select |
-| 1.1.0.1.1.1.0 | `main` [main](#node:main) | eff | ─▶ | bind |  | bind |
-| 1.1.0.1.1.1.0.0 | `main` [main](#node:main) | eff | ‖ | exit |  | exit |
-| 1.1.0.1.1.1.0.0.0 | `main` [main](#node:main) | eff | !? | perform | call TodoApp_list | perform |
-| 1.1.0.1.1.1.0.1 | `main` [main](#node:main) | eff | ─▶ | bind |  | bind |
-| 1.1.0.1.1.1.0.1.0 | `main` [main](#node:main) | eff | !? | perform | row Session.reply_list | perform |
-| 1.1.0.1.1.1.0.1.1 | `main` [main](#node:main) | eff | ─● | succeed |  | succeed |
-| 1.1.0.1.1.1.1 | `main` [main](#node:main) | eff | ⑂ | select |  | select |
-| 1.1.0.1.1.1.1.0 | `main` [main](#node:main) | eff | ─▶ | bind |  | bind |
-| 1.1.0.1.1.1.1.0.0 | `main` [main](#node:main) | eff | ‖ | exit |  | exit |
-| 1.1.0.1.1.1.1.0.0.0 | `main` [main](#node:main) | eff | !? | perform | call TodoApp_complete | perform |
-| 1.1.0.1.1.1.1.0.1 | `main` [main](#node:main) | eff | ─▶ | bind |  | bind |
-| 1.1.0.1.1.1.1.0.1.0 | `main` [main](#node:main) | eff | !? | perform | row Session.reply_complete | perform |
-| 1.1.0.1.1.1.1.0.1.1 | `main` [main](#node:main) | eff | ─● | succeed |  | succeed |
-| 1.1.0.1.1.1.1.1 | `main` [main](#node:main) | eff | ⑂ | select |  | select |
-| 1.1.0.1.1.1.1.1.0 | `main` [main](#node:main) | eff | ─▶ | bind |  | bind |
-| 1.1.0.1.1.1.1.1.0.0 | `main` [main](#node:main) | eff | ‖ | exit |  | exit |
-| 1.1.0.1.1.1.1.1.0.0.0 | `main` [main](#node:main) | eff | !? | perform | call TodoApp_remove | perform |
-| 1.1.0.1.1.1.1.1.0.1 | `main` [main](#node:main) | eff | ─▶ | bind |  | bind |
-| 1.1.0.1.1.1.1.1.0.1.0 | `main` [main](#node:main) | eff | !? | perform | row Session.reply_remove | perform |
-| 1.1.0.1.1.1.1.1.0.1.1 | `main` [main](#node:main) | eff | ─● | succeed |  | succeed |
-| 1.1.0.1.1.1.1.1.1 | `main` [main](#node:main) | eff | ─● | succeed |  | succeed |
-| 2 | `layers` [layers](#node:layers) | layers | · | nil |  | nil |
+|  | `block` block | eff | ❏ | define |  | defs |
+| 0 | `defs` definitions | effs | · | cons |  | cons |
+| 0.0 | `def:0` [TodoAppContext](#calls:node:def:0) | eff | ⌕ | read |  | withFiber |
+| 0.0.0 | `def:0` [TodoAppContext](#calls:node:def:0) | action | ⌕ | read |  | context |
+| 0.1 | `defs` definitions | effs | · | cons |  | cons |
+| 0.1.0 | `def:1` [TodoApp_add](#calls:node:def:1) | eff | ⌜ ⌟ | provide |  | provideContext |
+| 0.1.0.0 | `def:1` [TodoApp_add](#calls:node:def:1) | eff | ─▶ | bind |  | bind |
+| 0.1.0.0.0 | `def:1` [TodoApp_add](#calls:node:def:1) | eff | ─● | succeed |  | succeed |
+| 0.1.0.0.1 | `def:1` [TodoApp_add](#calls:node:def:1) | eff | ⑂ | select |  | select |
+| 0.1.0.0.1.0 | `def:1` [TodoApp_add](#calls:node:def:1) | eff | × | fail |  | fail |
+| 0.1.0.0.1.1 | `def:1` [TodoApp_add](#calls:node:def:1) | eff | !? | perform | row TodoRepo.insert | perform |
+| 0.1.1 | `defs` definitions | effs | · | cons |  | cons |
+| 0.1.1.0 | `def:2` [TodoApp_list](#calls:node:def:2) | eff | ⌜ ⌟ | provide |  | provideContext |
+| 0.1.1.0.0 | `def:2` [TodoApp_list](#calls:node:def:2) | eff | !? | perform | row TodoRepo.all | perform |
+| 0.1.1.1 | `defs` definitions | effs | · | cons |  | cons |
+| 0.1.1.1.0 | `def:3` [TodoApp_complete](#calls:node:def:3) | eff | ⌜ ⌟ | provide |  | provideContext |
+| 0.1.1.1.0.0 | `def:3` [TodoApp_complete](#calls:node:def:3) | eff | ─▶ | bind |  | bind |
+| 0.1.1.1.0.0.0 | `def:3` [TodoApp_complete](#calls:node:def:3) | eff | ─● | succeed |  | succeed |
+| 0.1.1.1.0.0.1 | `def:3` [TodoApp_complete](#calls:node:def:3) | eff | ─▶ | bind |  | bind |
+| 0.1.1.1.0.0.1.0 | `def:3` [TodoApp_complete](#calls:node:def:3) | eff | !? | perform | row TodoRepo.setDone | perform |
+| 0.1.1.1.0.0.1.1 | `def:3` [TodoApp_complete](#calls:node:def:3) | eff | ⑂ | select |  | select |
+| 0.1.1.1.0.0.1.1.0 | `def:3` [TodoApp_complete](#calls:node:def:3) | eff | × | fail |  | fail |
+| 0.1.1.1.0.0.1.1.1 | `def:3` [TodoApp_complete](#calls:node:def:3) | eff | ─● | succeed |  | succeed |
+| 0.1.1.1.1 | `defs` definitions | effs | · | cons |  | cons |
+| 0.1.1.1.1.0 | `def:4` [TodoApp_remove](#calls:node:def:4) | eff | ⌜ ⌟ | provide |  | provideContext |
+| 0.1.1.1.1.0.0 | `def:4` [TodoApp_remove](#calls:node:def:4) | eff | ─▶ | bind |  | bind |
+| 0.1.1.1.1.0.0.0 | `def:4` [TodoApp_remove](#calls:node:def:4) | eff | ─● | succeed |  | succeed |
+| 0.1.1.1.1.0.0.1 | `def:4` [TodoApp_remove](#calls:node:def:4) | eff | ─▶ | bind |  | bind |
+| 0.1.1.1.1.0.0.1.0 | `def:4` [TodoApp_remove](#calls:node:def:4) | eff | !? | perform | row TodoRepo.delete | perform |
+| 0.1.1.1.1.0.0.1.1 | `def:4` [TodoApp_remove](#calls:node:def:4) | eff | ⑂ | select |  | select |
+| 0.1.1.1.1.0.0.1.1.0 | `def:4` [TodoApp_remove](#calls:node:def:4) | eff | ─● | succeed |  | succeed |
+| 0.1.1.1.1.0.0.1.1.1 | `def:4` [TodoApp_remove](#calls:node:def:4) | eff | × | fail |  | fail |
+| 0.1.1.1.1.1 | `defs` definitions | effs | · | nil |  | nil |
+| 1 | `main` [main](#calls:node:main) | eff | ─▶ | bind |  | bind |
+| 1.0 | `main` [main](#calls:node:main) | eff | !? | perform | call TodoAppContext | perform |
+| 1.1 | `main` [main](#calls:node:main) | eff | ↺ | iterate |  | iterate |
+| 1.1.0 | `main` [main](#calls:node:main) | eff | ─▶ | bind |  | bind |
+| 1.1.0.0 | `main` [main](#calls:node:main) | eff | !? | perform | row Session.next | perform |
+| 1.1.0.1 | `main` [main](#calls:node:main) | eff | ⑂ | select |  | select |
+| 1.1.0.1.0 | `main` [main](#calls:node:main) | eff | ─● | succeed |  | succeed |
+| 1.1.0.1.1 | `main` [main](#calls:node:main) | eff | ⑂ | select |  | select |
+| 1.1.0.1.1.0 | `main` [main](#calls:node:main) | eff | ─▶ | bind |  | bind |
+| 1.1.0.1.1.0.0 | `main` [main](#calls:node:main) | eff | ‖ | exit |  | exit |
+| 1.1.0.1.1.0.0.0 | `main` [main](#calls:node:main) | eff | !? | perform | call TodoApp_add | perform |
+| 1.1.0.1.1.0.1 | `main` [main](#calls:node:main) | eff | ─▶ | bind |  | bind |
+| 1.1.0.1.1.0.1.0 | `main` [main](#calls:node:main) | eff | !? | perform | row Session.reply_add | perform |
+| 1.1.0.1.1.0.1.1 | `main` [main](#calls:node:main) | eff | ─● | succeed |  | succeed |
+| 1.1.0.1.1.1 | `main` [main](#calls:node:main) | eff | ⑂ | select |  | select |
+| 1.1.0.1.1.1.0 | `main` [main](#calls:node:main) | eff | ─▶ | bind |  | bind |
+| 1.1.0.1.1.1.0.0 | `main` [main](#calls:node:main) | eff | ‖ | exit |  | exit |
+| 1.1.0.1.1.1.0.0.0 | `main` [main](#calls:node:main) | eff | !? | perform | call TodoApp_list | perform |
+| 1.1.0.1.1.1.0.1 | `main` [main](#calls:node:main) | eff | ─▶ | bind |  | bind |
+| 1.1.0.1.1.1.0.1.0 | `main` [main](#calls:node:main) | eff | !? | perform | row Session.reply_list | perform |
+| 1.1.0.1.1.1.0.1.1 | `main` [main](#calls:node:main) | eff | ─● | succeed |  | succeed |
+| 1.1.0.1.1.1.1 | `main` [main](#calls:node:main) | eff | ⑂ | select |  | select |
+| 1.1.0.1.1.1.1.0 | `main` [main](#calls:node:main) | eff | ─▶ | bind |  | bind |
+| 1.1.0.1.1.1.1.0.0 | `main` [main](#calls:node:main) | eff | ‖ | exit |  | exit |
+| 1.1.0.1.1.1.1.0.0.0 | `main` [main](#calls:node:main) | eff | !? | perform | call TodoApp_complete | perform |
+| 1.1.0.1.1.1.1.0.1 | `main` [main](#calls:node:main) | eff | ─▶ | bind |  | bind |
+| 1.1.0.1.1.1.1.0.1.0 | `main` [main](#calls:node:main) | eff | !? | perform | row Session.reply_complete | perform |
+| 1.1.0.1.1.1.1.0.1.1 | `main` [main](#calls:node:main) | eff | ─● | succeed |  | succeed |
+| 1.1.0.1.1.1.1.1 | `main` [main](#calls:node:main) | eff | ⑂ | select |  | select |
+| 1.1.0.1.1.1.1.1.0 | `main` [main](#calls:node:main) | eff | ─▶ | bind |  | bind |
+| 1.1.0.1.1.1.1.1.0.0 | `main` [main](#calls:node:main) | eff | ‖ | exit |  | exit |
+| 1.1.0.1.1.1.1.1.0.0.0 | `main` [main](#calls:node:main) | eff | !? | perform | call TodoApp_remove | perform |
+| 1.1.0.1.1.1.1.1.0.1 | `main` [main](#calls:node:main) | eff | ─▶ | bind |  | bind |
+| 1.1.0.1.1.1.1.1.0.1.0 | `main` [main](#calls:node:main) | eff | !? | perform | row Session.reply_remove | perform |
+| 1.1.0.1.1.1.1.1.0.1.1 | `main` [main](#calls:node:main) | eff | ─● | succeed |  | succeed |
+| 1.1.0.1.1.1.1.1.1 | `main` [main](#calls:node:main) | eff | ─● | succeed |  | succeed |
+| 2 | `layers` [layers](#calls:node:layers) | layers | · | nil |  | nil |
 
 ## Definitions
 
@@ -108,20 +108,20 @@ Node addresses name stored syntax. Call addresses name the checked expansion; or
 
 | address | from | targetSort | target | targetAddress | origin |
 | --- | --- | --- | --- | --- | --- |
-| 0.1.0.0.1.1 | `def:1` [TodoApp_add](#node:def:1) | row | `row:0` [TodoRepo.insert](#node:row:0) | 0 | 0.1.0.0.1.1 |
-| 0.1.1.0.0 | `def:2` [TodoApp_list](#node:def:2) | row | `row:1` [TodoRepo.all](#node:row:1) | 1 | 0.1.1.0.0 |
-| 0.1.1.1.0.0.1.0 | `def:3` [TodoApp_complete](#node:def:3) | row | `row:2` [TodoRepo.setDone](#node:row:2) | 2 | 0.1.1.1.0.0.1.0 |
-| 0.1.1.1.1.0.0.1.0 | `def:4` [TodoApp_remove](#node:def:4) | row | `row:3` [TodoRepo.delete](#node:row:3) | 3 | 0.1.1.1.1.0.0.1.0 |
-| 1.0 | `main` [main](#node:main) | def | `def:0` [TodoAppContext](#node:def:0) | 0.0 | 1.0 |
-| 1.1.0.0 | `main` [main](#node:main) | row | `row:4` [Session.next](#node:row:4) | 4 | 1.1.0.0 |
-| 1.1.0.1.1.0.0.0 | `main` [main](#node:main) | def | `def:1` [TodoApp_add](#node:def:1) | 0.1.0 | 1.1.0.1.1.0.0.0 |
-| 1.1.0.1.1.0.1.0 | `main` [main](#node:main) | row | `row:5` [Session.reply_add](#node:row:5) | 5 | 1.1.0.1.1.0.1.0 |
-| 1.1.0.1.1.1.0.0.0 | `main` [main](#node:main) | def | `def:2` [TodoApp_list](#node:def:2) | 0.1.1.0 | 1.1.0.1.1.1.0.0.0 |
-| 1.1.0.1.1.1.0.1.0 | `main` [main](#node:main) | row | `row:6` [Session.reply_list](#node:row:6) | 6 | 1.1.0.1.1.1.0.1.0 |
-| 1.1.0.1.1.1.1.0.0.0 | `main` [main](#node:main) | def | `def:3` [TodoApp_complete](#node:def:3) | 0.1.1.1.0 | 1.1.0.1.1.1.1.0.0.0 |
-| 1.1.0.1.1.1.1.0.1.0 | `main` [main](#node:main) | row | `row:7` [Session.reply_complete](#node:row:7) | 7 | 1.1.0.1.1.1.1.0.1.0 |
-| 1.1.0.1.1.1.1.1.0.0.0 | `main` [main](#node:main) | def | `def:4` [TodoApp_remove](#node:def:4) | 0.1.1.1.1.0 | 1.1.0.1.1.1.1.1.0.0.0 |
-| 1.1.0.1.1.1.1.1.0.1.0 | `main` [main](#node:main) | row | `row:8` [Session.reply_remove](#node:row:8) | 8 | 1.1.0.1.1.1.1.1.0.1.0 |
+| 0.1.0.0.1.1 | `def:1` [TodoApp_add](#calls:node:def:1) | row | `row:0` [TodoRepo.insert](#calls:node:row:0) | 0 | 0.1.0.0.1.1 |
+| 0.1.1.0.0 | `def:2` [TodoApp_list](#calls:node:def:2) | row | `row:1` [TodoRepo.all](#calls:node:row:1) | 1 | 0.1.1.0.0 |
+| 0.1.1.1.0.0.1.0 | `def:3` [TodoApp_complete](#calls:node:def:3) | row | `row:2` [TodoRepo.setDone](#calls:node:row:2) | 2 | 0.1.1.1.0.0.1.0 |
+| 0.1.1.1.1.0.0.1.0 | `def:4` [TodoApp_remove](#calls:node:def:4) | row | `row:3` [TodoRepo.delete](#calls:node:row:3) | 3 | 0.1.1.1.1.0.0.1.0 |
+| 1.0 | `main` [main](#calls:node:main) | def | `def:0` [TodoAppContext](#calls:node:def:0) | 0.0 | 1.0 |
+| 1.1.0.0 | `main` [main](#calls:node:main) | row | `row:4` [Session.next](#calls:node:row:4) | 4 | 1.1.0.0 |
+| 1.1.0.1.1.0.0.0 | `main` [main](#calls:node:main) | def | `def:1` [TodoApp_add](#calls:node:def:1) | 0.1.0 | 1.1.0.1.1.0.0.0 |
+| 1.1.0.1.1.0.1.0 | `main` [main](#calls:node:main) | row | `row:5` [Session.reply_add](#calls:node:row:5) | 5 | 1.1.0.1.1.0.1.0 |
+| 1.1.0.1.1.1.0.0.0 | `main` [main](#calls:node:main) | def | `def:2` [TodoApp_list](#calls:node:def:2) | 0.1.1.0 | 1.1.0.1.1.1.0.0.0 |
+| 1.1.0.1.1.1.0.1.0 | `main` [main](#calls:node:main) | row | `row:6` [Session.reply_list](#calls:node:row:6) | 6 | 1.1.0.1.1.1.0.1.0 |
+| 1.1.0.1.1.1.1.0.0.0 | `main` [main](#calls:node:main) | def | `def:3` [TodoApp_complete](#calls:node:def:3) | 0.1.1.1.0 | 1.1.0.1.1.1.1.0.0.0 |
+| 1.1.0.1.1.1.1.0.1.0 | `main` [main](#calls:node:main) | row | `row:7` [Session.reply_complete](#calls:node:row:7) | 7 | 1.1.0.1.1.1.1.0.1.0 |
+| 1.1.0.1.1.1.1.1.0.0.0 | `main` [main](#calls:node:main) | def | `def:4` [TodoApp_remove](#calls:node:def:4) | 0.1.1.1.1.0 | 1.1.0.1.1.1.1.1.0.0.0 |
+| 1.1.0.1.1.1.1.1.0.1.0 | `main` [main](#calls:node:main) | row | `row:8` [Session.reply_remove](#calls:node:row:8) | 8 | 1.1.0.1.1.1.1.1.0.1.0 |
 
 ## The program and its boundary
 
