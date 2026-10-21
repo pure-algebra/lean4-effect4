@@ -1,8 +1,6 @@
-lean-imports: Tools.Document.Json is newer than its .ilean; its edits are read by name
-lean-imports: Tools.View.LayerGraph is newer than its .ilean; its edits are read by name
-batteries-touched: 195 batteries
-ℹ [1455/1595] Replayed Test.Codegen.CompilerGraphs
-info: Test/Codegen/CompilerGraphs.lean:92:0: fun sourceExists sessionExists =>
+batteries-touched: 2 batteries
+ℹ [1161/1161] Replayed Test.Codegen.CompilerGraphs
+info: Test/Codegen/CompilerGraphs.lean:112:0: fun sourceExists sessionExists =>
   Built.session_ok_iff (todoBuilt.get sourceExists) "TodoApp"
     (todoSession.get
       sessionExists) : ∀ (sourceExists : todoBuilt.isSome = true) (sessionExists : todoSession.isSome = true),
@@ -11,7 +9,7 @@ info: Test/Codegen/CompilerGraphs.lean:92:0: fun sourceExists sessionExists =>
       (Object.ofBuilt (todoBuilt.get sourceExists)).session "TodoApp" = Except.ok object ∧
         object.open = Except.ok (todoSession.get sessionExists) ∧
           ServiceSession.foreign (todoSession.get sessionExists) = []
-info: Test/Codegen/CompilerGraphs.lean:108:0: Graph.ranks_forward
+info: Test/Codegen/CompilerGraphs.lean:128:0: Graph.ranks_forward
   { nodes := #[{ key := "source", line1 := "source" }, { key := "target", line1 := "target" }],
     edges := #[{ key := "edge", src := 0, dst := 1 }] }
   { key := "edge", src := 0, dst := 1 } (List.mem_singleton_self { key := "edge", src := 0, dst := 1 })
@@ -25,37 +23,36 @@ info: Test/Codegen/CompilerGraphs.lean:108:0: Graph.ranks_forward
   { nodes := #[{ key := "source", line1 := "source" }, { key := "target", line1 := "target" }],
           edges := #[{ key := "edge", src := 0, dst := 1 }] }.ranks.getD
     { key := "edge", src := 0, dst := 1 }.dst 0
-info: Test/Codegen/CompilerGraphs.lean:168:0: fun present =>
+info: Test/Codegen/CompilerGraphs.lean:186:0: fun present =>
   let b := todoSession.get present;
   let atoms :=
     EffAlgebra.ofLayer fun x x_1 x_2 =>
       List.foldr (fun name rest => (AGraph.vertex name).overlay rest) AGraph.empty
-        (List.map (fun row => text (row[2]?.getD [])) (records (Compiler.Graphs.read b).rows));
+        (List.map (fun x => x.host) (Compiler.Graphs.read b).rows);
   LayerGraph.hypergraph_provide atoms (LayerTerm.succeed natKey (Lit.nat 23))
     (LayerTerm.ref [2, 0]) : ∀ (present : todoSession.isSome = true),
   let b := todoSession.get present;
   let atoms :=
     EffAlgebra.ofLayer fun x x_1 x_2 =>
       List.foldr (fun name rest => (AGraph.vertex name).overlay rest) AGraph.empty
-        (List.map (fun row => text (row[2]?.getD [])) (records (Compiler.Graphs.read b).rows));
+        (List.map (fun x => x.host) (Compiler.Graphs.read b).rows);
   LayerGraph.hypergraph atoms ((LayerTerm.succeed natKey (Lit.nat 23)).provide (LayerTerm.ref [2, 0])) =
     (LayerGraph.hypergraph atoms (LayerTerm.succeed natKey (Lit.nat 23))).overlay
       (LayerGraph.hypergraph atoms (LayerTerm.ref [2, 0]))
-info: Test/Codegen/CompilerGraphs.lean:175:0: fun present =>
+info: Test/Codegen/CompilerGraphs.lean:193:0: fun present =>
   let b := todoSession.get present;
   let atoms :=
     EffAlgebra.ofLayer fun x x_1 x_2 =>
       List.foldr (fun name rest => (AGraph.vertex name).overlay rest) AGraph.empty
-        (List.map (fun row => text (row[2]?.getD [])) (records (Compiler.Graphs.read b).rows));
+        (List.map (fun x => x.host) (Compiler.Graphs.read b).rows);
   LayerGraph.hypergraph_merge_comm atoms (LayerTerm.succeed natKey (Lit.nat 23))
     (LayerTerm.ref [2, 0]) : ∀ (present : todoSession.isSome = true),
   let b := todoSession.get present;
   let atoms :=
     EffAlgebra.ofLayer fun x x_1 x_2 =>
       List.foldr (fun name rest => (AGraph.vertex name).overlay rest) AGraph.empty
-        (List.map (fun row => text (row[2]?.getD [])) (records (Compiler.Graphs.read b).rows));
+        (List.map (fun x => x.host) (Compiler.Graphs.read b).rows);
   (LayerGraph.hypergraph atoms ((LayerTerm.succeed natKey (Lit.nat 23)).merge (LayerTerm.ref [2, 0]))).denote =
     (LayerGraph.hypergraph atoms ((LayerTerm.ref [2, 0]).merge (LayerTerm.succeed natKey (Lit.nat 23)))).denote
-ℹ [1685/1859] Replayed Test.Program.SourceDocumentControls
-info: Test/Program/SourceDocumentControls.lean:170:0: S1 Doc controls: acceptance, rollback, nested revert, root, policy, and hole-row controls pass
-Build completed successfully (1859 jobs).
+Build completed successfully (1161 jobs).
+exit 0

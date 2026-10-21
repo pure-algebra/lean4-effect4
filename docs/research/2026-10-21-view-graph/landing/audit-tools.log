@@ -1,4 +1,4 @@
-docs/research/2026-10-21-view-graph/landing/audit-tools.lean:5:0: error: #axiom_audit: 41 of 456 declarations reach axioms outside [propext, Quot.sound]:
+docs/research/2026-10-21-view-graph/landing/audit-tools.lean:6:0: error: #axiom_audit: 45 of 464 declarations reach axioms outside [propext, Quot.sound]:
   Compiler.reading reaches [Classical.choice]
   Compiler.graphReading reaches [Classical.choice]
   _private.Compiler.InspectDocument.0.Compiler.InspectDocument.line reaches [Classical.choice]
@@ -40,7 +40,11 @@ docs/research/2026-10-21-view-graph/landing/audit-tools.lean:5:0: error: #axiom_
   Compiler.CheckOptions.read._sunfold reaches [Classical.choice]
   Compiler.runHosted reaches [Classical.choice]
   Compiler.builtOf reaches [Classical.choice]
-18 of them stand under no other (the first 8 shown); each one's path to its axiom:
+  Compiler.Page.flows reaches [Classical.choice]
+  Compiler.Page.laid reaches [Classical.choice]
+  Compiler.Page.page reaches [Classical.choice]
+  Compiler.Page.flowAt reaches [Classical.choice]
+19 of them stand under no other (the first 8 shown); each one's path to its axiom:
   Compiler.graphReading  (Compiler.Inspect)
   → Compiler.prettyText  (Compiler.Json)
   → String.fromUTF8!  (Init.Data.String.Basic)
@@ -85,7 +89,7 @@ docs/research/2026-10-21-view-graph/landing/audit-tools.lean:5:0: error: #axiom_
   → ⋯ 9 more toolchain constants
   → Classical.propDecidable  (Init.Classical)
   → Classical.choice  (Init.Prelude)
-docs/research/2026-10-21-view-graph/landing/audit-tools.lean:6:0: error: #axiom_audit: 56 of 73 declarations reach axioms outside [propext, Quot.sound]:
+docs/research/2026-10-21-view-graph/landing/audit-tools.lean:7:0: error: #axiom_audit: 56 of 75 declarations reach axioms outside [propext, Quot.sound]:
   Tools.Document.Json.readInline reaches [Classical.choice]
   _private.Tools.Document.Json.0.Tools.Document.Json.entries._sparseCasesOn_1 reaches [Classical.choice]
   _private.Tools.Document.Json.0.Tools.Document.Json.str._sparseCasesOn_1 reaches [Classical.choice]
@@ -128,9 +132,9 @@ docs/research/2026-10-21-view-graph/landing/audit-tools.lean:6:0: error: #axiom_
   _private.Tools.Document.Json.0.Tools.Document.Json.readValues._sunfold reaches [Classical.choice]
   Tools.Document.Json.line reaches [Classical.choice]
   Tools.Document.Json.readLine reaches [Classical.choice]
-  _private.Tools.Document.Json.0.Tools.Document.Json.readRow reaches [Classical.choice]
-  _private.Tools.Document.Json.0.Tools.Document.Json.readCells reaches [Classical.choice]
   Tools.Document.Json.readBlock reaches [Classical.choice]
+  _private.Tools.Document.Json.0.Tools.Document.Json.readCells reaches [Classical.choice]
+  _private.Tools.Document.Json.0.Tools.Document.Json.readRow reaches [Classical.choice]
   _private.Tools.Document.Json.0.Tools.Document.Json.readBlock_fold._f reaches [Classical.choice]
   _private.Tools.Document.Json.0.Tools.Document.Json.readValue._f reaches [Classical.choice]
   _private.Tools.Document.Json.0.Tools.Document.Json.readValue.match_1 reaches [Classical.choice]
@@ -184,3 +188,4 @@ docs/research/2026-10-21-view-graph/landing/audit-tools.lean:6:0: error: #axiom_
   → Classical.propDecidable  (Init.Classical)
   → Classical.choice  (Init.Prelude)
 #axiom_audit: 321 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+exit 1

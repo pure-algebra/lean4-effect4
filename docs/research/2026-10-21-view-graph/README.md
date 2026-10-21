@@ -350,3 +350,124 @@ The forms draw that rule. A box is keyed by its position and drawn as a rectangl
 Changed: `tools/Tools/Form.lean` (new), `tools/Tools/Document.lean`, `tools/Tools/Document/Json.lean`, `tools/Tools/View/Graph.lean`, `tools/Tools/Document/Figure.lean` and `tools/Compiler/Graphs.lean`. Also `Test/Tools/GraphJson.lean` (every form in the coverage document), `Test/Codegen/CompilerGraphs.lean` (the forms of the to-do's figures, the target keys by position) and `generated/graphs/`.
 
 Verified 2026-10-21. The touched modules and their consumers build. `landing/audit-core.lean` reports 125 declarations within the ceiling. `make batteries-touched BASE=c0830ac08` passes. `generated/graphs` is regenerated, and its page passes the strict language check.
+
+## 9. The design seat: the carrier, the anchor, the page and the wiring
+
+Four pieces landed on `view-forms-design` from `da3a00ccb`, each its own commit after a narrow build. Section 8's forms stand; every mark below is the image of a fold of the relations.
+
+### The one thing the coordinator must know
+
+The relation is now the fold's carrier (`Compiler.Graphs.Relations`). A node row is an address, a scope, a sort, a constructor and what it names, as data. No query reads a cell back.
+A relation row's link names its node's `id` in the inside figure, `calls:node:<key>` (`Tools.Document.Figure.anchorIn`). One page draws `main` in three figures, and the site's check wants each id once.
+The generated group changed in meaning at three places, each named below. Nothing else in `generated/graphs/` moved.
+
+### Before and after
+
+| Figure | Before | After |
+| --- | --- | --- |
+| the boundary | [out/before/todo.boundary.gen.svg](out/before/todo.boundary.gen.svg) | [out/forms/todo.boundary.gen.svg](out/forms/todo.boundary.gen.svg) |
+| the boxes, the contraction | [out/before/todo.boundary-boxes.gen.svg](out/before/todo.boundary-boxes.gen.svg) | [out/forms/todo.boundary-boxes.gen.svg](out/forms/todo.boundary-boxes.gen.svg) |
+| the calls | [out/before/todo.calls.gen.svg](out/before/todo.calls.gen.svg) | [out/forms/todo.calls.gen.svg](out/forms/todo.calls.gen.svg) |
+| the wiring of a two-provider term | none | [out/clash.wiring.gen.svg](out/clash.wiring.gen.svg), from `probe-wiring.lean` |
+| the object page | `out/term-block.svg`, every row refused | [out/object-page.gen.svg](out/object-page.gen.svg), from `probe-object.lean` |
+
+### Piece 1: the relation as the fold's carrier
+
+`Compiler.Graphs.read` folds the program into `NodeRow`, `DefRow`, `HostRow` and `CallRow` values. A scope is `Scope` (a definition by position, main, the module's layers, the block's root, the definitions' spine). A target is `Target` (a definition or a row by position). What a node names is `Named` (a call, a row, a service key, a reference target).
+The four tables (`nodesTable`, `defsTable`, `rowsTable`, `callsTable`) are folds of the carrier, and so are the figures, the mapping and the document. The JSON and the TSV are the document's folds, unchanged.
+The commit's rerun of `python3 scripts/generate.py --only graphs` changed no byte.
+
+### Piece 2: the row reaches its mark
+
+`Tools.View.SvgOut.linkedMarks` takes an anchor beside the link. The run of marks of a key stands in an `a` with its `id`, or in a `g` with the `id` alone. `Tools.Document.Figure.picture` gives each node the anchor `anchorIn figure key`, and the HTML fold and the SVG files pass the figure's key.
+A relation cell links `#calls:node:<key>`. The block's root and the definitions' spine are no node of a figure, so their cells no longer link. That is the first change of meaning in `generated/graphs/`.
+With the relations present, a node that stands for a relation row opens its relation (`ref`). A definition opens the definitions, a row the rows, main and the module layers the nodes. That is the second change.
+
+### Piece 3: the term beside its graph
+
+`Compiler.Page.page` is the page of a program object. It opens the edit session at the object's application, so every line carries its type and no host row is refused.
+Beside each line stands the node relation's row for its address, in the code panel, under the line's key (`CodePanel.keys`). Below stand the flows. Each definition's body is folded at its own address by `Flow.flowLayer` and bracketed as a region named by its definition. The bodies stand side by side, and the main program's flow under them.
+`Laid.move`, `Laid.beside` and `Laid.below` join laid graphs by rigid moves (`tools/Tools/View/Graph.lean`). The routes name their items by key and stay. The lanes of a back edge stand at the right of the whole. So main's return arc reaches the joined picture's right side, the one visible cost.
+On the to-do: 63 lines, none refused; 66 placed items, 69 routes, 6 regions; `boxesApart` and `edgesDescend` hold (`Test/Codegen/CompilerGraphs.lean`).
+
+### Piece 4: the hypergraph drawn well
+
+- **A wire is a one-row pill.** `Laid.formRows` gives a wire one row of its two-row allocation, and `boxBounds` centres the painted form. So an edge meets the pill and not the allocation. The pill carries its name alone: the form is the mark, so no status line repeats it. The Mermaid, the JSON and the words keep the status.
+- **The wiring.** `Compiler.Graphs.wiring` is the layer term in the hypergraph form of §2.3, read from the nodes relation. A providing constructor (`succeed`, `effect`) is a box keyed by its address. A service key is a wire keyed by its name. A read inside a box (`service`, `context`) plugs its wire in. On `twoProviders` (`Test/Codegen/CompilerGraphs.lean`) two boxes stand on one pill, the clash, and two boxes hang from it, the shared wire. The to-do stores no layer constructor, so its wiring is the empty figure, stated in words: the third change of meaning in `generated/graphs/`.
+- **A context's keys.** The node relation now names the keys of a `context` row (`ArgF.keys`), so the to-do's `0.0.0` row names `key 30:6`; the wiring reads them.
+- **The contraction.** `boxes` keeps the boundary's order with the wires removed, and the Kahn order keeps it. So the contraction reads as the boundary with its pills taken out.
+- **The post** on a port stands as section 8 drew it.
+
+What the pass did not do, and why. The look's name and label faces are proportional, and the pipeline measures text by the cell grid alone (`PaintBounds.textUnmeasured`). A name set in the name face was cut, and the mark glyphs have no form in the label face. So a figure's text stays in the data face.
+
+### Questions for the owner
+
+1. The anchor of a node is qualified by its figure (`calls:node:def:1`), not `node:def:1`, because `main` is drawn in three figures of one page. The alternative is one figure per entity key in a document.
+2. A host in the boundary is a box. The host's post marks a port, a row; a host is a bundle of rows. Drawing a host with the post needs a ruling, since `Tools.Form` gives the post to a row.
+3. Typography in the name face needs a text measure the pipeline lacks. A measure is a font's metrics as data, which the token file does not hold.
+
+### Base, head and files
+
+Base: `da3a00ccbe395a44c6df6f439598ecd30d8b50ec`. Head: the commit after `e7269ba63212008f5034f9daa625b643513d88c4`, which holds this section. The four pieces and the gate repairs follow the base in order.
+
+| Files | Change |
+| --- | --- |
+| `tools/Compiler/Graphs.lean` | the typed carrier, the tables as folds, the queries on data, the wiring, the anchors and the refs |
+| `tools/Compiler/Page.lean` (new) | the object page |
+| `tools/Tools/View/SvgOut.lean`, `tools/Tools/Document/Figure.lean`, `tools/Tools/Document/Html.lean`, `tools/Compiler/InspectDocument.lean` | the anchor |
+| `tools/Tools/View/Graph.lean` | `formRows`, its bounds, the one-row pill, `Laid.move`, `beside`, `below` |
+| `tools/Tools/View/GraphMotion.lean` | `family_boxes_inside` over `formRows` |
+| `tools/Tools/View/Page.lean` | `CodePanel.keys` |
+| `Test/Codegen/CompilerGraphs.lean` | the readers on data, the page's checks, the wiring's checks, `twoProviders` |
+| `generated/graphs/` | the three changes of meaning above |
+| this folder | `probe-object.lean`, `probe-wiring.lean`, `out/before/`, `out/forms/`, `out/clash.wiring.gen.svg`, `out/object-page.gen.svg`, `landing/audit-core.lean`, `landing/audit-tools.lean` and the logs |
+
+### Commands and results
+
+Run from the worktree on 2026-10-21, one `lake` at a time with `LEAN_NUM_THREADS=3`.
+
+| Command | Result | Evidence |
+| --- | --- | --- |
+| `lake build Compiler.Graphs Compiler.Page Tools.Document.Figure Tools.View.SvgOut Tools.View.Page Tools.View.Graph Tools.View.GraphMotion Compiler.InspectDocument Tools.Site Tools.View.FlowSpecimen Test.Codegen.CompilerGraphs Test.Tools.GraphJson effect4` | Pass; 1,898 jobs | the build after the four commits |
+| `lake env lean -DwarningAsError=true docs/research/2026-10-21-view-graph/landing/audit-core.lean` | Pass; 371 declarations within the ceiling; no planned goals | `landing/audit-core.log` |
+| `lake env lean -DwarningAsError=true docs/research/2026-10-21-view-graph/landing/audit-tools.lean` | Exit 1; the rendering paths reach `Classical.choice`, `Compiler.Page` among them through `Program.ownText`; the registry audit passes | `landing/audit-tools.log` |
+| `make batteries-touched BASE=da3a00ccb` | Pass; 2 batteries; 1,161 jobs | `landing/batteries.log` |
+| `python3 scripts/generate.py --only graphs` | Pass; six files written through the command | `landing/generate.log` |
+| `python3 scripts/generate.py --only graphs --output-dir <scratch>` | Pass; the rerun changes no byte | `landing/rerun.log` |
+| `lake env lean -DwarningAsError=true docs/research/2026-10-21-view-graph/probe-object.lean` | Pass; 63 lines, none refused; 66 placed, 69 routes, 6 regions; apart and descending | `out/object-page.gen.svg` |
+| `lake env lean -DwarningAsError=true docs/research/2026-10-21-view-graph/probe-wiring.lean` | Pass; 4 boxes, 3 wires, 6 edges; two edges into the shared wire and two out | `out/clash.wiring.gen.svg` |
+| `python3 scripts/check-language.py --strict docs/research/2026-10-21-view-graph/README.md generated/graphs/todo.gen.md` | Pass | this section |
+
+The probes need `mkdir -p tools/view/out/view-graph` first, as before. The SVG figures were viewed as PNG through `rsvg-convert`, which changes no figure.
+
+The exact axiom summaries are:
+
+```text
+#axiom_audit: 371 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+#axiom_audit: 45 of 464 declarations reach axioms outside [propext, Quot.sound]
+#axiom_audit: 56 of 75 declarations reach axioms outside [propext, Quot.sound]
+#axiom_audit: 321 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The first covers `Compiler.Graphs`, `Tools.View.LayerGraph` and the two batteries. The second covers the command modules, `Compiler.Page` and the emit battery. The four declarations of `Compiler.Page` reach `Classical.choice` through the view's text (`Tools.View.Program.plain`), as every rendering path does. The third covers `Tools.Document.Json`, the fourth `ProofGraph.Registry`. The failed audit stays failed; this slice adds no exception.
+
+Two repairs the gates asked for. `GraphMotion.family_boxes_inside` is proved again over `formRows`, with `formRows_bounds` (one row at least, the allocation at most). `Test/Audit/GraphControls.lean` built a node with four fields after the base commit gave `GNode` its fifth; its three literals name their form.
+
+### Open obligations
+
+- The object page has no command. `Compiler.Page.page` is reached by the probe and the battery alone; `inspect` writes documents, and a page is not a document. A `--what page --form svg` reading is one small slice.
+- The joined layout's lanes stand at the right of the whole. A lane per part needs the lane's x in the route, which `Route.back` does not hold.
+- The wiring draws reads inside layer boxes only. A read in a definition's body or in main is the program's requirement; the boundary figure shows it through the call table.
+- The contraction is finite on the to-do and on `shared`. No general contraction theorem is stated (G3, as before).
+- Every figure of this slice is a finite probe on the to-do and the named fixtures.
+
+### Proposed decisions rows
+
+| Proposal, a follow-up to row 443 | Rationale |
+| --- | --- |
+| The relation is the fold's carrier; a table, a figure and a query are folds of it | a cell read back is a second parser of the fold's own output |
+| A node's anchor is its figure's key, then `node:` and its own; a relation row links the inside figure | one page draws one entity in several figures; the site wants each id once |
+| A wire is drawn as a one-row pill that carries its name alone | the form is the mark; the status word stays in the words and the JSON |
+| The layer term's wiring is a query over the nodes relation, boxes by address and wires by key name | §2.3's hypergraph form, with the clash and the shared wire visible |
+| A laid graph composes by rigid moves (`Laid.move`, `beside`, `below`) | a part laid out once keeps its drawing wherever it stands |
+| A figure's text stays in the data face until the pipeline measures text | a proportional face cuts a name the cell grid allocates |

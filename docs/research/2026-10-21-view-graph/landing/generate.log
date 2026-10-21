@@ -1,6 +1,7 @@
 + lake build effect4
-Build completed successfully (1862 jobs).
-+ lake exe effect4 inspect --group todo --session TodoApp --what relations --form md --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-_8hqiut6/generated/graphs
-+ lake exe effect4 inspect --group todo --session TodoApp --what relations --form json --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-_8hqiut6/generated/graphs
-+ lake exe effect4 inspect --group todo --session TodoApp --what relations --form tsv --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-_8hqiut6/generated/graphs
+Build completed successfully (1872 jobs).
++ lake exe effect4 inspect --group todo --session TodoApp --what relations --form md --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-j4h3b2yd/generated/graphs
++ lake exe effect4 inspect --group todo --session TodoApp --what relations --form json --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-j4h3b2yd/generated/graphs
++ lake exe effect4 inspect --group todo --session TodoApp --what relations --form tsv --out /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-j4h3b2yd/generated/graphs
 PASS generate: requested producers ran in dependency order
+exit 0
