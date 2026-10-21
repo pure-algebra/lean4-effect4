@@ -85,8 +85,9 @@ Done on 2026-10-20: the to-do as a user's project (`research/2026-10-19-todo-as-
 M1, M2, M3, C1 and the compiler's entry point in three slices
 (`research/2026-10-20-compiler-entry/README.md` §7). M4 landed in both halves (rows 431 and 433). Naturals and integers are exact in OCaml, and the
 Rocq comparison lane's producer is in the tree. The user-side pass (row 432), value linkage (row 434) and the entry point's fourth slice,
-part a (row 435), landed. Running: 4c. Next: the entry point's OCaml target (E2); then M8 as
-amended.
+part a (row 435), landed. Next: 4c, the entry point's OCaml target (E2), then M8 as amended. The
+handoff of 2026-10-20 (`research/2026-10-20-handoff-codex/README.md`) names the heads, the
+order, the rules and the three briefs.
 
 1. M1, one located refusal: landed.
 2. M2, one profile judgment at ingress: landed.

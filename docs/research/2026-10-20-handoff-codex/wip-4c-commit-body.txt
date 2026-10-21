@@ -1,0 +1,73 @@
+8fcc9839901214b35b273804ebfb5e78e50f416f
+WIP 4c: base measured, extraction over the generated Skeleton.v prototyped; no tree change yet
+
+Stopped at the coordinator's request (quota). No file of the tree has changed: this commit is
+empty and carries the record. Base 336a1bc0a.
+
+Done
+- Read: the brief, AGENTS.md, decisions rows 411, 431 and 433, rocq/README.md, LaneExtract.v,
+  Skeleton.v, the six hand files, the lane (dune, lane_eval.ml, test_rocq.ml, rocq_run.mli,
+  rocq_gen.ml), src/Effect4/Laws/Run/Tree.lean, src/Effect4/Run/Tree.lean, coherence.md 9.1.
+- Measured at the base:
+  - the lane, built by dune and run five times (test_rocq.exe from its build directory):
+    13 checks, 0 failures; R3 7 requests, 0 differ; R4 51 programs in InRocq, 36 typed,
+    0 differ under the silent host and under four units; the 15 refused, 1 differs (g200 at 0);
+    0.056 to 0.058 s wall per run;
+  - make gen-rocq-lane: 9.3 s wall, and git status clean after it (the runner is reproduced);
+  - hand Rocq lines (wc -l): the six files 2,824 (2,794 without their 5-line provenance
+    headers); all hand .v files 3,910 (with LaneExtract 72, SkeletonApprox 153, Assumptions 9,
+    StoreLaws 532, StoreGrammar 292, StoreAssumptions 28).
+- Prototyped outside the tree (the session scratchpad, lane-4c/proto/Try2.v), compiled under
+  Rocq 9.0.1 over Eff_types.v, Skeleton.v and split_types --extract's EffExtract.v:
+    Module Lean <: Eval.
+    Include Eval.
+    End Lean.
+    Extract Constant Lean.sync_op => "Rocq_gen.sync_op".   (and ctx, and each eval_* op)
+    Module Tree := Skeleton Lean.
+    Extraction "rocq_run.ml" Tree.ofProgram.
+  Include makes the 25 parameters axioms with no hand copy of the signature. Declare Module is
+  refused by extraction ("the module has no body"). The extracted interface has module type
+  Eval, the functor Skeleton, Lean (sync_op and ctx equal to the realizing types) and Tree.tree,
+  whose exits are Eff_types.Exit.t over Big_int_Z.big_int; a budget is an OCaml int.
+
+Remains (the design the reading found)
+1. ocaml/gen/roots.json: the 23 operations of Effect4.Run.Tree.Eval (push, pushAll, term, value,
+   fail, failCause, sync, test, choose, exitVal, causeVal, caught, restore, inTable, cellOp,
+   body, arg, programs, provide, contextVal, root, badShape, outside) join the Rocq_gen
+   consumer's linkage, so each parameter of Eval is Lean's lowered function itself. Eval.badShape
+   and Eval.outside leave the api artifact's linkage. Decision.decide, evalTerm, Stores.empty,
+   NativeOp.syncOpOf and syncOpStep leave it too if no other hand OCaml calls Api_gen's (grep:
+   only lane_eval.ml and test_rocq.ml do; kit.ml calls errOf and test_scenarios reify_exit_val,
+   so those stay). Then make gen-lcnf.
+2. rocq/LaneExtract.v over Skeleton.v as prototyped; Makefile ROCQ_LANE_SOURCES becomes
+   Eff_types Skeleton; make gen-rocq-lane.
+3. The lane: lane_eval.ml goes (no hand evaluator). test_rocq.ml maps Rocq's Tree.tree into
+   Lean's lowered tree by the identity on its four constructors, and runs both with Lean's
+   lowered Tree.run: probe against run of the mapped tree, compared as Lean's outcome records.
+   dune's modules follow.
+4. R5 cannot stay: under the generated tree the caught failure and the context read agree, since
+   Skeleton.v has both arms, so "its runs differ" fails. Proposed: they join R2 as greens, and
+   R5's red controls become a budget skew (Rocq at k against Lean at k + 1 on the doubling loop)
+   and a mutant evaluator (the extracted functor applied in OCaml with one operation changed).
+   InRocq stays R4's selection, so R3 and R4 reproduce the base's numbers; propose retiring
+   InRocq and widening R4 to every corpus program.
+5. Delete rocq/{Denote,Run,Judgments,Budget,BudgetDefs,Api}.v; update rocq/_RocqProject,
+   rocq/README.md (the exception and the table), docs/GENERATED.md (rocq-lane row),
+   ocaml/README.md (two lane rows), the Makefile's comments and rocq/tools/split_types.ml's
+   comment. Repair the docstrings of src/Effect4/Laws/Run/Tree.lean (Budget.v's fragment,
+   BudgetDefs.denoteBD_same, denoteW, adequacyD). No declared fact's proof lived in the hand
+   files: ofProgram_approx cites SkeletonApprox.v over Skeleton.v, and ofProgram_eq_denoteRowsB
+   is already a proof_goal. src/Effect4/Run/Tree.lean also cites rocq/BudgetDefs.v in four
+   docstrings; it is a core module, so its edit rebuilds every dependent. generated/semantics.md
+   quotes the old docstring, and gen-semantics is paused.
+6. Not started: the narrow lake builds, batteries-touched, #axiom_audit, #plan_status,
+   gen-rocq, check-ocaml, check-sweep, the Rocq compile of rocq/README.md's loop, the
+   Assumptions.v output, the merge of refactor/phase1-phase3, and the landing paragraph.
+
+Checks run
+- dune build engine/test/rocq/test_rocq.exe at the base, and the lane's executable five times.
+- make gen-rocq-lane at the base: no drift.
+- rocq compile of Eff_types, Skeleton, EffExtract and the prototype in the scratchpad.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
