@@ -206,6 +206,7 @@ import Effect4.Program.Typing.Annotate
 import Effect4.Api.Author
 -- Portable program data, its admission and its generated readings (decisions row 439).
 import Effect4.Api.Object
+import Effect4.Api.Session
 import Effect4.Api.Supervision
 import Effect4.Run
 -- What a tool reads off a run: the machine's view, the raw replay, the tape, a funded run, rest.

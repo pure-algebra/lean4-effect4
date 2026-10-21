@@ -168,6 +168,29 @@ def colliding : NativeEff :=
 -- the program is admitted, and its services do not print
 #guard (Api.check colliding).isOk && (Api.printModule "main" colliding).isNone
 
+/-- A service beside one free host call. Its constants must not capture the host namespace. -/
+def serviceBesideHost (service : String) : NativeEff :=
+  .defs [{ name := "hostMake", request := .unit, answer := .nat, role := .serviceInit service },
+         { name := "hostRead", request := .nat, answer := .nat,
+           role := .serviceMethod service "read" 0 }]
+    (.cons (.succeed (.lit (.nat 5))) (.cons (.succeed (.var 0)) .nil))
+    (.perform (.external 0) (.lit .unit)) .nil
+
+/-- One free host namespace, with no Effect service key. -/
+def freeHostTable (host : String) : RowTable :=
+  [(Authoring.Row.host (host ++ ".next") .unit .nat).row]
+
+-- finite controls: domain admission accepts all three blocks; only the colliding target names refuse.
+#guard (["Session", "SessionLayer", "Transport"].all fun host =>
+  (Api.Built.ofProgram { rows := freeHostTable host } (serviceBesideHost "Session")).isOk)
+#guard (match Api.emitModule "main" (serviceBesideHost "Session") (freeHostTable "Session") with
+  | .error (.print (.unsafeName "Session")) => true
+  | _ => false)
+#guard (match Api.emitModule "main" (serviceBesideHost "Session") (freeHostTable "SessionLayer") with
+  | .error (.print (.unsafeName "Session")) => true
+  | _ => false)
+#guard (Api.emitModule "main" (serviceBesideHost "Session") (freeHostTable "Transport")).isOk
+
 /-! ## The reader refuses a service image the printer would not write -/
 
 /-- A layer whose `get` passes `99` where the printer passes the state `a0` (Codex's

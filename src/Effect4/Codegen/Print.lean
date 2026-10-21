@@ -548,12 +548,14 @@ def classNameFault (classes : Effect4.Codegen.Classes.Classes) (defs : List DefD
   defs.findSome? fun d =>
     ((d.name :: d.params.map (·.name)).find? fun s => classes.any (·.1 == s))
 
-/-- A service's name and its layer's name, when one is not free: not an export name, the main
-declaration's name, or a row's spelling. `serviceFault` checks them against the definitions. -/
+/-- A service's name and its layer's name must be safe export names and leave row names free.
+Neither may be the main declaration's name or a row's qualified root (`rowNameUses`).
+`serviceFault` checks both against the definitions. -/
 def serviceNamesFault (table : List Row) (name : String) (defs : List DefDecl) : Option String :=
   (servicesOf defs).findSome? fun sv =>
     if !exportNameSafe sv.name || !exportNameSafe (sv.name ++ "Layer") || sv.name == name ||
-        sv.name ++ "Layer" == name || table.any (fun row => row.spelling == sv.name) then
+        sv.name ++ "Layer" == name || (rowNameUses table).contains sv.name ||
+        (rowNameUses table).contains (sv.name ++ "Layer") then
       some sv.name
     else none
 

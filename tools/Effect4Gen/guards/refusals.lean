@@ -90,6 +90,11 @@ def prints : List PrintRefusal :=
    .strayMethod "readCounter" "Clock", .service "Counter", .serviceMethod "Counter" "read",
    .declarations 1 0]
 
+/-- Every session-construction refusal, including its owner's original location. -/
+def sessions : List SessionRefusal :=
+  prints.map .service ++ [.missingService "Absent"] ++ scopes.map .scope ++
+    admissions.map .admission ++ [.requirements [1] [⟨⟨30⟩, ⟨6⟩⟩]]
+
 def reads : List Effect4.Program.ReadRefusal :=
   [.unknownHead "Cause.fail", .unknownIdent "x", .arity "Db.get", .binder "a1", .shape "call",
    .negative (-3), .unsupportedStmt, .annotation "lambda parameter"]
@@ -237,6 +242,13 @@ def printedHead : Effect4.Json → String
 #guard typings.all fun x =>
   Canonical.head x == "Effect4.Located(List(Nat), Effect4.Program.TypeReason)" &&
     printedHead (Canonical.print x) == ""
+
+-- Session construction composes these refusal owners without erasing their payloads.
+#guard sessions.all fun x => Canonical.decode (α := SessionRefusal) (Canonical.encode x) = some x
+#guard sessions.all fun x => Canonical.decode (α := SessionRefusal) (Canonical.encode x ++ [0]) = none
+#guard sessions.all fun x => Canonical.decode (α := SessionRefusal) (Canonical.encode x).dropLast = none
+#guard sessions.all fun x => (Canonical.shape SessionRefusal).accepts (Canonical.toVal x)
+#guard (sessions.map Canonical.encode).eraseDups.length = sessions.length
 
 end RefusalsAcceptance
 

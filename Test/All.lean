@@ -1,6 +1,7 @@
 import Effect4.Laws
 import Test.Api.FrontierContract
 import Test.Api.ObjectContract
+import Test.Api.SessionContract
 import Test.Schema.AnnotationDataPlaneContract
 import Test.Schema.DataBridge
 import Test.Schema.AuthoringContract

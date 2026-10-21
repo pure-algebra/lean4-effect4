@@ -1,5 +1,6 @@
 import Effect4.Api.Codegen
 import TypeScript.Render
+import TestSupport.ServiceSession
 
 /-!
 Finite target controls for Concept 5's print/read boundary and R5/R8 service identity
@@ -61,6 +62,7 @@ def falseAnnotation (requirement : TypeScript.TypeRef)
 
 def emit (out : System.FilePath) : IO Unit := do
   IO.FS.createDirAll out
+  TestSupport.ServiceSession.emit out
   let fixtures : List (String × NativeEff) :=
     [ ("first", .service firstKey)
     , ("both", both)

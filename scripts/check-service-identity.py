@@ -53,6 +53,43 @@ console.log(JSON.stringify({ correct: 9, sameKey: 7, scopedLookup: 42, missing: 
 '''
 
 
+SESSION_HOST = '''import { Effect, Option } from "effect"
+import type { Exit } from "effect"
+export const requests: ReadonlyArray<readonly ["check", number]> = [["check", 0], ["check", 7], ["check", 2]]
+export const replies: Array<Exit.Exit<number, number>> = []
+let position = 0
+export const Session = {
+  next: () => Effect.sync(() => {
+    const request = requests[position++]
+    return request === undefined ? Option.none() : Option.some(request)
+  }),
+  reply_check: (reply: Exit.Exit<number, number>) => Effect.sync(() => { replies.push(reply) })
+}
+'''
+
+SESSION_RUNTIME = '''import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { Effect, Exit } from "effect"
+import { sessionProgram } from "./session.ts"
+import { requests, replies } from "./session-host.ts"
+const expected = JSON.parse(readFileSync(new URL("./session-expected.json", import.meta.url), "utf8"))
+const normalize = (exit) => Exit.isSuccess(exit)
+  ? { _tag: "Success", value: exit.value ?? null }
+  : { _tag: "Failure", cause: exit.cause.reasons.map((reason) => {
+      assert.equal(reason._tag, "Fail")
+      return { _tag: "Fail", error: reason.error }
+    }) }
+const exit = await Effect.runPromiseExit(sessionProgram)
+const observed = { requests, replies: replies.map(normalize), exit: normalize(exit) }
+assert.deepEqual(observed, expected)
+assert.equal(replies.length, 3)
+assert.equal(Exit.isFailure(replies[0]), true)
+assert.equal(Exit.isSuccess(replies[1]), true)
+assert.equal(Exit.isSuccess(replies[2]), true)
+console.log(JSON.stringify(observed))
+'''
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=ROOT / ".lake/service-identity")
@@ -100,10 +137,12 @@ def main():
             raise RuntimeError(f"Lean fixture emission failed:\n{emitted.stdout}{emitted.stderr}")
         (out / "inference.ts").write_text(INFERENCE)
         (out / "runtime.mjs").write_text(RUNTIME)
+        (out / "session-host.ts").write_text(SESSION_HOST)
+        (out / "session-runtime.mjs").write_text(SESSION_RUNTIME)
         options = json.loads((ROOT / "ts/eff/tsconfig.json").read_text())["compilerOptions"]
         compiler = [node, str(modules / "@typescript/native-preview/bin/tsgo"), "--pretty", "false", "--noEmit"]
         for name, files, expected in [
-            ("positive", ["positive.ts", "inferred.ts", "inference.ts"], []),
+            ("positive", ["positive.ts", "inferred.ts", "inference.ts", "session.ts", "session-host.ts"], []),
             ("false-closed", ["false-closed.ts"], [2375]),
             ("wrong-brand", ["wrong-brand.ts"], [2375]),
         ]:
@@ -125,12 +164,15 @@ def main():
         runtime = run([bun, str(out / "runtime.mjs")], 30)
         if runtime.returncode:
             raise RuntimeError(f"runtime controls failed:\n{runtime.stdout}{runtime.stderr}")
+        session = run([bun, str(out / "session-runtime.mjs")], 30)
+        if session.returncode:
+            raise RuntimeError(f"service session disagrees with Lean:\n{session.stdout}{session.stderr}")
         report["emitted_sha256"] = {
             name: hashlib.sha256((out / name).read_bytes()).hexdigest()
-            for name in ("positive.ts", "inferred.ts", "false-closed.ts", "wrong-brand.ts")
+            for name in ("positive.ts", "inferred.ts", "false-closed.ts", "wrong-brand.ts", "session.ts", "session-expected.json")
         }
         report["passed"] = True
-        print("PASS service identity: checked API emissions, inferred requirements, two TS2375 controls, four runtime outcomes")
+        print("PASS service identity: checked API emissions, inferred requirements, two TS2375 controls, four runtime outcomes, service session agrees with Lean")
         return 0
     finally:
         (out / "report.json").write_text(json.dumps(report, indent=2) + "\n")

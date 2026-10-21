@@ -223,7 +223,7 @@
       "Note": "The refusals an agent can be shown, as content (decisions row 17): the scope reader's, the checker's, the authoring call's, the printer's, the reader's and the build's (the eight of the row's source, scout C 3.3), with admission's and the table's, which the Runner group carried before, and the signature's that admission reports (decisions row 21). Placed before Runner, which imports it. The build refusal is declared in Effect4.Api.Author; importing it brings no keyword since the authoring syntax is scoped (seat J2). A judgment's refusal is one `Located` reason (decisions rows 414 (2) and 415 (1); move M1), so the group holds several applied `Located`, each listed after its reason; qualified names keep them apart. The host session's refusal stays in Runner.",
       "Name": "Refusals",
       "Flags": ["--qualified-names"],
-      "Imports": "Effect4.Api.Codegen,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program,Effect4.Api.Author,Effect4.Store.Domain.ShapeJson,Effect4.Api.Object",
+      "Imports": "Effect4.Api.Codegen,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program,Effect4.Api.Author,Effect4.Store.Domain.ShapeJson,Effect4.Api.Object,Effect4.Api.Session",
       "Out": "src\\Effect4\\Api\\RefusalsDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\refusals.lean",
       "Kinds": [],
@@ -259,7 +259,8 @@
         "Effect4.Program.ClassRefusal",
         "Effect4.Program.PrintRefusal",
         "Effect4.Program.ReadRefusal",
-        "Effect4.Api.BuildRefusal"
+        "Effect4.Api.BuildRefusal",
+        "Effect4.Api.SessionRefusal"
       ]
     },
     {

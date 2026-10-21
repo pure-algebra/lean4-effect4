@@ -1,4 +1,5 @@
 import Effect4.Api.Author
+import Effect4.Api.Session
 import Effect4.Program.Authoring
 import Effect4.Program.Authoring.Ascribe
 import Effect4.Program.Authoring.Atoms

@@ -82,8 +82,11 @@ and a document are each a state reached by its journal. The dictionary
   Row names are derived, and `LiveRecord` stores the shared object.
 - The object's load is a composite of two exact embeddings, and the row-name projection is gone (row 440).
   The printer's service check is formation and naming.
-  The next program-domain slice is the target print, then the host interface and session program.
   The sequence is `research/2026-10-20-program-host-runtime.md` §14.5.
+- `Built.session` constructs an admitted lifetime from an admitted service block.
+  It initializes once, keeps definition positions, appends request and reply rows, and refuses remaining requirements.
+  The engine, file loader, and driver remain later slices.
+  The contract and checks are in `research/2026-10-21-session-landing/README.md`.
 
 ## Next, in order
 

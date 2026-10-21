@@ -1625,6 +1625,13 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   `LiveRecord.restore_save` returns the exact saved run in `src/Effect4/Laws/Api/LiveRecord.lean` (`live-session-persists`, R6 and R13).
   Neither property establishes native package integrity, host reconnection, repeated effects, or progress.
 
+- **Checked service sessions (`service-session-checked`, `service-session-retains`)**: `Api.Built.session` constructs an ordinary program from an admitted service block.
+  Success requires candidate construction, full program admission, and an empty requirement row.
+  It retains declarations, bodies, module layers, named types, and service declarations.
+  It appends rows and replaces the main program.
+  `Built.session_ok_iff` and `Built.session_retains` state these properties in `src/Effect4/Laws/Api/Session.lean`.
+  They serve R6 and R13. Neither establishes transport support, termination, or equality with the replaced main program's behaviour.
+
 ### 2.10 Concept 10: Translation & Simulation Metatheory (`translation-simulation`)
 
 #### 1. What the Literature Defines

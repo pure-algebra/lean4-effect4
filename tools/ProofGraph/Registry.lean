@@ -1021,6 +1021,12 @@ def registry : Registry where
     { id := "built-admission-exact", concept := "host-session-protocol", role := .compatibility
       title := "Built.ofSketch returns exactly the full program-admission refusal at the application extended by the sketch's hole rows, and Built.ofProgram at the recorded application exactly; no native forgery, host execution, or progress claim (seams S4, R6 and R13)"
       pointer := .witness `Effect4.Api.Built.ofSketch_error_iff },
+    { id := "service-session-checked", concept := "host-session-protocol", role := .compatibility
+      title := "A service session succeeds exactly when construction and full admission succeed and the result has no service requirements; no host progress or transport support claim (R6 and R13)"
+      pointer := .witness `Effect4.Api.Built.session_ok_iff },
+    { id := "service-session-retains", concept := "host-session-protocol", role := .compatibility
+      title := "Successful service-session construction retains declarations, bodies, layers and signature declarations, appends rows, and replaces only the main program; no equality of old and new main behaviour (R6 and R13)"
+      pointer := .witness `Effect4.Api.Built.session_retains },
     { id := "live-session-persists", concept := "host-session-protocol", role := .compatibility
       title := "Restoring a live session's own record returns its exact run after full admission and ordered journal replay, retaining recorded row spellings and empty session names; no repeated host effects or host reconnection claim (seams S4, R6 and R13)"
       pointer := .witness `Effect4.LiveRecord.restore_save },
