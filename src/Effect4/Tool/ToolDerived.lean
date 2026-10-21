@@ -1576,102 +1576,81 @@ namespace T_95_root_95__46_Effect4_46_LiveRecordC
 
 def shapeDoc : ShapeDoc :=
   ⟨.struct "Effect4.LiveRecord" [("version", (shape _root_.Nat).root),
-     ("app", (shape _root_.Effect4.Program.SigApp).root),
-     ("program", (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root),
+     ("object", (shape _root_.Effect4.Program.Object).root),
      ("session", (shape _root_.String).root), ("binding", (shape _root_.String).root),
      ("budget", (shape _root_.Effect4.Api.Budget).root),
-     ("journal", (shape (@_root_.List (_root_.Effect4.Api.Runner.Command))).root),
-     ("rowNames", (shape (@_root_.List (@_root_.Prod (_root_.String) (_root_.Nat)))).root)],
-   (shape _root_.Nat).defs ++ (shape _root_.Effect4.Program.SigApp).defs ++
-     (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).defs ++
+     ("journal", (shape (@_root_.List (_root_.Effect4.Api.Runner.Command))).root)],
+   (shape _root_.Nat).defs ++ (shape _root_.Effect4.Program.Object).defs ++
      (shape _root_.String).defs ++ (shape _root_.Effect4.Api.Budget).defs ++
-     (shape (@_root_.List (_root_.Effect4.Api.Runner.Command))).defs ++
-     (shape (@_root_.List (@_root_.Prod (_root_.String) (_root_.Nat)))).defs⟩
+     (shape (@_root_.List (_root_.Effect4.Api.Runner.Command))).defs⟩
 
 def toVal : _root_.Effect4.LiveRecord → Val
-  | .mk a0 a1 a2 a3 a4 a5 a6 a7 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1,
-      Canonical.toVal a2, Canonical.toVal a3, Canonical.toVal a4, Canonical.toVal a5,
-      Canonical.toVal a6, Canonical.toVal a7]
+  | .mk a0 a1 a2 a3 a4 a5 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2,
+      Canonical.toVal a3, Canonical.toVal a4, Canonical.toVal a5]
 
 def ofVal : Val → Option (_root_.Effect4.LiveRecord)
-  | .ctor 0 [v0, v1, v2, v3, v4, v5, v6, v7] =>
+  | .ctor 0 [v0, v1, v2, v3, v4, v5] =>
     match Canonical.ofVal (α := _root_.Nat) v0,
-        Canonical.ofVal (α := _root_.Effect4.Program.SigApp) v1,
-        Canonical.ofVal (α := (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))) v2,
-        Canonical.ofVal (α := _root_.String) v3, Canonical.ofVal (α := _root_.String) v4,
-        Canonical.ofVal (α := _root_.Effect4.Api.Budget) v5,
-        Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Api.Runner.Command))) v6,
-        Canonical.ofVal (α := (@_root_.List (@_root_.Prod (_root_.String) (_root_.Nat)))) v7 with
-    | some a0, some a1, some a2, some a3, some a4, some a5, some a6,
-      some a7 => some ⟨a0, a1, a2, a3, a4, a5, a6, a7⟩
-    | _, _, _, _, _, _, _, _ => none
+        Canonical.ofVal (α := _root_.Effect4.Program.Object) v1,
+        Canonical.ofVal (α := _root_.String) v2, Canonical.ofVal (α := _root_.String) v3,
+        Canonical.ofVal (α := _root_.Effect4.Api.Budget) v4,
+        Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Api.Runner.Command))) v5 with
+    | some a0, some a1, some a2, some a3, some a4, some a5 => some ⟨a0, a1, a2, a3, a4, a5⟩
+    | _, _, _, _, _, _ => none
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.LiveRecord) : ofVal (toVal a) = some a := by
-  obtain ⟨a0, a1, a2, a3, a4, a5, a6, a7⟩ := a
+  obtain ⟨a0, a1, a2, a3, a4, a5⟩ := a
   simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.LiveRecord} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  · next v0 v1 v2 v3 v4 v5 v6 v7 =>
+  · next v0 v1 v2 v3 v4 v5 =>
     split at h
-    · next b0 b1 b2 b3 b4 b5 b6 b7 h0 h1 h2 h3 h4 h5 h6 h7 =>
+    · next b0 b1 b2 b3 b4 b5 h0 h1 h2 h3 h4 h5 =>
       injection h with h
       subst h
       simp only [toVal]
       rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2,
-        Canonical.ofVal_exact h3, Canonical.ofVal_exact h4, Canonical.ofVal_exact h5,
-        Canonical.ofVal_exact h6, Canonical.ofVal_exact h7]
+        Canonical.ofVal_exact h3, Canonical.ofVal_exact h4, Canonical.ofVal_exact h5]
     · exact nomatch h
   · exact nomatch h
 
 theorem lift_T_95_root_95__46_Nat (x : _root_.Nat) :
     acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))
     _ _ (Canonical.fits x)
-theorem lift_T_95_root_95__46_Effect4_46_Program_46_SigApp (x : _root_.Effect4.Program.SigApp) :
-    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.SigApp).root
+theorem lift_T_95_root_95__46_Effect4_46_Program_46_Object (x : _root_.Effect4.Program.Object) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Object).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
-    _ _ (Canonical.fits x)
-theorem lift_T_64__95_root_95__46_Effect4_46_Program_46_Eff_32__40__95_root_95__46_Effect4_46_Program_46_NativeOp_41_ (x : (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))) :
-    acceptsIn shapeDoc.defs (shape (@_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp))).root
-      (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
     _ _ (Canonical.fits x)
 theorem lift_T_95_root_95__46_Effect4_46_Api_46_Budget (x : _root_.Effect4.Api.Budget) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Api.Budget).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
     _ _ (Canonical.fits x)
 theorem lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Api_46_Runner_46_Command_41_ (x : (@_root_.List (_root_.Effect4.Api.Runner.Command))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Api.Runner.Command))).root
-      (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
-    _ _ (Canonical.fits x)
-theorem lift_T_64__95_root_95__46_List_32__40__64__95_root_95__46_Prod_32__40__95_root_95__46_String_41__32__40__95_root_95__46_Nat_41__41_ (x : (@_root_.List (@_root_.Prod (_root_.String) (_root_.Nat)))) :
-    acceptsIn shapeDoc.defs (shape (@_root_.List (@_root_.Prod (_root_.String) (_root_.Nat)))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
 
 theorem fits (a : _root_.Effect4.LiveRecord) : shapeDoc.accepts (toVal a) = true := by
-  obtain ⟨a0, a1, a2, a3, a4, a5, a6, a7⟩ := a
+  obtain ⟨a0, a1, a2, a3, a4, a5⟩ := a
   apply accepts_struct
   exact
     (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Nat a0)
-      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_SigApp a1)
-        (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_Effect4_46_Program_46_Eff_32__40__95_root_95__46_Effect4_46_Program_46_NativeOp_41_ a2)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Program_46_Object a1)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_String a2)
           (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_String a3)
-            (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_String a4)
-              (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Api_46_Budget a5)
-                (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Api_46_Runner_46_Command_41_ a6)
-                  (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__64__95_root_95__46_Prod_32__40__95_root_95__46_String_41__32__40__95_root_95__46_Nat_41__41_ a7) (acceptsFields_nil _)))))))))
+            (acceptsFields_cons _ _ _ _ _ _ (lift_T_95_root_95__46_Effect4_46_Api_46_Budget a4)
+              (acceptsFields_cons _ _ _ _ _ _ (lift_T_64__95_root_95__46_List_32__40__95_root_95__46_Effect4_46_Api_46_Runner_46_Command_41_ a5) (acceptsFields_nil _)))))))
 
 instance instCanonical : Canonical (_root_.Effect4.LiveRecord) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
