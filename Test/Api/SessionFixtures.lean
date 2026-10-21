@@ -1,8 +1,9 @@
-import Effect4.Api.Session
+import Effect4.Run.Runner
+import Effect4.Run.Event
 import Test.Dogfood.Scenario.Todo.CachedProgram
 
 /-! Law-free finite fixtures for checked service sessions.
-The contract battery owns the evaluations. Hosts route each row before handling it.
+The contract battery owns the evaluations. Each reactor holds only its own state.
 These fixtures make no claim about physical host effects or arbitrary service behaviour. -/
 
 set_option autoImplicit false
@@ -11,26 +12,13 @@ open Effect4 Effect4.Program Effect4.Program.Authoring Effect4.Machine
 open Effect4.Api (Built SessionRefusal)
 open Test.Dogfood.Scenario.Todo (Repo repository todo)
 
-abbrev Script := List Val × List (String × Val)
-
-/-- The request queue and the reply values, in order. -/
-def script (replies : List String) : Run.Reactor Script := fun row sent state =>
-  if row.spelling == "Session.next" then
-    match state.1 with
-    | [] => some (.ofExit (.success .none), state)
-    | request :: rest => some (.ofExit (.success (.some request)), (rest, state.2))
-  else if replies.contains row.spelling then
-    some (.ofExit (.success .unit), (state.1, state.2 ++ [(row.spelling, sent)]))
-  else none
-
-/-- Select the protocol or application host before invoking either.
-An unanswered selected row never falls through to the other host. -/
-def route {σ : Type} (replies : List String) (host : Run.Reactor σ) :
-    Run.Reactor (Script × σ) := fun row sent state =>
-  if row.spelling == "Session.next" || replies.contains row.spelling then
-    (script replies row sent state.1).map fun (answer, next) => (answer, (next, state.2))
-  else
-    (host row sent state.2).map fun (answer, next) => (answer, (state.1, next))
+/-- Replies are accepted calls at session reply rows, in journal order. -/
+def replies (run : Run) : List (String × Val) :=
+  (Run.rows run).filterMap fun
+    | (.bind call _, .bound) => do
+      let row ← run.rowOf call.op
+      if Effect4.Api.ServiceSession.isReplyRow row then some (row.spelling, call.request) else none
+    | _ => none
 
 /-- Record each repository operation that receives an answer. -/
 def recordedRepository : Run.Reactor (Repo × List String) := fun row sent state =>
@@ -44,8 +32,6 @@ def cachedBuilt : Option Built :=
 def todoSession : Option Built := todoBuilt.bind fun b => (b.session "TodoApp").toOption
 def cachedSession : Option Built := cachedBuilt.bind fun b => (b.session "TodoApp").toOption
 
-def todoReplies : List String :=
-  ["Session.reply_add", "Session.reply_list", "Session.reply_complete", "Session.reply_remove"]
 def todoRequests : List Val :=
   [.list [.str "add", .str "milk"], .list [.str "add", .str "café 日本 🙂"],
    .list [.str "list", .unit], .list [.str "complete", .nat 1],
@@ -56,12 +42,32 @@ def stocked : Repo := (2, [(1, "milk", false)])
 
 /-- One whole to-do lifetime with a recorded repository. -/
 def runTodo (built : Built) (requests : List Val) (initial : Repo) :
-    Run × (Script × (Repo × List String)) :=
-  Run.runWith built (route todoReplies recordedRepository) ((requests, []), (initial, []))
+    Run × (List Val × (Repo × List String)) :=
+  Run.runWith built (Run.Reactor.tensor (Run.Reactor.queue requests) recordedRepository) (requests, (initial, []))
     "session-contract" {} 512
 
-def todoRun : Option (Run × (Script × (Repo × List String))) :=
+def todoRun : Option (Run × (List Val × (Repo × List String))) :=
   todoSession.map fun b => runTodo b todoRequests (1, [])
+
+/-- One client creates the service state once and keeps every method exit. -/
+def clientMain : Src NativeOp :=
+  bindWith (Def.invoke "TodoAppContext" []) fun state =>
+  bindWith (exit (Def.invoke "TodoApp_add" [state, str "milk"])) fun first =>
+  bindWith (exit (Def.invoke "TodoApp_add" [state, str "café 日本 🙂"])) fun second =>
+  bindWith (exit (Def.invoke "TodoApp_list" [state])) fun third =>
+  bindWith (exit (Def.invoke "TodoApp_complete" [state, nat 1])) fun fourth =>
+  bindWith (exit (Def.invoke "TodoApp_list" [state])) fun fifth =>
+  bindWith (exit (Def.invoke "TodoApp_remove" [state, nat 1])) fun sixth =>
+  bindWith (exit (Def.invoke "TodoApp_list" [state])) fun seventh =>
+  succeed (app "pair" [first, app "pair" [second, app "pair" [third,
+    app "pair" [fourth, app "pair" [fifth, app "pair" [sixth, app "pair" [seventh, unit]]]]]]])
+
+def clientBuilt : Option Built :=
+  (Test.Dogfood.Scenario.Todo.application.serviceModule "TodoApp").toOption.bind fun m =>
+    (Effect4.Api.Author.build { m with main := clientMain }).toOption
+
+def clientRun : Option (Run × (Repo × List String)) :=
+  clientBuilt.map fun b => Run.runWith b recordedRepository ((1, []), []) "session-client" {} 512
 
 def success (value : Val) : Val := reifyExitVal (.success value)
 def todoExpected : List Val :=
@@ -176,11 +182,11 @@ def exampleRequests : List Val :=
   [.list [.str "check", .nat 0], .list [.str "check", .nat 7], .list [.str "check", .nat 2]]
 def exampleExpected : List Val :=
   [reifyExitVal (.failure (.fail (.tag 0))), success (.nat 7), success (.nat 9)]
-def exampleReplies : List String := ["Session.reply_check"]
 def noHost : Run.Reactor Unit := fun _ _ _ => none
-def runExample (built : Built) (requests : List Val) (replies : List String) : Run × (Script × Unit) :=
-  Run.runWith built (route replies noHost) ((requests, []), ()) "session-example" {} 128
-def exampleRun : Option (Run × (Script × Unit)) :=
-  exampleSession.map fun b => runExample b exampleRequests exampleReplies
+def runExample (built : Built) (requests : List Val) : Run × (List Val × Unit) :=
+  Run.runWith built (Run.Reactor.tensor (Run.Reactor.queue requests) noHost)
+    (requests, ()) "session-example" {} 128
+def exampleRun : Option (Run × (List Val × Unit)) :=
+  exampleSession.map fun b => runExample b exampleRequests
 
 end Test.Api.SessionFixtures
