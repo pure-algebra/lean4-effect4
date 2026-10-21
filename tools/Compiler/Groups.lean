@@ -6,8 +6,8 @@ import Test.Api.PackagesContract
 # Compiler.Groups — the tree's own groups, which `lake exe effect4` runs over
 
     lake exe effect4 check --group NAME [--json]
-    lake exe effect4 emit --group NAME [--target ts] [--out DIR] [--emit=KIND,…]
-    lake exe effect4 describe --group NAME [--target ts] [--out DIR] [--emit=KIND,…] [--pretty]
+    lake exe effect4 emit --group NAME [--target ts|ocaml] [--check] [--out DIR] [--emit=KIND,…]
+    lake exe effect4 describe --group NAME [--target ts|ocaml] [--out DIR] [--emit=KIND,…] [--pretty]
     lake exe effect4 inspect --group NAME --what types|rows|surface|graph|manifest [--json]
     lake exe effect4 run --group todo [--text | --typed | --json] [--script FILE] [--budget N]
 
@@ -44,11 +44,18 @@ def todoScript : List Request :=
   ((Test.Dogfood.Scenario.Todo.HostLane.script.mapM fun (entry, args) =>
     (args.mapM Tools.RunChecks.literal).map fun lits => ⟨entry, lits⟩ : Option (List Request))).getD []
 
+/-- The dogfood host's native roots, named once for the compiler. -/
+def todoLowered : Lowered :=
+  { imports := [`Test.Dogfood.Scenario.Todo.HostLane]
+    roots := [`Test.Dogfood.Scenario.Todo.repository,
+      `Test.Dogfood.Scenario.Todo.HostLane.start, `Test.Dogfood.Scenario.Todo.HostLane.script,
+      `Test.Dogfood.Scenario.Todo.Host.serveBuiltVal, `Test.Dogfood.Scenario.Todo.Host.resultVal] }
+
 /-- **The tree's groups**, by name: the wire corpus, the SQLite package's programs at its table,
 and the dogfood to-do with its host and its script. -/
 def all : List Source :=
   [.programs "corpus" Effect4.Program.Wire.Corpus.all,
    .programs "sql" Test.Api.PackagesContract.sqlitePrograms { rows := Effect4.Program.Packages.sqliteBun },
-   .application Test.Dogfood.Scenario.Todo.application (some todoHosted) todoScript]
+   .application Test.Dogfood.Scenario.Todo.application (some todoHosted) todoScript todoLowered]
 
 end Compiler.Groups

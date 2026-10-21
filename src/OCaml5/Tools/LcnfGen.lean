@@ -14,7 +14,12 @@ alone; that is the command each artifact's header carries. The three forms write
 It runs compiled (`lake exe lcnfgen`, the lakefile's `lean_exe`); `lean --run` of this file still
 works, interpreted and many times slower.
 
+`--project-recipe` reads a project's v3 recipe against the library recipe's type owners.
+`Gen.projectArgvs` derives `--open-types` through the ordinary reader and runs only the project's artifacts.
+It runs from the library checkout, with the project's import path inherited from `lake exe`.
+
     lake exe lcnfgen --recipe ocaml/gen/roots.json --one 0
+    lake exe lcnfgen --project-recipe lowering.json
     lake exe lcnfgen --out ocaml/gen/api_gen.ml --import Effect4.Api --cap 2000 \
       Effect4.Api.run Effect4.Api.replay …
 
@@ -128,6 +133,8 @@ def main (argv : List String) : IO Unit := do
     else pure []
   -- The artifacts to make, each as its argv.
   let runs ← match argv with
+    | ["--project-recipe", path] =>
+      IO.ofExcept (Gen.projectArgvs (← readRecipe committed) (← readRecipe path))
     | ["--recipe", path] => IO.ofExcept (Gen.recipeArgvs (← readRecipe path))
     | ["--recipe", path, "--one", n] => do
       let all ← IO.ofExcept (Gen.recipeArgvs (← readRecipe path))

@@ -62,6 +62,8 @@ open Effect4 Effect4.Program Effect4.Store
 manifest's `kind`. The prelude is written with the module that imports it. -/
 inductive Kind where
   | module
+  | recipe
+  | closure
   | prelude
   | surface
   | canonical
@@ -72,6 +74,8 @@ inductive Kind where
 /-- A kind's name, in `--emit` and in the manifest. -/
 def Kind.name : Kind → String
   | .module => "module"
+  | .recipe => "recipe"
+  | .closure => "closure"
   | .prelude => "prelude"
   | .surface => "surface"
   | .canonical => "canonical"
@@ -80,14 +84,14 @@ def Kind.name : Kind → String
 
 /-- The kind that selects a kind: the module selects the prelude. -/
 def Kind.selector : Kind → Kind
-  | .prelude => .module
+  | .prelude | .recipe | .closure => .module
   | k => k
 
 /-- The kinds `--emit` names, in the order `emit` writes them. -/
 def Kind.selectable : List Kind := [.module, .surface, .canonical, .certificate, .manifest]
 
 /-- Every kind, in the order `emit` writes them: the prelude after the module that imports it. -/
-def Kind.all : List Kind := [.module, .prelude, .surface, .canonical, .certificate, .manifest]
+def Kind.all : List Kind := [.module, .recipe, .closure, .prelude, .surface, .canonical, .certificate, .manifest]
 
 /-- The kinds of `--emit=k₁,k₂,…`; `none` when one is no selectable kind's name. -/
 def Kind.parse (text : String) : Option (List Kind) :=
@@ -409,14 +413,16 @@ def Emission.files (e : Emission) (kinds : List Kind) : List Artifact :=
 inputs, with the executable's module closure and its address (`Inputs`); the checks performed and
 those not performed; and the command's arguments as given. An emission's manifest and a group's
 share them. -/
-def manifestFields (spec : Spec) (written : List Artifact) : List (String × NatJson) :=
+def manifestFields (spec : Spec) (written : List Artifact) (target : String := "ts")
+    (performed : List Check := checks) (omitted : List String := notPerformed)
+    (inputs : Option NatJson := none) : List (String × NatJson) :=
   [("profile", .obj [("declaration", .str (``Effect4.Program.rc112).toString),
       ("name", .str rc112.name), ("natBound", match rc112.natBound with | some b => .nat b | none => .null)]),
-    ("target", .str "ts"),
+    ("target", .str target),
     ("artifacts", .arr (written.map Artifact.json)),
-    ("inputs", spec.inputs.json written),
-    ("checks", .obj [("performed", .arr (checks.map Check.json)),
-      ("notPerformed", .arr (notPerformed.map NatJson.str))]),
+    ("inputs", inputs.getD (spec.inputs.json written)),
+    ("checks", .obj [("performed", .arr (performed.map Check.json)),
+      ("notPerformed", .arr (omitted.map NatJson.str))]),
     ("command", .arr (spec.command.map NatJson.str))]
 
 /-- A program as a manifest names it: its module's name, its declaration and its address. -/

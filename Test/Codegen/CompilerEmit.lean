@@ -723,4 +723,44 @@ def here : Elaborated := elaborated%
     | .error _ => false
   | .error _ => false
 
+/-! ## The native target -/
+
+-- The empty recipe gives the project's corrective action. The dogfood's declared roots admit.
+#guard match ({} : Lowered).validate, Groups.todoLowered.validate with
+  | .error why, .ok () => why.startsWith "no lowered roots:"
+  | _, _ => false
+#guard match Options.read ["--target", "ocaml", "--check"] {} with
+  | .ok o => o.target == some "ocaml" && o.nativeCheck
+  | .error _ => false
+#guard Lowered.validName "todo_2" && Lowered.validName "Todo" &&
+  !Lowered.validName "" && !Lowered.validName "2todo" && !Lowered.validName "_todo" &&
+  !Lowered.validName "équipe" && !Lowered.validName "../todo"
+
+-- The application supplies the ordinary v3 recipe, with names as data and one type owner.
+#guard
+  let recipe := Groups.todoLowered.recipe "todo"
+  isStr "effect4-lcnf-roots-v3" (recipe.at? [.key "format"]) &&
+    isStr "todo_gen.ml" (recipe.at? [.key "artifacts", .index 0, .key "out"])
+
+-- A native manifest names its own artifacts and versions. An unchecked emission claims no
+-- native compilation; --check adds that check, and neither mode claims a run.
+#guard match checkProgram first.2 with
+  | .error _ => false
+  | .ok b =>
+    let recipe := Groups.todoLowered.recipe "todo"
+    let pins := Native.inputsJson inputs "library-commit" "ocaml-version" "zarith-version" (.arr [])
+    let spec := { specOf "todo" with command := ["emit", "--target", "ocaml"] }
+    let e := Native.emission spec b recipe "module bytes" "closure bytes" pins false
+      (Native.command "lowering.json")
+    isStr "ocaml" (e.manifest.at? [.key "target"]) &&
+    isStr "ocaml-version" (e.manifest.at? [.key "inputs", .key "ocaml"]) &&
+    isStr "zarith-version" (e.manifest.at? [.key "inputs", .key "zarith"]) &&
+    (e.artifacts.map fun a => (a.path, a.kind)).take 3 ==
+      [("todo_gen.ml", .module), ("closure-todo_gen.tsv", .closure), ("lowering.json", .recipe)] &&
+    !(Native.checks false).any (·.name == "ocamlopt") &&
+    (Native.checks true).any (·.name == "ocamlopt") &&
+    (match e.manifest.at? [.key "checks", .key "notPerformed"] with
+    | some (.arr checks) => checks.any (fun t => isStr "no program or host has run" (some t))
+    | _ => false)
+
 end Test.Codegen.CompilerEmit

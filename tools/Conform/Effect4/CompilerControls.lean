@@ -1,6 +1,7 @@
 import Conform.Effect4.LcnfMl
 import Conform.Effect4.NormalizationInputs
 import Conform.Effect4.LoweringNames
+import OCaml5.Lcnf.Gen
 import Effect4.Program.Native
 
 /-! Focused regressions for the compiler adoption. All expressions below come from the
@@ -609,5 +610,20 @@ run_cmd liftTermElabM do
   if ← elaborates contractless then throwError "a row without a contract elaborated"
   if ← elaborates noRuntime then throwError "a row without its runtime column elaborated"
   if ← elaborates noCrossing then throwError "a row without its crossing elaborated"
+
+-- The ordinary recipe reader resolves the project's type owner and returns only its artifact.
+-- A library without that owner refuses the same project, before the generator writes any file.
+#guard
+  let library := Lean.Json.parse "{\"format\":\"effect4-lcnf-roots-v3\",\"facade\":{\"module\":\"Effect4\"},\"artifacts\":[{\"out\":\"ocaml/eff/eff_types.ml\",\"import\":[\"Effect4\"],\"cap\":0,\"modules\":true,\"types\":[\"Effect4.Store.Val\"]}]}"
+  let absent := Lean.Json.parse "{\"format\":\"effect4-lcnf-roots-v3\",\"facade\":{\"module\":\"Effect4\"},\"artifacts\":[]}"
+  let project := Lean.Json.parse "{\"format\":\"effect4-lcnf-roots-v3\",\"facade\":{\"module\":\"Project\"},\"artifacts\":[{\"out\":\"todo_gen.ml\",\"import\":[\"Todo\"],\"cap\":4000,\"linkage\":[\"Todo.repository\"],\"open\":{\"module\":\"Eff_types\",\"artifact\":\"ocaml/eff/eff_types.ml\"}}]}"
+  match library, absent, project with
+  | .ok owner, .ok missing, .ok recipe =>
+    match OCaml5.Lcnf.Gen.projectArgvs owner recipe, OCaml5.Lcnf.Gen.projectArgvs missing recipe with
+    | .ok runs, .error _ => runs.size == 1 &&
+        (runs[0]!.dropWhile (· != "--open-types")).take 2 == ["--open-types", "Effect4.Store.Val"] &&
+        runs[0]!.take 2 == ["--out", "todo_gen.ml"]
+    | _, _ => false
+  | _, _, _ => false
 
 end Conform.Effect4.CompilerControls

@@ -315,6 +315,21 @@ def recipeArgvs (recipe : Json) : Except String (Array (List String)) := do
       else none
   entries.mapM (argvOf plan face typesOf)
 
+/-- A project's recipe over the library's type owners. The ordinary recipe reader derives
+`--open-types` from those owners, and `generateInFull` computes their type closure.
+Only the project's artifacts run. The library's artifacts remain unchanged. -/
+def projectArgvs (library project : Json) : Except String (Array (List String)) := do
+  let _ ← (Export.readChecked library).mapError (·.message)
+  let owners := (← library.getObjValAs? (Array Json) "artifacts").filter fun e =>
+    (e.getObjValAs? Bool "modules").toOption == some true
+  let entries ← project.getObjValAs? (Array Json) "artifacts"
+  if entries.isEmpty then throw "the project recipe has no artifacts"
+  let fields ← project.getObj?
+  let combined := Json.mkObj ((fields.toList.filter (·.1 != "artifacts")) ++
+    [("artifacts", .arr (owners ++ entries))])
+  let argvs ← recipeArgvs combined
+  return argvs.extract owners.size argvs.size
+
 /-- The `--out` paths of the recipe's artifacts, whose closure manifests are data in
 `GENERATED_PATHS` at `ocaml/gen/closure-<stem>.tsv` (decisions row 70). -/
 def recipeOutsOf (recipe : Json) : List String :=

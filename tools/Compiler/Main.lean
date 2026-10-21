@@ -1,4 +1,4 @@
-import Compiler.Emit
+import Compiler.Native
 import Compiler.Run
 import Compiler.Inspect
 import Compiler.Elaborated
@@ -12,8 +12,8 @@ by static import, as decision E1 asks: the value of a declaration loaded by name
 evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
 
     check [--json]
-    emit [--target ts] [--out DIR] [--emit=module,surface,canonical,certificate,manifest]
-    describe [--target ts] [--out DIR] [--emit=…] [--pretty]
+    emit [--target ts|ocaml] [--check] [--out DIR] [--emit=module,surface,canonical,certificate,manifest]
+    describe [--target ts|ocaml] [--out DIR] [--emit=…] [--pretty]
     inspect --what types|rows|surface|graph|manifest [--json] [the options of describe]
     run [--text | --typed | --json] [--script FILE] [--budget N]
 
@@ -21,8 +21,9 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
   as text, each service's key with the Lean names that declare it, or as one line of JSON under
   `--json`. A refusal is one located refusal, printed the same two ways.
 - `emit` writes the checked emission into one folder (`Compiler.emitTs`), by default
-  `.lake/effect4/<name>/ts/`. `--emit` selects the kinds; the default is all of them. `ts` is the
-  one target, so `--target ts` is the default.
+  `.lake/effect4/<name>/<target>/`. `--emit` selects the kinds; the default is all of them.
+  `--target ts` is the default. `--target ocaml` lowers the named roots through `lcnfgen`.
+  `--check` compiles the native module, and never runs it.
 - `describe` prints the manifest that `emit` with the same options would write, and writes
   nothing: as one line, or indented under `--pretty` (`prettyText`).
 - `inspect` prints one reading of the built program (`Compiler.Inspect`): one query of the tool
@@ -41,7 +42,7 @@ group of programs, each admitted at the group's application (`Source`). Over a g
 `inspect` print each program's answer under its name, and `emit` writes one folder with one
 manifest (`Compiler.emitGroup`).
 
-**The inputs** (`readInputs`): the pins and the prelude are read from the library's checkout,
+**The inputs** (`readInputs`, `Compiler.Inputs`): the pins and the prelude are read from the library's checkout,
 which the project's `lake-manifest.json` locates (`libraryRoot`). The executable's Lean module
 closure is data it was built with (`Compiler.Elaborated`, the default of `main`'s `elaborated`), and
 each module's source is read where `lake exe` puts it, on `LEAN_SRC_PATH` (`sourceOf`). So the
@@ -58,17 +59,17 @@ open Effect4 Effect4.Program Effect4.Program.Authoring
 /-- A command's options, in words. -/
 def usageOf : String → String
   | "check" => "check [--json]"
-  | "emit" => "emit [--target ts] [--out DIR] [--emit=KIND,…]"
-  | "describe" => "describe [--target ts] [--out DIR] [--emit=KIND,…] [--pretty]"
+  | "emit" => "emit [--target ts|ocaml] [--check] [--out DIR] [--emit=KIND,…]"
+  | "describe" => "describe [--target ts|ocaml] [--out DIR] [--emit=KIND,…] [--pretty]"
   | "inspect" => "inspect --what " ++ "|".intercalate (What.all.map What.name) ++
-      " [--json] [--target ts] [--out DIR] [--emit=KIND,…]"
+      " [--json] [--target ts|ocaml] [--out DIR] [--emit=KIND,…]"
   | "run" => "run [--text | --typed | --json] [--script FILE] [--budget N]"
   | _ => ""
 
-/-- The kinds that `--emit` names, and the one target, in words. -/
+/-- The kinds that `--emit` names and the available targets, in words. -/
 def kindsText : String :=
   "a KIND is one of " ++ ", ".intercalate (Kind.selectable.map Kind.name) ++
-    "; ts is the one target, and the default"
+    "; ts is the default target; ocaml lowers the declared roots"
 
 /-- The command line, in words. -/
 def usage : String :=
@@ -87,130 +88,42 @@ structure Options where
   target : Option String := none
   out : Option String := none
   kinds : List Kind := Kind.selectable
+  kindsGiven : Bool := false
   pretty : Bool := false
+  nativeCheck : Bool := false
 
 /-- Read the options of `emit` and `describe`, or name the argument that is none. -/
 def Options.read : List String → Options → Except String Options
   | [], o => .ok o
   | "--target" :: t :: rest, o => Options.read rest { o with target := some t }
   | "--out" :: d :: rest, o => Options.read rest { o with out := some d }
+  | "--check" :: rest, o => Options.read rest { o with nativeCheck := true }
   | "--pretty" :: rest, o => Options.read rest { o with pretty := true }
   | a :: rest, o =>
     if a.startsWith "--emit=" then
       match Kind.parse (a.drop 7).toString with
-      | some kinds => Options.read rest { o with kinds }
+      | some kinds => Options.read rest { o with kinds, kindsGiven := true }
       | none => .error s!"{a} names no kind"
     else .error s!"{a} is no option"
-
-/-- A JSON file of the library's checkout, read by the profile's text reader (`NatJson.parse`). -/
-def readJson (path : System.FilePath) : IO NatJson := do
-  match NatJson.parse ((← IO.FS.readBinFile path).data.toList.map UInt8.toNat) with
-  | .ok t => pure t
-  | .error why => throw (IO.userError s!"{path}: {NatJson.refusalText why}")
-
-/-- Whether a JSON value is the string `s`. -/
-def isStr (s : String) : Option NatJson → Bool
-  | some (.str v) => v == s
-  | _ => false
-
-/-- **The library's checkout**: the folder where the project's `lake-manifest.json` puts the
-package `effect4`, at its path or under the packages folder; the current folder when the project
-is that package. -/
-def libraryRoot : IO System.FilePath := do
-  let manifest ← readJson "lake-manifest.json"
-  if isStr "effect4" (manifest.at? [.key "name"]) then return "."
-  let packages := match manifest.at? [.key "packages"] with
-    | some (.arr ps) => ps
-    | _ => []
-  let some package := packages.find? fun p => isStr "effect4" (p.at? [.key "name"])
-    | throw (IO.userError "lake-manifest.json names no package effect4")
-  match package.at? [.key "type"], package.at? [.key "dir"] with
-  | some (.str "path"), some (.str dir) => return dir
-  | _, _ =>
-    match manifest.at? [.key "packagesDir"] with
-    | some (.str dir) => return System.FilePath.mk dir / "effect4"
-    | _ => return System.FilePath.mk ".lake" / "packages" / "effect4"
-
-/-- **The folders that hold Lean sources**: `LEAN_SRC_PATH`, which `lake exe` sets from the
-workspace, the project's, the library's and its packages' source folders, as Lake reads them from
-`lake-manifest.json` and their lakefiles; each once. Refused when it is not set. -/
-def sourceFolders : IO (List System.FilePath) := do
-  match ← IO.getEnv "LEAN_SRC_PATH" with
-  | some path => return (System.SearchPath.parse path).eraseDups
-  | none => throw (IO.userError
-      "LEAN_SRC_PATH is not set: run the command through lake exe, which sets it from the workspace")
-
-/-- **The source of a Lean module**: its file in exactly one of the folders (`sourceFolders`), by
-its real path. Refused when no folder holds it, or when two hold different files: the manifest
-would then name a source the build may not have read. -/
-def sourceOf (folders : List System.FilePath) (module : String) : IO System.FilePath := do
-  let mut found : List System.FilePath := []
-  for folder in folders do
-    let file := Lean.modToFilePath folder module.toName "lean"
-    if ← file.pathExists then
-      let real ← IO.FS.realPath file
-      unless found.contains real do found := found ++ [real]
-  match found with
-  | [file] => return file
-  | [] => throw (IO.userError s!"no folder of LEAN_SRC_PATH holds the source of {module}")
-  | files => throw (IO.userError
-      s!"{module} has {files.length} sources on LEAN_SRC_PATH: {", ".intercalate (files.map toString)}")
-
-/-- **The newest commit of the library's checkout that changed one of `paths`** (relative to its
-root); `none` when Git answers none. -/
-def provenance (root : System.FilePath) (paths : List String) : IO (Option String) := do
-  try
-    let git ← IO.Process.output
-      { cmd := "git", args := #["-C", root.toString, "log", "-1", "--format=%H", "--"] ++ paths.toArray }
-    let commit := git.stdout.trimAscii.copy
-    pure (if git.exitCode == 0 && !commit.isEmpty then some commit else none)
-  catch _ => pure none
-
-/-- **The inputs**, from the library's checkout and the source folders: its `lean-toolchain`; each
-version that its TypeScript package pins (`ts/eff/package.json`), tsgo's among them; each module of
-the executable's closure (`modules`, `Compiler.Elaborated`) with the SHA-256 of its source
-(`sourceOf`); and as provenance, the newest commit of the checkout that changed a file the emission
-reads there: a source of the closure, the prelude's folder, the pins or the toolchain pin. -/
-def readInputs (root : System.FilePath) (modules : List String) : IO Inputs := do
-  let lean := (← IO.FS.readFile (root / "lean-toolchain")).trimAscii.copy
-  let package ← readJson (root / "ts" / "eff" / "package.json")
-  let pinned (field : String) : List (String × String) := match package.at? [.key field] with
-    | some (.obj entries) => entries.filterMap fun
-      | (name, .str version) => some (name, version)
-      | _ => none
-    | _ => []
-  let pins := pinned "dependencies" ++ pinned "devDependencies"
-  if (pins.lookup tsgoPackage).isNone then
-    throw (IO.userError s!"the library's ts/eff/package.json pins no {tsgoPackage}")
-  let folders ← sourceFolders
-  let sources ← modules.mapM fun m => do pure (m, ← sourceOf folders m)
-  let hashed ← sources.mapM fun (m, file) => do
-    pure (m, Store.sha256 (← IO.FS.readBinFile file).data.toList)
-  let checkout := (← IO.FS.realPath root).toString ++ "/"
-  let own := sources.filterMap fun (_, file) =>
-    if file.toString.startsWith checkout then some (file.toString.drop checkout.length).toString
-    else none
-  let library ← provenance root (own ++ ["ts/prelude", "ts/eff/package.json", "lean-toolchain"])
-  return { lean, library, pins, modules := hashed }
 
 /-- **What a command runs over**: one application, with the host and the script that `run` takes
 when the project passes them; or a named group of programs, each admitted at the group's
 application (`checkProgram`), the empty one by default, as the wire corpus is. -/
 inductive Source where
   | application (app : Application NativeOp) (hosted : Option Hosted := none)
-      (script : List Request := [])
+      (script : List Request := []) (lowered : Lowered := {})
   | programs (name : String) (programs : List (String × NativeEff)) (app : SigApp := {})
 
 /-- A source's name: the application's, or the group's. It names the default output folder. -/
 def Source.name : Source → String
-  | .application app _ _ => app.name
+  | .application app _ _ _ => app.name
   | .programs name _ _ => name
 
 /-- **What `run` runs over**: an application with its host and the script the project passes; or,
 in words, why the source has no host. -/
 def Source.hosted? : Source → Except String (Application NativeOp × Hosted × List Request)
-  | .application app (some h) script => .ok (app, h, script)
-  | .application app none _ =>
+  | .application app (some h) script _ => .ok (app, h, script)
+  | .application app none _ _ =>
     .error s!"the application {app.name} has no host; a project passes one to Compiler.main (hosted := …)"
   | .programs name _ _ =>
     .error s!"the group {name} is programs with no host to answer a row; run takes an application and its host"
@@ -219,7 +132,7 @@ def Source.hosted? : Source → Except String (Application NativeOp × Hosted ×
 (`check`), or each program of the group under its own, at the group's application
 (`checkProgram`); each built, or the build's refusal. -/
 def builtOf : Source → List (String × Except CheckRefusal Api.Built)
-  | .application app _ _ => [(app.name, check app)]
+  | .application app _ _ _ => [(app.name, check app)]
   | .programs _ programs app => programs.map fun (name, program) => (name, checkProgram program app)
 
 /-- A build's refusal, as `check` prints it: one line of JSON under `json`, else text on the error
@@ -239,7 +152,7 @@ def checkCommand (source : Source) (elaborated : Elaborated) (json : Bool) : IO 
   for (name, built) in builtOf source do
     match built, source with
     | .error why, _ => refused := true; printRefusal source name why json
-    | .ok b, .application app _ _ =>
+    | .ok b, .application app _ _ _ =>
       if json then IO.println (jsonText (certificate b))
       else
         let title := s!"{app.name}: checked; the service {serviceName app}"
@@ -265,7 +178,7 @@ def emissionOf (source : Source) (command : List String) (kinds : List Kind)
     (elaborated : Elaborated) : IO (Except String Emission) := do
   try
     match source with
-    | .application app _ _ =>
+    | .application app _ _ _ =>
       match check app with
       | .error why => return .error why.text
       | .ok b => return (emitTs (← readSpec app.name command kinds elaborated) b).mapError (·.text)
@@ -280,6 +193,7 @@ inductive Output where
   | write
   | describe
   | inspect (json : Bool)
+  deriving DecidableEq
 
 /-- The command an output belongs to. -/
 def Output.name : Output → String
@@ -299,14 +213,38 @@ def emitCommand (source : Source) (elaborated : Elaborated) (output : Output) (c
   | .write, true | .inspect _, true =>
     return (← usageError name "--pretty is describe's; inspect prints the manifest indented by default")
   | _, _ => pure ()
-  if let some t := o.target then
-    unless t == "ts" do return (← usageError name s!"--target {t} is no target here, only ts")
-  match ← emissionOf source command o.kinds elaborated with
+  let target := o.target.getD "ts"
+  unless target == "ts" || target == "ocaml" do
+    return (← usageError name s!"--target {target} is no target here; choose ts or ocaml")
+  if o.nativeCheck && (target != "ocaml" || output != .write) then
+    return (← usageError name "--check belongs to emit --target ocaml")
+  if target == "ocaml" && o.kindsGiven && o.kinds.contains .surface then
+    return (← usageError name "ocaml emits no surface; choose module, canonical, certificate or manifest")
+  let out := System.FilePath.mk (o.out.getD s!".lake/effect4/{source.name}/{target}")
+  if target == "ocaml" then
+    match source with
+    | .programs .. =>
+      return (← usageError name "the native target needs an application with named lowered roots")
+    | .application _ _ _ lowered =>
+      match lowered.validate with
+      | .error why => return (← usageError name why)
+      | .ok () => pure ()
+    unless Lowered.validName source.name do
+      return (← usageError name "the native application name must start with an ASCII letter and contain only ASCII letters, digits and underscores")
+  let result ← match target, source with
+    | "ocaml", .application app _ _ lowered =>
+      match check app with
+      | .error why => pure (.error why.text)
+      | .ok b =>
+        try
+          pure (.ok (← Native.emit source.name b lowered elaborated.modules command o.kinds o.nativeCheck out))
+        catch e => pure (.error (toString e))
+    | _, _ => emissionOf source command o.kinds elaborated
+  match result with
   | .error why => IO.eprintln (s!"{name}: " ++ why); return 1
   | .ok e =>
     match output with
     | .write =>
-      let out := System.FilePath.mk (o.out.getD s!".lake/effect4/{source.name}/ts")
       let files := e.files o.kinds
       Prelude.write out (files.map fun a => (a.path, a.bytes))
       IO.println (s!"emit: {files.length} files to {out}: " ++
@@ -436,8 +374,9 @@ def run (source : Source) (elaborated : Elaborated) (args rest : List String) : 
 `elaborated` is what the calling module's elaboration knows of the executable (`elaborated%`, the
 default): its Lean module closure and the declared names of its keys. -/
 def main (app : Application NativeOp) (args : List String) (hosted : Option Hosted := none)
-    (script : List Request := []) (elaborated : Elaborated := by exact elaborated%) : IO UInt32 :=
-  run (.application app hosted script) elaborated args args
+    (script : List Request := []) (lowered : Lowered := {})
+    (elaborated : Elaborated := by exact elaborated%) : IO UInt32 :=
+  run (.application app hosted script lowered) elaborated args args
 
 /-- The group that the first `--group NAME` names, and the arguments without those two. -/
 def takeGroup : List String → Option String × List String
