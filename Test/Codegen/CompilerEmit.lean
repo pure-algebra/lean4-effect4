@@ -739,6 +739,22 @@ def here : Elaborated := elaborated%
   | .ok files => files == [("todo.relation-nodes.gen.tsv", "address\n0.0\n")]
   | .error _ => false
 
+-- controls: ownership excludes other programs, forms, ordinary files and empty figure names.
+#guard InspectDocument.owns .svg "todo" "todo.old.gen.svg" &&
+  !InspectDocument.owns .svg "todo" "todo2.old.gen.svg" &&
+  !InspectDocument.owns .svg "todo" "todo%2Eother.old.gen.svg" &&
+  !InspectDocument.owns .svg "todo" "todo.old.gen.tsv" &&
+  !InspectDocument.owns .svg "todo" "todo.notes.svg" &&
+  !InspectDocument.owns .svg "todo" "todo.gen.svg" &&
+  !InspectDocument.owns .md "todo" "todo.old.gen.md"
+
+-- finite evaluation: a dot in a program name cannot alias the figure-key separator.
+#guard match InspectDocument.files .tsv "todo.other"
+    { title := "row", body := [.part "relation-nodes" "Nodes" [.table ["a"] []]] } with
+  | .ok [(name, _)] => name == "todo%2Eother.relation-nodes.gen.tsv" &&
+      InspectDocument.owns .tsv "todo.other" name && !InspectDocument.owns .tsv "todo" name
+  | _ => false
+
 -- controls: refuse path syntax and malformed graph edges before rendering any artifact.
 #guard !(InspectDocument.files .md "../todo" { title := "none", body := [] }).toOption.isSome &&
   !(InspectDocument.files .svg "todo"

@@ -30,6 +30,14 @@ def validName (name : String) : Bool :=
   !name.isEmpty && name != "." && name != ".." &&
     name.toList.all (fun c => c.isAlphanum || c == '-' || c == '_' || c == '.')
 
+/-- Dots in a program name cannot become the separator before a figure or relation key. -/
+def filePrefix (name : String) : String := name.replace "." "%2E" ++ "."
+
+/-- Multi-file output owns exactly this program prefix and this selected generated suffix. -/
+def owns (form : Form) (name file : String) : Bool :=
+  (form == .svg || form == .tsv) && file.startsWith (filePrefix name) &&
+    file.endsWith (".gen." ++ form.name) && file.length > (filePrefix name).length + 5 + form.name.length
+
 /-- TSV quotes a backslash, a tab, a carriage return and a newline with backslash escapes. -/
 def cell (s : String) : String :=
   s.replace "\\" "\\\\" |>.replace "\t" "\\t" |>.replace "\r" "\\r" |>.replace "\n" "\\n"
@@ -86,7 +94,7 @@ def files (form : Form) (name : String) (d : Document) :
     let files ← entries.zipIdx.mapM fun ((key, content), i) => do
       let key := if key.isEmpty then s!"table-{i}" else key
       unless validName key do throw s!"the output key {key.quote} is no file component"
-      return (name ++ "." ++ key ++ ".gen." ++ form.name, ← content)
+      return (filePrefix name ++ key ++ ".gen." ++ form.name, ← content)
     unless (files.map Prod.fst).eraseDups.length == files.length do
       throw "document artifacts repeat an output file name"
     return files

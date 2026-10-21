@@ -37,6 +37,8 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
   It prints text, or one line of JSON under `--json`.
   The relation readings print Markdown or JSON, or write SVG and TSV files under `--out DIR`.
   `--session SERVICE` reads the session object made by `Built.session`.
+  A multi-program JSON reading requires `--out DIR`, with one document per file.
+  SVG and TSV replace the selected programs' files of that form in the output folder.
 - `run` runs each request of a script on the Lean machine over the application's host, and prints
   one line a request (`Compiler.Run`): a readable line (`--text`, the default), the exit encoded at
   its own type (`--typed`), or the result's value tree as JSON (`--json`). The host and the default
@@ -417,7 +419,8 @@ def inspectBuilt (b : Api.Built) (service : Option String) : Except String Api.B
   | none => .ok b
   | some service => (b.session service).mapError fun why => jsonText (tree why)
 
-/-- Render every document before writing. SVG and TSV require a folder for their separate files. -/
+/-- Render every document before writing. SVG and TSV require a folder for their separate files.
+The selected form replaces this program's prior generated files, including an empty selection. -/
 def inspectDocuments (source : Source) (what : What) (json : Bool) (left : List String) : IO UInt32 := do
   let o ← match InspectOptions.read left
       { form := if json then .json else .md, explicitForm := json } with
@@ -425,9 +428,12 @@ def inspectDocuments (source : Source) (what : What) (json : Bool) (left : List 
     | .error why => return (← usageError "inspect" why)
   if o.out.isNone && (o.form == .svg || o.form == .tsv) then
     return (← usageError "inspect" s!"--form {o.form.name} needs --out DIR")
+  let programs := builtOf source
+  if o.out.isNone && o.form == .json && programs.length > 1 then
+    return (← usageError "inspect" "JSON for several programs needs --out DIR, one document per file")
   let mut outputs : List (String × String) := []
   let mut failed := false
-  for (name, result) in builtOf source do
+  for (name, result) in programs do
     match result with
     | .error why => failed := true; printRefusal source name why (o.form == .json)
     | .ok original =>
@@ -447,6 +453,11 @@ def inspectDocuments (source : Source) (what : What) (json : Bool) (left : List 
       IO.FS.createDirAll directory
       for (name, content) in outputs do
         IO.FS.writeFile (System.FilePath.mk directory / name) content
+      if o.form == .svg || o.form == .tsv then
+        for entry in ← (System.FilePath.mk directory).readDir do
+          if programs.any (fun (name, _) => InspectDocument.owns o.form name entry.fileName) &&
+              !(outputs.any (fun (name, _) => name == entry.fileName)) then
+            unless ← entry.path.isDir do IO.FS.removeFile entry.path
     return 0
   catch error => IO.eprintln s!"inspect: {error}"; return 1
 
