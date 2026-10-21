@@ -45,23 +45,21 @@ def recursive : Object :=
       (.cons (.perform (.call 0) (.lit .unit)) .nil) unitProgram .nil }
 
 -- Finite evaluation (row 443, the forms): in the boundary a wire is a wire and a box a box; in the
--- calls figure a row is a port. A row's target cell holds its node's key, so no name is joined.
+-- calls figure a row is a port. A call's target is data, and its key is a node of the calls figure,
+-- so no name is joined.
 #guard todoSession.any fun b =>
   let r := Compiler.Graphs.read b
-  (match boundary r, calls r with
-   | .graph _ _ bs _, .graph _ _ cs _ =>
-     bs.all (fun n => (n.form == .wire) == n.key.startsWith "wire:") &&
-     cs.all (fun n => (n.form == .port) == n.key.startsWith "row:")
-   | _, _ => false) &&
-  (records r.calls).all fun call => match (call[3]? : Option Tools.Document.Line) with
-    | some (.code key :: _) => key.startsWith "def:" || key.startsWith "row:"
-    | _ => false
+  match boundary r, calls r with
+  | .graph _ _ bs _, .graph _ _ cs _ =>
+    bs.all (fun n => (n.form == .wire) == n.key.startsWith "wire:") &&
+    cs.all (fun n => (n.form == .port) == n.key.startsWith "row:") &&
+    r.calls.all (fun c => cs.any (·.key == c.target.key) && cs.any (·.key == c.scope.key))
+  | _, _ => false
 
 -- Finite evaluation: the four to-do relations keep the probe's measured rows.
 #guard todoSession.any fun b =>
   let r := Compiler.Graphs.read b
-  [records r.nodes |>.length, records r.defs |>.length,
-    records r.rows |>.length, records r.calls |>.length] == [70, 5, 9, 14] &&
+  [r.nodes.length, r.defs.length, r.rows.length, r.calls.length] == [70, 5, 9, 14] &&
   (document b "relations").check.isOk
 
 -- G3, finite evaluation: the to-do's three shared wires contract to its three dependencies.
@@ -96,9 +94,8 @@ def recursive : Object :=
   match calls r, boundary r with
   | .graph _ _ cn _, .graph _ _ bn _ =>
     (ServiceSession.foreign b).isEmpty &&
-    (records r.rows).all fun row =>
-      cn.any (·.key == "row:" ++ text (row[0]?.getD [])) &&
-      bn.any (·.key == "host:" ++ text (row[2]?.getD []))
+    r.rows.all fun h =>
+      cn.any (·.key == (Target.row h.i).key) && bn.any (·.key == "host:" ++ h.host)
   | _, _ => false
 
 -- Reader: the session constructor's law, at the to-do source and its admitted lifetime.
@@ -136,12 +133,11 @@ def recursive : Object :=
   | .error _ => false
   | .ok b =>
     let r := Compiler.Graphs.read b
-    let defs := records r.defs
     match calls r with
     | .graph _ _ ns _ =>
-      (document b "relations").check.isOk && defs.length == 6 &&
+      (document b "relations").check.isOk && r.defs.length == 6 &&
       (ns.filter (·.label == "TodoApp_list")).length == 2 &&
-      (ns.filter (fun n => (defs.map fun d => "def:" ++ text (d[0]?.getD [])).contains n.key)).length == 6
+      (ns.filter (fun n => r.defs.any fun d => (Scope.def_ d.k).key == n.key)).length == 6
     | _ => false
 
 -- Control: stored reference syntax stays visible, with its target as data.
@@ -158,12 +154,11 @@ def recursive : Object :=
   | .error _ => false
   | .ok b =>
     let r := Compiler.Graphs.read b
-    let cs := (records r.calls).map (fun row => row.map text)
     match calls r, layers r with
     | .graph _ _ ns es, .graph _ _ ls _ =>
-      (document b "relations").check.isOk && cs.length == 2 &&
-      cs.any (fun row => row[0]? == some "1.0.0" && row[5]? == some "1.0") &&
-      cs.any (fun row => row[0]? == some "2.0.0" && row[5]? == some "2.0.0") &&
+      (document b "relations").check.isOk && r.calls.length == 2 &&
+      r.calls.any (fun c => c.address == [1, 0, 0] && c.origin == [1, 0]) &&
+      r.calls.any (fun c => c.address == [2, 0, 0] && c.origin == [2, 0, 0]) &&
       ns.any (·.key == "layers") && es.contains ("layers", "row:0") &&
       es.contains ("main", "row:0") &&
       ls.any (fun n => n.key == "layer:1.0" && n.detail == "ref 2.0")
@@ -181,14 +176,14 @@ def recursive : Object :=
 #check fun (present : todoSession.isSome = true) =>
   let b := todoSession.get present
   let atoms : EffAlgebra NativeOp (fun _ => AGraph String) := EffAlgebra.ofLayer fun _ _ _ =>
-    ((records (Compiler.Graphs.read b).rows).map fun row => text (row[2]?.getD [])).foldr
+    ((Compiler.Graphs.read b).rows.map (·.host)).foldr
       (fun name rest => .overlay (.vertex name) rest) .empty
   LayerGraph.hypergraph_provide atoms (.succeed natKey (.nat 23)) (.ref [2, 0])
 
 #check fun (present : todoSession.isSome = true) =>
   let b := todoSession.get present
   let atoms : EffAlgebra NativeOp (fun _ => AGraph String) := EffAlgebra.ofLayer fun _ _ _ =>
-    ((records (Compiler.Graphs.read b).rows).map fun row => text (row[2]?.getD [])).foldr
+    ((Compiler.Graphs.read b).rows.map (·.host)).foldr
       (fun name rest => .overlay (.vertex name) rest) .empty
   LayerGraph.hypergraph_merge_comm atoms (.succeed natKey (.nat 23)) (.ref [2, 0])
 
