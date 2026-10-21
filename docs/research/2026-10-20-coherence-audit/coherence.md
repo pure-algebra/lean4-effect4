@@ -327,6 +327,59 @@ First, before item 1: the to-do as a user's project, outside the library
   first half and E6's stop. `rocq/Eff_types.v` lags M2's program types by `Located` and
   `ProfileReason`, and the next `make gen-rocq` adds them. `api_gen`'s copies of `programToVal`
   and `programOfVal` stay for M11, since they did not fall out of the type rows.
+- **E6 landed** 2026-10-20 (`bb7862fa0`, the lane's producer `cd41008d1`): `Nat` and `Int` are
+  Zarith's `Z.t` in OCaml, and the profile's bound has one owner. The comparison lane's producer
+  is in the tree: `rocq/LaneExtract.v`, whose runner `make gen-rocq-lane` writes. Its extraction
+  reaches six files of the study of 2026-10-16, so they moved to `rocq/` with it. They are
+  `Denote.v`, `Run.v`, `Judgments.v`, `Budget.v`, `BudgetDefs.v` and `Api.v`: 2,794 lines of hand
+  Rocq that no declared fact cites. Their map back to the OCaml owners is now
+  `rocq/tools/split_types.ml --extract`, since the study's map read the retired flat layout. At the
+  base the target writes the committed runner token for token, and the lane passes its 13 checks.
+  Rocq's `Z` extracts to Zarith in E6's commit, not in the producer's: the runner spells a number
+  as the program types do. At the base a Zarith runner fails at the first host row, where the
+  program types' `int` meets Zarith's integer. The extraction is Rocq's `ExtrOcamlZBigInt`, with
+  RocqOfOCaml's `int` as the same type and `Z.to_nat` and `Z.of_nat` by name. It names the type
+  `Big_int_Z.big_int`, Zarith's own name for `Z.t`, because the extracted Rocq module `Z` shadows
+  Zarith's. E6 itself came from `c27054c2a`, with one conflict, in `split_types.ml`'s header.
+  `ProfileData.natBound : Option Nat` owns the bound: `some safeBound` for rc.112, `none` for a
+  profile that holds every natural. `NatJson.limit`, the tool schema's maximum, `Within` and
+  `E4_clock.number_bound` read it or are gone. `ProfileReason.belowBound` names the magnitude
+  `n + 1`, asked of `admitsNat`, since `Z.add` is exact. The comparison `n < natBound` goes; it
+  stood only while the lowered `Nat` wrapped. The bound is an ingress rule, so a run's own sum
+  past it is exact. The kit's transcript re-pins one answer: a run of `2^53 - 1 + 1` now finishes
+  with `2^53`, where it stopped outside the profile. Deleted: `OCaml5.Lcnf.ClockFlow` (605
+  lines), `OCaml5.Lcnf.Clock` (22), the clock rows and crossing, and each row's second contract,
+  `Receipt`. Deleted too: the saturating `Lcnf_nat` bodies, `Test/Audit/ClockLowering.lean`
+  (122), `Test/Audit/ClockLiteralFixtures.lean` (127) and `ocaml/clock` with its opam file (343).
+  E6 deletes 15,435 lines and adds 15,130: hand lines 3,956 against 3,483, generated 11,479
+  against 11,647. The producer adds 3,082 lines and deletes 66; the moved study is 2,824 of them,
+  with its provenance comments. The kept commit had run neither `check-ocaml` nor the batteries,
+  and six repairs landed with it. `tools/Compiler/Emit.lean` writes the optional bound, and two
+  batteries read `safeBound`. The normalization lane spells its checks' naturals through
+  `OCaml5.Lcnf.natLiteral`. `test_engine.ml`'s odd square and its binary64 control had wrong
+  numbers. The to-do lane's table keys its ids through `Z.equal` and `Z.hash` (rule 7). The
+  install lane's facade client writes `Z.t`. After the merge, `rc112`'s docstring names
+  `ts/prelude/sql.ts` (`02ebb2497`), and the sweep repaired one citation of `ocaml/clock` in
+  `Test/Counterexamples/REGISTER.md`. Measured by allocated words, at the base `fb7804182`, the
+  first half and E6: the engine differential allocates 962,419,172, 962,419,187 and 954,887,098
+  words. E6's run allocates 7,532,089 fewer, 0.78 per cent, over 508 programs and 72,840 positions
+  with no divergence. A store put of the 89 goldens allocates 30,282 words in all three. The
+  largest golden, `pOps.bin`, takes 1,773 words to encode and 3,098 to put in all three.
+  Regenerated: derived, lcnf, eff, cas and ts each wrote the kept commit's bytes, and
+  `make gen-rocq` changed no file. `make batteries-touched BASE=afd92e8cb`: 405 batteries on
+  the merged state, built. `#axiom_audit`: 2,635 declarations of the 14 touched `Effect4` modules
+  are within `[propext, Quot.sound]`, none modulo a planned goal. So are 286 of the 10 edited
+  batteries, and 16,334 of 392 other reached batteries, 11 of them modulo the fixtures' 15
+  planned goals. Three more reached batteries hold 12 declarations that reach `Classical.choice`,
+  each admitted by name or module in `Test/Audit/AxiomGate.lean`. Outside the gate, 166 of the
+  1,298 declarations of the seven touched `OCaml5` modules reach `Classical.choice` through string
+  operations. `#closure_audit` passes. The 14 Rocq files compile, and `Assumptions.v` prints only
+  `Eval`'s 25 parameters. Gates, on the merge with `5bb8a3aee`: `check-ocaml`, each lane and the
+  comparison lane among them, `check-ts` and `check-sweep` pass. Proposed: a decisions row for E6
+  and the lane's producer. Proposed too: the lane runs the generated `rocq/Skeleton.v`, the
+  development the declared fact cites, and the six hand files go. Left for the coordinator:
+  `docs/ARCHITECTURE.md` still names `clock/`, and `src/Effect4/Laws/Run/Tree.lean` calls
+  `BudgetDefs.v` history.
 
 - **The order from here** (the owner, 2026-10-20): the entry point's first slice, then M3, then C1's
   moves under E4. Then M4 with E6, then `run`, then M8. Seats alternate between the chain and the
