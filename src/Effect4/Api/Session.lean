@@ -38,6 +38,17 @@ deriving DecidableEq
 
 namespace ServiceSession
 
+/-- The request row's spelling, shared by construction and reactors. -/
+def nextName : String := "Session.next"
+
+/-- The reply rows' prefix, shared by construction and reactors. -/
+def replyPrefix : String := "Session.reply_"
+
+/-- Whether a row uses the session reply prefix. Admission checks its actual columns.
+The byte-list operation keeps prefix recognition within the core's axiom ceiling. -/
+def isReplyRow (row : Program.Row) : Bool :=
+  replyPrefix.toUTF8.data.toList.isPrefixOf row.spelling.toUTF8.data.toList
+
 /-- The sum of a list of types, with `never` as its unit: the dual of `requestTy`. -/
 def sumTy : List Ty → Ty
   | [] => .never
@@ -52,14 +63,14 @@ def methodPort (decls : List DefDecl) (service : Service) (state : Ty)
   let some d := decls[position]? | throw (.serviceMethod service.name name)
   let some args := methodArgs state d arity | throw (.serviceMethod service.name name)
   return (.prod (.lit name) (requestTy args),
-    (Row.host ("Session.reply_" ++ name) (.exitOf d.answer d.error) .unit).row)
+    (Row.host (replyPrefix ++ name) (.exitOf d.answer d.error) .unit).row)
 
 /-- The protocol rows: `Session.next`, whose answer is the next tagged request or none, then
 one reply row a method, in the service's method order. -/
 def rows (decls : List DefDecl) (service : Service) (state : Ty) :
     Except PrintRefusal RowTable := do
   let ports ← service.methods.mapM (methodPort decls service state)
-  return (Row.host "Session.next" .unit (.option (sumTy (ports.map (·.1))))).row ::
+  return (Row.host nextName .unit (.option (sumTy (ports.map (·.1))))).row ::
     ports.map (·.2)
 
 /-- Invoke the definition at a position. No name is resolved. -/

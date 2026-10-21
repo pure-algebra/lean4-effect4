@@ -1027,6 +1027,9 @@ def registry : Registry where
     { id := "service-session-retains", concept := "host-session-protocol", role := .compatibility
       title := "Successful service-session construction retains declarations, bodies, layers and signature declarations, appends rows, and replaces only the main program; no equality of old and new main behaviour (R6 and R13)"
       pointer := .witness `Effect4.Api.Built.session_retains },
+    { id := "queue-reactor", concept := "host-session-protocol", role := .compatibility
+      title := "The queue consumes the next request and acknowledges replies without changing state; tensor equations retain the other state component (R6 and R13). No general client agreement or host progress."
+      pointer := .witness `Effect4.Run.Reactor.queue_spec },
     { id := "live-session-persists", concept := "host-session-protocol", role := .compatibility
       title := "Restoring a live session's own record returns its exact run after full admission and ordered journal replay, retaining recorded row spellings and empty session names; no repeated host effects or host reconnection claim (seams S4, R6 and R13)"
       pointer := .witness `Effect4.LiveRecord.restore_save },
