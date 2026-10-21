@@ -80,6 +80,23 @@ emission's file `e.file "./prelude.ts"` holds the module's imports, written from
 `ts/prelude/prelude.ts`. Lay the file out with `Tools.Code.moduleText`
 (`tools/Compiler/Code/Module.lean`), as every lane writes it.
 
+## Save a program as data
+
+Import `Effect4.Api.Object` to save a program with the signature it was checked against.
+`Program.Object.ofBuilt b` forgets its admission certificate; `Object.load o.bytes` checks the saved data again.
+The object contains no host implementation or run state.
+`Built.bytes` remains the bare program encoding used by existing runtime consumers.
+
+The compiler exposes the same operations:
+
+```sh
+lake exe effect4 --group todo check --out /tmp/todo.obj
+lake exe effect4 open /tmp/todo.obj
+```
+
+`open` prints the same JSON as `check --json`, without looking up application source.
+The reader requires the current node specification and exact payload shape. Automatic migration is not provided.
+
 ## The application face
 
 Import `Effect4.Api` (`src/Effect4/Api.lean`). It is the program interface: `typeOf`, `compile`,

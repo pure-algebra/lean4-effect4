@@ -1,5 +1,6 @@
 import Effect4.Laws
 import Test.Api.FrontierContract
+import Test.Api.ObjectContract
 import Test.Schema.AnnotationDataPlaneContract
 import Test.Schema.DataBridge
 import Test.Schema.AuthoringContract
@@ -41,6 +42,7 @@ import Test.Codegen.SchemaGenerationCoverage
 import Test.Codegen.SchemaCode
 import Test.Codegen.SurfaceContract
 import Test.Codegen.CompilerEmit
+import Test.Codegen.ProgramServices
 import Test.Counterexamples.Machine.Semantics.CauseExit
 import Test.Counterexamples.Machine.Semantics.ActionAtRaceAllPremise
 import Test.Counterexamples.Machine.Semantics.InterruptDelivery

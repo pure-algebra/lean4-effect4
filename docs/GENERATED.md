@@ -87,6 +87,15 @@ flowchart LR
   O --> B[Generated module builds]
 ```
 
+## Program object codecs
+
+The derived family's Object group owns `SigApp`, `Object`, `Certificate` and the two store read-refusal alphabets.
+It imports the carriers, store readers and generated program/value codecs, without the printer.
+Refusals depends on Object and adds `Object.LoadRefusal` after `AdmitRefusal`.
+Check imports Object's signature codec. Tool imports the revised `LiveRecord` carrier.
+The manifest is the only list of these generated carriers.
+Make reads its output paths directly, so a new group also enters freshness and drift checks.
+
 ## Declarations generated during elaboration
 
 The typed-state group has no generated source file or committed table. `#typed_state`

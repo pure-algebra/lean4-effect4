@@ -1,6 +1,6 @@
 # Program data landing
 
-The object contains its signature and its program. Every other reading has one existing owner.
+The object contains its language signature and its program. Every other reading has one existing owner.
 
 ## Decisions
 
@@ -8,14 +8,15 @@ Decisions row 439 adopts all eight recommendations of the design note.
 `SigApp.rowNames` lives beside `SigApp`, because `Built` needs it without the object codec.
 `Built` retains its admission certificate. Its row names become a projection.
 The internal `finishBuild` no longer accepts arbitrary row names.
-The printed certificate retains its existing field order and JSON bytes.
+The program's printed certificate retains its existing field order and JSON bytes.
 `NameProfile` is executable configuration. No object stores it.
 The store node supplies format checks. No object version field duplicates them.
+Specification checks compare digests. Distinct layouts are not proved to have distinct SHA-256 digests.
 `LiveRecord` retains its current version and uses the object internally.
 Its changed layout refuses old records during canonical decoding. This slice adds no migration reader.
 `open FILE` prints JSON. Source-based `check` retains its text form and Lean names.
 Single-file saving refuses sources containing several programs before writing anything.
-Caching remains the checker's existing table. This slice adds no persistent cache.
+`Object.table` calls the existing checker. This slice adds no persistent cache.
 
 ## Functional boundaries
 
@@ -46,7 +47,7 @@ The object adds no program constructor and no program traversal.
 | `service-view-printed` | `exact-codecs`, compatibility | `Program.serviceFaultIn_anyName` in `src/Effect4/Laws/Codegen/Services.lean` | TypeScript service success implies domain service success; R8; printer compatibility |
 | `service-view` | `exact-codecs`, adequacy | `Program.entriesOf_isSome` in the same file | Successful domain service checks provide readable entries; R8; service reading |
 
-`admitted_unique` and `built_ext` serve `object-exact` through the existing admission procedure.
+The existing program admission procedure recovers its certificate. `object-exact` needs no additional uniqueness helper.
 `open_ok_iff` and `open_error_iff` instantiate `built-admission-exact` at objects.
 `ref_eq_or_collision` instantiates `program-digest-exact`. It assumes no hash injectivity.
 The table laws instantiate `source-annotation-agrees` and serve R14 inspection.
@@ -56,12 +57,12 @@ The byte retraction requires every frame payload to fit the store's 64-bit lengt
 
 ## Finish criteria
 
-1. Reproduce the eight design probes and their axiom audit before changing the library.
+1. Reproduce the eight design probes and their axiom gate before changing the library.
 2. Reproduce both generated codec outputs with the existing generator.
 3. Land the carriers, projections, operations, laws and generator ownership.
-4. Preserve useful authoring and record laws; retain explicit refusal controls.
+4. Retain useful authoring and record laws; retain explicit refusal controls.
 5. Save and reopen the to-do without source lookup, with identical JSON and repeated bytes.
-6. Verify usage errors, malformed bytes, wrong layouts, failed admission and failed file operations.
+6. Verify usage errors, malformed bytes, wrong layouts, failed program admission and failed file operations.
 7. Build touched modules and batteries; audit their declarations; run reached behavior gates.
 8. Commit explicit paths, retaining commands and results in this directory.
 

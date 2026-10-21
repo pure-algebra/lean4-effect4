@@ -1,0 +1,13 @@
+env lake build effect4 Effect4.Tool.Serve
+Build completed successfully (1597 jobs).
+python3 scripts/check-program-object.py
+PASS saving preserves certificate JSON and repeats identical bytes
+PASS saving preserves text check output
+PASS open outside the project needs no group, source, or prelude
+PASS usage errors and multiple-program saving preserve existing output
+PASS input and output IO errors are controlled
+PASS node, content, and located admission refusals retain their generated JSON
+PASS admission refusal leaves an existing object untouched
+PASS four direct readings match the previous Tool query text and JSON
+PASS program-object: 8 CLI control groups
+PASS program-object: recorded 92bd705a1357 (17.326s)

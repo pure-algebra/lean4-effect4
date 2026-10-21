@@ -436,15 +436,15 @@ move unchanged: the generator writes the same `toVal`, so no byte of any carrier
 
 A node is `version ∷ kind ∷ spec ∷ payload` (`src/Effect4/Store/Domain/Node.lean`). The spec is
 the digest of the carrier's shape document. That document's table binds the program family and the
-type language (tested: it holds `Eff`, `Stmt`, `LayerTerm`, `Ty` and `Term`). So the spec names
-the object's layout exactly, and nobody bumps it by hand.
+type language (tested: it holds `Eff`, `Stmt`, `LayerTerm`, `Ty` and `Term`). The spec is derived from this document. Nobody bumps it by hand.
+The reader compares digests; no theorem assumes distinct layouts have distinct SHA-256 digests.
 
 Three controls in `probe-object.lean`, all tested:
 
 - A bare program's node has kind `program` too, and the reader refuses it by its spec, before it
   reads the payload.
-- A later layout, one more field under its own spec, is refused by the spec. The same field under
-  this layout's spec is refused by the payload reader.
+- An extra field under a wrong specification digest refuses at the specification check.
+  The same field under the current specification refuses at the payload reader.
 - One changed header byte is the node reader's refusal, `.node (.badVersion 1)`.
 
 The plan's alternative cannot see a later layout. `probe-record.lean` takes `LiveRecord`, which has
@@ -452,8 +452,8 @@ a version field and a generated codec. At the same layout, version 2 is refused 
 `unsupportedVersion 2`. A later layout, one more field, fails the generated decoder before any
 reader sees its version field.
 
-The spec is strict. A case appended to `Eff` changes the spec, so an object saved before is
-refused after it, although its payload bytes still decode. Every program node in the store has the
+The spec check is strict. A case appended to `Eff` changes the shape document.
+When its digest differs, an earlier object refuses even if its payload still decodes. Every program node in the store has the
 same behaviour today, so the object inherits the store's policy rather than making one (§8, point 3).
 
 ### 5.4 The one printer and the frame premise
@@ -482,8 +482,8 @@ which the compiler reaches as `Compiler.tree` (`tools/Compiler/Json.lean`). `dec
 An executable knows those names of its own elaboration, so no carrier's print serves it.
 
 If the row names become a projection (§8, point 1), the field `Built.rowNames` goes too. The
-producers `Built.ofProgram` and `Author.Internal.finishBuild` lose a line each, and three law
-statements lose a conjunct. Nine batteries' constructions lose a component: six anonymous
+producers `Built.ofProgram` and `Author.Internal.finishBuild` lose a stored component.
+Public authoring and restoration conclusions remain; the internal helper loses its arbitrary row-name argument. Nine batteries' constructions lose a component: six anonymous
 constructors and three record fields. The control that `restore` keeps hand-made names goes with
 the freedom it tests.
 
@@ -545,8 +545,8 @@ The acceptance, §14.3 of the plan note amended by the probes:
 
 1. **The row names.** Keep `Built.rowNames` as a field, and `open_ofBuilt` and `restore_save` keep
    the premise that the names are the signature's. Or make `Built.rowNames` the projection, and the
-   premise disappears. Recommended: the projection. Every producer already writes it (proved), and
-   only batteries' hand-made values disagree. The restated `restore_save` then holds for every live
+   premise disappears. Recommended: the projection. `Author.build` and `Built.ofProgram` produce it (proved).
+   The landing removes the internal `finishBuild` argument that also permits arbitrary row names. The restated `restore_save` then holds for every live
    session, with its statement unchanged.
 2. **The argument names.** Keep them out of the object. A side table keyed by method name would be a
    second owner of each method's arity, which the role already holds. If the target's print wants

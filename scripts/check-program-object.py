@@ -6,6 +6,7 @@ The controls use temporary files and invoke no host or target runtime.
 """
 import json
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import tempfile
@@ -112,7 +113,8 @@ def main():
 
         fixture = folder / 'ObjectCli.lean'
         fixture.write_text(FIXTURE)
-        lean = ['lake', 'env', 'lean', '-DwarningAsError=true', '--run', fixture]
+        lean = [*shlex.split(os.environ.get('LAKE', 'lake')), 'env', 'lean',
+                '-DwarningAsError=true', '--run', fixture]
         run([*lean, 'fixtures', folder])
         mutations = {'version.obj': bytes([1]) + content[1:],
                      'spec.obj': content[:2] + bytes([content[2] ^ 1]) + content[3:],

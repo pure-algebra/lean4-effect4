@@ -1,0 +1,36 @@
++ lake env lean -DwarningAsError=true -M4096 --run tools/Effect4Gen/Driver.lean --plan
++ lake build effect4gen Compiler.GeneratedStamp Effect4.Program.TyCore Effect4.Machine.Frames Effect4.Store.Carrier.Val Effect4.Schema.Representation TypeScript.Syntax OCaml5.Ml.Syntax
+Build completed successfully (52 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-0-effect4gen.json
++ lake build effect4gen Compiler.GeneratedStamp Effect4.Store.Domain.Canonical Effect4.Store.Domain.Pin Effect4.Store.Domain.Node Effect4.Store.Domain.ShapeJson Effect4.Program.Eff Effect4.Program.Ty Effect4.Program.ScopedOp Effect4.Program.Node Effect4.Machine.Term
+Build completed successfully (99 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-1-effect4gen.json
++ lake build effect4gen Compiler.GeneratedStamp Effect4.Store.Domain.Derived.Json Effect4.Program.Fold Effect4.Program.Refs Effect4.Program.ScopedOp
+Build completed successfully (97 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-2-effect4gen.json
++ lake build effect4gen Compiler.GeneratedStamp Effect4.Program.Native Effect4.Laws.Program.FragmentRowAdmission Effect4.Store.Domain.Canonical Effect4.Store.Domain.RowCanonical Effect4.Store.Domain.Node Effect4.Api.Frontier Effect4.Store.Domain.Clock Effect4.Program.Compile Effect4.Program.Fold Effect4.Program.Authoring
+Build completed successfully (139 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-3-effect4gen.json
++ lake build effect4gen effect4gen-catalogue Compiler.GeneratedStamp Effect4.Program.Object Effect4.Store.Domain.Derived.Program Effect4.Store.Domain.Read Effect4.Store.Domain.Derived.Value Effect4.Laws.Program.Folds.Ty Effect4.Laws.Auto.RuleSets Effect4.Program.Authoring.Lifts Effect4.Program.NativeAtom Effect4.Laws.Program.Authoring Effect4.Program.Authoring
+✔ [483/487] Built Effect4Gen.Forms (5.5s)
+✔ [484/487] Built Effect4Gen.Forms:c.o (770ms)
+✔ [485/487] Built Effect4Gen.CatalogueExe (1.2s)
+✔ [487/487] Built «effect4gen-catalogue»:exe (1.7s)
+Build completed successfully (487 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-4-effect4gen.json
++ lake exe effect4gen-catalogue --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-4-effect4gen-catalogue.json
++ lake build effect4gen effect4gen-catalogue Compiler.GeneratedStamp Effect4.Api.Codegen Effect4.Api.HostSession Effect4.Store.Domain.Derived.Program Effect4.Api.Author Effect4.Store.Domain.ShapeJson Effect4.Api.Object Effect4.Program.Authoring.Lifts Effect4.Program.Authoring.Sugar Effect4.Codegen.Forms Effect4.Laws.Program.Authoring.Lifts Effect4.Program.Authoring.Rows Effect4.Laws.Program.Authoring Effect4.Program.Authoring.Atoms
+Build completed successfully (542 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-5-effect4gen.json
++ lake exe effect4gen-catalogue --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-5-effect4gen-catalogue.json
++ lake build effect4gen effect4gen-catalogue Compiler.GeneratedStamp Effect4.Api.Runner Effect4.Store.Domain.Derived.Value Effect4.Store.Domain.AnnotationsCanonical Effect4.Store.Domain.PayloadCanonical Effect4.Store.Domain.Clock Effect4.Store.Domain.Derived.Program Effect4.Api.Derived Effect4.Api.RefusalsDerived Effect4.Run Effect4.Store.Domain.ShapeJson Effect4.Program.Check Effect4.Api.ObjectDerived Effect4.Laws.Program.Authoring.Lifts Effect4.Laws.Program.Authoring.Sugar Effect4.Codegen.Authoring.Forms Effect4.Codegen.Forms
+Build completed successfully (557 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-6-effect4gen.json
++ lake exe effect4gen-catalogue --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-6-effect4gen-catalogue.json
++ lake build effect4gen Compiler.GeneratedStamp Effect4.Tool.Serve Effect4.Tool.WireTypes Effect4.Tool.CheckDerived Effect4.Api.RunnerDerived Effect4.Store.Domain.ContextCanonical
+Build completed successfully (268 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-dyttbr1c/derived-7-effect4gen.json
++ lake build Effect4.Program.Fragment Effect4.Laws.Program.FragmentLooped Effect4.Laws.Program.FragmentRows Effect4.Laws.Program.FragmentLoopedRows Effect4.Program.TyEq Effect4.Store.Domain.Derived.Json Effect4.Store.Domain.Derived.Schema Effect4.Store.Domain.Derived.Program Effect4.Store.Domain.PinDerived Effect4.Api.Derived Effect4.Store.Domain.Derived.Value Effect4.Api.ObjectDerived Effect4.Api.RefusalsDerived Effect4.Api.RunnerDerived Effect4.Tool.CheckDerived Effect4.Tool.ToolDerived Effect4.Program.Fold Effect4.Laws.Program.TyView Effect4.Machine.Fold Effect4.Laws.Program.Folds.Region Effect4.Store.Carrier.Fold Effect4.Schema.Fold Effect4.Program.LayerView Effect4.Program.TyFoldExtras Effect4.Codegen.TsFold OCaml5.Ml.Fold Effect4.Program.NodeLenses Effect4.Program.Binders Effect4.Program.Scoped Effect4.Program.Authoring.Lifts Effect4.Program.Authoring.Rows Effect4.Program.AtomInventory Effect4.Codegen.Authoring.Forms Effect4.Laws.Program.Authoring.Lifts Effect4.Laws.Program.Authoring.Rows Effect4.Laws.Program.Authoring.Forms Effect4.Program.Authoring.Atoms Effect4.Laws.Program.Authoring.Atoms
+✔ [435/435] Built Effect4.Laws.Program.Authoring.Forms (1.4s)
+Build completed successfully (435 jobs).
+PASS generate: requested producers ran in dependency order

@@ -77,6 +77,11 @@ and a document are each a state reached by its journal. The dictionary
   module's imports.
 - The Rocq comparison lane now extracts the generated development (row 436). The six hand copies and their evaluator adapter retire.
 - The compiler emits OCaml from declared roots (row 438). The external to-do now builds freshly through that command.
+- Program objects hold the application signature and program (row 439).
+  `check --out` saves their node bytes; `open FILE` checks them without application source.
+  Row names are derived, and `LiveRecord` stores the shared object.
+  The next program-domain slice is the target print, then the host interface and session program.
+  The sequence is `research/2026-10-20-program-host-runtime.md` §14.5.
 
 ## Next, in order
 

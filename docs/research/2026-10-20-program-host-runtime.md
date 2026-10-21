@@ -646,104 +646,57 @@ domain stands on its own.
 
 ### 14.1 What the program domain is
 
-The program domain is a closed world of data and the judgments over that data. No host, no
-machine, no tape, no target. Its data:
+The object is a program with its signature: `Object` in `src/Effect4/Program/Object.lean`.
+Its fields are `app : SigApp` and `program : Eff NativeOp`.
+Row names are `SigApp.rowNames`, a projection of the rows.
+Argument names have no domain consumer and remain outside this object.
+The store node's specification identifies the layout. No object field repeats that information.
 
-| Datum | Owner | What it is |
+Admission uses `Built.ofProgram` in `src/Effect4/Api/Built.lean`.
+It checks the signature, formation, typing and columns through their existing owners.
+The object holds no run state, host implementation or target naming policy.
+
+### 14.2 The implementation
+
+The design note's §7 owns the file plan.
+Decisions row 439 settles its recommendations.
+The landing note records proof placement and finishing criteria:
+`docs/research/2026-10-21-program-domain-landing/README.md`.
+
+| Operation | Existing owner | Result |
 | --- | --- | --- |
-| the tree | `Eff NativeOp` (`Program/Eff.lean`) | the program, a first-order tree; a definition block at its root when it has definitions |
-| the types | `Ty`, `TyDecls` (`Program/TyCore.lean`, `TyExpand.lean`) | the type language and the application's named types |
-| the signature | `SigApp` (`Program/SigApp.lean`): `rows`, `services`, `types` | what the tree is read against: the host rows by position, the service declarations, the named types |
-| the names | `rowNames`, `argNames` | metadata the tree does not keep: each row's spelling, each method's argument names |
+| `Object.ofBuilt` | `Built` projections | object data |
+| `Object.open` | `Built.ofProgram` | admitted program or admission refusal |
+| `Object.bytes`, `Object.read` | store node codec and typed reader | exact node bytes or read refusal |
+| `Object.load` | `Object.read`, then `Object.open` | admitted saved program or tagged refusal |
+| `Object.ref` | `Store.address` | typed node digest |
+| `Object.table` | `Check.run` at the module | source address table through layer references |
+| `Object.services` | `serviceFaultIn anyName`, then `servicesOf` | formed service roles or refusal |
+| `Built.certificate` | admitted program projections | printed certificate data |
 
-Together these are the **object** (§3.1): the one complete datum of the domain. A program with
-no signature cannot be checked; a signature with no program is a declaration. The object is
-both, with a version.
+The codec generator owns the Object group and moves `SigApp` there from Check.
+The generated printed certificate replaces the compiler's hand-built JSON.
+`certificateLines` stays because source-based text names Lean declarations unavailable in an object.
+`LiveRecord` stores the object instead of repeating its program, signature and row names.
+Its changed layout refuses old records during canonical decoding. This slice supplies no migration reader.
 
-Its judgments, each an existing function with its completeness law:
+The laws compose admission and the existing exact node codec.
+Reopening recovers every `Built`, since row names are derived.
+Byte retraction requires `Val.WF`; successful reading identifies the exact encoded bytes.
+Equal references give equal objects or an exhibited collision. No hash injectivity law is claimed.
+The table uses source annotation, including layer references, rather than raw syntax annotation.
 
-| Judgment | Function | Law | Answers |
-| --- | --- | --- | --- |
-| signature admission | `admitSig app` | `admitSig_ok_iff` | are the rows well scoped, the services flat, the named types expandable |
-| formation | `Formation.checkInput program rows services` | `checkInput_eq_none_iff` | is the tree well formed under its names and rules |
-| typing | `typeOfProgram sig program`, its located refusal `Api.explain` | `explain_none_iff`, `programRefusal_none_iff` | what type the tree has at the signature, or where and why it has none |
-| the column scan | `findEmptyColumnInEffTy app.types ty` | by definition | does an inferred column name an empty type |
-| canonical form | `Canonical.encode`, `Wire.decodeProgram`; the address `sha256` of the bytes | `decode_encode`, `decode_exact` | the one spelling of the tree, and its name |
-| the service view | `servicesOf`, `methodArgs`, `serviceFault` | by definition | is the block one service, and what are its methods |
-| the address table | `Program.annotate` | `annotate_eq_table`, `refusals_nil_iff` (R14) | the type at every address, and the first refusal |
-| profile support | `ProfileData.literalRefusal` | `literalRefusal_eq_none_iff` | are the tree's literals inside a profile's bound (a judgment over the data, asked by a target) |
-
-Admission is the first four in that order (`admitProgram`), and its certificate is `Built`.
-
-What is out of the domain, and waits: a run (the machine, the budget, the tape), a host (the
-reactor, the envelope), a target's print (the TypeScript module and its read-back), emission,
-assembly, and the session program of §6, which is a program-to-program derivation but needs the
-session rows and the lifetime's semantics to be worth stating.
-
-### 14.2 What to implement, and nothing else
-
-One library module, one law module, and the compiler's `check` and `inspect` over the object.
-
-`src/Effect4/Api/Object.lean`:
-
-```lean
-structure Object where
-  version  : Nat := Object.currentVersion
-  app      : SigApp
-  program  : Program
-  rowNames : List (String × Nat)
-  argNames : List (String × List String) := []
-  deriving Canonical                       -- the generator's codec; bytes, JSON print, digest
-
-def Object.ofBuilt (b : Built) (argNames := []) : Object
-def Object.open (o : Object) : Except Object.Refusal Built      -- the version, then Built.ofProgram
-def Object.address (o : Object) : Digest := Canonical.digest o   -- the name of the whole datum
-def Object.service (o : Object) : Except PrintRefusal Service    -- servicesOf, checked by serviceFault
-def Object.types (o : Object) : List (Address × Except TypeRefusal EffTy)   -- the address table
-
-structure Certificate where                                       -- what check prints; a carrier, not hand JSON
-  answer error : Ty; requires : List ServiceKey
-  rows : RowTable; services : List (ServiceKey × String); declarations : List DefDecl
-  deriving Canonical
-def Built.certificate (b : Built) : Certificate
-```
-
-`src/Effect4/Laws/Api/Object.lean`:
-
-- `open_ofBuilt : (open (ofBuilt b names)).map (ofBuilt · names) = .ok (ofBuilt b names)`;
-- `open_exact : open o = .ok b → ofBuilt b o.argNames = o`;
-- `address_injective`, from `encode_injective` under `WF`;
-- `LiveRecord` over the object, `restore_save` restated with its content unchanged.
-
-`tools/Compiler/`:
-
-- `check` builds the object from the application and prints its certificate; `check --out
-  FILE.obj` writes the object's bytes, `--json` its print;
-- `open FILE.obj` (new; on `lake exe effect4` too, which has no application): reads an object,
-  opens it, prints its certificate. This is the program-as-data demonstration: a saved program is
-  re-checked with no Lean source present;
-- `inspect` reads the object: `rows` and `types` from it directly, `graph` its tree, `surface` as
-  today.
-
-Deleted in the same slice: `Compiler.certificate`'s hand-built `NatJson` (the carrier prints it),
-`certificateLines`' ad-hoc layout where the carrier's print serves, and `LiveRecord`'s four
-duplicated fields.
-
-Not in the slice: `emit`, `Compiler.Native`, the prelude, `run`, `Hosted`, `Request`, the session
-program, `eff_rows`' generated host record, every TypeScript or OCaml file. They stay exactly as
-they are today, and the to-do's `ts/` and `ocaml/` folders are untouched.
+Runtime lifetime, host generation, target emission and assembly remain later slices.
+Generated consumers reached by changed carriers must still be regenerated and checked.
 
 ### 14.3 Acceptance
 
-1. `lake exe todo check --out todo.obj`, then `lake exe effect4 open todo.obj`, prints the same
-   certificate as `lake exe todo check`; the object's bytes read back to the same object
-   (`decode_encode`), and a second write is byte-identical.
-2. An object with `version := 2` refuses with `unsupportedVersion 2`; an object whose program
-   does not type at its signature refuses with the located typing refusal, at the same site
-   `check` reports.
-3. `inspect --what rows|types|graph|surface` prints what it prints today, read from the object.
-4. The two laws proved; `#axiom_audit` of the touched modules within `[propext, Quot.sound]`;
-   `make batteries-touched` green; `check-ts` unchanged, since no emitted byte changes.
+1. Save an admitted to-do with `check --out todo.obj`.
+2. Open it without source lookup; bare `open todo.obj` prints the same JSON as `check --json`.
+3. Repeated saves produce identical bytes. Node, layout and admission failures retain their refusal owners.
+4. Rows, types, graph and surface inspection retain their existing output bytes without a tool round trip.
+5. Prove the placed laws; audit touched declarations within `[propext, Quot.sound]`.
+6. Build affected batteries and run the reached TypeScript and OCaml behavior gates.
 
 ### 14.4 The design, probed (2026-10-21)
 

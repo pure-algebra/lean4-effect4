@@ -147,16 +147,8 @@ DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.
 # to the closure changes the file that imports it.
 DERIVED_INPUTS := $(shell $(PY) scripts/lean-imports.py --closure --manifest tools/Effect4Gen/manifest.json \
   Effect4Gen.Exe Effect4Gen.CatalogueExe Compiler.GeneratedStamp) lake-manifest.json lean-toolchain
-DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Json.lean src/Effect4/Store/Domain/Derived/Schema.lean \
-  src/Effect4/Store/Domain/Derived/Program.lean src/Effect4/Store/Domain/PinDerived.lean src/Effect4/Api/Derived.lean \
-  src/Effect4/Store/Domain/Derived/Value.lean src/Effect4/Api/RefusalsDerived.lean src/Effect4/Api/RunnerDerived.lean \
-  src/Effect4/Machine/Fold.lean src/Effect4/Program/Fold.lean src/Effect4/Program/TyFoldExtras.lean src/Effect4/Laws/Program/TyView.lean src/Effect4/Store/Carrier/Fold.lean src/Effect4/Schema/Fold.lean src/Effect4/Program/LayerView.lean src/Effect4/Program/NodeLenses.lean src/Effect4/Program/Binders.lean src/Effect4/Program/Scoped.lean \
-  src/Effect4/Program/Authoring/Lifts.lean src/Effect4/Laws/Program/Authoring/Lifts.lean \
-  src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \
-  src/Effect4/Program/Authoring/Atoms.lean src/Effect4/Laws/Program/Authoring/Atoms.lean \
-  src/Effect4/Codegen/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean \
-  src/Effect4/Program/AtomInventory.lean ts/prelude/prelude-atoms.gen.ts src/Effect4/Codegen/TsFold.lean \
-  src/OCaml5/Ml/Fold.lean
+# The manifest owns every derived output, including object and Tool codecs.
+DERIVED_OUT := $(shell $(PY) -c 'import json; print(" ".join(g["Out"].replace(chr(92), "/") for g in json.load(open("tools/Effect4Gen/manifest.json"))["groups"]))')
 
 # A missing output must run its producer instead of becoming a missing prerequisite.
 DERIVED_KEY = $(PY) scripts/gate-cache.py key gen-derived --runtime lean --inputs $(CHECK_CACHE_SOURCES) $(DERIVED_SOURCES) $(DERIVED_INPUTS) --outputs $(DERIVED_OUT)
@@ -453,7 +445,7 @@ gen-truth-corpus: $(GEN)/derived ## on demand: write Test/Corpus/corpus.json and
 	$(LAKE) env lean -M4096 $(call native_flags,tools/Drivers/Truth.lean) --run tools/Drivers/Truth.lean --corpus Test/Corpus
 
 CHECKS := roots native compiler ts-reader target ocaml ingest-smoke \
-  service-identity census schema-pins tools tsgo tsdiag docs language
+  service-identity census schema-pins tools tsgo tsdiag docs language program-object
 .PHONY: check check-ts check-full check-sweep check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
 FORCE:
 
@@ -469,7 +461,7 @@ batteries-touched: ## the batteries a change against BASE (default HEAD) edits o
 check-ts: $(addprefix $(CHK)/,tsgo target ts-reader tsdiag ingest-smoke service-identity) ## every comparison with Effect and tsgo 7
 check-ocaml: $(addprefix $(CHK)/,native compiler ocaml) ## every comparison on the OCaml route
 check-full: check check-ts check-ocaml ## the build and every outside oracle
-check-sweep: $(addprefix $(CHK)/,roots docs language census schema-pins tools) check-gen ## batteries, axioms, drift and documents
+check-sweep: $(addprefix $(CHK)/,roots docs language census schema-pins tools program-object) check-gen ## batteries, axioms, drift and documents
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -581,6 +573,12 @@ $(CHK)/language.key: $(CHK)/paths
 _run-language:
 	$(PY) scripts/check-language.py --self-test
 	$(PY) scripts/check-language.py --strict docs/core/controlled-english.md AGENTS.md
+
+# Saved program files use the compiler entry point and the same pure object operations.
+$(eval $(call cached_check,program-object,lean,scripts/check-program-object.py,Compiler.Exe Effect4.Tool.Serve))
+_run-program-object:
+	$(LAKE) build effect4 Effect4.Tool.Serve
+	$(PY) scripts/check-program-object.py
 
 $(eval $(call cached_check,native,lean,scripts/check-conform.py scripts/lib/conform_report.py,tools/Conform/Effect4/NativeMain.lean))
 _run-native:

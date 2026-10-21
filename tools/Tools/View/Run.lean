@@ -158,7 +158,7 @@ def framesBuilt (name : String) (built : Api.Built) (most : Nat := 64) : List Pa
 /-- Frames of a program with no host row. Admission supplies the built program that binds
 both the checked run and its static view. -/
 def frames (name : String) (program : NativeEff) (most : Nat := 64) : Option (List Page) :=
-  match Api.Author.Internal.finishBuild program {} [] with
+  match Api.Author.Internal.finishBuild program {} with
   | .error _ => none
   | .ok built => some (framesBuilt name built most)
 
