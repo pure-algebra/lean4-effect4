@@ -1,0 +1,4 @@
+ran clean: probe-exact.lean
+ran clean: probe-names.lean
+ran clean: probe-services.lean
+#axiom_audit: 60 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
