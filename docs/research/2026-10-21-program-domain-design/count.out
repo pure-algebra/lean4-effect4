@@ -1,0 +1,134 @@
+
+the object's operations and laws (probe-object.lean)
+     2  def SigApp.rowNames
+     1  def ofBuilt
+     1  def «open»
+     6  theorem ofBuilt_of_open
+     9  theorem open_ofBuilt
+     9  theorem open_ok_iff
+     3  theorem open_error_iff
+     1  def bytes
+     1  def ref
+     5  inductive LoadRefusal
+     4  def read
+     4  def load
+     6  theorem read_bytes
+    19  theorem read_exact
+     7  theorem load_bytes
+    17  theorem load_exact
+     5  theorem ref_eq_or_collision
+     1  def table
+     2  theorem table_eq
+     5  theorem table_head
+     6  theorem table_root_toOption
+    15  theorem table_root_of_open
+     4  theorem refusals_nil_iff
+     3  def _root_.Effect4.Api.Built.certificate
+  total: definition 23, theorem 113
+
+  carriers section: 25 lines; generated section: 242 lines
+  generated blocks: SigApp 72, Object 65, Certificate 93
+
+the service view (probe-service.lean)
+     9  structure NameProfile
+     6  def tsProfile
+     5  def anyName
+    15  def serviceFaultOfIn
+    10  def serviceFaultIn
+     2  theorem serviceFault_eq
+    13  theorem repeatOf_eq_none_iff
+     8  theorem names_sublist
+    25  theorem serviceFaultOfIn_anyName
+    20  theorem serviceFaultIn_anyName
+     9  theorem mapM_isSome
+    40  theorem entriesOf_isSome
+     4  def Object.services
+  total: definition 49, theorem 117
+
+the row names (probe-names.lean)
+     2  def rowNamesOf
+     9  theorem namesFrom_eq
+     3  theorem module_rowNames
+     4  theorem build_rowNames
+     7  theorem ofProgram_rowNames
+     5  theorem rebuild_rowNames
+     4  def todoBuilt
+  total: definition 6, theorem 28
+
+the certificate's uniqueness (probe-certificate.lean)
+     4  theorem admitted_unique
+     2  instance {program
+     9  theorem built_ext
+     3  theorem admitProgram_ok_iff
+  total: definition 2, theorem 16
+
+the saved session over the object (probe-record.lean)
+     7  structure Record
+     3  def save
+     5  def restore
+    10  theorem restore_save
+  total: definition 15, theorem 10
+
+the tree, at HEAD
+
+  the service view in the printer (src/Effect4/Codegen/Print.lean)
+     5  structure Service
+     7  def methodAt
+     2  def serviceMethods
+     7  def serviceAt
+     2  def servicesOf
+     5  def methodArgTys
+     5  def methodArgs
+     1  def argNames
+     4  def argTuple
+     4  def methodRequest
+     1  def plainMethodName
+     2  def serviceNames
+    18  def serviceFaultOf
+     4  def strayMethod
+     3  def repeatOf
+     6  def strayOf
+    10  def serviceFault
+  total: definition 86
+
+  the hand JSON of the certificate (tools/Compiler/Check.lean)
+     4  def certificate
+  total: definition 4
+
+  the tool round trip of inspect (tools/Compiler/Inspect.lean)
+     2  def opened
+     2  def ask
+    15  def reading
+  total: definition 19
+
+  the saved session (src/Effect4/Run/LiveRecord.lean)
+     9  structure LiveRecord
+     3  def save
+     9  def restore
+  total: definition 21
+
+  the built program (src/Effect4/Api/Built.lean)
+     7  structure Built
+     7  def ofProgram
+  total: definition 14
+
+construction sites of Built:
+  Test/Counterexamples/Machine/Runtime/HostInstancePrefix.lean:33
+  Test/Counterexamples/Machine/Runtime/HostRefPrefix.lean:33
+  Test/Program/LiveRecordControls.lean:40
+  Test/Program/PreviewControls.lean:153
+  Test/Program/PreviewControls.lean:49
+  Test/Program/PreviewControls.lean:86
+  Test/Program/RunAdmissionControls.lean:59
+  Test/Run/RunContract.lean:111
+  Test/Run/RunContract.lean:183
+  Test/Run/RunContract.lean:244
+  Test/Run/RunContract.lean:270
+  Test/Run/RunContract.lean:42
+  src/Effect4/Api/Author.lean:54
+  src/Effect4/Api/Built.lean:44
+  src/Effect4/Laws/Api/Built.lean:41
+  src/Effect4/Laws/Program/Author.lean:233
+  src/Effect4/Run/LiveRecord.lean:72
+  total: 17
+  in Test/: 12
