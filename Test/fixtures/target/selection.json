@@ -96,24 +96,24 @@
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",
-    "SqlClient.SqlClient": "Adapter.SqlHandle",
+    "SqlClient.SqlClient": "SqlAdapter.SqlHandle",
     "KeyValueStore.KeyValueStore": "Adapter.KvHandle"
   },
   "rows": [
     {
       "table": "SqliteBun",
       "name": "sqliteOpen",
-      "subject": "typeof Adapter.Sql.open"
+      "subject": "typeof SqlAdapter.Sql.open"
     },
     {
       "table": "SqliteBun",
       "name": "sqlUnsafe",
-      "subject": "Adapter.SqlHandle[\"unsafe\"]"
+      "subject": "SqlAdapter.SqlHandle[\"unsafe\"]"
     },
     {
       "table": "SqliteBun",
       "name": "sqliteClose",
-      "subject": "typeof Adapter.Sql.close"
+      "subject": "typeof SqlAdapter.Sql.close"
     },
     {
       "table": "KeyValueStoreMemory",

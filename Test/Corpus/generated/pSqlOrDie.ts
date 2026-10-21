@@ -4,7 +4,7 @@
  */
 import { Context, Effect, Layer } from "effect"
 import { strings } from "../../../ts/prelude/prelude.ts"
-import { Sql } from "../../../ts/prelude/prelude.ts"
+import { Sql } from "../../../ts/prelude/sql.ts"
 
 export const main: Effect.Effect<number, never, never> = Effect.provide(
   Effect.service(Context.Service<"k8_4", number>("k8_4")),

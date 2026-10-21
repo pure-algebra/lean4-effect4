@@ -4,7 +4,7 @@
  */
 import { Effect, type Exit } from "effect"
 import { strings } from "../../../ts/prelude/prelude.ts"
-import { Sql } from "../../../ts/prelude/prelude.ts"
+import { Sql } from "../../../ts/prelude/sql.ts"
 
 export const main: Effect.Effect<Exit.Exit<ReadonlyArray<ReadonlyArray<readonly [string, string]>>, readonly [string, string]>, never, never> = Effect.scoped(
   Effect.flatMap(

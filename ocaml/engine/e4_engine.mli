@@ -57,9 +57,9 @@
    EN2 the alphabet REFINES Lean's and never contradicts it: Finished iff
        `Outcome.finished`, Refused iff `Outcome.stuck`, and Suspended-or-Delay iff
        `Outcome.frontier`.                                 tested (test_engine)
-   EN3 `step` is total: it answers a machine for every decision and never raises -- the two
-       `failwith` rows of the generated prelude (`sh_dispatcher_mk`, `sh_memo_map_mk`) are
-       the only exception, and they fire on a construction the closure does not contain.
+   EN3 `step` is total: it answers a machine for every decision and never raises -- the one
+       `failwith` row of the generated prelude (`sh_memo_map_mk`) is
+       the only exception, and it fires on a construction the closure does not contain.
        test_engine counts them over the whole corpus and expects 0. A crossing's refusal
        (`Lcnf_crossing.Refused`) is caught and returned as Outside_profile with the input
        machine retained.

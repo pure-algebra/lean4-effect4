@@ -1,7 +1,5 @@
-import Compiler.Main
+import Compiler.Groups
 import Effect4.Author
-import Test.Dogfood.Scenario.Todo.Data
-import Test.Dogfood.Scenario.Todo.HostLane
 
 /-!
 # The compiler's emission and its run, read: one corpus program's folder, the dogfood to-do's run, and their controls
@@ -21,6 +19,12 @@ prelude's closure, the pins and a script's text are data here; the IO that reads
   profile. Its twin at `natBound` emits, and its module imports the prelude beside it.
 - **The command's controls**: an entry that the checker refuses is named, `--emit` selects, an
   unknown kind is refused, and an import that leaves the prelude's folder resolves to nothing.
+- **The packages a folder imports**: the manifest's pins name each package that the folder's
+  files import, with the library's pin, and tsgo's. The prelude's closure, over a folder shaped
+  as the library's, does not reach the SQLite package's adapter from the root that a module
+  imports. So the wire corpus's folder names `effect` alone. The red control: a folder that
+  reaches the adapter, as every folder did when the root imported the package, names
+  `@effect/sql-sqlite-bun`.
 - **A group**: the wire corpus emitted as one folder with one manifest. The manifest names each
   program with its address and every file with its SHA-256, and each module is the one its
   program's own emission writes. The red controls: two programs of one name, and one program above
@@ -30,14 +34,16 @@ prelude's closure, the pins and a script's text are data here; the IO that reads
   table's row services read first, as `Api.readFile` reads them, it admits the file, and the
   to-do emits.
 - **The run** (`Compiler.Run`): the dogfood to-do over its reference repository, from no to-do, on
-  the host lane's script (`Test.Dogfood.Scenario.Todo.HostLane.script`). Each request gives one
+  the host lane's script (`Test.Dogfood.Scenario.Todo.HostLane.script`), as the group `todo` of
+  `lake exe effect4` runs it (`Compiler.Groups`). Each request gives one
   line in each of the three modes, the host's state threads from request to request, and a title
   outside ASCII passes through as UTF-8. The controls: a request that the build refuses is the
   build's located refusal under its entry, and leaves the state as it was; a request that names no
   entry, or gives other than one argument a parameter, has no module, though the module at an
   extra argument builds; at fuel 0 no request reaches an exit, a frontier and no refusal; and an
-  application with no host, or a group, refuses `run` (`Source.hosted?`). Then the script's reader,
-  the inverse of a line's print of a literal, and the options' reader, with their refusals.
+  application with no host, or the group `corpus`, refuses `run` (`Source.hosted?`), saying why.
+  Then the script's reader, the inverse of a line's print of a literal, and the options' reader,
+  readable lines by default, with their refusals.
 
 Every check is a `#guard`, so the rendered bytes stay inside them.
 -/
@@ -46,10 +52,11 @@ namespace Test.Codegen.CompilerEmit
 
 open Effect4 Effect4.Program Effect4.Program.Authoring Compiler
 
-/-- The pins of the battery's emissions, as data. -/
+/-- The pins of the battery's emissions, as data: the library's TypeScript package's pins. -/
 def inputs : Inputs :=
-  { lean := "leanprover/lean4:v4.33.1", library := none, effect := "4.0.0-rc.112",
-    tsgo := "7.0.0-dev.20260629.1" }
+  { lean := "leanprover/lean4:v4.33.1", library := none,
+    pins := [("@effect/sql-sqlite-bun", "4.0.0-rc.112"), ("effect", "4.0.0-rc.112"),
+      ("@typescript/native-preview", "7.0.0-dev.20260629.1")] }
 
 /-- A prelude of two files given as data: its root re-exports the other. -/
 def prelude : List (String × ByteArray) :=
@@ -58,6 +65,21 @@ def prelude : List (String × ByteArray) :=
 /-- What `emit --target ts` asks for a module's name, with the kinds given. -/
 def specOf (name : String) (kinds : List Kind := Kind.selectable) : Spec :=
   { name, command := ["emit", "--target", "ts"], kinds, prelude, inputs }
+
+/-- A prelude folder shaped as the library's (`ts/prelude/`): its root imports `effect` and
+re-exports a helper. Beside them, the SQLite package's adapter imports the root and
+`@effect/sql-sqlite-bun`, and no file of the root's closure imports the adapter. -/
+def folder : List (String × ByteArray) :=
+  [("prelude.ts", "import { Option } from \"effect\"\nexport * from \"./a.ts\"\n".toUTF8),
+   ("a.ts", "export const a = 1\n".toUTF8),
+   ("sql.ts", ("import { SqliteClient } from \"@effect/sql-sqlite-bun\"\n" ++
+     "import { a } from \"./prelude.ts\"\nexport const Sql = { a }\n").toUTF8)]
+
+/-- A file of `folder` read by its path, as `Prelude.closure` reads the disk; refused when none. -/
+def readIn (path : String) : ExceptT String Id ByteArray :=
+  match folder.lookup path with
+  | some bytes => pure bytes
+  | none => throw s!"no file {path}"
 
 /-- The wire corpus's first program, with its name. -/
 def first : String × NativeEff := Wire.Corpus.all.head?.getD ("", .succeed (.lit .unit))
@@ -227,6 +249,43 @@ def mixed : Application NativeOp :=
   ["./a.ts", "./c.ts", "./b.ts"]
 #guard Prelude.resolve "prelude.ts" "../outside.ts" == none && Prelude.resolve "sub/x.ts" "../y.ts" == some "y.ts"
 
+/-! ## The packages a folder imports -/
+
+-- A bare specifier names its package: a scoped package by its scope and name, any other by its
+-- first segment. A relative specifier names none.
+#guard Prelude.packageOf "effect/unstable/persistence" == "effect" &&
+  Prelude.packageOf "@effect/sql-sqlite-bun" == "@effect/sql-sqlite-bun" &&
+  Prelude.packages "import { a } from \"./a.ts\"\nimport { Ref } from \"effect\"\nimport { K } from 'effect/unstable/persistence'\n" ==
+    ["effect"]
+
+-- The manifest's pins name each package that the folder's files import, with the library's pin, and
+-- tsgo's. `p42`'s module imports `effect`, and the prelude given here imports no package.
+#guard match emitProgram (specOf first.1) first.2 with
+  | .ok e => (e.manifest.at? [.key "inputs"]).map jsonText ==
+      some ("{\"lean\":\"leanprover/lean4:v4.33.1\",\"library\":null,\"packages\":{\"effect\":\"4.0.0-rc.112\"}," ++
+        "\"tsgo\":\"7.0.0-dev.20260629.1\"}")
+  | .error _ => false
+
+-- The closure from the root that a module imports holds the root and its helper, never the SQLite
+-- package's adapter; the closure from the adapter holds all three.
+#guard (Id.run (Prelude.closureOf readIn "prelude.ts").run).toOption.map (·.map (·.1)) ==
+    some ["a.ts", "prelude.ts"] &&
+  (Id.run (Prelude.closureOf readIn "sql.ts").run).toOption.map (·.map (·.1)) ==
+    some ["a.ts", "prelude.ts", "sql.ts"] &&
+  (Id.run (Prelude.closureOf readIn "missing.ts").run).toOption.isNone
+
+-- So the wire corpus's folder, whose modules import the root alone, names `effect` and no SQL package.
+-- red: a folder that reaches the adapter, as every folder did when the root imported the package
+-- itself, names `@effect/sql-sqlite-bun` with its pin.
+#guard match Id.run (Prelude.closureOf readIn "prelude.ts").run, Id.run (Prelude.closureOf readIn "sql.ts").run with
+  | .ok root, .ok adapter =>
+    let packagesOf (prelude : List (String × ByteArray)) : Option String :=
+      ((emitGroup { specOf "corpus" with prelude } Wire.Corpus.all).toOption.bind
+        (·.manifest.at? [.key "inputs", .key "packages"])).map jsonText
+    packagesOf root == some "{\"effect\":\"4.0.0-rc.112\"}" &&
+      packagesOf adapter == some "{\"@effect/sql-sqlite-bun\":\"4.0.0-rc.112\",\"effect\":\"4.0.0-rc.112\"}"
+  | _, _ => false
+
 /-! ## A group: the wire corpus, with one manifest -/
 
 -- The group's files: the prelude's once, then each program's module, canonical bytes, their tagged
@@ -329,21 +388,22 @@ def mixed : Application NativeOp :=
 
 Every rendered line stays inside a `#guard`. -/
 
-/-- The dogfood to-do's host as `run` takes it: the reference repository, from no to-do
-(`HostLane.start`), its state shown as the host lane shows it (`Host.repoVal`). -/
-def todoHosted : Hosted :=
-  { σ := Test.Dogfood.Scenario.Todo.Repo, initial := Test.Dogfood.Scenario.Todo.HostLane.start,
-    reactor := Test.Dogfood.Scenario.Todo.repository, view := Test.Dogfood.Scenario.Todo.Host.repoVal }
+open Compiler.Groups (todoHosted todoScript)
 
-/-- The host lane's script (`HostLane.script`) as requests, each argument a literal
-(`Tools.RunChecks.literal`); empty when an argument is none. -/
-def todoScript : List Request :=
-  ((Test.Dogfood.Scenario.Todo.HostLane.script.mapM fun (entry, args) =>
-    (args.mapM Tools.RunChecks.literal).map fun lits => ⟨entry, lits⟩ : Option (List Request))).getD []
-
-/-- Each request of the script with its module (`Request.moduleOf?`). -/
+/-- Each request of the group's script with its module (`Request.moduleOf?`). -/
 def todoRequests : List (Request × Module NativeOp) :=
   todoScript.filterMap fun r => (r.moduleOf? Test.Dogfood.Scenario.Todo.application).map (r, ·)
+
+-- The tree's groups (`lake exe effect4`): `run --group todo` runs the dogfood to-do over its
+-- reference repository on the host lane's seven requests; `run --group corpus` refuses, saying why.
+#guard Groups.all.map Source.name == ["corpus", "todo"] &&
+  (match (Groups.all.find? (·.name == "todo")).map Source.hosted? with
+    | some (.ok (app, _, script)) => app.name == "todo" && script == todoScript
+    | _ => false) &&
+  (match (Groups.all.find? (·.name == "corpus")).map Source.hosted? with
+    | some (.error why) => why == "the group corpus is programs with no host to answer a row; " ++
+        "run takes an application and its host"
+    | _ => false)
 
 -- finite evaluation: the script is the host lane's seven requests, and each has its module, the
 -- same that the command's check of the script gives.
@@ -408,12 +468,10 @@ def todoRequests : List (Request × Module NativeOp) :=
     json == "[\"add\",[\"milk\"],null,[1,[]]]" && typed == "add(\"milk\") no exit"
   | _, _ => false
 
--- red: an application with no host refuses `run`, and so does a group of programs; with its host
--- the dogfood to-do runs, with the script it was given.
-#guard match (Source.application (offset 1)).hosted?, (Source.programs "corpus" Wire.Corpus.all).hosted?,
-    (Source.application Test.Dogfood.Scenario.Todo.application (some todoHosted) todoScript).hosted? with
-  | .error _, .error _, .ok (app, _, script) => app.name == "todo" && script == todoScript
-  | _, _, _ => false
+-- red: an application with no host refuses `run`, and names how a project passes one.
+#guard match (Source.application (offset 1)).hosted? with
+  | .error why => why == "the application offset has no host; a project passes one to Compiler.main (hosted := …)"
+  | .ok _ => false
 
 -- The script's reader is the inverse of a line's print of a literal: each literal printed in a
 -- result's value tree reads back to itself.
@@ -436,13 +494,13 @@ def todoRequests : List (Request × Module NativeOp) :=
   | .ok t => (scriptOf t).toOption.isNone
   | .error _ => false
 
--- The options of `run`: the mode, the script's file and the fuel; `--json` is the default. Each
--- value is read, and an option with no value, a budget that is no natural, or an unknown option
--- refuses.
+-- The options of `run`: the mode, the script's file and the fuel; the readable line, `--text`, is
+-- the default. Each value is read, and an option with no value, a budget that is no natural, or an
+-- unknown option refuses.
 #guard (match RunOptions.read ["--typed", "--budget", "5", "--script", "s.json"] {} with
     | .ok o => o.mode == .typed && o.budget.fuel == 5 && o.script == some "s.json"
     | .error _ => false) &&
-  (RunOptions.read [] {}).toOption.map (·.mode) == some .json &&
+  (RunOptions.read [] {}).toOption.map (·.mode) == some .text &&
   [["--budget", "x"], ["--budget"], ["--script"], ["--bogus"]].all fun args =>
     (RunOptions.read args {}).toOption.isNone
 

@@ -12,7 +12,7 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
     check [--json]
     emit --target ts [--out DIR] [--emit=module,surface,canonical,certificate,manifest]
     describe --target ts [--out DIR] [--emit=…]
-    run [--json | --typed | --text] [--script FILE] [--budget N]
+    run [--text | --typed | --json] [--script FILE] [--budget N]
 
 - `check` builds the application's service module (`Compiler.check`) and prints its certificate:
   as text, or as one line of JSON under `--json`. A refusal is one located refusal, printed the
@@ -21,8 +21,8 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
   `.lake/effect4/<name>/ts/`. `--emit` selects the kinds; the default is all of them.
 - `describe` prints the manifest that `emit` with the same options would write, and writes nothing.
 - `run` runs each request of a script on the Lean machine over the application's host, and prints
-  one line a request (`Compiler.Run`): the result's value tree as JSON (`--json`, the default), the
-  exit encoded at its own type (`--typed`), or a readable line (`--text`). The host and the default
+  one line a request (`Compiler.Run`): a readable line (`--text`, the default), the exit encoded at
+  its own type (`--typed`), or the result's value tree as JSON (`--json`). The host and the default
   script are what the project passes to `Compiler.main`; `--script FILE` reads a JSON array of
   requests instead. `--budget N` plays every row at `N` steps of fuel. An application with no host
   refuses `run`, as a usage error.
@@ -35,20 +35,35 @@ each program's certificate under its name, and `emit` writes one folder with one
 
 The pins and the prelude are read from the library's checkout, which the project's
 `lake-manifest.json` locates (`libraryRoot`). So the command runs from the project's root, as
-`lake exe` does. The exit code is `0` on success, `1` on a refusal, and `2` on a usage error. A
-`run` whose request the build refuses prints the located refusal as `check` does, runs the rest,
-and exits with `1`.
+`lake exe` does. The exit code is `0` on success, `1` on a refusal, and `2` on a usage error, which
+names the command and its options (`usageOf`). A `run` whose request the build refuses prints the
+located refusal as `check` does, runs the rest, and exits with `1`.
 -/
 
 namespace Compiler
 
 open Effect4 Effect4.Program Effect4.Program.Authoring
 
+/-- A command's options, in words. -/
+def usageOf : String → String
+  | "check" => "check [--json]"
+  | "emit" => "emit --target ts [--out DIR] [--emit=KIND,…]"
+  | "describe" => "describe --target ts [--out DIR] [--emit=KIND,…]"
+  | "run" => "run [--text | --typed | --json] [--script FILE] [--budget N]"
+  | _ => ""
+
+/-- The kinds that `--emit` names, in words. -/
+def kindsText : String := "a KIND is one of " ++ ", ".intercalate (Kind.selectable.map Kind.name)
+
 /-- The command line, in words. -/
 def usage : String :=
-  "usage: check [--json] | emit --target ts [--out DIR] [--emit=KIND,…] | describe --target ts " ++
-    "[--out DIR] [--emit=KIND,…] | run [--json | --typed | --text] [--script FILE] [--budget N]; " ++
-    "a KIND is one of " ++ ", ".intercalate (Kind.selectable.map Kind.name)
+  "usage: " ++ " | ".intercalate (["check", "emit", "describe", "run"].map usageOf) ++ "; " ++ kindsText
+
+/-- **A usage error**: the command, why, and the command's options (`usageOf`); exit code `2`. -/
+def usageError (command why : String) : IO UInt32 := do
+  let kinds := if command == "emit" || command == "describe" then s!"; {kindsText}" else ""
+  IO.eprintln s!"{command}: {why}; usage: {usageOf command}{kinds}"
+  return 2
 
 /-- The options of `emit` and `describe`: the target, the output folder and the kinds. -/
 structure Options where
@@ -97,21 +112,24 @@ def libraryRoot : IO System.FilePath := do
     | some (.str dir) => return System.FilePath.mk dir / "effect4"
     | _ => return System.FilePath.mk ".lake" / "packages" / "effect4"
 
-/-- **The pins**, from the library's checkout: its `lean-toolchain`, its Git commit, and Effect's
-and tsgo's versions in its TypeScript package (`ts/eff/package.json`). -/
+/-- **The pins**, from the library's checkout: its `lean-toolchain`, its Git commit, and each
+version that its TypeScript package pins (`ts/eff/package.json`), tsgo's among them. -/
 def readInputs (root : System.FilePath) : IO Inputs := do
   let lean := (← IO.FS.readFile (root / "lean-toolchain")).trimAscii.copy
   let package ← readJson (root / "ts" / "eff" / "package.json")
-  let pin (path : List JsonStep) : IO String := match package.at? path with
-    | some (.str v) => pure v
-    | _ => throw (IO.userError "the library's ts/eff/package.json pins no version there")
-  let effect ← pin [.key "dependencies", .key "effect"]
-  let tsgo ← pin [.key "devDependencies", .key "@typescript/native-preview"]
+  let pinned (field : String) : List (String × String) := match package.at? [.key field] with
+    | some (.obj entries) => entries.filterMap fun
+      | (name, .str version) => some (name, version)
+      | _ => none
+    | _ => []
+  let pins := pinned "dependencies" ++ pinned "devDependencies"
+  if (pins.lookup tsgoPackage).isNone then
+    throw (IO.userError s!"the library's ts/eff/package.json pins no {tsgoPackage}")
   let library ← try
       let git ← IO.Process.output { cmd := "git", args := #["-C", root.toString, "rev-parse", "HEAD"] }
       pure (if git.exitCode == 0 then some git.stdout.trimAscii.copy else none)
     catch _ => pure none
-  return { lean, library, effect, tsgo }
+  return { lean, library, pins }
 
 /-- **What a command runs over**: one application, with the host and the script that `run` takes
 when the project passes them; or a named group of programs, each admitted at the empty application
@@ -132,7 +150,8 @@ def Source.hosted? : Source → Except String (Application NativeOp × Hosted ×
   | .application app (some h) script => .ok (app, h, script)
   | .application app none _ =>
     .error s!"the application {app.name} has no host; a project passes one to Compiler.main (hosted := …)"
-  | .programs name _ => .error s!"the group {name} is programs, with no host"
+  | .programs name _ =>
+    .error s!"the group {name} is programs with no host to answer a row; run takes an application and its host"
 
 /-- `check`: the certificate, or the refusal. Over a group, each program's, under its name; the
 command refuses when one program refuses. -/
@@ -185,12 +204,14 @@ def emissionOf (source : Source) (command : List String) (kinds : List Kind) :
 /-- `emit` and `describe`: the emission of the options `rest`, recorded under `command`; written
 when `write`, else its manifest printed. -/
 def emitCommand (source : Source) (command rest : List String) (write : Bool) : IO UInt32 := do
+  let name := if write then "emit" else "describe"
   let o ← match Options.read rest {} with
     | .ok o => pure o
-    | .error why => IO.eprintln s!"{why}; {usage}"; return 2
+    | .error why => return (← usageError name why)
   unless o.target == some "ts" do
-    IO.eprintln s!"--target ts is the one target of this slice; {usage}"
-    return 2
+    return (← usageError name (match o.target with
+      | none => "--target ts names the target"
+      | some t => s!"--target {t} is no target here, only ts"))
   match ← emissionOf source command o.kinds with
   | .error why => IO.eprintln ("emit: " ++ why); return 1
   | .ok e =>
@@ -199,8 +220,8 @@ def emitCommand (source : Source) (command rest : List String) (write : Bool) : 
       let files := e.files o.kinds
       Prelude.write out (files.map fun a => (a.path, a.bytes))
       IO.println (s!"emit: {files.length} files to {out}: " ++
-        ", ".intercalate (Kind.selectable.filterMap fun k =>
-          let n := (files.filter (·.kind.selector == k)).length
+        ", ".intercalate (Kind.all.filterMap fun k =>
+          let n := (files.filter (·.kind == k)).length
           if n == 0 then none else some s!"{k.name} {n}"))
     else IO.println (jsonText e.manifest)
     return 0
@@ -214,6 +235,8 @@ def runHosted (app : Application NativeOp) (h : Hosted) (passed : List Request) 
   let script ← match o.script with
     | none => pure passed
     | some file =>
+      unless ← System.FilePath.pathExists file do
+        IO.eprintln s!"run: --script {file}: no such file"; return 2
       match ← EIO.toBaseIO (readJson file) with
       | .error e => IO.eprintln s!"run: {e}"; return 2
       | .ok t =>
@@ -238,7 +261,7 @@ def runHosted (app : Application NativeOp) (h : Hosted) (passed : List Request) 
 source with no host refuses, as a usage error. -/
 def runCommand (source : Source) (rest : List String) : IO UInt32 := do
   match RunOptions.read rest {}, source.hosted? with
-  | .error why, _ => IO.eprintln s!"{why}; {usage}"; return 2
+  | .error why, _ => usageError "run" why
   | .ok _, .error why => IO.eprintln s!"run: {why}"; return 2
   | .ok o, .ok (app, h, passed) => runHosted app h passed o
 
@@ -254,10 +277,12 @@ def run (source : Source) (args rest : List String) : IO UInt32 :=
   match rest with
   | ["check"] => checkCommand source false
   | ["check", "--json"] => checkCommand source true
+  | "check" :: options => usageError "check" s!"{" ".intercalate options} is no option"
   | "emit" :: options => emitCommand source args options true
   | "describe" :: options => emitCommand source (asEmit args) options false
   | "run" :: options => runCommand source options
-  | _ => do IO.eprintln usage; return 2
+  | [] => do IO.eprintln usage; return 2
+  | c :: _ => do IO.eprintln s!"{c} is no command; {usage}"; return 2
 
 /-- **The compiler's entry point** over one application: `check`, `emit`, `describe` or `run`.
 `run` takes the application's host and the script of requests that the project passes. -/

@@ -65,6 +65,8 @@ and a document are each a state reached by its journal. The dictionary
   confirmed, five briefs amended, value linkage added as item 4b.
 - The owner's order of the evening (row 430): the user side first; the consolidation chain
   continues as one background seat at a time.
+- M4's first half merged (row 431). E6 stopped at the Rocq comparison lane, whose runner is an
+  extraction with no producer in the tree. The producer comes into the tree, then E6 lands.
 
 ## Next, in order
 
@@ -73,13 +75,14 @@ and compiled as its semantics says. Each move deletes what it replaces.
 
 Done on 2026-10-20: the to-do as a user's project (`research/2026-10-19-todo-as-a-user/receipt.md`),
 M1, M2, M3, C1 and the compiler's entry point in three slices
-(`research/2026-10-20-compiler-entry/README.md` §7). Running: M4 with E6. Next: 4b, then the user
-side first, with the chain as one background seat (row 430).
+(`research/2026-10-20-compiler-entry/README.md` §7). M4's first half is merged (row 431). Running: E6 with the Rocq lane's producer in
+the tree, and the user-side pass. Next: 4b, then M8 as amended.
 
 1. M1, one located refusal: landed.
 2. M2, one profile judgment at ingress: landed.
 3. M3, one program codec, lowered: landed.
-4. M4, one type spelling, then E6: `Nat` and `Int` exact in OCaml: running.
+4. M4, one type spelling, then E6: the first half landed; E6 runs behind the Rocq lane's
+   producer (row 431).
 4b. Value linkage between artifacts: a Lean declaration is lowered into one artifact (§9.3).
 5. M8, one observation, one check, the kit's commands as queries (row 414 (3); amended, row 428).
 6. M9, the typing rule as two tables, in three stages.

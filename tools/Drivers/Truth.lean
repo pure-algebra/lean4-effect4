@@ -31,7 +31,8 @@ and built-in host answers (`hostInputs`), and one writer of two outputs, under `
   (`moduleOf`, over `Tools.Code.programModule`; decisions row 392, P1 (a)). It is the checked
   emission's file, its pieces printed typed, or, for a program the emission refuses, the
   program printed plain as `main`, with its imports from Lean data, the prelude's host
-  namespaces (`hostImports`) from `ts/prelude/prelude.ts` (`preludePath`), and the compiler's
+  namespaces (`hostImports`) from `ts/prelude/prelude.ts` (`preludePath`) or, for the SQLite
+  package's rows, from `ts/prelude/sql.ts` (`sqlPath`), and the compiler's
   layout under a lane's header (`Compiler.moduleFile`, `Compiler.generatedHeader`). The target lane
   (`tools/target/profile.ts`) and the reader lane (`ts/eff/check.ts`) read these modules.
 * `corpus.json`, the manifest. At the top: `scopeKey`, the scope's service key, and `hostRows`,
@@ -1429,18 +1430,26 @@ def runJson (names : KeyNames) (p : Api.Program) (fuel : Nat) (table : RowTable)
 folder `Test/Corpus/generated/`. -/
 def preludePath : String := "../../../ts/prelude/prelude.ts"
 
+/-- The path a truth module imports the SQLite package's adapter from: `ts/prelude/sql.ts`, the one
+file of the prelude that imports `@effect/sql-sqlite-bun`. -/
+def sqlPath : String := "../../../ts/prelude/sql.ts"
+
 /-- **The truth lane's host is its prelude.** A module file leaves free each namespace of the
 table's rows that is no service (`ModuleEmission.file`: a row that is no service row is the
-host's), and the prelude binds those this lane's fixtures name: `Host`, `L`, `Sql` and `Kv` of
-`ts/prelude/prelude.ts`. So a module imports from the prelude each such namespace that it names,
-in one import after the file's own, read off the table (`serviceParts`): no list of names. -/
+host's), and the prelude binds those this lane's fixtures name: `Host`, `L` and `Kv` of
+`ts/prelude/prelude.ts`, and `Sql` of `ts/prelude/sql.ts`, the adapter of the SQLite package's
+rows (`Packages.sqliteBun`). So a module imports each such namespace that it names from the file
+that binds it, after the file's own imports, read off the tables (`serviceParts`): no list of
+names. -/
 def hostImports (table : RowTable) (m : TypeScript.Module) : TypeScript.Module :=
-  let spaces := ((table.filter fun row => row.serviceCall?.isNone).filterMap fun row =>
+  let spaces (rows : RowTable) := ((rows.filter fun row => row.serviceCall?.isNone).filterMap fun row =>
     (serviceParts row.spelling).map (·.1)).eraseDups
-  let free := (Effect4.Codegen.freeNames m).filter fun p => spaces.contains p.1
-  if free.isEmpty then m
-  else { m with imports := m.imports ++
-    [.named (free.map fun p => { imported := p.1, localName := p.1, typeOnly := p.2 }) preludePath false] }
+  let free := (Effect4.Codegen.freeNames m).filter fun p => (spaces table).contains p.1
+  let importOf (path : String) (names : List (String × Bool)) : List TypeScript.Import :=
+    if names.isEmpty then []
+    else [.named (names.map fun p => { imported := p.1, localName := p.1, typeOnly := p.2 }) path false]
+  let (sql, other) := free.partition fun p => (spaces Packages.sqliteBun).contains p.1
+  { m with imports := m.imports ++ importOf preludePath other ++ importOf sqlPath sql }
 
 /-- **One program's module, as the lane writes it**: the one writer of every lane
 (`Tools.Code.programModule`): the checked emission's file, its pieces printed typed, or the

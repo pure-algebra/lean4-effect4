@@ -13,7 +13,7 @@ syntax and never text: `TypeScript.Module` is the pinned package's, `Json` is th
 
 Rendering crosses from a target's syntax to bytes, outside every emitter. A TypeScript module is
 rendered by the pinned package (`TypeScript.Render.module`), and a file writer lays it out as
-every lane writes it (`moduleText`, `tools/Tools/Code/Module.lean`). A JSON document is rendered
+every lane writes it (`moduleText`, `tools/Compiler/Code/Module.lean`). A JSON document is rendered
 here (`renderJson`). Each renderer that traverses a `String` is admitted by exact name in the
 axiom gate. The codegen refactor's CR-9 removed the `Artefact` wrapper over the two, which one
 battery line called (decisions row 392).

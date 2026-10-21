@@ -81,6 +81,9 @@ def Kind.selector : Kind → Kind
 /-- The kinds `--emit` names, in the order `emit` writes them. -/
 def Kind.selectable : List Kind := [.module, .surface, .canonical, .certificate, .manifest]
 
+/-- Every kind, in the order `emit` writes them: the prelude after the module that imports it. -/
+def Kind.all : List Kind := [.module, .prelude, .surface, .canonical, .certificate, .manifest]
+
 /-- The kinds of `--emit=k₁,k₂,…`; `none` when one is no selectable kind's name. -/
 def Kind.parse (text : String) : Option (List Kind) :=
   (text.splitOn ",").mapM fun s => Kind.selectable.find? (·.name == s)
@@ -98,23 +101,40 @@ def sha256Hex (bytes : ByteArray) : String := Digest.hex (Store.sha256 bytes.dat
 def Artifact.json (a : Artifact) : NatJson :=
   .obj [("path", .str a.path), ("kind", .str a.kind.name), ("sha256", .str (sha256Hex a.bytes))]
 
-/-- **The pins an emission records** (the manifest's `inputs`, decision E3). The import closure of
-the application's Lean modules, with their digests, is a later addition: it is absent. -/
+/-- **The pins an emission records** (the manifest's `inputs`, decision E3): the Lean toolchain,
+the library's commit, and the versions of the library's TypeScript package. The manifest names
+each package that the folder imports, with its pin, and tsgo's pin (`Inputs.json`). The import
+closure of the application's Lean modules, with their digests, is still absent: the next slice
+adds it. -/
 structure Inputs where
   /-- the Lean toolchain, as the library's `lean-toolchain` names it -/
   lean : String
   /-- the library's Git commit; `none` when its checkout has none. Uncommitted edits in the
   checkout are not recorded. -/
   library : Option String
-  /-- Effect's version, as the library's TypeScript package pins it -/
-  effect : String
-  /-- tsgo's version, as the library's TypeScript package pins it -/
-  tsgo : String
+  /-- each package that the library's TypeScript package pins (`ts/eff/package.json`), its
+  dependencies and then its development dependencies, with the version pinned -/
+  pins : List (String × String)
 
-/-- The pins as the manifest writes them. -/
-def Inputs.json (i : Inputs) : NatJson :=
+/-- The package that tsgo, the one TypeScript compiler, is pinned under. -/
+def tsgoPackage : String := "@typescript/native-preview"
+
+/-- **The packages a folder imports**: the package of each bare specifier of its TypeScript files,
+the module, the surface and the prelude's closure (`Prelude.packages`), once each, in byte order. -/
+def importedPackages (written : List Artifact) : List String :=
+  let texts := (written.filter fun a => a.kind == .module || a.kind == .surface || a.kind == .prelude)
+    |>.filterMap fun a => String.fromUTF8? a.bytes
+  (texts.flatMap Prelude.packages).eraseDups.mergeSort fun a b =>
+    Effect4.Codegen.bytesLe a.toUTF8.data.toList b.toUTF8.data.toList
+
+/-- The pins as the manifest writes them: the toolchain and the commit; each package that the
+folder imports (`importedPackages`) with its pin, `null` where the library pins none; and tsgo's
+pin. -/
+def Inputs.json (i : Inputs) (written : List Artifact) : NatJson :=
+  let pin (name : String) : NatJson := ((i.pins.lookup name).map NatJson.str).getD .null
   .obj [("lean", .str i.lean), ("library", (i.library.map NatJson.str).getD .null),
-    ("effect", .str i.effect), ("tsgo", .str i.tsgo)]
+    ("packages", .obj ((importedPackages written).map fun name => (name, pin name))),
+    ("tsgo", pin tsgoPackage)]
 
 /-- **What an emission is asked for**: the module's name, which names its files; the command's
 arguments as given; the kinds to write; the prelude's import closure; and the pins. For an
@@ -310,14 +330,15 @@ def Emission.files (e : Emission) (kinds : List Kind) : List Artifact :=
     (if kinds.contains .manifest then [⟨"manifest.json", .manifest, jsonBytes e.manifest⟩] else [])
 
 /-- **The manifest's fields after its programs**: the profile; the target; each file written; the
-pins, with no module closure yet (`Inputs`); the checks performed and those not performed; and the
-command's arguments as given. An emission's manifest and a group's share them. -/
+pins, each package the folder imports among them, with no module closure yet (`Inputs`); the checks
+performed and those not performed; and the command's arguments as given. An emission's manifest
+and a group's share them. -/
 def manifestFields (spec : Spec) (written : List Artifact) : List (String × NatJson) :=
   [("profile", .obj [("declaration", .str (``Effect4.Program.rc112).toString),
       ("name", .str rc112.name), ("natBound", match rc112.natBound with | some b => .nat b | none => .null)]),
     ("target", .str "ts"),
     ("artifacts", .arr (written.map Artifact.json)),
-    ("inputs", spec.inputs.json),
+    ("inputs", spec.inputs.json written),
     ("checks", .obj [("performed", .arr (checks.map Check.json)),
       ("notPerformed", .arr (notPerformed.map NatJson.str))]),
     ("command", .arr (spec.command.map NatJson.str))]

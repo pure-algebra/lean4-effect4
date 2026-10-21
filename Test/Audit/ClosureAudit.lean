@@ -3,7 +3,7 @@ import Tools.Semantics
 import Tools.SemanticsDocument
 import Tools.Document.Html
 import ProofGraph.ClosureAudit
-import Compiler.Main
+import Compiler.Groups
 
 /-!
 # No table bound before a returned closure (`#closure_audit`)

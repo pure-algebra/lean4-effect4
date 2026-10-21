@@ -1,4 +1,4 @@
-import Tools.GeneratedStamp
+import Compiler.GeneratedStamp
 import Tools.ProfileJson
 import Lean
 import OCaml5.Eff.World

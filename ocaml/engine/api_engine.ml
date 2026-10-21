@@ -920,7 +920,7 @@ and external_store = string list
    P2  Each body is Lean's, arm for arm, with `M`/`T`/`L`/`D` for `List`.  A body that needs a
        generated helper takes it as a leading argument, because the prelude is emitted BEFORE
        the declarations (externs.txt spells the helper's name in the row).
-   P3  No mutable structure and no exception, except the two `failwith`s below, which fire
+   P3  No mutable structure and no exception, except the one `failwith` below, which fires
        only on a construction the closure does not contain and which say so.
    P4  Record parameters carry an `(_, …, _) t` annotation wherever a field name is claimed by
        more than one generated record (`id`, `state`, `scope`, `key`, `interruptible`, …), so

@@ -228,9 +228,10 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 	$(PY) scripts/generate.py --only readme
 	@mkdir -p $(GEN) && touch $@
 
-# The prelude and the files it re-exports (`ts/prelude/`): a gate that reads printed modules depends
-# on all five. The host protocol's projection is written beside them.
-PRELUDE_SOURCES := ts/prelude/prelude.ts ts/prelude/control.ts ts/prelude/records.ts ts/prelude/tuples.ts ts/prelude/prelude-atoms.gen.ts
+# The prelude and the files it re-exports (`ts/prelude/`), and the SQLite package's adapter that a
+# module with a SQL row imports beside it (`sql.ts`): a gate that reads printed modules depends on
+# all six. The host protocol's projection is written beside them.
+PRELUDE_SOURCES := ts/prelude/prelude.ts ts/prelude/control.ts ts/prelude/records.ts ts/prelude/tuples.ts ts/prelude/prelude-atoms.gen.ts ts/prelude/sql.ts
 $(GEN)/host-protocol: $(GEN)/derived tools/Tools/HostProtocol.lean $(CORE_SOURCES)
 	$(LAKE) build Effect4.Api.HostSession
 	$(call build_imports,tools/Tools/HostProtocol.lean)

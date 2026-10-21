@@ -86,9 +86,12 @@ export function queriesFromInputs(repo: string, selectionInput: unknown, corpusI
   if (missing.length || extra.length || new Set(actualNames).size !== actualNames.length) inputIssues.push({ code: "program-inventory", message: `missing=${missing.join(",")} extra=${extra.join(",")} duplicate=${new Set(actualNames).size !== actualNames.length}` })
   let scope: Key | undefined
   try { scope = key(corpus.scopeKey) } catch (e) { inputIssues.push({ code: "scope-key-metadata", message: String(e) }) }
+  // Each adapter namespace the selection's subjects name, with the prelude file that declares it:
+  // the SQLite package's adapter stands in its own file, the one that imports its package.
+  const adapters: Record<string, string> = { Adapter: "ts/prelude/prelude.ts", SqlAdapter: "ts/prelude/sql.ts" }
   const imports = [
     ...pairImports,
-    `import type * as Adapter from ${JSON.stringify(resolve(repo, "ts/prelude/prelude.ts"))}`,
+    ...Object.entries(adapters).map(([name, file]) => `import type * as ${name} from ${JSON.stringify(resolve(repo, file))}`),
   ]
   const queries: Query[] = programs.map(name => {
     if (!/^[A-Za-z_$][\w$]*$/.test(name)) throw new Error(`invalid program ID ${name}`)
@@ -116,8 +119,10 @@ export function queriesFromInputs(repo: string, selectionInput: unknown, corpusI
   const rowReceivers = subjectReceivers(repo, selectedRows.map(r => string(r.subject, "row subject")))
   selectedRows.forEach((selected, index) => {
     const table = string(selected.table, "table"), name = string(selected.name, "row name")
-    const q: Query = { id: `row/${table}/${name}`, source: "ts/prelude/prelude.ts", imports,
-      subject: string(selected.subject, "row subject"), kind: "function", expected: {}, bindings: Object.fromEntries(handles), inputIssues: [...inputIssues, ...rowInventoryIssues],
+    const subject = string(selected.subject, "row subject")
+    const source = adapters[subject.replace(/^typeof /, "").split(".")[0] ?? ""] ?? "ts/prelude/prelude.ts"
+    const q: Query = { id: `row/${table}/${name}`, source, imports,
+      subject, kind: "function", expected: {}, bindings: Object.fromEntries(handles), inputIssues: [...inputIssues, ...rowInventoryIssues],
       provenance: { metadata: table === "Host" ? "Test/Corpus/corpus.json#hostRows" : "ts/eff/packages.gen.ts", table, row: name } }
     const receiver = rowReceivers[index]
     if (receiver !== undefined) q.receiver = receiver
