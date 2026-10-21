@@ -24,7 +24,7 @@ open Effect4 Effect4.Program Effect4.Store
 
 /-- **A saved live session restores to the same run** (E1). Saving a `Live` session and restoring
 it through `LiveRecord.restore` succeeds and produces a `Live` whose `run` is `l.run`, including
-its journal, phases, waiting calls and row spellings.
+its journal, phases and waiting calls.
 
 Placement:
 1. Concept: `host-session-protocol`, property `typed-replay-session`.

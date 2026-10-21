@@ -1,6 +1,5 @@
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Api.Author
-import Effect4.Laws.Api.AuthorBuild
 import Effect4.Laws.Program.CheckedTyping
 import Effect4.Laws.Program.Signature
 
@@ -192,12 +191,6 @@ theorem build_rows_resolve {Op : Type} (m : Module Op) (names : RowNames)
 
 /-! ## What a build carries -/
 
-/-- A built program's table is the module's own, and its row names are the module's. -/
-theorem build_table {m : Module NativeOp} {b : Api.Built} (h : Api.Author.build m = .ok b) :
-    b.table = m.table ∧ b.rowNames = m.rowNames := by
-  obtain ⟨_, table, names, _⟩ := Api.Author.build_retains h
-  exact ⟨table, names⟩
-
 /-- A built program's table is lawful: the certificate's signature is (`admitSig_ok_iff`), and
 `build_table_lawful` is what lets an author know it before the build. -/
 theorem build_lawful {b : Api.Built} : Table.lawful b.table = true :=
@@ -220,7 +213,7 @@ which program and host setup were checked. They compare no program behaviors or 
 returned `Built.admitted` certificate is indexed by those program and table fields. -/
 theorem rebuild_spec {before after : Api.Built} {candidate : Api.Program}
     (h : before.rebuild candidate = .ok after) :
-    after.program = candidate ∧ after.app = before.app ∧ after.rowNames = before.rowNames := by
+    after.program = candidate ∧ after.app = before.app := by
   unfold Api.Built.rebuild Api.Author.Internal.finishBuild at h
   split at h <;> aesop
 

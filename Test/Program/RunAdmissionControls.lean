@@ -24,7 +24,7 @@ def opened : Option Live :=
 
 -- Loop 1, row 5: the admitted program waits on the application row.
 #guard opened.isSome
-#guard opened.map (·.run.built.rowNames) = some [("ask", 0)]
+#guard opened.map (·.run.built.positionOf "ask") = some (some 0)
 #guard opened.map (·.run.budget) = some budget
 #guard opened.map (fun live => (live.view.awaiting.map (·.await)).length) = some 1
 
@@ -49,18 +49,18 @@ def liveHole : Sketch :=
 #guard (admitProgram liveHole.program (app.withHoles liveHole.holes)).isOk
 #guard (Api.Built.ofSketch app liveHole).isOk
 #guard !(Api.Built.ofProgram app liveHole.program).isOk
-#guard (Api.Built.ofSketch app liveHole).toOption.map (·.rowNames) =
-  some [("ask", 0), ("h0", 1)]
+#guard (Api.Built.ofSketch app liveHole).toOption.map (fun b => (b.positionOf "ask", b.positionOf "h0")) =
+  some (some 0, some 1)
 -- Unused metadata adds no admission rule of its own.
 #guard (Api.Built.ofSketch {} { program := .succeed (.lit (.nat 1)), holes := [ask] }).isOk
 
--- The record restores derived row names, empty session names, and both budgets.
+-- The record restores row positions, empty session names, and both budgets.
 def restored : Option Live :=
   (Api.Built.ofSketch app sketch).toOption.bind fun built =>
     let live := Live.open built "" budget
     (LiveRecord.save live).restore.toOption
 #guard restored.map (·.run.id) = some ""
-#guard restored.map (·.run.built.rowNames) = some [("ask", 0)]
+#guard restored.map (·.run.built.positionOf "ask") = some (some 0)
 #guard restored.map (·.run.budget) = some budget
 -- The strict decoder refuses the old eight-field record layout.
 #guard restored.map (fun live =>
@@ -72,6 +72,6 @@ def restored : Option Live :=
     Store.Canonical.toVal live.run.profile,
     Store.Canonical.toVal live.run.budget,
     Store.Canonical.toVal live.run.journal,
-    Store.Canonical.toVal live.run.built.rowNames]
+    Store.Canonical.toVal ([("ask", 0)] : List (String × Nat))]
   (Store.Canonical.decode (α := LiveRecord) oldLayout.encode).isNone) = some true
 end Test.Program.RunAdmissionControls

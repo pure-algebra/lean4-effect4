@@ -1,7 +1,7 @@
 # 2026-10-21 The program domain landing, rederived
 
 Status: a review of `codex/program-domain` at `99007881b` (base `40770f079`), with three probes.
-It rules nothing. The landing is on its branch and is not merged into `refactor/phase1-phase3`.
+The landing is merged into `refactor/phase1-phase3`. Points 1 to 3 of §5 landed as decisions row 440; the probes stay as the record of what was shown first.
 The evidence words are those of `docs/core/controlled-english.md` §3.8.
 
 Every probe runs clean against the landing with `lake env lean -DwarningAsError=true`.

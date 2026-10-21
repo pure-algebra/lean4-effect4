@@ -1,13 +1,12 @@
 (* Fixture reader shared by the to-do tests and benchmark.
    Depends on Todo_gen and Eff_types.
-   Properties: malformed fixtures raise Failure; row names agree with rows.
+   Properties: malformed fixtures raise Failure.
    Tested by test_todo. *)
 type request = private
   { entry : string
   ; program : string
   ; rows : string list
   ; typed : string
-  ; names : string
   ; state : string
   ; result : string
   ; forgetful : string

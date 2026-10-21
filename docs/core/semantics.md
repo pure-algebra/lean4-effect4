@@ -818,11 +818,11 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   Admission, exact node reading and hashing retain their existing owners.
   Equal references imply equal objects or an exhibited collision, without a hash injectivity assumption.
   These laws establish no cross-layout migration, host execution or persistence property.
-- **Service-role reading (`service-view-printed`, `service-view`, row 439)**: one profiled check separates role formation from target naming.
-  `Program.serviceFaultIn_anyName` and `Program.entriesOf_isSome` state the properties in `src/Effect4/Laws/Codegen/Services.lean`.
+- **Service-role reading (`service-view-printed`, `service-view`, rows 439 and 440)**: one profiled check separates role formation from target naming.
+  `Program.serviceFaultIn_tsProfile_iff` and `Program.entriesOf_isSome` state the properties in `src/Effect4/Laws/Codegen/Services.lean`.
   Their roles are compatibility and adequacy, respectively. They serve R8's service reading and printer compatibility.
-  TypeScript success implies domain success. Domain success gives readable service entries.
-  Neither property establishes target compilation or host behavior.
+  TypeScript success is domain success and TypeScript's naming conditions. Domain success gives readable service entries.
+  Neither property names the refusal the printer reports, target compilation or host behavior.
 - **The tool wire's JSON profile (`codec-profile-retains-value`, seams S3b)**: a successful guarded JSON write
   reads back as the original canonical value. `Tool.CodecProfile.write_read` states it in
   `src/Effect4/Laws/Tool/CodecProfile.lean`. The profile refuses an option whose item can print null.

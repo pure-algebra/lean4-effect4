@@ -9,12 +9,11 @@ Slice E of the authoring plan (`docs/research/2026-10-17-proof-scout/README.md` 
 `LiveRecord` holds the program object and the session's version, name, binding, budgets and journal.
 No certificate is stored. `LiveRecord.restore` checks the version and opens the object through
 program admission. It then replays the journal through `Live.feedAll`.
-Row spellings are derived from the object's signature.
 
 * **Versioned record** (`currentVersion`, `Refusal.unsupportedVersion`): a record with an unknown
   format version is refused before admission.
 * **Exact restoration** (`LiveRecord.restore_save`, `src/Effect4/Laws/Api/LiveRecord.lean`):
-  the object and journal restore the exact `Run`, including its derived row spellings.
+  the object and journal restore the exact `Run`.
 * **Canonical bytes**: every field is first-order, so the record's codec is the generator's
   (`Canonical LiveRecord`, the Tool group, `src/Effect4/Tool/ToolDerived.lean`).
 

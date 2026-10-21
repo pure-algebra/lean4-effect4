@@ -55,6 +55,15 @@ example (accepted : serviceFault (block "Counter" "read") = none) :
     serviceFaultIn anyName (block "Counter" "read") = none :=
   serviceFaultIn_anyName accepted
 
+-- reader: at the colliding block, formation holds and the target refuses, so by the conjunction
+-- a naming condition fails; the target's refusal is the finite fact guarded above
+example (refused : serviceFault layerCollision = some (.serviceName "CounterLayer")) :
+    ¬ tsNames layerCollision := fun names => by
+  have h := (serviceFaultIn_tsProfile_iff layerCollision).mpr ⟨rfl, names⟩
+  rw [serviceFault_eq] at refused
+  rw [refused] at h
+  cases h
+
 -- reader: domain formation supplies the argument reading for this service
 example : (Effect4.Codegen.entriesOf (block "Counter" "read")
     ⟨"Counter", 0, [("read", 1, 0)]⟩).isSome = true :=

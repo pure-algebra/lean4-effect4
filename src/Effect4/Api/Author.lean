@@ -103,7 +103,7 @@ def closed (b : Built) : Bool := b.typed.closed
 
 /-- The position a declared spelling was given in the table. -/
 def positionOf (b : Built) (spelling : String) : Option Nat :=
-  (b.rowNames.find? (fun entry => entry.1 == spelling)).map Prod.snd
+  b.app.rows.findIdx? (·.spelling == spelling)
 
 /-- `Effect.runSyncExit` on a built program. (The ordinary run of a built program is a value a
 caller holds, `Run.open` followed by `Rows.start` and `Rows.flush`; it is not a projection of `Built`.) -/

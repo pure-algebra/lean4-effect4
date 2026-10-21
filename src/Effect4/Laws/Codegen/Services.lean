@@ -1,5 +1,6 @@
 import Effect4.Laws.Codegen.ReadLeaf
 import Effect4.Codegen.Surface
+import Effect4.Laws.Auto.Semantics
 
 /-!
 # Codegen.Services — a block's services read back (decisions rows 338 and 339, slice CO-6b)
@@ -614,8 +615,9 @@ theorem restoreRoles {defs : List DefDecl} (hf : serviceFault defs = none)
 
 /-! ## The domain service view
 
-The TypeScript profile strengthens the domain's role check. The connector and helpers serve
-`service-view-printed`; the entry-reading helpers serve `service-view`. Their placement precedes
+The TypeScript profile's check is the domain's role check and TypeScript's naming conditions
+(`serviceFaultIn_tsProfile_iff`). The connector and helpers serve `service-view-printed`; the
+entry-reading helpers serve `service-view`. Their placement precedes
 these proofs in `docs/research/2026-10-21-program-domain-landing/README.md` at `4d0b06374`.
 -/
 
@@ -625,7 +627,7 @@ theorem serviceFault_eq (defs : List DefDecl) : serviceFault defs = serviceFault
   rfl
 
 /-- `repeatOf` finds nothing exactly on a list with no repeat.
-A step of `serviceFaultIn_anyName`, the consumer for `service-view-printed`. -/
+A step of `serviceFaultIn_tsProfile_iff`, the consumer for `service-view-printed`. -/
 theorem repeatOf_eq_none_iff : ∀ (names : List String), repeatOf names = none ↔ names.Nodup
   | [] => ⟨fun _ => List.nodup_nil, fun _ => rfl⟩
   | n :: rest => by
@@ -641,7 +643,7 @@ theorem repeatOf_eq_none_iff : ∀ (names : List String), repeatOf names = none 
       exact (repeatOf_eq_none_iff rest).mpr hrest
 
 /-- A service's own name is among the constants TypeScript declares for it.
-A step of `serviceFaultIn_anyName`, the consumer for `service-view-printed`. -/
+A step of `serviceFaultIn_tsProfile_iff`, the consumer for `service-view-printed`. -/
 theorem names_sublist (services : List Service) :
     (services.flatMap fun sv => anyName.serviceConsts sv.name).Sublist
       (services.flatMap fun sv => tsProfile.serviceConsts sv.name) := by
@@ -651,61 +653,107 @@ theorem names_sublist (services : List Service) :
     simp only [List.flatMap_cons]
     exact List.Sublist.append (List.Sublist.cons_cons _ (List.nil_sublist _)) ih
 
-/-- One service: what the printer prints, the domain admits.
-A step of `serviceFaultIn_anyName`, the consumer for `service-view-printed`. -/
-theorem serviceFaultOfIn_anyName {defs : List DefDecl} {sv : Service}
-    (h : serviceFaultOfIn tsProfile defs sv = none) : serviceFaultOfIn anyName defs sv = none := by
-  unfold serviceFaultOfIn at h ⊢
-  split at h
-  · cases h
-  · split at h
-    · cases h
-    · rename_i hreq
-      rw [if_neg hreq]
-      split at h
-      · cases h
-      · rename_i hmethods
-        have hany : sv.methods.any (fun x => !anyName.method x.1) = false := by
-          rw [List.any_eq_false]
-          intro x _ hx
-          simp only [anyName, Bool.not_true, Bool.false_eq_true] at hx
-        have hdomain : ¬ ((!(sv.methods.map (·.1)).Nodup || sv.methods.isEmpty ||
-            sv.methods.any (fun x => !anyName.method x.1)) = true) := by
-          rw [hany, Bool.or_false]
-          intro hd
-          exact hmethods (by rw [hd, Bool.true_or])
-        rw [if_neg hdomain]
-        split at h
-        · cases h
-        · exact h
+/-- **TypeScript's naming conditions** on a block's services, beside role formation: no
+definition name repeats in a block with a service, no service constant repeats (a key or a
+layer), every method name is a plain key, and no service's constants collide with the block. -/
+def tsNames (defs : List DefDecl) : Prop :=
+  tsProfile.defNameFault defs = none ∧
+  repeatOf ((servicesOf defs).flatMap fun sv => tsProfile.serviceConsts sv.name) = none ∧
+  ∀ sv ∈ servicesOf defs,
+    sv.methods.any (fun x => !plainMethodName x.1) = false ∧
+    tsProfile.collides defs sv.name = false
 
-/-- **What the printer prints, the domain admits**: the TypeScript profile's check implies the
-program domain's. The converse fails at target names (`Test/Codegen/ProgramServices.lean`).
+/-- The domain's profile refuses no method name.
+A step of `serviceFaultIn_tsProfile_iff`, the consumer for `service-view-printed`. -/
+theorem any_not_anyName (methods : List (String × Nat × Nat)) :
+    methods.any (fun x => !anyName.method x.1) = false := by
+  rw [List.any_eq_false]
+  intro x _ hx
+  simp only [anyName, Bool.not_true, Bool.false_eq_true] at hx
+
+/-- One service: the printer's check is formation and the two naming conditions.
+A step of `serviceFaultIn_tsProfile_iff`, the consumer for `service-view-printed`. -/
+theorem serviceFaultOfIn_tsProfile_iff (defs : List DefDecl) (sv : Service) :
+    serviceFaultOfIn tsProfile defs sv = none ↔
+      serviceFaultOfIn anyName defs sv = none ∧
+        sv.methods.any (fun x => !plainMethodName x.1) = false ∧
+        tsProfile.collides defs sv.name = false := by
+  unfold serviceFaultOfIn
+  cases hinit : defs[sv.init]? with
+  | none => simp
+  | some init =>
+    dsimp only
+    cases hreq : (init.request ≠ .unit || !init.params.isEmpty) with
+    | true => simp
+    | false =>
+      simp only [Bool.false_eq_true, ↓reduceIte]
+      rw [any_not_anyName]
+      show _ ↔ (if (!(sv.methods.map (·.1)).Nodup || sv.methods.isEmpty || false) = true then _
+        else if false = true then _ else _) = none ∧ _
+      simp only [Bool.or_false, Bool.false_eq_true, ↓reduceIte]
+      cases hshape : (!(sv.methods.map (·.1)).Nodup || sv.methods.isEmpty) with
+      | true => simp
+      | false =>
+        simp only [Bool.false_or, Bool.false_eq_true, ↓reduceIte]
+        rw [show tsProfile.method = plainMethodName from rfl]
+        cases hplain : sv.methods.any (fun x => !plainMethodName x.1) with
+        | true => simp
+        | false =>
+          simp only [Bool.false_eq_true, ↓reduceIte]
+          cases hcoll : tsProfile.collides defs sv.name with
+          | true => simp
+          | false => simp
+
+/-- **The printer's check is formation and naming**: the TypeScript profile's check succeeds
+exactly when the program domain's does and TypeScript's naming conditions hold (`tsNames`). The
+order the printer reports its refusals in is no part of the claim.
 
 Placement: concept `exact-codecs`, compatibility claim `service-view-printed`, requirement R8.
-The hypothesis is TypeScript service-check success at any definition list. The consumer is
-`Object.services` through the printer's compatibility with domain role formation.
+The consumers are `Object.services`, through the printer's compatibility with domain role
+formation, and the controls of `Test/Codegen/ProgramServices.lean`.
 This establishes no target execution, method meaning or program admission. -/
-theorem serviceFaultIn_anyName {defs : List DefDecl} (h : serviceFaultIn tsProfile defs = none) :
-    serviceFaultIn anyName defs = none := by
-  unfold serviceFaultIn at h ⊢
-  split at h
-  · cases h
-  · split at h
-    · cases h
-    · rename_i hts
-      have hnames : repeatOf ((servicesOf defs).flatMap fun sv => anyName.serviceConsts sv.name) =
-          none :=
-        (repeatOf_eq_none_iff _).mpr
-          ((names_sublist _).nodup ((repeatOf_eq_none_iff _).mp hts))
-      simp only [anyName] at hnames ⊢
-      rw [hnames]
+@[semantics "exact-codecs" (requirement := R8)]
+theorem serviceFaultIn_tsProfile_iff (defs : List DefDecl) :
+    serviceFaultIn tsProfile defs = none ↔ serviceFaultIn anyName defs = none ∧ tsNames defs := by
+  unfold serviceFaultIn tsNames
+  cases hdef : tsProfile.defNameFault defs with
+  | some n => simp
+  | none =>
+    dsimp only
+    show _ ↔ (match (none : Option String) with
+      | some n => some (PrintRefusal.serviceName n)
+      | none => match repeatOf ((servicesOf defs).flatMap fun sv => anyName.serviceConsts sv.name) with
+        | some n => some (.serviceName n)
+        | none => match strayOf ((servicesOf defs).map (·.name)) defs with
+          | some why => some why
+          | none => (servicesOf defs).findSome? (serviceFaultOfIn anyName defs)) = none ∧ _
+    dsimp only
+    cases hts : repeatOf ((servicesOf defs).flatMap fun sv => tsProfile.serviceConsts sv.name) with
+    | some n => simp
+    | none =>
       dsimp only
-      split at h
-      · cases h
-      · rw [List.findSome?_eq_none_iff] at h ⊢
-        intro sv hsv
-        exact serviceFaultOfIn_anyName (h sv hsv)
+      have hdom : repeatOf ((servicesOf defs).flatMap fun sv => anyName.serviceConsts sv.name) =
+          none :=
+        (repeatOf_eq_none_iff _).mpr ((names_sublist _).nodup ((repeatOf_eq_none_iff _).mp hts))
+      rw [hdom]
+      dsimp only
+      cases hstray : strayOf ((servicesOf defs).map (·.name)) defs with
+      | some why => simp
+      | none =>
+        dsimp only
+        simp only [List.findSome?_eq_none_iff, true_and]
+        constructor
+        · intro h
+          refine ⟨fun sv hsv => ((serviceFaultOfIn_tsProfile_iff defs sv).mp (h sv hsv)).1,
+            fun sv hsv => ((serviceFaultOfIn_tsProfile_iff defs sv).mp (h sv hsv)).2⟩
+        · rintro ⟨hform, hnames⟩ sv hsv
+          exact (serviceFaultOfIn_tsProfile_iff defs sv).mpr ⟨hform sv hsv, hnames sv hsv⟩
+
+/-- What the printer prints, the domain admits: the forward half of `serviceFaultIn_tsProfile_iff`.
+Consumers: the readers of `Test/Codegen/ProgramServices.lean`. -/
+theorem serviceFaultIn_anyName {defs : List DefDecl} (h : serviceFaultIn tsProfile defs = none) :
+    serviceFaultIn anyName defs = none :=
+  ((serviceFaultIn_tsProfile_iff defs).mp h).1
 
 /-- `mapM` in `Option` answers when every element does.
 A step of `entriesOf_isSome`, the consumer for `service-view`. -/

@@ -57,10 +57,6 @@ def requestsFrom : Repo → List (String × List Val) → Option (List Request)
 
 def requests : Option (List Request) := requestsFrom start script
 
-/-- The row names of a built program as a value: each spelling and its position. -/
-def namesVal (names : List (String × Nat)) : Val :=
-  .list (names.map fun entry => .list [.str entry.1, .nat entry.2])
-
 /-- Bytes in lowercase hexadecimal. -/
 def hex (bytes : Store.Bytes) : String := Store.hexString bytes
 
@@ -94,7 +90,6 @@ def Request.text (r : Request) : String :=
   "program " ++ hex (Api.bytesOf r.built.program) ++ "\n" ++
   String.join (r.built.table.map fun row => "row " ++ hex (Store.Canonical.encode row) ++ "\n") ++
   "typed " ++ hex (Store.Canonical.encode r.built.admitted.toTypedProgram.ty) ++ "\n" ++
-  "names " ++ hex (Store.Val.encode (namesVal r.built.rowNames)) ++ "\n" ++
   "state " ++ hex (Store.Val.encode (repoVal r.state)) ++ "\n" ++
   "result " ++ hex (Store.Val.encode (serveBuiltVal r.built r.state)) ++ "\n" ++
   "forgetful " ++ hex (Store.Val.encode (serveBuiltForgetfulVal r.built r.state)) ++ "\n" ++

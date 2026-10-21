@@ -125,6 +125,7 @@ def readKey : Module NativeOp := Package.install [kv]
       Row.call (kv.op "get") (app "pair" [store, str "greeting"]) }
 
 #guard readKey.rowNames = [("Kv.make", 0), ("get", 1), ("set", 2), ("remove", 3), ("has", 4)]
+#guard (Effect4.Api.Author.build readKey).toOption.map (fun b => b.positionOf "has") = some (some 4)
 #guard readKey.table = Packages.keyValueStoreMemory
 
 #guard elaborateModule readKey
@@ -447,7 +448,6 @@ private def editedReadKey : Option (Except Api.BuildRefusal Api.Built) := do
 
 #guard (editedReadKey.bind Except.toOption).map (fun b => b.ty.answer) = some .string
 #guard (editedReadKey.bind Except.toOption).map (fun b => b.table) = some readKey.table
-#guard (editedReadKey.bind Except.toOption).map (fun b => b.rowNames) = some readKey.rowNames
 #guard (editedReadKey.bind Except.toOption).map (fun b => b.positionOf "get") = some (some 1)
 #guard (editedReadKey.bind Except.toOption).map (fun b => b.program) = some
   (.bind (.perform (.external 0) (.lit .unit)) (.succeed (.lit (.str "edited"))))

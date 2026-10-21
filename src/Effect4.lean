@@ -23,6 +23,8 @@ import Effect4.Store.Carrier.Val
 -- Machine layer uses without naming a `Shape`; `Canonical.image` is the bridge.
 import Effect4.Store.Carrier.Image
 import Effect4.Store.Carrier.Image.Containers
+-- The dictionary's exact embedding as a carrier, with composition (decisions row 440).
+import Effect4.Store.Carrier.Exact
 import Effect4.Store.Carrier.Digest
 import Effect4.Store.Carrier.Kind
 import Effect4.Store.Domain.Shape

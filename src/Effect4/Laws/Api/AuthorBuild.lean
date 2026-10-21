@@ -49,45 +49,26 @@ theorem elaboration_eq_getD {Op : Type} (result : Except Authoring.Refusal (Eff 
   | error why => cases h
   | ok tree => rfl
 
-/-- The authoring names are the table's spellings at the same positions.
-Helper of the author-build static facts; consumer: `module_rowNames`. -/
-theorem namesFrom_eq (base : Nat) (rows : List RowDef) :
-    RowDef.namesFrom base rows =
-      ((RowDef.table rows).zipIdx base).map fun (row, index) => (row.spelling, index) := by
-  induction rows generalizing base with
-  | nil => rfl
-  | cons r rest ih =>
-    simp only [RowDef.namesFrom, RowDef.table, List.map_cons, List.zipIdx_cons]
-    rw [ih (base + 1)]
-    rfl
-
-/-- A module's row names are its signature's projection.
-Helper of the author-build static facts; consumers: `build_retains` and `build_table`. -/
-theorem module_rowNames (m : Module NativeOp) :
-    m.rowNames = ({ rows := m.table } : SigApp).rowNames := by
-  unfold Module.rowNames RowDef.names SigApp.rowNames Module.table
-  exact namesFrom_eq 0 m.rowDefs
-
-/-- Successful final admission retains its program, application and derived row names.
+/-- Successful final admission retains its program and application.
 Step of the scenario static facts. Consumer: `build_retains`. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem finishBuild_retains {program : Program} {app : SigApp} {b : Built}
     (h : Internal.finishBuild program app = .ok b) :
-    b.program = program ∧ b.app = app ∧ b.rowNames = app.rowNames := by
+    b.program = program ∧ b.app = app := by
   unfold Internal.finishBuild at h
   split at h
   · cases h
-    exact ⟨rfl, rfl, rfl⟩
+    exact ⟨rfl, rfl⟩
   · cases h
   · cases h
 
-/-- A successful build retains its elaboration, the declared table, the row names and the
-application: the table with the named types. Step of the scenario static facts. Consumers: the
-two crews' program equations, and the call tree's declaration table (`Run.CallTree.bound_in_tree`,
-read at `b.app.types`). -/
+/-- A successful build retains its elaboration, the declared table and the application: the
+table with the named types. Step of the scenario static facts. Consumers: the two crews' program
+equations, and the call tree's declaration table (`Run.CallTree.bound_in_tree`, read at
+`b.app.types`). -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem build_retains {m : Module NativeOp} {b : Built} (h : build m = .ok b) :
-    elaborateModule m = .ok b.program ∧ b.table = m.table ∧ b.rowNames = m.rowNames ∧
+    elaborateModule m = .ok b.program ∧ b.table = m.table ∧
       b.app = { rows := m.table, types := m.types } := by
   unfold build at h
   split at h
@@ -96,8 +77,7 @@ theorem build_retains {m : Module NativeOp} {b : Built} (h : build m = .ok b) :
     dsimp only at h
     split at h
     · cases h
-    · obtain ⟨hprogram, happ, hnames⟩ := finishBuild_retains h
-      exact ⟨hprogram ▸ hp, by rw [Built.table, happ],
-        hnames.trans (module_rowNames m).symm, happ⟩
+    · obtain ⟨hprogram, happ⟩ := finishBuild_retains h
+      exact ⟨hprogram ▸ hp, by rw [Built.table, happ], happ⟩
 
 end Effect4.Api.Author

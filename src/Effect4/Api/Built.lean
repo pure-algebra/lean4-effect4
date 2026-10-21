@@ -8,7 +8,7 @@ import Effect4.Program.Sketch
 Everything a run needs of a program, packed once: the application (`SigApp`: the row table and
 the named types), the program whose host calls are positions in that table, the admission
 certificate (typing and the execution checks, `Program/Admission.lean`) at that application.
-The row spellings are a projection of its signature, for blame, printing and the reactor. `Author.build` produces one;
+A row's spelling is read off the table (`Built.positionOf`). `Author.build` produces one;
 `Run.open` consumes one and cannot refuse it, because the certificate already carries full admission. A built program at declared services is the Σ_app slice's
 step 3.
 -/
@@ -28,13 +28,10 @@ structure Built where
 
 namespace Built
 
-/-- The signature's row spellings, with their positions in the table. -/
-def rowNames (b : Built) : List (String × Nat) := b.app.rowNames
-
 /-- The built program's row table. -/
 abbrev table (b : Built) : RowTable := b.app.rows
 
-/-- **Admit a program at exactly this application**, and retain its row spellings. A saved run
+/-- **Admit a program at exactly this application**. A saved run
 restores through it, at the application it recorded (`LiveRecord.restore`). -/
 def ofProgram (app : Program.SigApp) (program : Program) :
     Except Program.AdmitRefusal Built :=

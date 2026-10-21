@@ -1314,8 +1314,8 @@ def registry : Registry where
       title := "Saving and loading a built program recovers it when its encoded value is well formed; R13; no host persistence claim"
       pointer := .witness `Effect4.Program.Object.load_bytes },
     { id := "service-view-printed", concept := "exact-codecs", role := .compatibility
-      title := "TypeScript service success implies domain service success; R8; no target compiler or host observation claim"
-      pointer := .witness `Effect4.Program.serviceFaultIn_anyName },
+      title := "TypeScript service success is domain service formation and TypeScript's naming conditions; R8; no claim on the refusal reported, no target compiler or host observation claim"
+      pointer := .witness `Effect4.Program.serviceFaultIn_tsProfile_iff },
     { id := "service-view", concept := "exact-codecs", role := .adequacy
       title := "Domain service success provides readable service entries; R8; no target compiler or host observation claim"
       pointer := .witness `Effect4.Program.entriesOf_isSome },

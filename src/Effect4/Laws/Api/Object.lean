@@ -1,10 +1,12 @@
 import Effect4.Api.Object
+import Effect4.Store.Carrier.Exact
 import Effect4.Laws.Api.Built
 import Effect4.Laws.Program.SourceTable
 import Effect4.Laws.Program.Sketch
 
 /-! Program objects: admission and exact stored bytes.
 Placement: exact-codecs, object-exact/object-bytes-exact/object-load-exact, compatibility, R13.
+The first two are exact embeddings (`builtObject`, `objectBytes`); the third is their composite.
 The table helpers instantiate source-annotation-agrees, initial-algebras-folds, R14.
 Admission helpers instantiate built-admission-exact; the digest helper instantiates program-digest-exact.
 Consumers: file loading, saved-session restoration and compiler inspection.
@@ -75,34 +77,85 @@ theorem read_exact {bs : Bytes} {o : Object} (h : read bs = .ok o) :
     subst hn'
     exact ⟨hb, hwf⟩
 
-/-- object-load-exact: the saved bytes recover the original admitted program. -/
+/-! ## The two embeddings and their composite
+
+`Built ↪ Object` forgets the certificate and reads back by admission (object-exact). `Object ↪
+Bytes` writes the store node and reads it back on the storable objects (object-bytes-exact). A
+load is the composite's read (`load_toOption`), so object-load-exact is the composite's two laws
+(`Exact.comp`, `src/Effect4/Store/Carrier/Exact.lean`). -/
+
+/-- object-exact as an exact embedding: total, since every built program is admitted. -/
+def builtObject : Exact Api.Built Object where
+  write := ofBuilt
+  read o := o.open.toOption
+  dom _ := True
+  retract b _ := by
+    rw [open_ofBuilt]
+    rfl
+  exact := by
+    intro o b h
+    cases ho : o.open with
+    | error e =>
+      rw [ho] at h
+      cases h
+    | ok c =>
+      rw [ho] at h
+      cases h
+      exact (ofBuilt_of_open ho).symm
+
+/-- object-bytes-exact as an exact embedding: total on the storable objects (`Val.WF`). -/
+def objectBytes : Exact Object Bytes where
+  write := bytes
+  read bs := (read bs).toOption
+  dom o := (toVal o).WF
+  retract o h := by
+    rw [read_bytes o h]
+    rfl
+  exact := by
+    intro bs o h
+    cases hr : read bs with
+    | error e =>
+      rw [hr] at h
+      cases h
+    | ok p =>
+      rw [hr] at h
+      cases h
+      exact (read_exact hr).1
+
+/-- Helper of object-load-exact: a load is the composite's read, pointwise. -/
+theorem load_toOption (bs : Bytes) :
+    (load bs).toOption = (builtObject.comp objectBytes).read bs := by
+  show (load bs).toOption = ((read bs).toOption.bind fun o => o.open.toOption)
+  unfold load
+  cases hr : read bs with
+  | error e => rfl
+  | ok o =>
+    dsimp only
+    show (Except.mapError LoadRefusal.admission o.open).toOption = o.open.toOption
+    cases o.open <;> rfl
+
+/-- object-load-exact: the saved bytes recover the original admitted program. The composite's
+retraction, on the composite's domain: every built program, whose object is storable. -/
 @[semantics "exact-codecs" (requirement := R13)]
 theorem load_bytes (b : Api.Built) (hwf : (toVal (ofBuilt b)).WF) :
     load (bytes (ofBuilt b)) = .ok b := by
-  unfold load
-  rw [read_bytes _ hwf]
-  dsimp only
-  rw [open_ofBuilt]
-  rfl
+  have h : (load (bytes (ofBuilt b))).toOption = some b := by
+    rw [load_toOption]
+    exact (builtObject.comp objectBytes).retract b ⟨trivial, hwf⟩
+  cases hl : load (bytes (ofBuilt b)) with
+  | error e =>
+    rw [hl] at h
+    cases h
+  | ok c =>
+    rw [hl] at h
+    cases h
+    rfl
 
-/-- Helper of object-load-exact: successful loading accepts only that program's exact object bytes. -/
+/-- Helper of object-load-exact: successful loading accepts only that program's exact object
+bytes. The composite's exactness. -/
 theorem load_exact {bs : Bytes} {b : Api.Built} (h : load bs = .ok b) :
-    bs = bytes (ofBuilt b) := by
-  unfold load at h
-  split at h
-  · cases h
-  · next o ho =>
-    have hopen : o.open = .ok b := by
-      cases hr : o.open with
-      | error e =>
-        rw [hr] at h
-        cases h
-      | ok c =>
-        rw [hr] at h
-        cases h
-        rfl
-    rw [ofBuilt_of_open hopen]
-    exact (read_exact ho).1
+    bs = bytes (ofBuilt b) :=
+  (builtObject.comp objectBytes).exact (by rw [← load_toOption, h]; rfl)
 
 /-- program-digest-exact at objects: equal references give equality or an exhibited collision. -/
 theorem ref_eq_or_collision {o p : Object} (ho : (toVal o).WF) (hp : (toVal p).WF)

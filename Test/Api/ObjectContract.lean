@@ -21,11 +21,10 @@ def todoBuilt : Option Built :=
 /-- The to-do's object. -/
 def todoObject : Option Object := todoBuilt.map Object.ofBuilt
 
--- finite evaluation: the to-do's object exists, its tree is well formed, and its names are its
--- signature's, so `load_bytes` applies to it
+-- finite evaluation: the to-do's object exists and its tree is well formed, so `load_bytes`
+-- applies to it
 #guard todoObject.isSome
 #guard (todoObject.map fun o => decide (toVal o).WF) = some true
-#guard (todoBuilt.map fun b => b.rowNames == b.app.rowNames) = some true
 
 -- finite evaluation: the bytes read back to the same object, and a second write is the same bytes
 #guard (todoObject.map fun o => match Object.read o.bytes with
@@ -35,7 +34,7 @@ def todoObject : Option Object := todoBuilt.map Object.ofBuilt
 -- finite evaluation: the bytes load to a built program with the same data and the same printed
 -- certificate as the original and as the compiler's hand JSON
 #guard (todoBuilt.map fun b => match Object.load (Object.ofBuilt b).bytes with
-  | .ok c => Object.ofBuilt c == Object.ofBuilt b && c.rowNames == b.rowNames &&
+  | .ok c => Object.ofBuilt c == Object.ofBuilt b &&
       Compiler.jsonText (Compiler.tree c.certificate) == Compiler.jsonText (Compiler.certificate b)
   | .error _ => false) = some true
 

@@ -29161,29 +29161,29 @@ let program_row_checks (r : Row.t) : (bool * row_reason) list =
       let _x_46 = _x_24 :: _x_45 in
       let _x_47 = _x_21 :: _x_46 in
       let _x_48 = _x_17 :: _x_47 in
-      let _x_49 = _y_12 :: _x_48 in
-      let _x_50 = _y_11 :: _x_49 in
-      let _x_51 = _y_10 :: _x_50 in
+      let _x_49 = _y_10 :: _x_48 in
+      let _x_50 = _y_12 :: _x_49 in
+      let _x_51 = _y_11 :: _x_50 in
       let _x_52 = _x_8 :: _x_51 in
       _x_4 :: _x_52 in
       let[@local always] _jp_54 = fun _y_55 _y_56 _y_57 _y_58 -> let _x_59 = "answer" in
       let _x_60 = RowReason_internalHandle _x_59 in
       let _x_61 = _y_58, _x_60 in
-      let _x_62 = program_find_internal_handle _y_56 error in
+      let _x_62 = program_find_internal_handle _y_57 error in
       match _x_62 with
         | None -> (let _x_63 = true in
-          _jp_9 _y_55 _y_57 _x_61 _x_59 _x_63)
+          _jp_9 _x_61 _y_55 _y_56 _x_59 _x_63)
         | Some _ -> (let _x_65 = false in
-          _jp_9 _y_55 _y_57 _x_61 _x_59 _x_65) in
+          _jp_9 _x_61 _y_55 _y_56 _x_59 _x_65) in
       let[@local always] _jp_66 = fun _y_67 _y_68 -> let _x_69 = RowReason_valueRowTrailing in
       let _x_70 = _y_68, _x_69 in
       let _x_71 = [] in
       let _x_72 = program_find_internal_handle _x_71 answer in
       match _x_72 with
         | None -> (let _x_73 = true in
-          _jp_54 _y_67 _x_71 _x_70 _x_73)
+          _jp_54 _y_67 _x_70 _x_71 _x_73)
         | Some _ -> (let _x_75 = false in
-          _jp_54 _y_67 _x_71 _x_70 _x_75) in
+          _jp_54 _y_67 _x_70 _x_71 _x_75) in
       let[@local always] _jp_76 = fun _y_77 -> let _x_78 = RowReason_builtinCollision in
       let _x_79 = _y_77, _x_78 in
       let _x_80 = RowShape.Value in

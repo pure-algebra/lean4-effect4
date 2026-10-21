@@ -80,6 +80,8 @@ and a document are each a state reached by its journal. The dictionary
 - Program objects hold the application signature and program (row 439).
   `check --out` saves their node bytes; `open FILE` checks them without application source.
   Row names are derived, and `LiveRecord` stores the shared object.
+- The object's load is a composite of two exact embeddings, and the row-name projection is gone (row 440).
+  The printer's service check is formation and naming.
   The next program-domain slice is the target print, then the host interface and session program.
   The sequence is `research/2026-10-20-program-host-runtime.md` §14.5.
 
