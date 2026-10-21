@@ -3,6 +3,11 @@
 Status: a review of `docs/research/2026-10-21-host-runtime-design/README.md` (`9061ff5d7`), with two probes.
 It rules nothing. The evidence words are those of `docs/core/controlled-english.md` §3.8.
 
+Amended 2026-10-21 after Codex's refinement (`docs/research/2026-10-21-host-runtime-refinement/README.md`, `22bfa7473`).
+Improvement 1 is withdrawn. The raw-row guard refuses a valid reply at a generic row, and it hides a bad reply as a wait (its `probe-guard.lean`).
+Reply admission stays at the call instance, where the session applies it, and a refused verdict stays visible.
+Improvements 2 and 3 stand; §2.4's reader must read `Run.rows` and keep the `bound` verdicts (its finding 2.4).
+
 Both probes run clean against the design's compiled probes with `lake env lean -DwarningAsError=true`.
 `audit.sh` reruns the design's audit, then runs and audits the review's two modules (`audit.out`).
 The design's closure measurements (`closure.sh`) were not rerun here; the review takes them as reported.
