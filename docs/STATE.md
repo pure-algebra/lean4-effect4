@@ -67,6 +67,9 @@ and a document are each a state reached by its journal. The dictionary
   continues as one background seat at a time.
 - M4's first half merged (row 431). E6 stopped at the Rocq comparison lane, whose runner is an
   extraction with no producer in the tree. The producer comes into the tree, then E6 lands.
+- The user-side pass landed (row 432): the SQL adapter reached only by SQL rows, the manifest
+  naming every package, and `run` readable by default. The to-do's README was walked top to
+  bottom in one shell.
 
 ## Next, in order
 
@@ -75,8 +78,9 @@ and compiled as its semantics says. Each move deletes what it replaces.
 
 Done on 2026-10-20: the to-do as a user's project (`research/2026-10-19-todo-as-a-user/receipt.md`),
 M1, M2, M3, C1 and the compiler's entry point in three slices
-(`research/2026-10-20-compiler-entry/README.md` §7). M4's first half is merged (row 431). Running: E6 with the Rocq lane's producer in
-the tree, and the user-side pass. Next: 4b, then M8 as amended.
+(`research/2026-10-20-compiler-entry/README.md` §7). M4's first half is merged (row 431), and the user-side pass landed (row 432). Running: E6
+with the Rocq lane's producer in the tree. Next: 4b; the entry point's next slice (`--target
+ocaml`, `inspect`, the module closure in the manifest); then M8 as amended.
 
 1. M1, one located refusal: landed.
 2. M2, one profile judgment at ingress: landed.
