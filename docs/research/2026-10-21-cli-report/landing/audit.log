@@ -1,0 +1,115 @@
+docs/research/2026-10-21-cli-report/landing/audit.lean:5:0: error: #axiom_audit: 68 of 1185 declarations reach axioms outside [propext, Quot.sound]:
+  Compiler.typedJson reaches [Classical.choice]
+  Compiler.RunOptions.read._f reaches [Classical.choice]
+  Compiler.RunOptions.read reaches [Classical.choice]
+  Compiler.lineOf reaches [Classical.choice]
+  Compiler.Served.line reaches [Classical.choice]
+  Compiler.RunOptions.read._unsafe_rec reaches [Classical.choice]
+  Compiler.valueText reaches [Classical.choice]
+  Compiler.RunOptions.read._sunfold reaches [Classical.choice]
+  Compiler.runFrom reaches [Classical.choice]
+  Compiler.Report.foldItem reaches [Classical.choice]
+  Compiler.Report.Log.report reaches [Classical.choice]
+  Compiler.Report.tty reaches [Classical.choice]
+  Compiler.Report.Log.event reaches [Classical.choice]
+  Compiler.Report.pad reaches [Classical.choice]
+  Compiler.Report.md reaches [Classical.choice]
+  Compiler.Report.json reaches [Classical.choice]
+  Compiler.Report.liveSink reaches [Classical.choice]
+  Compiler.Report.eventLines._unsafe_rec reaches [Classical.choice]
+  Compiler.Report.eventLines._sunfold reaches [Classical.choice]
+  Compiler.Report.plain reaches [Classical.choice]
+  Compiler.Report.document reaches [Classical.choice]
+  Compiler.Report.Text.standard reaches [Classical.choice]
+  Compiler.Report.Log.refusedSince reaches [Classical.choice]
+  Compiler.Report.Format.text reaches [Classical.choice]
+  Compiler.Report.eventLines._f reaches [Classical.choice]
+  Compiler.Report.Written.ofEmitted reaches [Classical.choice]
+  Compiler.Report.Kind.ofEmitted reaches [Classical.choice]
+  Compiler.Report.print reaches [Classical.choice]
+  Compiler.Report.short reaches [Classical.choice]
+  Compiler.Report.eventLines reaches [Classical.choice]
+  Compiler.Report.measuresText reaches [Classical.choice]
+  Compiler.Report.Log.folding reaches [Classical.choice]
+  Compiler.Report.grouped reaches [Classical.choice]
+  Compiler.Report.padLeft reaches [Classical.choice]
+  Compiler.Report.pieces reaches [Classical.choice]
+  Compiler.Report.lines reaches [Classical.choice]
+  Compiler.Report.Form.ofEmitted reaches [Classical.choice]
+  Compiler.Options.read reaches [Classical.choice]
+  Compiler.dispatch reaches [Classical.choice]
+  Compiler.usageError reaches [Classical.choice]
+  Compiler.CheckOptions.read._f reaches [Classical.choice]
+  Compiler.InspectOptions.read._unsafe_rec reaches [Classical.choice]
+  Compiler.Options.read._f reaches [Classical.choice]
+  Compiler.readSpec reaches [Classical.choice]
+  Compiler.CheckOptions.read reaches [Classical.choice]
+  Compiler.InspectOptions.read._sunfold reaches [Classical.choice]
+  Compiler.InspectOptions.read reaches [Classical.choice]
+  Compiler.checkCommand reaches [Classical.choice]
+  Compiler.run reaches [Classical.choice]
+  Compiler.inspectCommand reaches [Classical.choice]
+  Compiler.emissionOf reaches [Classical.choice]
+  Compiler.runCommand reaches [Classical.choice]
+  Compiler.Options.read._unsafe_rec reaches [Classical.choice]
+  Compiler.reported reaches [Classical.choice]
+  Compiler.main reaches [Classical.choice]
+  Compiler.Options.read._sunfold reaches [Classical.choice]
+  Compiler.emitCommand reaches [Classical.choice]
+  Compiler.mainOver reaches [Classical.choice]
+  Compiler.inspectBuilt reaches [Classical.choice]
+  Compiler.inspectDocuments reaches [Classical.choice]
+  Compiler.openCommand reaches [Classical.choice]
+  Compiler.InspectOptions.read._f reaches [Classical.choice]
+  Compiler.CheckOptions.read._unsafe_rec reaches [Classical.choice]
+  Compiler.CheckOptions.read._sunfold reaches [Classical.choice]
+  Compiler.runHosted reaches [Classical.choice]
+  Compiler.refusalText reaches [Classical.choice]
+  Compiler.builtOf reaches [Classical.choice]
+  Compiler.measured reaches [Classical.choice]
+24 of them stand under no other (the first 8 shown); each one's path to its axiom:
+  Compiler.typedJson  (Compiler.Run)
+  → Compiler.jsonText  (Compiler.Json)
+  → String.fromUTF8!  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.RunOptions.read._f  (Compiler.Run)
+  → String.toNat?  (Init.Data.String.Search)
+  → ⋯ 7 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.RunOptions.read._unsafe_rec  (Compiler.Run)
+  → String.toNat?  (Init.Data.String.Search)
+  → ⋯ 7 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.valueText  (Compiler.Run)
+  → Compiler.jsonText  (Compiler.Json)
+  → String.fromUTF8!  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.Report.Log.report  (Compiler.Report)
+  → ST.Ref.get  (Init.System.ST)
+  → ST.Prim.Ref.get  (Init.System.ST)
+  → _private.Init.System.ST.0.ST.Prim.inhabitedFromRef  (Init.System.ST)
+  → Classical.inhabited_of_nonempty  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.Report.Log.event  (Compiler.Report)
+  → ST.Ref.modify  (Init.System.ST)
+  → ⋯ 3 more toolchain constants
+  → Classical.inhabited_of_nonempty  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.Report.pad  (Compiler.Report)
+  → String.length  (Init.Data.String.Length)
+  → ⋯ 7 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Compiler.Report.Log.refusedSince  (Compiler.Report)
+  → ST.Ref.get  (Init.System.ST)
+  → ST.Prim.Ref.get  (Init.System.ST)
+  → _private.Init.System.ST.0.ST.Prim.inhabitedFromRef  (Init.System.ST)
+  → Classical.inhabited_of_nonempty  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+exit 1

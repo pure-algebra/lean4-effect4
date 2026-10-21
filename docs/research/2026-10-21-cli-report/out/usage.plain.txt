@@ -1,0 +1,3 @@
+effect4 check --group todo --bogus --format plain
+  check: --bogus is no option; usage: check [--out FILE.obj]
+exit 2

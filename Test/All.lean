@@ -43,6 +43,7 @@ import Test.Codegen.SchemaGenerationCoverage
 import Test.Codegen.SchemaCode
 import Test.Codegen.SurfaceContract
 import Test.Codegen.CompilerEmit
+import Test.Codegen.CompilerReport
 import Test.Codegen.CompilerGraphs
 import Test.Tools.GraphJson
 import Test.Codegen.ProgramServices

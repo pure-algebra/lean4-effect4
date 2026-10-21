@@ -1,0 +1,2 @@
+run: the group corpus is programs with no host to answer a row; run takes an application and its host
+exit 2

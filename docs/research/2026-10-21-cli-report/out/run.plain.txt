@@ -1,0 +1,10 @@
+effect4 run --group todo --format plain
+  ■ running on the Lean machine   7 requests
+    add("milk") -> {"_tag":"Success","value":{"done":false,"id":1,"title":"milk"}} | [2,[[1,"milk",false]]]
+    add("café 日本 🙂") -> {"_tag":"Success","value":{"done":false,"id":2,"title":"café 日本 🙂"}} | [3,[[1,"milk",false],[2,"café 日本 🙂",false]]]
+    list() -> {"_tag":"Success","value":[{"done":false,"id":1,"title":"milk"},{"done":false,"id":2,"title":"café 日本 🙂"}]} | [3,[[1,"milk",false],[2,"café 日本 🙂",false]]]
+    complete(1) -> {"_tag":"Success","value":{"done":true,"id":1,"title":"milk"}} | [3,[[1,"milk",true],[2,"café 日本 🙂",false]]]
+    list() -> {"_tag":"Success","value":[{"done":true,"id":1,"title":"milk"},{"done":false,"id":2,"title":"café 日本 🙂"}]} | [3,[[1,"milk",true],[2,"café 日本 🙂",false]]]
+    remove(1) -> {"_tag":"Success","value":null} | [3,[[2,"café 日本 🙂",false]]]
+    list() -> {"_tag":"Success","value":[{"done":false,"id":2,"title":"café 日本 🙂"}]} | [3,[[2,"café 日本 🙂",false]]]
+exit 0

@@ -168,8 +168,8 @@ def mixed : Application NativeOp :=
     | _, _, _ => false
   | .error _ => false
 
--- The certificate file is `check --json`'s text and a newline, and the manifest holds the same
--- certificate. Its fields, for `Effect.succeed(42)`: a natural, no error, no key, row, service or
+-- The certificate file is the certificate's JSON text and a newline, and the manifest holds the
+-- same certificate. Its fields, for `Effect.succeed(42)`: a natural, no error, no key, row, service or
 -- definition.
 #guard match emitProgram (specOf first.1) first.2, Api.Built.ofProgram {} first.2 with
   | .ok e, .ok b =>
@@ -450,8 +450,8 @@ def todoRequests : List (Request × Module NativeOp) :=
     | .ok requests => requests.map (·.1) == todoScript
     | .error _ => false)
 
--- finite evaluation: `--json` gives one line a request and refuses none. Each line is the result's
--- value tree: the request, its exit's image and the repository after it. The second title passes
+-- finite evaluation: the value-tree mode gives one line a request and refuses none. Each line is
+-- the result's value tree: the request, its exit's image and the repository after it. The second title passes
 -- through as UTF-8, and the last line holds the reference model's state after the script.
 #guard match (runFrom todoHosted .json {} todoRequests todoHosted.initial).map (·.toOption) with
   | [some first, some second, _, _, _, _, some last] =>
@@ -693,15 +693,15 @@ def here : Elaborated := elaborated%
       | .error _ => false) && (reading b .manifest).toOption.isNone
   | .error _ => false
 
--- The reader of `inspect`'s options: `--what` names a reading, `--json` the form, and what is left
--- is `describe`'s. red: a word that names no reading, and no `--what`, are refused. The manifest's
--- command is the `emit` it describes.
+-- The reader of `inspect`'s options: `--what` names a reading, and what is left is `describe`'s.
+-- red: a word that names no reading, and no `--what`, are refused. The manifest's command is the
+-- `emit` it describes. `--json` is the report's flag, read before the command (`takeFlags`).
 #guard What.all.all (fun w => What.parse w.name == some w) && (What.parse "bogus").isNone &&
-  (readInspect ["--what", "manifest", "--out", "ts", "--json"] none false []).toOption ==
-    some (.manifest, true, ["--out", "ts"]) &&
-  (readInspect ["--json"] none false []).toOption.isNone &&
-  (readInspect ["--what", "bogus"] none false []).toOption.isNone &&
-  inspectAsEmit ["inspect", "--group", "todo", "--what", "manifest", "--json", "--out", "o"] ==
+  (readInspect ["--what", "manifest", "--out", "ts"] none []).toOption ==
+    some (.manifest, ["--out", "ts"]) &&
+  (readInspect ["--out", "ts"] none []).toOption.isNone &&
+  (readInspect ["--what", "bogus"] none []).toOption.isNone &&
+  inspectAsEmit ["inspect", "--group", "todo", "--what", "manifest", "--out", "o"] ==
     ["emit", "--group", "todo", "--out", "o"]
 
 /-! ## Relation document forms -/

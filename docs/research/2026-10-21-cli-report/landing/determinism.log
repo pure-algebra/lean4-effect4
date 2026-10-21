@@ -1,0 +1,12 @@
+== inspect --form json into two folders, the report in json, its lines that name the folder removed
+equal
+== emit into two folders, the same: the differing lines, and the artifacts they belong to
+<        "ea0cdf8bc69aa86c5b57e3c1179e17e5f8edbeb6d0f198e5697077d4af23b926"}]],
+>        "6e694cd7148930a1ae23eb45a4a97d57b78a7d9c4ba477bc7b03a69142bfb796"}]],
+<        "64241c27ebdfbff8f205e6747fa0a20201fe9a5ad60ea337acf38deaf8a2b11d"}]],
+>        "f846214ee9a55a71070ba13b27b1085af9e1cfb1779051922c497693c13bcf65"}]],
+<        "d5d179a04d795c34741201eeba3c7f18e5c950399e14f35426cd907b2e0dbcac"}]]],
+>        "6179c96de92d55ef205b17cec6d227f29c3dc80f79428c51de30692e6e57ed4f"}]]],
+"code": "todo.gen.ts"
+"code": "todo.surface.gen.ts"
+"code": "manifest.json"

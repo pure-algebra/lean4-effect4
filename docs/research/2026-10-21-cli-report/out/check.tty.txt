@@ -1,0 +1,16 @@
+^[[1meffect4 check --group todo --format tty^[[0m
+  M-bM-^VM-! folding the program todo M-bM-^TM-^DM-bM-^TM-^D^M^[[K  M-bM-^VM-  ^[[1mfolding the program todo    ^[[0m  ^[[2m5 definitions M-BM-7 4 rows M-BM-7 35 nodes M-BM-7 4 calls^[[0m
+    todo: checked; the service TodoApp
+    
+    program   sha256 ebf361e27f030719b4b55c2078fae00c89187057882b66967aa451ceb749108d
+    type      void
+    rows      TodoRepo.insert(string) { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] needs k30_6
+              TodoRepo.all(void) ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly ["SqlError", string] needs k30_6
+              TodoRepo.setDone(readonly [number, boolean]) Option.Option<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly ["SqlError", string] needs k30_6
+              TodoRepo.delete(number) boolean ! readonly ["SqlError", string] needs k30_6
+    services  TodoRepo k30_6 (Test.Dogfood.Scenario.Todo.todoRepoKey)
+    defines   TodoAppContext(void) Context.Context<"k30_6"> needs k30_6
+              TodoApp_add(readonly [Context.Context<"k30_6">, string]) { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] | readonly ["EmptyTitle", "a title is required"]
+              TodoApp_list(Context.Context<"k30_6">) ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly ["SqlError", string]
+              TodoApp_complete(readonly [Context.Context<"k30_6">, number]) { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number }
+              TodoApp_remove(readonly [Context.Context<"k30_6">, number]) void ! readonly ["SqlError", string] | { readonly _tag: "NotFound"; readonly id: number }

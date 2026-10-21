@@ -1,0 +1,99 @@
+{"title":
+ "effect4 inspect --group todo --session TodoApp --what relations --form tsv --out .lake/effect4/todo/graphs --format json",
+ "producer": [],
+ "format": "effect4-document/1",
+ "body":
+ [{"rows":
+   [{"line": [{"code": "inspect"}], "label": "command"},
+    {"line":
+     [{"code":
+       "inspect --group todo --session TodoApp --what relations --form tsv --out .lake/effect4/todo/graphs --format json"}],
+     "label": "arguments"},
+    {"line": [{"text": ".lake/effect4/todo/graphs"}], "label": "out"},
+    {"line": [{"text": "0"}], "label": "exit"}],
+   "kind": "fields"},
+  {"lines":
+   [[{"text": "■ folding the program todo"},
+     {"text": " · 5 definitions · 4 rows · 35 nodes · 4 calls"}],
+    [{"text": "■ reading the relations as tsv"}, {"text": " · 11 files"}]],
+   "kind": "items"},
+  {"rows":
+   [[[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.relation-nodes.gen.tsv"}],
+     [{"text": "3932"}],
+     [{"code":
+       "342d0a657bcaec5fbfc41f38eebc38b3ee251ca94bc291f44752af1b9a2197b5"}]],
+    [[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.relation-defs.gen.tsv"}],
+     [{"text": "252"}],
+     [{"code":
+       "fcf73cadd73085f9d3ee66078c5e6ec2f89a356b4ebc09c7eda4a078dbe6f17e"}]],
+    [[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.relation-rows.gen.tsv"}],
+     [{"text": "1298"}],
+     [{"code":
+       "8b9383e6a960bf04f8d5e94823356bde6495aeae3319ac6f8b3702534f742209"}]],
+    [[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.relation-calls.gen.tsv"}],
+     [{"text": "1099"}],
+     [{"code":
+       "34f8ffd6a3b6c4730f19b1834cd1dd9d7208594e9f587b568fdd5bee9ca56c6a"}]],
+    [[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.mapping.gen.tsv"}],
+     [{"text": "610"}],
+     [{"code":
+       "9d5679a92cfba689d41841369b3c062dbd78f23ccfb0bee421a64a67585749a7"}]],
+    [[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.boundary-nodes.gen.tsv"}],
+     [{"text": "262"}],
+     [{"code":
+       "ea32731cacb8c07bfd7d4a2e667ba776374390d3e89a31ef404fcbbc3d159c13"}]],
+    [[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.boundary-edges.gen.tsv"}],
+     [{"text": "199"}],
+     [{"code":
+       "bcbab6c186bfbdfd40e6a5717bdee73e4ca589db1aef74adad14eb75f638ed4d"}]],
+    [[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.boundary-boxes-nodes.gen.tsv"}],
+     [{"text": "149"}],
+     [{"code":
+       "ebd782c9dc438dcaa7212e5ff42935d97e5d4daed3fda967e38e8ff3cce99bfb"}]],
+    [[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.boundary-boxes-edges.gen.tsv"}],
+     [{"text": "83"}],
+     [{"code":
+       "309f0daa523ce35ecb71687c54cf5cab2d76a1ec5747bbd2046865711f826bb3"}]],
+    [[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.calls-nodes.gen.tsv"}],
+     [{"text": "562"}],
+     [{"code":
+       "c4301e02ebb375273fa70d5537584b18ba55324cae4d7477be2d56c81418db6e"}]],
+    [[{"text": "program"}],
+     [{"text": "print tsv"}],
+     [{"text": "table"}],
+     [{"code": "todo.calls-edges.gen.tsv"}],
+     [{"text": "172"}],
+     [{"code":
+       "3e4d5934960170b0444337be11cc2a645a1f37e0749b6849e54165ebd1638b42"}]]],
+   "kind": "table",
+   "headers": ["role", "form", "kind", "path", "bytes", "sha256"]}]}

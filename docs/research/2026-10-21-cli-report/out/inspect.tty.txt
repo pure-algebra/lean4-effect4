@@ -1,0 +1,15 @@
+^[[1meffect4 inspect --group todo --session TodoApp --what relations --form tsv --out .lake/effect4/todo/graphs --format tty^[[0m
+  M-bM-^VM-! folding the program todo M-bM-^TM-^DM-bM-^TM-^D^M^[[K  M-bM-^VM-  ^[[1mfolding the program todo    ^[[0m  ^[[2m5 definitions M-BM-7 4 rows M-BM-7 35 nodes M-BM-7 4 calls^[[0m
+  M-bM-^VM-! reading the relations as tsv M-bM-^TM-^DM-bM-^TM-^D^M^[[K  M-bM-^VM-  ^[[1mreading the relations as tsv^[[0m  ^[[2m11 files^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.relation-nodes.gen.tsv         ^[[2m     3,932 B  342dM-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.relation-defs.gen.tsv          ^[[2m       252 B  fcf7M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.relation-rows.gen.tsv          ^[[2m     1,298 B  8b93M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.relation-calls.gen.tsv         ^[[2m     1,099 B  34f8M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.mapping.gen.tsv                ^[[2m       610 B  9d56M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.boundary-nodes.gen.tsv         ^[[2m       262 B  ea32M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.boundary-edges.gen.tsv         ^[[2m       199 B  bcbaM-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.boundary-boxes-nodes.gen.tsv   ^[[2m       149 B  ebd7M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.boundary-boxes-edges.gen.tsv   ^[[2m        83 B  309fM-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.calls-nodes.gen.tsv            ^[[2m       562 B  c430M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.calls-edges.gen.tsv            ^[[2m       172 B  3e4dM-bM-^@M-&^[[0m
+  M-bM-^VM-  ^[[1m11 artifacts^[[0m in ^[[2m.lake/effect4/todo/graphs^[[0m

@@ -19,9 +19,10 @@ with no IO. The command line, which reads the options and the script's file, is 
   entry at its arguments over the application's declarations, one argument for each parameter
   (`Request.moduleOf?`).
 - **A request's run** (`serve`): its module built (`Api.Author.build`), then run from the host's
-  state with its reactor, at the execution budget (`Run.runWith`). The state after it is the next
-  request's. A refused build is the build's located refusal, as `check` prints it, and the state
-  does not change.
+  state with its reactor, at the execution budget (`Run.runWith`). Its outcome (`Served`) is the
+  request, the built program, the exit and the state after it, which is the next request's. A
+  refused build is the build's located refusal, as `check` prints it, and the state does not
+  change.
 - **A request's line** (`lineOf`), by the mode: a readable line, the default: the request, its exit
   encoded at the built program's exit type by the type-directed codec, Effect's own `Schema.Exit`
   encoding (`typedJson`), and the host's state as its value tree's JSON; the request and that exit
@@ -136,26 +137,43 @@ def lineOf (h : Hosted) (mode : Mode) (r : Request) (b : Api.Built) (exit : Opti
 
 /-! ## The run -/
 
+/-- **One request's outcome**: the request, its built program, its exit and the host's state after
+it; a line is its print in a mode (`line`). -/
+structure Served (σ : Type) where
+  request : Request
+  built : Api.Built
+  exit : Option Machine.ExitV
+  state : σ
+
+/-- An outcome's line in a mode (`lineOf`). -/
+def Served.line (h : Hosted) (mode : Mode) (o : Served h.σ) : String :=
+  lineOf h mode o.request o.built o.exit o.state
+
 /-- **One request on the Lean machine**, from the host's state `s`: its module built
 (`Api.Author.build`), then run with the host's reactor at the execution budget (`Run.runWith`); its
-line, and the host's state after it. A refused build is the build's located refusal, with the
+outcome, and the host's state after it. A refused build is the build's located refusal, with the
 request's entry named, and the state does not change. -/
-def serve (h : Hosted) (mode : Mode) (budget : Api.Budget) (r : Request) (m : Module NativeOp)
-    (s : h.σ) : Except CheckRefusal String × h.σ :=
+def serve (h : Hosted) (budget : Api.Budget) (r : Request) (m : Module NativeOp) (s : h.σ) :
+    Except CheckRefusal (Served h.σ) × h.σ :=
   match Api.Author.build m with
   | .error why => (.error ⟨some r.entry, why⟩, s)
   | .ok b =>
     let (run, next) := Run.runWith b h.reactor s (budget := budget)
-    (.ok (lineOf h mode r b run.exit next), next)
+    (.ok { request := r, built := b, exit := run.exit, state := next }, next)
 
 /-- **A script on the Lean machine**: each request with its module, served from the state that the
 request before it left; one outcome a request, in order. -/
-def runFrom (h : Hosted) (mode : Mode) (budget : Api.Budget) :
-    List (Request × Module NativeOp) → h.σ → List (Except CheckRefusal String)
+def served (h : Hosted) (budget : Api.Budget) :
+    List (Request × Module NativeOp) → h.σ → List (Except CheckRefusal (Served h.σ))
   | [], _ => []
   | (r, m) :: rest, s =>
-    let (line, next) := serve h mode budget r m s
-    line :: runFrom h mode budget rest next
+    let (outcome, next) := serve h budget r m s
+    outcome :: served h budget rest next
+
+/-- The script's outcomes as lines, in a mode: `served`, each outcome printed (`Served.line`). -/
+def runFrom (h : Hosted) (mode : Mode) (budget : Api.Budget)
+    (script : List (Request × Module NativeOp)) (s : h.σ) : List (Except CheckRefusal String) :=
+  (served h budget script s).map (·.map (Served.line h mode))
 
 /-! ## The script and the options -/
 
@@ -215,7 +233,9 @@ def scriptOf : NatJson → Except String (List Request)
   | _ => .error "a script is a JSON array of requests"
 
 /-- **The options of `run`**: how a line is written, readable by default, the script's file, and
-the execution budget, the fuel that every row of a run is played at (`Api.Budget.fuel`). -/
+the execution budget, the fuel that every row of a run is played at (`Api.Budget.fuel`). The
+value-tree line (`Mode.json`) is every outcome's reading in JSON, in the report's `json` and `md`
+formats; `--json` is the report's flag (`Compiler.Main`). -/
 structure RunOptions where
   mode : Mode := .text
   script : Option String := none
@@ -224,7 +244,6 @@ structure RunOptions where
 /-- Read the options of `run`, or name the argument that is none. -/
 def RunOptions.read : List String → RunOptions → Except String RunOptions
   | [], o => .ok o
-  | "--json" :: rest, o => RunOptions.read rest { o with mode := .json }
   | "--typed" :: rest, o => RunOptions.read rest { o with mode := .typed }
   | "--text" :: rest, o => RunOptions.read rest { o with mode := .text }
   | "--script" :: file :: rest, o => RunOptions.read rest { o with script := some file }

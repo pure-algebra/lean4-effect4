@@ -1,0 +1,15 @@
+^[[1meffect4 emit --group todo --out .lake/effect4/todo/ts --format tty^[[0m
+  M-bM-^VM-! folding the program todo M-bM-^TM-^DM-bM-^TM-^D^M^[[K  M-bM-^VM-  ^[[1mfolding the program todo    ^[[0m  ^[[2m5 definitions M-BM-7 4 rows M-BM-7 35 nodes M-BM-7 4 calls^[[0m
+  M-bM-^VM-! printing for ts M-bM-^TM-^DM-bM-^TM-^D^M^[[K  M-bM-^VM-  ^[[1mprinting for ts             ^[[0m  ^[[2m11 files^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.gen.ts                         ^[[2m     4,929 B  1281M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/prelude/control.ts                  ^[[2m     3,227 B  471fM-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/prelude/prelude-atoms.gen.ts        ^[[2m    15,457 B  9814M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/prelude/prelude.ts                  ^[[2m    29,661 B  7001M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/prelude/records.ts                  ^[[2m     2,644 B  6844M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/prelude/tuples.ts                   ^[[2m       344 B  35c5M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.surface.gen.ts                 ^[[2m     2,863 B  3a69M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.eff                            ^[[2m     5,713 B  ebf3M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/todo.eff.json                       ^[[2m     5,213 B  1cc3M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/certificate.json                    ^[[2m     4,589 B  f524M-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/manifest.json                       ^[[2m    92,854 B  6cffM-bM-^@M-&^[[0m
+  M-bM-^VM-  ^[[1m11 artifacts^[[0m in ^[[2m.lake/effect4/todo/ts^[[0m
