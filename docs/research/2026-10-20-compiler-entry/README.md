@@ -426,6 +426,64 @@ after M2. That slice deletes `EmitTodo.lean` and the to-do's `Print.lean`.
   `check-gen` pass, and no committed file changed. `check-roots` was not run: it is
   `lake build Test`. `make check-ocaml` is not owed, since nothing under `ocaml/` or `src/OCaml5`
   changed.
+- **Slice 4a landed** 2026-10-20 (`127437c2a`, to-do `ce4e5c7`): `inspect`, the inputs' module
+  closure and address, the SQL adapter, and three defaults.
+  `inspect --what types|rows|surface|graph|manifest [--json]` prints one reading of the built
+  program (`Compiler.Inspect`). The program is opened as the tool protocol's document (`Tool.serve`,
+  the action `open`), and one query is asked of it. `types` is the query `table`: each address that
+  holds a program, with its type or the refusal located there. `rows` and `graph` are the query
+  `doc` at the root: the inspection's signature context and its sub-program. So `rows` prints the
+  certificate's rows, and `graph` prints the tree of `<name>.eff.json`. The tool protocol has no
+  query for the surface. So `surface` reads the program's services as the surface printer does
+  (`Codegen.entriesOf`, `Codegen.entrySchemas`). `manifest` prints what `describe` prints, indented,
+  and `--json` prints any reading as one line. The executable's Lean module closure is data in it
+  (`Compiler.Elaborated`). The term elaborator `elaborated%` is the default of `main`'s argument
+  `elaborated`, so a project's `Main.lean` passes nothing. At the caller's elaboration it reads the
+  module and each import whose `.olean` the toolchain does not ship. At run time each module's
+  source is its one file on `LEAN_SRC_PATH`, which `lake exe` sets from the workspace. The manifest
+  names each module with the SHA-256 of its source (`inputs.modules`). `inputs.address` is the
+  SHA-256 of those digests in byte order of the names, and its docstring names what it covers. Two
+  refinements of the brief, each a reuse. The source folders are Lake's own `LEAN_SRC_PATH`, not a
+  second reading of the lakefiles that `lake-manifest.json` locates. And `inputs.library` is the
+  newest commit that changed a file the emission reads in the checkout, as row 432 put it.
+  Reproduced: after a documentation commit in the library, the to-do's manifest is the same bytes;
+  that commit was then dropped. The red control: one comment added to `Todo/App.lean` changes the
+  address. The to-do's closure holds 265 modules, and the closure of `lake exe effect4` holds 675.
+  The same scan reads each literal service key's declaration, so `check` prints
+  `Repo k30_6 (Todo.repoKey)`. The compiler writes a module's host imports through
+  `Compiler.hostImports`, the truth lane's mechanics moved to one owner. The prelude's adapters are
+  data (`Compiler.adapters`): `prelude.ts` binds `Kv`, and `sql.ts` binds `Sql`. `Api.admitModule`
+  accepts those imports, and the copied closure starts at the module's own imports
+  (`Prelude.importedBy`). So a module with no prelude name copies no prelude file, as the wire
+  corpus's `p42` shows. The package fixtures have one owner, `Test.Api.PackagesContract`, and the
+  truth corpus imports them. A new group `sql` of `lake exe effect4` emits the five SQL programs at
+  the package's table. Reproduced: its 27 files, `prelude/sql.ts` among them, check under tsgo
+  7.0.0-dev.20260629.1 with the library's packages. The red control: with `effect` alone, tsgo
+  refuses `prelude/sql.ts` (TS2307) and the five modules (TS2375). The pass's control stays: the
+  corpus group's 38 files hold no `sql.ts` and check with `effect` alone. `--target ts` is the
+  default, and the usage says that it is the one target. `describe --pretty` indents the manifest
+  (`Compiler.prettyText`). Deleted: the truth lane's copies of the package fixtures and its
+  host-import mechanics, 84 lines for 18. The library deleted 327 lines and added 1,077, 263 of them
+  in the battery and 226 in two new modules. The to-do deleted 20 and added 49, most of them in its
+  README. In the to-do, `emit --out ts` twice writes the same bytes. Its `describe --pretty` reads
+  back to the written manifest. Then tsgo 7 checks `ts/`, and `run --text` equals
+  `bun --no-install ts/run.ts` on the eleven lines. `run --json` still equals the native run, whose
+  binary was not rebuilt. `make gen-truth-corpus` rewrote no file of `Test/Corpus/`.
+  `make batteries-touched BASE=36f8da729`: two batteries, `Test.Api.PackagesContract` and
+  `Test.Codegen.CompilerEmit`, built. The battery gains readers of the five readings, the address,
+  the closure, the declared names and the SQL import, with their red controls. `#axiom_audit`: the
+  two batteries' 106 declarations are within `[propext, Quot.sound]`, none modulo a planned goal.
+  The compiler's modules, its writer, stamp and executable aside, reach `Classical.choice` in 76 of
+  804 declarations. Each enters through the toolchain's string, path, name and environment
+  functions. `#closure_audit`: none of the compiler's 1,433 declarations binds a table before a
+  returned closure. Gates: `make check-ts` passes on all six lanes. The target lane resolves 104 of
+  104, and the corpus keeps 408, 385 readable, 0 refused. `make check-docs`, `check-language`,
+  `check-census`, `check-schema-pins`, `check-tools` and `check-gen` pass, and no committed file
+  changed. `check-roots` was not run: it is `lake build Test`. `make check-ocaml` is not owed, since
+  nothing under `ocaml/` or `src/OCaml5` changed. Proposed: a decisions row for the slice, with its
+  two refinements. Proposed too: a `surface` query in the tool protocol, so that every reading but
+  the manifest is one query. And the docstring of `Effect4.Program.rc112` still names
+  `Compiler.Prelude.closure`; its fix waits for the next core rebuild.
 
 ## 9. The prior art, each against our semantics
 
