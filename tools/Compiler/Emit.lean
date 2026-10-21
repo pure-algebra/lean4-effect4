@@ -3,6 +3,7 @@ import Compiler.Prelude
 import Effect4.Api.Codegen
 import Effect4.Store.Domain.JsonText
 import Effect4.Store.Domain.ProgramWire
+import Effect4.Program.Packages
 import Compiler.GeneratedStamp
 
 /-!
@@ -13,9 +14,11 @@ print fold of §2 over a built program. Everything it writes is computed here, w
 (`emitTs`), and every check runs before a file is written. The folder holds:
 
 - `<name>.gen.ts`, the checked emission (`Api.Typed.emit`, `ModuleEmission.file`) laid out as every
-  producer lays a module out (`moduleFile`); it imports `./prelude/prelude.ts`, and the reading
-  boundary admits it (`Api.admitModule`, its row services read first);
-- `prelude/`, the prelude's import closure (`Compiler.Prelude.closure`), byte for byte;
+  producer lays a module out (`moduleFile`); it imports the prelude's names from
+  `./prelude/prelude.ts` and a package's host namespace from its adapter (`hostImports`), and the
+  reading boundary admits it (`Api.admitModule`, its row services read first);
+- `prelude/`, the import closure of the module's own imports in the prelude's folder
+  (`Compiler.Prelude.closureOf`, from `Prelude.importedBy`), byte for byte;
 - `<name>.surface.gen.ts`, the Schemas of each data service's methods
   (`ModuleEmission.surface`), when the program declares a data service;
 - `<name>.eff`, the canonical bytes (`Api.bytesOf`), and `<name>.eff.json`, their tagged print
@@ -36,15 +39,17 @@ oracles, the run expectations and `corpus.json`.
 - **The address**: the SHA-256 of the canonical bytes (`Tools.Code.addressOf`). The canonical bytes
   and their JSON print carry no header: it would change the bytes the address is taken of, and the
   print that `ts/eff`'s `toJson` writes. The manifest names them.
-- **The manifest**: each file written with its kind and its SHA-256, the pins, the checks and the
-  command (`manifestFields`), after the program (`manifest`) or a group's programs
+- **The manifest**: each file written with its kind and its SHA-256, the inputs (`Inputs`: the
+  pins, the executable's Lean module closure with each source's SHA-256, and their address), the
+  checks and the command (`manifestFields`), after the program (`manifest`) or a group's programs
   (`groupManifest`).
 
-**A group** (`emitGroup`) is programs, each admitted at the empty application, as the wire corpus
-is. Each is emitted under its own name, its certificate as `<name>.certificate.json`; the
-prelude's closure is written once, and one manifest names every file. A second run with the same
-command and pins writes the same bytes: nothing written depends on the time, and the output
-folder appears only as the command spells it.
+**A group** (`emitGroup`) is programs, each admitted at the group's application, as the wire
+corpus is at the empty one. Each is emitted under its own name, its certificate as
+`<name>.certificate.json`; the prelude's files that any of its modules reach are written once, and
+one manifest names every file. A second run with the same command and inputs writes the same
+bytes: nothing written depends on the time, and the output folder appears only as the command
+spells it.
 
 What it does not establish: tsgo's typing of the printed text, and any run (`notPerformed`).
 -/
@@ -101,20 +106,36 @@ def sha256Hex (bytes : ByteArray) : String := Digest.hex (Store.sha256 bytes.dat
 def Artifact.json (a : Artifact) : NatJson :=
   .obj [("path", .str a.path), ("kind", .str a.kind.name), ("sha256", .str (sha256Hex a.bytes))]
 
-/-- **The pins an emission records** (the manifest's `inputs`, decision E3): the Lean toolchain,
-the library's commit, and the versions of the library's TypeScript package. The manifest names
-each package that the folder imports, with its pin, and tsgo's pin (`Inputs.json`). The import
-closure of the application's Lean modules, with their digests, is still absent: the next slice
-adds it. -/
+/-- **The inputs an emission records** (the manifest's `inputs`, decision E3): the Lean toolchain,
+the library's commit as provenance, the versions of the library's TypeScript package, and the
+executable's Lean module closure with the SHA-256 of each module's source. The manifest names each
+package that the folder imports, with its pin, and tsgo's pin (`Inputs.json`).
+
+**The address** (`address`) is what a second run compares: the SHA-256 of the modules' digests, in
+the closure's order. It covers the source bytes of every Lean module the executable is built from,
+outside the toolchain: the project's, the library's and its packages', comments and documentation
+included. It does not cover the toolchain's own modules and binaries, which `lean` pins by name;
+nor the contents of the node packages, which `packages` and `tsgo` pin by version; nor the build's
+options and the C compiler; nor the prelude's TypeScript files, which `artifacts` hash as written.
+So a commit of the library that changes no Lean source of the closure leaves it unchanged. -/
 structure Inputs where
   /-- the Lean toolchain, as the library's `lean-toolchain` names it -/
   lean : String
-  /-- the library's Git commit; `none` when its checkout has none. Uncommitted edits in the
-  checkout are not recorded. -/
+  /-- provenance: the newest commit of the library's checkout that changed a file the emission
+  reads there: a Lean source of the closure, the prelude's folder, the TypeScript pins or the
+  toolchain pin (`Compiler.readInputs`); `none` when the checkout has no such commit. Uncommitted
+  edits are not recorded in it; `address` covers the Lean sources as they are. -/
   library : Option String
   /-- each package that the library's TypeScript package pins (`ts/eff/package.json`), its
   dependencies and then its development dependencies, with the version pinned -/
   pins : List (String × String)
+  /-- the executable's import closure outside the toolchain (`Compiler.Elaborated.modules`): each
+  module's name and the SHA-256 of its source, in byte order of the names -/
+  modules : List (String × Store.Digest) := []
+
+/-- **The address of the inputs**: the SHA-256 of the modules' digests, concatenated in the
+closure's order (`Inputs.modules`). -/
+def Inputs.address (i : Inputs) : Store.Digest := Store.sha256 (i.modules.flatMap (·.2.bytes))
 
 /-- The package that tsgo, the one TypeScript compiler, is pinned under. -/
 def tsgoPackage : String := "@typescript/native-preview"
@@ -127,17 +148,20 @@ def importedPackages (written : List Artifact) : List String :=
   (texts.flatMap Prelude.packages).eraseDups.mergeSort fun a b =>
     Effect4.Codegen.bytesLe a.toUTF8.data.toList b.toUTF8.data.toList
 
-/-- The pins as the manifest writes them: the toolchain and the commit; each package that the
-folder imports (`importedPackages`) with its pin, `null` where the library pins none; and tsgo's
-pin. -/
+/-- The inputs as the manifest writes them: the toolchain and the commit; the address and each
+module with its source's SHA-256; each package that the folder imports (`importedPackages`) with
+its pin, `null` where the library pins none; and tsgo's pin. -/
 def Inputs.json (i : Inputs) (written : List Artifact) : NatJson :=
   let pin (name : String) : NatJson := ((i.pins.lookup name).map NatJson.str).getD .null
   .obj [("lean", .str i.lean), ("library", (i.library.map NatJson.str).getD .null),
+    ("address", .str i.address.hex),
+    ("modules", .obj (i.modules.map fun (m, d) => (m, .str d.hex))),
     ("packages", .obj ((importedPackages written).map fun name => (name, pin name))),
     ("tsgo", pin tsgoPackage)]
 
 /-- **What an emission is asked for**: the module's name, which names its files; the command's
-arguments as given; the kinds to write; the prelude's import closure; and the pins. For an
+arguments as given; the kinds to write; the prelude's folder, every file with its path and its
+bytes (`Prelude.folder`), from which each module's closure is copied; and the inputs. For an
 application the name is the application's own: a library entry called by static import (E1) is
 given a value, not the Lean module and declaration that hold it, so the manifest cannot name them.
 A group's program writes its certificate under its own name (`emitGroup`). -/
@@ -189,8 +213,8 @@ def checks : List Check :=
    ⟨.certificate, "admission", ``Effect4.Api.Author.build,
     "The build admitted the program at its application: elaboration, the table, typing and the execution checks.",
     "A certificate states types; it states no run."⟩,
-   ⟨.prelude, "copy", ``Compiler.Prelude.closure,
-    "The prelude's import closure, copied byte for byte from the library at the commit in inputs.",
+   ⟨.prelude, "copy", ``Compiler.Prelude.closureOf,
+    "The import closure of the module's own imports in the prelude's folder, copied byte for byte from the library's checkout.",
     "The library's target lane runs the prelude's self-test table (tools/target/prelude.test.ts); this copy is not run here."⟩]
 
 /-- **What no emission performs.** -/
@@ -223,6 +247,9 @@ inductive EmitRefusal where
   | member (name : String) (why : EmitRefusal)
   /-- Two programs of a group share a name, so their files would share paths. -/
   | duplicate (name : String)
+  /-- The import closure of the module's own imports leaves the prelude's folder, or names a file
+  it does not hold (`Prelude.closureOf`). -/
+  | prelude (why : String)
 
 /-- A refusal as text: the step, then its refusal through its generated encoder where its carrier
 has one (`tree`), or the words the tree already gives it (`Tools.Code.surfaceText`); a group's
@@ -244,6 +271,7 @@ def EmitRefusal.text : EmitRefusal → String
   | .canonical part => s!"the {part} does not read back to the program"
   | .member name why => s!"the program {name}: " ++ why.text
   | .duplicate name => s!"two programs are named {name}"
+  | .prelude why => "the prelude's closure refuses: " ++ why
 
 /-- The path the printed module and its surface import the prelude from: the folder beside them. -/
 def preludeImport : String := "./prelude/prelude.ts"
@@ -267,6 +295,54 @@ def readsBack (json : ByteArray) (program : NativeEff) : Bool :=
     | .ok p => decide (p = program)
     | .error _ => false
   | .error _ => false
+
+/-! ## A module's host imports -/
+
+/-- **The host namespaces of a row table**: the namespace of each row's spelling (`serviceParts`)
+whose row belongs to no service (`Row.serviceCall?`), once each. A module's file leaves such a name
+free (`ModuleEmission.file`): its host binds it. -/
+def hostSpaces (table : RowTable) : List String :=
+  ((table.filter fun row => row.serviceCall?.isNone).filterMap fun row =>
+    (serviceParts row.spelling).map (·.1)).eraseDups
+
+/-- **A module's host imports**: each free name of the module (`Codegen.freeNames`) that is a host
+namespace of `table` (`hostSpaces`), imported from the file that `fileOf` gives it, after the
+module's own imports. The files stand in the order `files` lists them, each file's names in the
+order of first use, each binding type-only when every use of its name is a type. A name with no
+file stays free. The compiler (`emitTs`, at the prelude's adapters) and the truth lane
+(`tools/Drivers/Truth.lean`, at its own files) write their modules' host imports through it. -/
+def hostImports (files : List String) (fileOf : String → Option String) (table : RowTable)
+    (m : TypeScript.Module) : TypeScript.Module :=
+  let free := (Codegen.freeNames m).filter fun p => (hostSpaces table).contains p.1
+  let importOf (path : String) : List TypeScript.Import :=
+    match free.filter fun p => fileOf p.1 == some path with
+    | [] => []
+    | names =>
+      [.named (names.map fun p => { imported := p.1, localName := p.1, typeOnly := p.2 }) path false]
+  { m with imports := m.imports ++ files.flatMap importOf }
+
+/-- **The prelude's adapters**: each file of the prelude that binds the host namespaces of a
+canonical package's rows (`Packages.table`), with that package's rows. `prelude.ts` binds `Kv`, the
+key-value store's namespace, and `sql.ts` binds `Sql`, the SQLite package's
+(`Effect4.Program.rc112`'s `adapters`). `sql.ts` is the one file of the prelude that imports
+`@effect/sql-sqlite-bun`, so only a module with a SQL row reaches it. -/
+def adapters : List (String × RowTable) :=
+  [("prelude.ts", Packages.keyValueStoreMemory), ("sql.ts", Packages.sqliteBun)]
+
+/-- An adapter's file, as the printed module imports it: beside the module, under `prelude/`. -/
+def adapterPath (file : String) : String := s!"./{Prelude.under}{file}"
+
+/-- The adapter's file that binds a host namespace (`adapters`), as the module imports it. -/
+def adapterOf (space : String) : Option String :=
+  (adapters.find? fun (_, rows) => (hostSpaces rows).contains space).map fun (file, _) =>
+    adapterPath file
+
+/-- The origins the adapters give a printed module: each host namespace of each adapter's rows,
+imported from that adapter's file. The reading boundary admits these imports
+(`Api.admitModule`). -/
+def adapterOrigins : List Codegen.Bindings.Origin :=
+  adapters.flatMap fun (file, rows) =>
+    (hostSpaces rows).map fun space => .imported (adapterPath file) (some space)
 
 /-! ## One artifact mechanics -/
 
@@ -330,9 +406,9 @@ def Emission.files (e : Emission) (kinds : List Kind) : List Artifact :=
     (if kinds.contains .manifest then [⟨"manifest.json", .manifest, jsonBytes e.manifest⟩] else [])
 
 /-- **The manifest's fields after its programs**: the profile; the target; each file written; the
-pins, each package the folder imports among them, with no module closure yet (`Inputs`); the checks
-performed and those not performed; and the command's arguments as given. An emission's manifest
-and a group's share them. -/
+inputs, with the executable's module closure and its address (`Inputs`); the checks performed and
+those not performed; and the command's arguments as given. An emission's manifest and a group's
+share them. -/
 def manifestFields (spec : Spec) (written : List Artifact) : List (String × NatJson) :=
   [("profile", .obj [("declaration", .str (``Effect4.Program.rc112).toString),
       ("name", .str rc112.name), ("natBound", match rc112.natBound with | some b => .nat b | none => .null)]),
@@ -354,8 +430,11 @@ def manifest (spec : Spec) (b : Api.Built) (address : String) (written : List Ar
     manifestFields spec written)
 
 /-- **A built program's TypeScript emission**, every check run before anything is written; or the
-step that refuses, with its refusal. The module's file is admitted by the reading boundary, its
-row services read first as `Api.readFile` reads them (`Api.admitModule`). -/
+step that refuses, with its refusal. The module's file imports each host namespace of a package
+row from the prelude's adapter that binds it (`hostImports`, `adapters`), and the reading boundary
+admits it, its row services read first as `Api.readFile` reads them (`Api.admitModule`). The
+prelude's files written are the import closure of the module's and the surface's own imports
+(`Prelude.importedBy`, `Prelude.closureOf`). -/
 def emitTs (spec : Spec) (b : Api.Built) : Except EmitRefusal Emission := do
   let program := b.program
   let table := b.table
@@ -364,7 +443,8 @@ def emitTs (spec : Spec) (b : Api.Built) : Except EmitRefusal Emission := do
     | .error .illTyped => throw (.emissionTyping (Api.explain program { rows := table }))
     | .error why => throw (.emission why)
   let file ← (emission.file preludeImport).mapError .file
-  let moduleOrigins := Tools.Code.originsAt preludeImport
+  let file := hostImports (adapters.map fun (f, _) => adapterPath f) adapterOf table file
+  let moduleOrigins := Tools.Code.originsAt preludeImport ++ adapterOrigins
   match Api.admitModule declaration file table moduleOrigins [] table with
   | .ok reading => unless decide (reading.program = program) do throw (.readBack none)
   | .error why => throw (.readBack (some why))
@@ -379,21 +459,25 @@ def emitTs (spec : Spec) (b : Api.Built) : Except EmitRefusal Emission := do
   let json := programJson program
   unless readsBack json program do throw (.canonical "tagged print")
   let address := Tools.Code.addressOf program
-  let surfaceFiles : List Artifact := if surface.decls.isEmpty then [] else
-    [⟨s!"{spec.name}.surface.gen.ts", .surface,
-      (moduleFile { surface with header := surfaceHeader spec address }).toUTF8⟩]
+  let moduleText := moduleFile { file with header := moduleHeader spec b address }
+  let surfaceTexts := if surface.decls.isEmpty then [] else
+    [moduleFile { surface with header := surfaceHeader spec address }]
+  let prelude ← (Id.run (Prelude.closureOf (Prelude.lookup spec.prelude)
+    (Prelude.importedBy (moduleText :: surfaceTexts))).run).mapError .prelude
   let files : List Artifact :=
-    [⟨s!"{spec.name}.gen.ts", .module, (moduleFile { file with header := moduleHeader spec b address }).toUTF8⟩] ++
-      spec.prelude.map (fun (path, bytes) => ⟨"prelude/" ++ path, .prelude, bytes⟩) ++ surfaceFiles ++
+    [⟨s!"{spec.name}.gen.ts", .module, moduleText.toUTF8⟩] ++
+      prelude.map (fun (path, bytes) => ⟨Prelude.under ++ path, .prelude, bytes⟩) ++
+      surfaceTexts.map (fun text => ⟨s!"{spec.name}.surface.gen.ts", .surface, text.toUTF8⟩) ++
       [⟨s!"{spec.name}.eff", .canonical, ⟨bytes.toArray⟩⟩, ⟨s!"{spec.name}.eff.json", .canonical, json⟩,
        ⟨spec.certificatePath, .certificate, jsonBytes (certificate b)⟩]
   let written := files.filter fun a => spec.kinds.contains a.kind.selector
   pure ⟨written, manifest spec b address written⟩
 
-/-- **A program's emission with no application**: the program admitted at the empty application
-(`checkProgram`), then emitted (`emitTs`). A program of the wire corpus is one. -/
-def emitProgram (spec : Spec) (program : NativeEff) : Except EmitRefusal Emission :=
-  (checkProgram program).mapError .check >>= emitTs spec
+/-- **A program's emission at an application**, the empty one by default: the program admitted
+there (`checkProgram`), then emitted (`emitTs`). A program of the wire corpus is one. -/
+def emitProgram (spec : Spec) (program : NativeEff) (app : SigApp := {}) :
+    Except EmitRefusal Emission :=
+  (checkProgram program app).mapError .check >>= emitTs spec
 
 /-! ## A group -/
 
@@ -411,19 +495,24 @@ def groupManifest (spec : Spec) (programs : List (String × Api.Built)) (written
       .obj (programEntry name (Tools.Code.addressOf b.program) ++ [("certificate", certificate b)])))] ++
     manifestFields spec written)
 
-/-- **A group's emission** (`lake exe effect4 emit --group G`): each program admitted at the empty
-application (`checkProgram`) and emitted under its own name (`emitTs`), its certificate as
-`<name>.certificate.json`; then the prelude's import closure once, before the programs' files; and
-one manifest that names every file written (`groupManifest`). Every program's checks run before a
-file is written. A refusal names its program, and two programs with one name are refused. -/
-def emitGroup (spec : Spec) (programs : List (String × NativeEff)) : Except EmitRefusal Emission := do
+/-- **A group's emission** (`lake exe effect4 emit --group G`): each program admitted at the
+group's application (`checkProgram`) and emitted under its own name (`emitTs`), its certificate as
+`<name>.certificate.json`; then the prelude's files that any program's module reaches, once each in
+byte order of their paths, before the programs' files; and one manifest that names every file
+written (`groupManifest`). Every program's checks run before a file is written. A refusal names its
+program, and two programs with one name are refused. -/
+def emitGroup (spec : Spec) (programs : List (String × NativeEff)) (app : SigApp := {}) :
+    Except EmitRefusal Emission := do
   if let some name := sharedName (programs.map (·.1)) then throw (.duplicate name)
   let emitted ← programs.mapM fun (name, program) => do
-    let b ← (checkProgram program).mapError fun why => .member name (.check why)
+    let b ← (checkProgram program app).mapError fun why => .member name (.check why)
     let e ← (emitTs { spec with name, certificatePath := s!"{name}.certificate.json" } b).mapError
       (.member name)
     pure (name, b, e)
-  let prelude := (emitted.head?.map fun (_, _, e) => e.artifacts.filter (·.kind == .prelude)).getD []
+  let reached := emitted.flatMap fun (_, _, e) => e.artifacts.filter (·.kind == .prelude)
+  let prelude := (reached.foldl (fun (acc : List Artifact) a =>
+      if acc.any (·.path == a.path) then acc else acc ++ [a]) []).mergeSort fun a b =>
+    Effect4.Codegen.bytesLe a.path.toUTF8.data.toList b.path.toUTF8.data.toList
   let written := prelude ++ emitted.flatMap fun (_, _, e) => e.artifacts.filter (·.kind != .prelude)
   pure ⟨written, groupManifest spec (emitted.map fun (name, b, _) => (name, b)) written⟩
 

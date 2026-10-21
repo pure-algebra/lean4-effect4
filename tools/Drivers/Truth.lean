@@ -13,6 +13,7 @@ import Test.Codegen.ServicesPrint
 import Tools.ProfileJson
 import Effect4.Api.Codegen
 import Test.Api.HostList
+import Test.Api.PackagesContract
 import TypeScript.Render
 import Lean.Data.Json
 
@@ -46,8 +47,8 @@ and built-in host answers (`hostInputs`), and one writer of two outputs, under `
 answers from a list (`Test.Api.HostList`: the session, each answer a decision, DI-23):
 `outcome` (`finished`, `frontier`, `stuck …`), `exit` (the root's exit in the wire below, `null`
 while the root is live), `exitKind` and `fiberCount`. A canonical package fixture (`pSqlite`,
-`pKv`, the four `pSql*` programs) has no built-in answers, so its run parks at its first host
-call.
+`pKv`, the four `pSql*` programs, defined once in `Test.Api.PackagesContract`) has no built-in
+answers, so its run parks at its first host call.
 
 The value wire: `unit` ↦ `null`, `nat` ↦ number, `bool` ↦ boolean, a tuple / exit list ↦ JSON
 array, `fiber k` ↦ `{"fiber":k}` (the machine's fiber id), `cell k` ↦ `{"ref":k}`, `promise k` ↦
@@ -272,76 +273,8 @@ def joinedModify (initial : Nat) : Api.Program :=
 def pJoinedModifyNumber : Api.Program := joinedModify 1
 def pJoinedModifyString : Api.Program := joinedModify 0
 
-def strs (xs : List String) : Term := .app "strings" (xs.foldr (fun s t => .cons (.lit (.str s)) t) .nil)
-def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
-
-/-- The sqlite fixture over the canonical `SqliteBun` table (host rows step 6): open the
-`:memory:` client, create, insert through `strings` parameters (JSON text, decoded by the
-host before binding), select, and close at the scope's end. rc.112's answers were its tape
-(`git:fa7bdc304:harness/truth/tapes/pSqlite.jsonl`), deleted with the differential. -/
-def pSqlite : Api.Program :=
-  .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
-                                  (.perform (.external 2) (.var 0)))
-    (.bind (.perform (.external 1) (pairT (.var 0) (pairT (.lit (.str "CREATE TABLE t (a INTEGER, b TEXT)")) (strs []))))
-      (.bind (.perform (.external 1) (pairT (.var 0) (pairT (.lit (.str "INSERT INTO t (a, b) VALUES (?, ?)")) (strs ["7", "\"x\""]))))
-        (.perform (.external 1) (pairT (.var 0) (pairT (.lit (.str "SELECT a, b FROM t")) (strs [])))))))
-
-/-- The key-value fixture over the canonical `KeyValueStoreMemory` table: make, set, get,
-has, remove; the answer is the `(get, has)` pair. rc.112's answers were its tape
-(`git:fa7bdc304:harness/truth/tapes/pKv.jsonl`), deleted with the differential. -/
-def pKv : Api.Program :=
-  .bind (.perform (.external 0) (.lit .unit))
-    (.bind (.perform (.external 2) (pairT (.var 0) (pairT (.lit (.str "k")) (.lit (.str "1")))))
-      (.bind (.perform (.external 1) (pairT (.var 0) (.lit (.str "k"))))
-        (.bind (.perform (.external 4) (pairT (.var 0) (.lit (.str "k"))))
-          (.bind (.perform (.external 3) (pairT (.var 0) (.lit (.str "k"))))
-            (.succeed (pairT (.var 2) (.var 3)))))))
-
-/-! ### The error paths (2026-09-09, after the slice): what a real `SqlError` does
-
-`sql.unsafe` on a missing table fails with rc.112's `SqlError`; the recorder posts the pair
-of DB-15 in rc.112's two-level form — the reason's tag and the driver's message under it,
-`("UnknownError", "no such table: missing")`, the outer `"SqlError"` implied by the row
-(ruling G1) — to the tape and the machine replays it as `Err.tagged`. Each
-way a program has of meeting such a failure is one fixture over the same client and statement:
-it escapes through the scope, whose release still runs (`pSqlFail`); it is caught
-(`pSqlCatch`); it is reified into the answer (`pSqlExit`); a layer built over it dies under
-`Layer.orDie` (`pSqlOrDie`: both faces retain the adapter's exact two-string pair inside the
-defect, compared as represented error data). rc.112's answers were the tapes
-`pSql*.jsonl` (`git:fa7bdc304:harness/truth/tapes`), deleted with the differential. -/
-
-/-- The statement that fails: no table `missing`. -/
-def sqlMissing (handle : Term) : Api.Program :=
-  .perform (.external 1) (pairT handle (pairT (.lit (.str "SELECT a FROM missing")) (strs [])))
-
-/-- `body` under an open client (`.var 0`) that the scope's end releases, as `pSqlite`. -/
-def sqlClient (body : Api.Program) : Api.Program :=
-  .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
-                                  (.perform (.external 2) (.var 0)))
-    body)
-
-def pSqlFail : Api.Program := sqlClient (sqlMissing (.var 0))
-/-- The two arms of a `catchCause` share one answer type (`Ty` has no union), so the body
-answers a string the statement never reaches and the handler the string that is observed. -/
-def pSqlCatch : Api.Program :=
-  sqlClient (.catchCause (.bind (sqlMissing (.var 0)) (.succeed (.lit (.str "rows"))))
-    (.succeed (.lit (.str "recovered"))))
-def pSqlExit : Api.Program := sqlClient (.exit (sqlMissing (.var 0)))
-
-def kSql : ServiceKey := ⟨⟨8⟩, ⟨4⟩⟩
-
-/-- A layer whose build acquires the client on the layer scope, fails on the statement, and
-releases when the failed build's scope closes; `Layer.orDie` turns the tagged failure into a
-defect on both faces. -/
-def pSqlOrDie : Api.Program :=
-  .provideLayer (.orDie (.effect kSql
-      (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
-                              (.perform (.external 2) (.var 0)))
-        (.bind (sqlMissing (.var 0)) (.succeed (.lit (.nat 1)))))))
-    false (.service kSql)
-
-/-- The programs over the sqlite table. -/
-def sqliteFixtures : List String := ["pSqlite", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie"]
+/-- The programs over the sqlite table: the package fixtures' (`Test.Api.PackagesContract`). -/
+def sqliteFixtures : List String := Test.Api.PackagesContract.sqlitePrograms.map (·.1)
 
 /-- Per-fixture input data supplied beside the canonical program: the row table, and the
 built-in host answers of a unit-declared fixture (`pAcquireHandle`). A canonical package
@@ -1167,8 +1100,10 @@ def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
     ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice),
     ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pAcquireHandle", pAcquireHandle),
-    ("pFailTagged", pFailTagged), ("pSqlite", pSqlite), ("pKv", pKv),
-    ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit), ("pSqlOrDie", pSqlOrDie),
+    ("pFailTagged", pFailTagged), ("pSqlite", Test.Api.PackagesContract.pSqlite),
+    ("pKv", Test.Api.PackagesContract.pKv), ("pSqlFail", Test.Api.PackagesContract.pSqlFail),
+    ("pSqlCatch", Test.Api.PackagesContract.pSqlCatch), ("pSqlExit", Test.Api.PackagesContract.pSqlExit),
+    ("pSqlOrDie", Test.Api.PackagesContract.pSqlOrDie),
     ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie), ("pCatchError", pCatchError),
     ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained),
     ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pFailPayload", pFailPayload), ("pTagPayload", pTagPayload), ("pInterruptEscape", pInterruptEscape),
@@ -1434,22 +1369,21 @@ def preludePath : String := "../../../ts/prelude/prelude.ts"
 file of the prelude that imports `@effect/sql-sqlite-bun`. -/
 def sqlPath : String := "../../../ts/prelude/sql.ts"
 
+/-- The file of the truth lane that binds a host namespace: `ts/prelude/sql.ts` for a namespace of
+the SQLite package's rows (`Packages.sqliteBun`), `ts/prelude/prelude.ts` for any other. -/
+def hostFile (space : String) : Option String :=
+  some (if (Compiler.hostSpaces Packages.sqliteBun).contains space then sqlPath else preludePath)
+
 /-- **The truth lane's host is its prelude.** A module file leaves free each namespace of the
 table's rows that is no service (`ModuleEmission.file`: a row that is no service row is the
 host's), and the prelude binds those this lane's fixtures name: `Host`, `L` and `Kv` of
 `ts/prelude/prelude.ts`, and `Sql` of `ts/prelude/sql.ts`, the adapter of the SQLite package's
 rows (`Packages.sqliteBun`). So a module imports each such namespace that it names from the file
-that binds it, after the file's own imports, read off the tables (`serviceParts`): no list of
-names. -/
+that binds it (`hostFile`), after the file's own imports, read off the tables: no list of names.
+The mechanics are the compiler's (`Compiler.hostImports`), which binds only the canonical
+packages' namespaces. -/
 def hostImports (table : RowTable) (m : TypeScript.Module) : TypeScript.Module :=
-  let spaces (rows : RowTable) := ((rows.filter fun row => row.serviceCall?.isNone).filterMap fun row =>
-    (serviceParts row.spelling).map (·.1)).eraseDups
-  let free := (Effect4.Codegen.freeNames m).filter fun p => (spaces table).contains p.1
-  let importOf (path : String) (names : List (String × Bool)) : List TypeScript.Import :=
-    if names.isEmpty then []
-    else [.named (names.map fun p => { imported := p.1, localName := p.1, typeOnly := p.2 }) path false]
-  let (sql, other) := free.partition fun p => (spaces Packages.sqliteBun).contains p.1
-  { m with imports := m.imports ++ importOf preludePath other ++ importOf sqlPath sql }
+  Compiler.hostImports [preludePath, sqlPath] hostFile table m
 
 /-- **One program's module, as the lane writes it**: the one writer of every lane
 (`Tools.Code.programModule`): the checked emission's file, its pieces printed typed, or the

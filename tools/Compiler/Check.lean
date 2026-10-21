@@ -22,7 +22,8 @@ application, so the built program carries its certificate (`Api.Built.admitted`)
 - **The certificate** (`certificate`) is the built program's answer, error and required keys, its
   rows, the names its rows give their service keys (`Signature.keyNames`), and its definitions'
   declarations, each in its carrier's one public JSON (`Compiler.Json`, decisions row 418).
-  `certificateLines` is the same certificate as text.
+  `certificateLines` is the same certificate as text, each key with the Lean names that declare it
+  beside its spelling (`keyLine`): names are metadata, so the JSON holds none.
 
 What it does not establish: profile support, which a target's emission checks (`Compiler.Emit`),
 and any run.
@@ -58,10 +59,11 @@ def check (app : Application NativeOp) : Except CheckRefusal Api.Built :=
   | .error (.typing e r) => .error ⟨some e, .typing r⟩
   | .ok m => (Api.Author.build m).mapError (⟨none, ·⟩)
 
-/-- **A program checked at the empty application** (`Api.Built.ofProgram`): built, or the build's
-refusal at admission. A program of the wire corpus is one, and so is each program of a group. -/
-def checkProgram (program : NativeEff) : Except CheckRefusal Api.Built :=
-  (Api.Built.ofProgram {} program).mapError fun why => ⟨none, .admission why⟩
+/-- **A program checked at an application**, the empty one by default (`Api.Built.ofProgram`):
+built, or the build's refusal at admission. A program of the wire corpus is one, and so is each
+program of a group, at the group's application. -/
+def checkProgram (program : NativeEff) (app : SigApp := {}) : Except CheckRefusal Api.Built :=
+  (Api.Built.ofProgram app program).mapError fun why => ⟨none, .admission why⟩
 
 /-- **The certificate of a built program**, as `check --json` prints it and `certificate.json`
 holds it: the answer, the error and the keys required, the rows, the services' keys with their
@@ -78,15 +80,21 @@ def columnText (request answer error : Ty) (requires : List ServiceKey) : String
 /-- A header row's lines, or `none` for an empty list. -/
 def orNone (lines : List String) : List String := if lines.isEmpty then ["none"] else lines
 
+/-- A service's key as text: its spelling, then the names that declare it, when any
+(`Compiler.Elaborated.namesOf`): `k30_6 (Todo.repoKey)`. -/
+def keyLine (key : ServiceKey) (declared : List String) : String :=
+  keyText key ++ (if declared.isEmpty then "" else s!" ({", ".intercalate declared})")
+
 /-- **The certificate as text**, as `check` prints it, laid out as a header block
 (`Tools.Code.headerBlock`): the program's address, its type, its rows, its services' names and
-keys, and its definitions. -/
-def certificateLines (title : String) (b : Api.Built) : List String :=
+keys, each key with the names that declare it (`declared`), and its definitions. -/
+def certificateLines (title : String) (b : Api.Built) (declared : ServiceKey → List String := fun _ => []) :
+    List String :=
   Tools.Code.headerBlock title
     [("program", [s!"sha256 {Tools.Code.addressOf b.program}"]),
      ("type", [Tools.Code.effTyText b.ty]),
      ("rows", orNone (b.table.map fun r => r.spelling ++ columnText r.request r.answer r.error r.requires)),
-     ("services", orNone ((nativeSignature b.table).keyNames.map fun (k, n) => s!"{n} {keyText k}")),
+     ("services", orNone ((nativeSignature b.table).keyNames.map fun (k, n) => s!"{n} {keyLine k (declared k)}")),
      ("defines", orNone (b.program.defsOf.map fun d =>
         d.name ++ columnText d.request d.answer d.error d.requires))]
 

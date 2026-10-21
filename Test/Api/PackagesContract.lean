@@ -9,6 +9,10 @@ The tables are lawful, their programs type, print and read back only under their
 the `strings` atom spells a parameter list, and a run under a host that answers from a list
 (`Test.Api.HostList`) answers the shapes the host answers (finite receipts; the table-premised
 laws carry the general claims).
+
+The package fixtures are defined here once (`pSqlite`, `pKv`, and the SQL error paths, listed in
+`sqlitePrograms`). The truth corpus prints them (`tools/Drivers/Truth.lean`), and the compiler's
+group `sql` emits the SQL programs with the adapter (`Compiler.Groups`).
 -/
 
 namespace Test.Api.PackagesContract
@@ -51,7 +55,10 @@ def strs (xs : List String) : Term := .app "strings" (xs.foldr (fun s t => .cons
 def pair (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
 def answer (v : Val) : Completion Val Err Defect FiberId Ann := .ofExit (.success v)
 
-/-- The sqlite fixture: open, create, insert, select, close (the scope's release). -/
+/-- The sqlite fixture over the canonical `SqliteBun` table (host rows step 6): open the
+`:memory:` client, create, insert through `strings` parameters (JSON text, decoded by the host
+before binding), select, and close at the scope's end. rc.112's answers were its tape
+(`git:fa7bdc304:harness/truth/tapes/pSqlite.jsonl`), deleted with the differential. -/
 def pSqlite : Api.Program :=
   .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
                                   (.perform (.external 2) (.var 0)))
@@ -89,7 +96,9 @@ def sqliteExits : List ExitV :=
     (text.splitOn "strings()").length == 3
   | .error _ => false
 
-/-- The key-value fixture: make, set, get, has, remove; the answer is the (get, has) pair. -/
+/-- The key-value fixture over the canonical `KeyValueStoreMemory` table: make, set, get, has,
+remove; the answer is the `(get, has)` pair. rc.112's answers were its tape
+(`git:fa7bdc304:harness/truth/tapes/pKv.jsonl`), deleted with the differential. -/
 def pKv : Api.Program :=
   .bind (.perform (.external 0) (.lit .unit))
     (.bind (.perform (.external 2) (pair (.var 0) (pair (.lit (.str "k")) (.lit (.str "1")))))
@@ -134,15 +143,32 @@ def failed : Completion Val Err Defect FiberId Ann := .ofExit failedExit
 #guard (Test.Api.HostList.run pSqlite sqliteBun [.success (.nat 0), failedExit]).map (·.exit) =
   some none
 
-/-- The failing statement under an open client the scope releases (`Truth.lean`'s
-`sqlClient`/`sqlMissing`, whose tapes carry the real answers). -/
+/-! ### The error paths (2026-09-09, after the slice): what a real `SqlError` does
+
+`sql.unsafe` on a missing table fails with rc.112's `SqlError`; the recorder posted the pair of
+DB-15 in rc.112's two-level form, the reason's tag and the driver's message under it,
+`("UnknownError", "no such table: missing")`, the outer `"SqlError"` implied by the row (ruling
+G1), and the machine replays it as `Err.tagged`. Each way a program has of meeting such a failure
+is one fixture over the same client and statement: it escapes through the scope, whose release
+still runs (`pSqlFail`); it is caught (`pSqlCatch`); it is reified into the answer (`pSqlExit`); a
+layer built over it dies under `Layer.orDie` (`pSqlOrDie`: both faces retain the adapter's exact
+two-string pair inside the defect, compared as represented error data). rc.112's answers were the
+tapes `pSql*.jsonl` (`git:fa7bdc304:harness/truth/tapes`), deleted with the differential. -/
+
+/-- The statement that fails: no table `missing`, on the client the scope opened (`.var 0`). -/
 def sqlMissing : Api.Program :=
   .perform (.external 1) (pair (.var 0) (pair (.lit (.str "SELECT a FROM missing")) (strs [])))
+/-- `body` under an open client (`.var 0`) that the scope's end releases, as `pSqlite`. -/
 def sqlClient (body : Api.Program) : Api.Program :=
   .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
                                   (.perform (.external 2) (.var 0)))
     body)
 def sqlExits : List ExitV := [.success (.nat 0), failedExit, .success .unit]
+
+/-- The failure escapes through the scope, whose release still runs. -/
+def pSqlFail : Api.Program := sqlClient sqlMissing
+/-- The failure reified into the answer. -/
+def pSqlExit : Api.Program := sqlClient (.exit sqlMissing)
 
 -- the failure caught: the handler's value is the program's, and the release still runs; the
 -- two arms share one answer type (`Ty` has no union), so the body answers a string too
@@ -152,31 +178,42 @@ def pSqlCatch : Api.Program :=
 #guard (Api.typeOf pSqlCatch sqliteBun).map (fun t => (t.answer, t.error)) = some (.string, .never)
 #guard Test.Api.HostList.exit pSqlCatch sqliteBun sqlExits = some (.success (.str "recovered"))
 -- the failure reified is well typed at the exit type, and it escapes at the pair
-#guard (Api.typeOf (sqlClient (.exit sqlMissing)) sqliteBun).map (fun t => (t.answer, t.error)) =
+#guard (Api.typeOf pSqlExit sqliteBun).map (fun t => (t.answer, t.error)) =
   some (.exitOf sqlRows sqlError, .never)
-#guard (Api.typeOf (sqlClient sqlMissing) sqliteBun).map (fun t => (t.answer, t.error)) = some (sqlRows, sqlError)
+#guard (Api.typeOf pSqlFail sqliteBun).map (fun t => (t.answer, t.error)) = some (sqlRows, sqlError)
 -- the failure reified: the program succeeds with the exit, the tagged pair its one reason
-#guard match Test.Api.HostList.exit (sqlClient (.exit sqlMissing)) sqliteBun sqlExits with
+#guard match Test.Api.HostList.exit pSqlExit sqliteBun sqlExits with
   | some (.success (Value.exitErr written)) =>
     (causeImage.ofVal written).map (·.reasons.map fun | .fail e _ => some e | _ => none) = some [some sqlFailed]
   | _ => false
 -- a failed answer is refused where the row's error channel is empty (the open row), at the
 -- call's token
-#guard match Api.replayChecked (sqlClient sqlMissing) 1000 [Api.evaluate, .answerAsync Api.root 0 failed] sqliteBun with
+#guard match Api.replayChecked pSqlFail 1000 [Api.evaluate, .answerAsync Api.root 0 failed] sqliteBun with
   | .inr (.decision 1 _ (.errorType _ 0 .never) _) => true
   | _ => false
 
-/-- DI-31: the actual package pair survives layer orDie, after its client is released. -/
+/-- The key of the layer that `pSqlOrDie` builds. -/
+def kSql : ServiceKey := ⟨⟨8⟩, ⟨4⟩⟩
+
+/-- DI-31: the actual package pair survives layer orDie, after its client is released. A layer
+whose build acquires the client on the layer scope, fails on the statement, and releases when the
+failed build's scope closes; `Layer.orDie` turns the tagged failure into a defect on both faces. -/
 def pSqlOrDie : Api.Program :=
-  .provideLayer (.orDie (.effect (⟨⟨8⟩, ⟨4⟩⟩ : ServiceKey)
+  .provideLayer (.orDie (.effect kSql
       (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
                               (.perform (.external 2) (.var 0)))
         (.bind sqlMissing (.succeed (.lit (.nat 1)))))))
-    false (.service (⟨⟨8⟩, ⟨4⟩⟩ : ServiceKey))
+    false (.service kSql)
 #guard Api.wellTyped pSqlOrDie sqliteBun
 #guard Test.Api.HostList.exit pSqlOrDie sqliteBun sqlExits =
   some (.failure (Cause.die (.error sqlFailed)))
 #guard (Test.Api.HostList.run pSqlOrDie sqliteBun [.success (.nat 0), failedExit]).map (·.exit) =
   some none
+
+/-- **The programs over the SQLite table**, by name, in the truth corpus's order: the fixture and
+its four error paths. -/
+def sqlitePrograms : List (String × Api.Program) :=
+  [("pSqlite", pSqlite), ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit),
+   ("pSqlOrDie", pSqlOrDie)]
 
 end Test.Api.PackagesContract
