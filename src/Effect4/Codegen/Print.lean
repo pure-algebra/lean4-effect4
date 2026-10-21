@@ -1,6 +1,7 @@
 import Effect4.Codegen.Templates
 import Effect4.Codegen.ClassTable
 import Effect4.Program.Definitions
+import Effect4.Program.Services
 
 /-!
 # Codegen.Print — `Eff` into TypeScript: the generated fold over the table of printed clauses
@@ -280,54 +281,6 @@ the initial program once, and each method closes over its answer, the state (rc.
 programs takes them after its arguments and passes them on: `m: (a1, …, p, …) => d(pair(a0, …),
 p, …)` (slice HO-5, decisions row 340). -/
 
-/-- A service of a block: its name, its initial program's position, and its methods, each with
-its name, its definition's position and its arity. -/
-structure Service where
-  name : String
-  init : Nat
-  methods : List (String × Nat × Nat)
-deriving DecidableEq, Repr
-
-/-- The method of service `s` that the definition at position `j` is, if it is one. -/
-def methodAt (s : String) (defs : List DefDecl) (j : Nat) : Option (String × Nat × Nat) :=
-  match defs[j]? with
-  | some d =>
-    match d.role with
-    | .serviceMethod s' m n => if s' = s then some (m, j, n) else none
-    | _ => none
-  | none => none
-
-/-- The methods of service `s` in a block, in block order. -/
-def serviceMethods (s : String) (defs : List DefDecl) : List (String × Nat × Nat) :=
-  (List.range defs.length).filterMap (methodAt s defs)
-
-/-- The service whose initial program is the definition at position `i`, if it is one. -/
-def serviceAt (defs : List DefDecl) (i : Nat) : Option Service :=
-  match defs[i]? with
-  | some d =>
-    match d.role with
-    | .serviceInit s => some ⟨s, i, serviceMethods s defs⟩
-    | _ => none
-  | none => none
-
-/-- The services a block's roles declare, in the order of their initial programs. -/
-def servicesOf (defs : List DefDecl) : List Service :=
-  (List.range defs.length).filterMap (serviceAt defs)
-
-/-- A method's arguments after the state: `arity` types read off the rest of its request. -/
-def methodArgTys : Nat → Ty → Option (List Ty)
-  | 0, _ => some []
-  | 1, t => some [t]
-  | n + 2, .prod a b => (methodArgTys (n + 1) b).map (a :: ·)
-  | _ + 2, _ => none
-
-/-- A method's arguments, from its definition's request and the service's state type. -/
-def methodArgs (state : Ty) (d : DefDecl) (arity : Nat) : Option (List Ty) :=
-  match arity, d.request with
-  | 0, request => if request = state then some [] else none
-  | n + 1, .prod first rest => if first = state then methodArgTys (n + 1) rest else none
-  | _ + 1, _ => none
-
 /-- The argument names `a1` to `an`. -/
 def argNames (n : Nat) : List String := (List.range n).map fun k => Var.name (k + 1)
 
@@ -352,6 +305,15 @@ def plainMethodName (m : String) : Bool := TypeScript.targetIdentifier m && m !=
 def serviceNames (services : List Service) : List String :=
   services.flatMap fun sv => [sv.name, sv.name ++ "Layer"]
 
+/-- **The TypeScript printer's profile**: each field is the corresponding check of
+`serviceFault`, written as it is written there. -/
+def tsProfile : NameProfile where
+  defNameFault defs := if (servicesOf defs).isEmpty then none else repeatOf (defs.map (·.name))
+  serviceConsts s := [s, s ++ "Layer"]
+  method := plainMethodName
+  collides defs s := defs.any (·.name == s) || defs.any (·.name == s ++ "Layer") ||
+    (LayerTerm.readRefName s).isSome || (LayerTerm.readRefName (s ++ "Layer")).isSome
+
 /-- Why one service does not print, if it does not: its initial program is missing, takes a
 request other than `unit`, or takes a program, which the layer has none to pass; it has no
 method, two with one name, or one whose name is no plain key (`plainMethodName`); its name or its
@@ -360,43 +322,7 @@ its arguments. A method that takes programs prints, and its closure passes them 
 The refusal names the service (`PrintRefusal.service`), or the service and the method at fault
 (`PrintRefusal.serviceMethod`). -/
 def serviceFaultOf (defs : List DefDecl) (sv : Service) : Option PrintRefusal :=
-  match defs[sv.init]? with
-  | none => some (.service sv.name)
-  | some init =>
-    -- the layer runs the initial program with no caller, so none passes it a program
-    if init.request ≠ .unit || !init.params.isEmpty then some (.service sv.name)
-    else if !(sv.methods.map (·.1)).Nodup || sv.methods.isEmpty ||
-        sv.methods.any (fun x => !plainMethodName x.1) then some (.service sv.name)
-    else if defs.any (·.name == sv.name) || defs.any (·.name == sv.name ++ "Layer") ||
-        (LayerTerm.readRefName sv.name).isSome ||
-        (LayerTerm.readRefName (sv.name ++ "Layer")).isSome then
-      some (.service sv.name)
-    else sv.methods.findSome? fun (m, j, n) =>
-      match defs[j]? with
-      | some d =>
-        if (methodArgs init.answer d n).isSome then none
-        else some (.serviceMethod sv.name m)
-      | none => some (.serviceMethod sv.name m)
-
-/-- Whether a definition is a method of a service that the block does not declare. -/
-def strayMethod (names : List String) (d : DefDecl) : Bool :=
-  match d.role with
-  | .serviceMethod s _ _ => !names.contains s
-  | _ => false
-
-/-- The first name of a list that a later one repeats, if one does. -/
-def repeatOf : List String → Option String
-  | [] => none
-  | n :: rest => if rest.contains n then some n else repeatOf rest
-
-/-- The refusal of the first definition that is a method of a service the block does not
-declare (`strayMethod`), by the definition and the service it names. -/
-def strayOf (names : List String) : List DefDecl → Option PrintRefusal
-  | [] => none
-  | d :: ds =>
-    match d.role with
-    | .serviceMethod s _ _ => if names.contains s then strayOf names ds else some (.strayMethod d.name s)
-    | _ => strayOf names ds
+  serviceFaultOfIn tsProfile defs sv
 
 /-- Why a block's services do not print, if they do not: definitions with one name in a block
 with a service, two of the names the services declare that are one (a key and another service's
@@ -404,15 +330,7 @@ layer among them, Codex's CO6B-NAMES), a method of no service, or a fault of one
 (`serviceFaultOf`). Each refusal names the name, the definition, the service or the method at
 fault. -/
 def serviceFault (defs : List DefDecl) : Option PrintRefusal :=
-  match (if (servicesOf defs).isEmpty then none else repeatOf (defs.map (·.name))) with
-  | some n => some (.serviceName n)
-  | none =>
-  match repeatOf (serviceNames (servicesOf defs)) with
-  | some n => some (.serviceName n)
-  | none =>
-  match strayOf ((servicesOf defs).map (·.name)) defs with
-  | some why => some why
-  | none => (servicesOf defs).findSome? (serviceFaultOf defs)
+  serviceFaultIn tsProfile defs
 
 /-- A method's type in the service's shape: `(a1: T1, …, p: (a0: B) => Effect.Effect<…>, …) =>
 Effect.Effect<A, E, R>`. The definition's program parameters follow the arguments, each named by
