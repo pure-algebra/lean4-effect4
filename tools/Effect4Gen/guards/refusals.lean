@@ -90,7 +90,7 @@ def prints : List PrintRefusal :=
    .strayMethod "readCounter" "Clock", .service "Counter", .serviceMethod "Counter" "read",
    .declarations 1 0]
 
-def reads : List ReadRefusal :=
+def reads : List Effect4.Program.ReadRefusal :=
   [.unknownHead "Cause.fail", .unknownIdent "x", .arity "Db.get", .binder "a1", .shape "call",
    .negative (-3), .unsupportedStmt, .annotation "lambda parameter"]
 
@@ -185,23 +185,23 @@ def printedHead : Effect4.Json → String
 #guard typings.all fun x => Canonical.decode (α := TypeRefusal) (Canonical.encode x) = some x
 #guard authors.all fun x => Canonical.decode (α := AuthorRefusal) (Canonical.encode x) = some x
 #guard prints.all fun x => Canonical.decode (α := PrintRefusal) (Canonical.encode x) = some x
-#guard reads.all fun x => Canonical.decode (α := ReadRefusal) (Canonical.encode x) = some x
+#guard reads.all fun x => Canonical.decode (α := Effect4.Program.ReadRefusal) (Canonical.encode x) = some x
 -- A byte added or removed is refused, never repaired.
 #guard authors.all fun x => Canonical.decode (α := AuthorRefusal) (Canonical.encode x ++ [0]) = none
 #guard authors.all fun x => Canonical.decode (α := AuthorRefusal) (Canonical.encode x).dropLast = none
-#guard reads.all fun x => Canonical.decode (α := ReadRefusal) (Canonical.encode x ++ [0]) = none
+#guard reads.all fun x => Canonical.decode (α := Effect4.Program.ReadRefusal) (Canonical.encode x ++ [0]) = none
 #guard admissions.all fun x => Canonical.decode (α := AdmitRefusal) (Canonical.encode x).dropLast = none
 -- Every refusal fits its generated shape.
 #guard typings.all fun x => (Canonical.shape TypeRefusal).accepts (Canonical.toVal x)
 #guard authors.all fun x => (Canonical.shape AuthorRefusal).accepts (Canonical.toVal x)
 #guard prints.all fun x => (Canonical.shape PrintRefusal).accepts (Canonical.toVal x)
-#guard reads.all fun x => (Canonical.shape ReadRefusal).accepts (Canonical.toVal x)
+#guard reads.all fun x => (Canonical.shape Effect4.Program.ReadRefusal).accepts (Canonical.toVal x)
 #guard admissions.all fun x => (Canonical.shape AdmitRefusal).accepts (Canonical.toVal x)
 -- Refusals are distinct as bytes exactly when they are distinct values.
 #guard (authors.map Canonical.encode).eraseDups.length = authors.length
 #guard (reads.map Canonical.encode).eraseDups.length = reads.length
 -- An authoring refusal and a read refusal are different content: neither reads as the other.
-#guard authors.all fun x => Canonical.decode (α := ReadRefusal) (Canonical.encode x) = none
+#guard authors.all fun x => Canonical.decode (α := Effect4.Program.ReadRefusal) (Canonical.encode x) = none
 -- The build refusal (seat J2): read back exactly, refused with a byte added or removed, fitting
 -- its shape, and distinct as bytes exactly when distinct.
 #guard builds.all fun x => Canonical.decode (α := BuildRefusal) (Canonical.encode x) = some x
