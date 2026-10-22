@@ -783,7 +783,7 @@ and checked/wanted evidence remain available through the existing report and arc
 - **Records (rows 119, 165)**: a record value carries its canonical field names (row 165 (a), ruled). The
   Schema bridge describes a record type as a struct (`schemaAlg.ty_record`, `src/Effect4/Schema/Bridge.lean`).
   The JSON codec encodes a record value by its own arm (`wireAlgebra.ty_record`,
-  `src/Effect4/Schema/Codec.lean`). The claim `record-codec-layout` is proved by `decode_iff`.
+  `src/Effect4/Schema/Codec.lean`). The claim `decode-iff` covers the record layout too: its theorem is `decode_iff`.
 
 #### 3. Project Definition and Judgment
 Data plane conversions in Effect4 are exact embeddings between syntactic carriers and serializable formats:
@@ -861,7 +861,7 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   (`ofSchema_exact` (`src/Effect4/Schema/Bridge.lean`)).
 - **Schema retraction (`of-schema-schema`)**: Inverting schema representations on reserved-free types
   (`ofSchema_schema` (`src/Effect4/Schema/Bridge.lean`)).
-- **Record codecs (`record-codec-layout`)**: JSON decoding reconstructs named record values exactly under `normJ`
+- **Record codecs (`decode-iff`)**: JSON decoding reconstructs named record values exactly under `normJ`
   (`decode_iff`, `src/Effect4/Laws/Schema/Codec.lean`; decisions row 165 (a)).
 - **Term reconstruction (`collection-term-print-read`)**: structural reading reconstructs every scoped term after printing
   (`readTerm_printTerm`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`).
@@ -1793,7 +1793,7 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   fork or an interruption (slice L1).
 - **M7 conditional route (`m7-route`)**: Derivation of M7 conditionally from M5 and M6 ledger components
   (`m7_of_ledger` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)).
-- **M7's results (`m7-exits-typed`, `m7-stores-typed`, `m7-never-halts`, `m7-admitted`)**: On
+- **M7's results (`m7-proved`, `m7-admitted`)**: On
   `M7Fragment`, every exit that the observation records fits its fiber's declared type (M7a).
   The observed stores fit at a world that describes them (M7b).
   The frame machine never halts (M7c, row 139).

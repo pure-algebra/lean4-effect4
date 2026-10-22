@@ -7,7 +7,7 @@ import Effect4.Laws.Program.Typed.RecordValues
 # Checked JSON boundary laws
 
 Concept: Exact Codecs & Data Plane Embeddings.
-Claims: `decode-encode`, `decode-iff` and `record-codec-layout`; requirements R2 and R3.
+Claims: `decode-encode` and `decode-iff`; requirements R2 and R3.
 The data-language JSON codec brief places the helpers and their consumers before implementation.
 
 `decode_iff` states exactness modulo `Codec.normJ` for every type and every table of key names.

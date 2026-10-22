@@ -236,7 +236,6 @@ def registry : Registry where
     { id := "initial-algebras-folds"
       title := "Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniqueness"
       defaultModules := [
-        `Effect4.Laws.Program.Handler,
         `Effect4.Laws.Program.Folds.Ty,
         `Effect4.Laws.Machine.Folds.Val,
         `Effect4.Laws.Machine.Folds.Stores,
@@ -245,7 +244,6 @@ def registry : Registry where
     { id := "context-requirements"
       title := "Context Requirements: Graded coeffects, requirement rows, and layer discharge"
       defaultModules := [
-        `Effect4.Laws.Program.Handler,
         `Effect4.Laws.Effects.Protocol
       ] },
     { id := "host-session-protocol"
@@ -295,33 +293,6 @@ def registry : Registry where
       ] }
   ]
   claims := [
-    { id := "type-metadata-exact", concept := "exact-codecs", role := .compatibility
-      title := "Structural TypeScript metadata retains the exact stored Ty declaration"
-      pointer := .witness `Effect4.Codegen.Metadata.type_metadata_exact },
-    { id := "checker-combine-deps", concept := "initial-algebras-folds", role := .compatibility
-      title := "The combined actual dependency answers equal the complete verdict. This includes source layer projection for every module and part key; no admission, native execution, or progress claim (seams V1, R14)"
-      pointer := .witness `Effect4.Program.Check.combine_deps },
-    { id := "checker-placed-verdict", concept := "initial-algebras-folds", role := .compatibility
-      title := "A part verdict placed at a base equals checking that part at the base, including the complete annotation table; no admission, native execution, or progress claim (seams V1, R14)"
-      pointer := .witness `Effect4.Program.Check.run_placed },
-    { id := "checker-part-extension", concept := "initial-algebras-folds", role := .compatibility
-      title := "A positive part verdict agrees at an extending signature, including the complete annotation table. Negative and module reuse are excluded; no admission, native execution, or progress claim (seams V1, R14)"
-      pointer := .witness `Effect4.Program.Check.run_part_extends },
-    { id := "checker-explanation-replays", concept := "initial-algebras-folds", role := .compatibility
-      title := "A selected local explanation names an actual dependency with its exact placed refusal. Aggregate failures need no invented part; no admission, native execution, or progress claim (seams V1, R14)"
-      pointer := .witness `Effect4.Program.Check.explain_replays },
-    { id := "checker-ask-value", concept := "host-session-protocol", role := .compatibility
-      title := "Every certified oracle ask returns the exact uncached verdict. Semantic traces contain answers and exclude invocation counts; no admission, native execution, or progress claim (seams V1, R14)"
-      pointer := .witness `Effect4.Program.Check.Checked.ask_value },
-    { id := "checker-oracle-agrees", concept := "host-session-protocol", role := .compatibility
-      title := "Every certified checker oracle equals the uncached checker on the complete verdict; no arbitrary native callback or forged package is admitted (seams S0, R6 and R14)"
-      pointer := .witness `Effect4.Program.Check.Oracle.eq_uncached },
-    { id := "raw-formation", concept := "subtyping-algebra", role := .decidability
-      title := "Raw formation checking agrees with distinct record names, admitted map keys, a deferred's admitted error column, and no type variable outside a template; a declared service carrier is a strict formation site (decisions rows 288, 297)"
-      pointer := .witness `Effect4.Program.Formation.checkInput_eq_none_iff },
-    { id := "instantiated-formation", concept := "residual-program-typing", role := .compatibility
-      title := "Successful row template use checks instantiated map keys and deferred error columns"
-      pointer := .witness `Effect4.Program.rowTy_instantiated_formed },
     -- 1. store-typing
     { id := "fits-mono", concept := "store-typing", role := .monotonicity
       title := "Membership is monotone under host world order"
@@ -376,13 +347,11 @@ def registry : Registry where
       title := "The mask's saved state: membership at Ty.maskRestore is exactly the two saved images, in Fits and in the shape check; the image is no Boolean, a Boolean is no image, and no subtyping relates the two types; the target is reserved against an external allocation, a host answer column and a service carrier; an image holds no handle, so every world, every store and every environment keep its membership (decisions row 244; no reply admission)"
       pointer := .witness `Effect4.Program.Typed.saved_mask_image_membership },
     { id := "modeled-membership", concept := "store-typing", role := .compatibility
-      title := "On the checked domain, every carrier value's encoding inhabits its type at every allocation table: the refusal fold answers none at the type, and the carrier and its image are the carrier fold's (Model.member); an instance of Modeled inherits it across its equivalence, with no proof of its own (Modeled.member); nothing for an identity type, an optional field or a refused constructor, and no codec admission (decisions row 330, slice L1)"
+      title := "On the checked domain, every carrier value's encoding inhabits its type at every allocation table, and each Modeled instance inherits this through its equivalence; nothing for identity types, optional fields or refused constructors, and no codec admission"
       pointer := .witness `Effect4.Schema.Model.member },
     { id := "step-language-typed", concept := "store-typing", role := .compatibility
       title := "A stored step translates to its indexed type from native atom typing, typed caller inputs and Step.Facts; records retain formation and normality, and empty-value subtyping follows from the shared construction law; a fold additionally requires the caller type list to match the source scope length; Step.normal derives Facts for a closed step; no run, optional field, allocation or host behavior follows (decisions row 330)"
       pointer := .witness `Effect4.Modules.Step.typed },
-    -- recursive types: membership under the application's declaration table (decisions rows
-    -- 124, 158 and 400; seat RECTYPES, docs/research/2026-10-15-recursive-types/formal.md)
     { id := "recursive-types-decided", concept := "store-typing", role := .decidability
       title := "Membership under a declaration table is an inductive predicate, MemberIn: a union holds its sides' members, a declared reference its body's, and a head its step's when every question holds (Val.obligations); the checker Val.hasTyIn, well founded on the value's size and then on the declared names not yet unfolded, with no fuel, decides it on every table, guarded or not, so it computes the least fixed point; nothing of Fits, a world, a parameter or a target (decisions rows 124, 158 and 400)"
       pointer := .witness `Effect4.Program.hasTyIn_iff
@@ -409,7 +378,7 @@ def registry : Registry where
       title := "Inhabitance under a table, the least fixed point by saturation (TyDecls.saturate), a name read at its declaration as the checker reads it, agrees with membership: a type with a member is inhabited (inhabited_of_memberIn), and an inhabited type has a member built at an extension of any allocation table, round by round (exists_memberIn_fresh); a guarded table can still have an empty name (Stream) (decisions rows 124 and 127)"
       pointer := .witness `Effect4.Program.inhabited_iff_memberIn },
     { id := "recursive-types-normalize", concept := "store-typing", role := .compatibility
-      title := "Membership under a table is invariant under type normalization, which spells a reference with no argument as a handle: the admission fold under any oracle keeps its admission (cata_declAlg_normalize, hasTy_normalize's induction over declAlg; the congruence arms through AdmitsNormalize); the wiring slice's fits_normalize and fits_subN under a table need it"
+      title := "Membership under a declaration table is unchanged by type normalization, which spells a reference with no argument as a handle: a value is a member of the normal form exactly when it is a member of the type"
       pointer := .witness `Effect4.Program.memberIn_normalize },
     { id := "guarded-fixed-point-unique", concept := "store-typing", role := .compatibility
       title := "On a guarded table, one whose declared names all have a rank in the head references' topological order (TyDecls.rankedNames, by saturation), every fixed point of the admission fold admits exactly the members of each body, so the least fixed point is the greatest: two fixed points agree by recursion on the value's size and, at one value, by the rounds of the ranking (fixedPoint_agree_at); membership is a fixed point of every table (checkerOracle_fixedPoint); on an unguarded table it fails (A = A has the constant oracle true as a fixed point and no member, Test/Program/TyDecls.lean)"
@@ -424,18 +393,50 @@ def registry : Registry where
       title := "A derived Modeled type is named in the declaration table: its reference handle n has exactly its code's members under every guarded table whose computed expansions solve it and that holds the type's declarations (Modeled.memberIn_ref), so its codec writes members of its name (Modeled.memberIn_image); the deriver proves the reference expands to the code from each field instance's own proof, so a field instance may be opaque; nothing reads the reference yet: Fits and reply admission take no table (decisions row 402)"
       pointer := .witness `Effect4.Schema.Modeled.memberIn_ref },
     { id := "store-safety", concept := "store-typing", role := .progress
-      title := "Store safety through inductive configuration typing"
+      title := "Stores are safe: an inductive typing of configurations keeps every store well typed"
       pointer := .absent "Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139)"
       literature := [
         { work := "TAPL", locator := "§13.5, pp. 165–169", relation := "excludedFeature" }
       ] },
-
+    { id := "semaphore-profile-closed", concept := "store-typing", role := .preservation
+      title := "Each transition of Semaphore's abstract model keeps the first profile, with no premise on its request (the model's half of semaphore-accounting-preserved; nothing about a program, and no progress of a waiter; decisions rows 259 to 261 and 265)"
+      pointer := .witness `Effect4.Semaphore.Model.profile_closed },
+    { id := "waiting-wrapper-typed", concept := "store-typing", role := .compatibility
+      title := "The waiting wrapper at a caller's restore answers its result type at every typed scope, when the module's part is typed: its attempt answers the join of what its two exits answer, and its withdrawal answers a type; the wrapper with no loop answers its hint's type from the same part, with no premise on that type (waitAnswer_answers, HintTy.canonical) (the shared typing of a module that waits, decisions row 275, point 3; its users are Semaphore's take and its protected form, and the Queue's take and offer; a result type in normal form; no run)"
+      pointer := .witness `Effect4.Modules.waitRetryAt_answers },
+    { id := "protected-form-typed", concept := "store-typing", role := .compatibility
+      title := "The protected form keeps its body's effect type: one mask over an acquisition that answers a type, a body of any effect type at the restore site, and a release that answers a type under the exit's binder; the form has the body's answer, its failure type in normal form and its requirement (decisions row 276, point 1; its users are Semaphore's two protected forms; typing only: no run, no law of the mask and no release at an exit)"
+      pointer := .witness `Effect4.Modules.protectedBy_has },
+    { id := "pool-use-typed", concept := "store-typing", role := .compatibility
+      title := "Pool's use keeps its body's effect type at every typed scope: for a kept handle at the reference type of Pool's cell and a body of one effect type at every kept resource, the form has the body's answer, its failure type in normal form and its requirement; the lease and the return add no failure and no requirement, and the refusal at a closed pool adds none, since an interruption has no failure type (the protected form's second user; decisions rows 267, 276 and 279; a resource type in normal form whose item record and cell record are formed; typing only: no run, no law of the mask and no return at an exit)"
+      pointer := .witness `Effect4.Pool.use_types },
+    { id := "pool-make-typed", concept := "store-typing", role := .compatibility
+      title := "Pool's make answers the pool's handle at every typed scope, for an acquisition of one effect type whose answer is the resource's type: its failure type is the acquisition's in normal form, so a failed acquisition fails make, and its requirement is the acquisition's with the scope's key, so a pool is made inside a scope (decisions rows 267 and 268; a positive size, and a resource type in normal form whose item record and cell record are formed; typing only: no run and no finalizer's run; an acquisition whose answer type is another type is outside the statement)"
+      pointer := .witness `Effect4.Pool.make_types },
+    { id := "pool-close-typed", concept := "store-typing", role := .compatibility
+      title := "Pool's close answers the unit at every typed scope, with no failure and no requirement, for a kept handle at the reference type of Pool's cell: the close's first step, the posted wake at the counted waiters, and the closer's loop over the closer's step; so it is a release that cannot fail, and make registers it (decisions rows 268 and 276, point 2; a resource type in normal form whose item record and cell record are formed; typing only: no wait along a run, no end of the loop and no finalizer's run)"
+      pointer := .witness `Effect4.Pool.close_answers },
+    { id := "pool-profile-closed", concept := "store-typing", role := .preservation
+      title := "Each transition of Pool's abstract model keeps the first profile, with no premise on its request (the model's half of pool-profile-preserved; nothing about a program, and no progress of a waiter; decisions rows 267 to 269)"
+      pointer := .witness `Effect4.Pool.Model.profile_closed },
+    { id := "pool-lease-enrols", concept := "store-typing", role := .inversion
+      title := "One lease of Pool's model enrols its request exactly when the pool is open and a lease holds every item (on the profile's states; a helper of the public waiting wrapper; no fairness and no liveness)"
+      pointer := .witness `Effect4.Pool.Model.lease_enrols_iff },
+    { id := "stream-source-declarations", concept := "store-typing", role := .compatibility
+      title := "An accepted definition-backed Stream source derives its normalized batch/completion protocol, open and close state requests, and unit close answer from the supplied operation declarations; each invocation uses the corresponding declaration name; no body admission, nonempty batch, execution, finalization or host behavior follows"
+      pointer := .witness `Effect4.Stream.Source.fromDefinitions_declarations },
+    { id := "answer-flow-history", concept := "store-typing", role := .preservation
+      title := "A per-fiber frame predicate that each command keeps, given its local facts at each arm, holds through every admitted history of a program of the direct lexical fragment (PlaceFunding.NativeFlow.history), and a place ledger whose debit reads it stays funded (LocalOn.history_funded); nothing of a crew's answer-class model, its local facts, progress or a host observation"
+      pointer := .witness `Effect4.Program.PlaceFunding.NativeFlow.history },
     -- 2. residual-program-typing
+    { id := "instantiated-formation", concept := "residual-program-typing", role := .compatibility
+      title := "Successful row template use checks instantiated map keys and deferred error columns"
+      pointer := .witness `Effect4.Program.rowTy_instantiated_formed },
     { id := "program-refusal-located", concept := "residual-program-typing", role := .decidability
-      title := "The program's located refusal is absent exactly when the program types: programRefusal names an address and a reason in the typing's own alphabet, and is none if and only if the checker answers a type; nothing of how to repair the place (wave 1, A1; ruling 2: Located only)"
+      title := "A program's located refusal is none exactly when the checker types the program; the refusal names an address and a reason in the typing's alphabet; nothing of how to repair the place"
       pointer := .witness `Effect4.Program.programRefusal_none_iff },
     { id := "seq-typed", concept := "residual-program-typing", role := .compatibility
-      title := "The seqR compatibility lemma: denoteR sequences with typed continuations"
+      title := "Sequencing is typed under denoteR: a typed program guarded on success, followed by a continuation typed at every fitting answer in every later world and with the same error type, is typed"
       pointer := .witness `Effect4.Program.Typed.seq_typed
       literature := [
         { work := "ATTAPL", locator := "ch. 3, pp. 87–136", relation := "adaptedResult" }
@@ -468,23 +469,23 @@ def registry : Registry where
       pointer := .witness `Effect4.Program.Authoring.rebuild_spec },
     { id := "denote-typed-layer-free", concept := "residual-program-typing",
       role := .fundamentalProperty
-      title := "M5 on the layer-free fragment: every arm but provideLayer's, assembled by induction on fuel"
+      title := "On the layer-free fragment, every source's denotation is typed: M5 for every arm but provideLayer's, assembled by induction on fuel"
       pointer := .witness `Effect4.Program.Typed.denotesTyped_of_layerFree
       literature := [
         { work := "XiaEtAl2020", locator := "audit P37", relation := "definitionUsed" }
       ] },
     { id := "load-typed-layer-free", concept := "residual-program-typing", role := .preservation
-      title := "The typed load on the layer-free fragment: a checked program loads into J (M5's load connector, the marker premise discharged)"
+      title := "On the layer-free fragment, a checked program loads into J at every fuel"
       pointer := .witness `Effect4.Program.Typed.loadsTyped_of_layerFree },
     { id := "provide-layer-arm", concept := "residual-program-typing", role := .compatibility
       title := "The layer family's arm: a layer build at an admitted layer point answers the built context at the layer's checked error type, and the provide protocol around it is typed (decisions rows 176 (b), 185-187)"
       pointer := .witness `Effect4.Program.Typed.provideLayerArm
       contestedBy := ["E4-TYPED-CE-023", "E4-TYPED-CE-031"] },
     { id := "load-typed", concept := "residual-program-typing", role := .preservation
-      title := "M5: a lawful, checked, closed source with an empty requirement row loads into J"
+      title := "A lawful, checked, closed source with an empty requirement row loads into J (M5)"
       pointer := .witness `Effect4.Program.Typed.loadsTyped },
     { id := "load-typed-checked", concept := "residual-program-typing", role := .preservation
-      title := "The typed load for every checked program: M5 with no lawful-signature or closed-row premise"
+      title := "Every checked program with an empty requirement row loads into a typed machine in J, with no lawful-signature or closed-row premise"
       pointer := .witness `Effect4.Program.Typed.load_typed },
     { id := "bind-closed", concept := "residual-program-typing", role := .compatibility
       title := "TypedProg is closed under bind"
@@ -496,7 +497,7 @@ def registry : Registry where
       title := "The guard compatibility lemma: a guarded program bound into its arms is typed (the general form of seq_typed, row 148)"
       pointer := .witness `Effect4.Program.Typed.guardBind_typed },
     { id := "on-failure-typed", concept := "residual-program-typing", role := .compatibility
-      title := "The onFailure shape (catchCause, catchIf, orDie, a finalizer's cleanup) is typed"
+      title := "The onFailure shape (catchCause, catchIf, orDie, finalizer cleanup) is typed: a typed program guarded on failure, with its answer below the target's, then a continuation typed at each failing exit in every later world, is typed at the target"
       pointer := .witness `Effect4.Program.Typed.catchGuard_typed },
     { id := "all-guard-typed", concept := "residual-program-typing", role := .compatibility
       title := "The all and onExit guard shapes (exit, matchCause, a finalizer's boundary) are typed"
@@ -507,13 +508,16 @@ def registry : Registry where
     { id := "scoped-body-substitution-boundary", concept := "residual-program-typing", role := .compatibility
       title := "A restore site is one node that binds nothing, with its checked body at child 0: both saved choices run that one body in the node's environment; a typed point at the node denotes a typed program, its saved term evaluates to an image, and its body's point is typed at the node's type; a saved value passed as data keeps its choice and holds no handle; the mask's builder is the program's own expansion over bind (decisions rows 245, 246; the restore node's half of the claim; no agreement with a target)"
       pointer := .witness `Effect4.Program.Typed.scoped_body_substitution_boundary },
-
+    { id := "admitted-source-lawful", concept := "residual-program-typing", role := .compatibility
+      title := "An admitted program's signature, its row table and its service declarations, is lawful: program admission runs admitSig (the bridge from admission to the typed state)"
+      pointer := .witness `Effect4.Program.Typed.lawfulSig_of_admitted
+      contestedBy := ["E4-TYPED-CE-041"] },
     -- 3. scope-lifetime-finalization
     { id := "finalizer-starts-bounded", concept := "scope-lifetime-finalization", role := .preservation
-      title := "Every native decision prefix starts an onExit finalizer no more often than it pushes that source's finalizer frame; arbitrary program, table and budget; no progress, source uniqueness or cleanup-log claim"
+      title := "On every reachable native machine, for any program, table and budget, a source's onExit finalizer starts no more often than its finalizer frame is pushed; no progress, source uniqueness or cleanup-log claim"
       pointer := .witness `Effect4.Program.FinalizerRun.starts_le_pushes },
     { id := "once-placed-finalizer", concept := "scope-lifetime-finalization", role := .preservation
-      title := "A once-placed source pushes its finalizer frame at most once across every fiber of a native decision prefix; no progress or log-writer claim"
+      title := "A once-placed source has its finalizer frame pushed at most once across all fibers of every reachable native machine; no progress or log-writer claim"
       pointer := .witness `Effect4.Program.FinalizerRun.once_placed_pushes_once },
     { id := "close-idempotent", concept := "scope-lifetime-finalization", role := .preservation
       title := "Closing an already-closed scope returns void without re-running finalizers"
@@ -531,10 +535,10 @@ def registry : Registry where
         { work := "ATTAPL", locator := "ch. 3, pp. 87–136", relation := "analogy" }
       ] },
     { id := "close-reentrant-add", concept := "scope-lifetime-finalization", role := .preservation
-      title := "Re-entrant finalizer addition observes closed state immediately"
+      title := "Adding a finalizer to a scope that is closing sees it closed at once: the finalizer runs immediately with the close's exit"
       pointer := .witness `Effect4.Scope.close_reentrant_add },
     { id := "close-seq-protocol", concept := "scope-lifetime-finalization", role := .fundamentalProperty
-      title := "The sequential close walk meets the ambient iterator protocol at one row for admitted finalizers"
+      title := "The sequential close walk of admitted finalizers meets the ambient iterator protocol at one row"
       pointer := .witness `Effect4.Program.Typed.closeSeqProtocol
       literature := [
         { work := "deVilhenaPottier2021", locator := "audit P8", relation := "adaptedResult" }
@@ -543,13 +547,13 @@ def registry : Registry where
       title := "The mask's law at the boundaries of regions, on the frame machine: the getter masks and answers the image of the entry flag; a restore site at a true bit is the interruptible region over its body, and at a false bit it is its body's own code; a region's entry sets its own flag at every fiber and saves the earlier flag exactly when it changes it; the saved frame's pass returns that flag on every exit, and with a cause pending an exit that leaves the fiber interruptible fails there with it (decisions rows 227, 244 to 246; no progress, nothing about a module, and no statement for a region that changes no flag)"
       pointer := .witness `Effect4.Program.Typed.saved_mask_restoration },
     { id := "saved-mask-pop-discipline", concept := "scope-lifetime-finalization", role := .preservation
-      title := "At one fixed base bit, the frame machine keeps the chain of restoring frames on a fiber's stack: FrameFiber.popFrom from an empty scratch stack, getCont, Machine.frameExitState and the entry of each region keep it, and two fibers with one base and one stack have one flag (a local law at every demand, skip flag and carried cause; no statement of a run, of a completed exit, of cleanup or of delivery)"
+      title := "At a fixed base bit, popping, getCont, frame exit and region entry keep the chain of restoring frames on a fiber's stack, and fibers with one base and stack share one flag; a local law: nothing of runs, exits, cleanup or delivery"
       pointer := .witness `Effect4.Machine.saved_mask_pop_discipline },
     { id := "saved-mask-chain-runs", concept := "scope-lifetime-finalization", role := .preservation
-      title := "Each live fiber of a run of a compiled program holds the saved mask's chain at its start flag: the invariant MaskRuns, at a table of start flags, is kept by every decision tape and fuel at the compiled program's interpreter, from each machine that holds it; each command keeps it under the condition just before a clearing, which the command loop discharges, so each entry outside the machine that returns a machine keeps it, with no premise for the condition (the lift of saved-mask-pop-discipline to runs; no typing, no admission and no premise on the table; no bracket of a region, no flag or stack of an exited fiber, no cleanup's multiplicity, no delivery, no budget, no liveness)"
+      title := "Every replay of a compiled program, at any tape and fuel, keeps the saved-mask invariant MaskRuns from a machine that holds it, extending its start flags; no typing, admission or table premise; nothing of brackets, exited fibers, cleanup, delivery or liveness"
       pointer := .witness `Effect4.Program.compiled_mask_chain_runs },
     { id := "saved-mask-region-bracket", concept := "scope-lifetime-finalization", role := .preservation
-      title := "A region of a compiled program ends at its entry's stack and at its entry flag, for an arbitrary body: at two cuts of one command loop's run where a pending command steps the fiber, the later cut's stack shape above ++ below is a premise, and it is the region's only mark on the machine; the theorem then gives the entry's stack and the entry flag at the region's end, which is the fiber that the pop of the own frames leaves where no own frame answers, and the pop goes on from it; it does not give that a body's run keeps that shape (the run-level half of saved-mask-restoration; no premise on an exit, by stepped-fiber-live; no cleanup, no release count, no delivery, no budget, no liveness; nothing of a region whose fiber exits inside it; the client premise of the mask's derived form stays: nothing acquired or registered before the body begins, decisions rows 227, 244 to 246)"
+      title := "At two cuts of one command loop that step one fiber, with the later stack shape as premise, a region ends at its entry stack and flag; nothing of a body keeping that shape, cleanup, delivery, liveness, or fibers exiting inside; the mask's client premise stays"
       pointer := .witness `Effect4.Program.compiled_region_bracket },
     { id := "stepped-fiber-live", concept := "scope-lifetime-finalization", role := .inversion
       title := "At each cut of a compiled command loop, a fiber that a pending command steps has not exited: the guard's queue gives the fiber of each pending Cmd.loop and Cmd.deliver as running, and the guard's state gives each exited fiber as not running (every program and row table, each machine and pending commands that hold GuardState and GuardQueue; false at a hand-written interpreter; no statement that a fiber is stepped, and nothing of a fiber that no pending command steps)"
@@ -566,10 +570,9 @@ def registry : Registry where
     { id := "pool-drain-waits", concept := "scope-lifetime-finalization", role := .inversion
       title := "The closer's step of Pool's model answers that the pool is drained exactly when no lease is outstanding, it enrols the closer exactly otherwise, and it changes the waiters alone (a helper of pool-close-waits; one transition: no wait along a run, no progress of the closer and no finalizer's run; decisions rows 268 and 276)"
       pointer := .witness `Effect4.Pool.Model.drain_waits },
-
     -- 4. reactive-scheduling
     { id := "machine-typed-not-halted", concept := "reactive-scheduling", role := .inversion
-      title := "Halted machine configuration outside MachineTyped invariant"
+      title := "No halted machine configuration satisfies the MachineTyped invariant"
       pointer := .witness `Effect4.Program.Typed.machineTyped_not_halted
       literature := [
         { work := "PFPL", locator := "ch. 28, §28.2, p. 263", relation := "adaptedResult" }
@@ -620,7 +623,7 @@ def registry : Registry where
       title := "Completing race registration keeps configuration typing through immediate settlement or parking"
       pointer := .witness `Effect4.Program.Typed.registrationDone_preserves },
     { id := "drivestate-lift", concept := "reactive-scheduling", role := .simulation
-      title := "Command loop invariant lifting for driveState"
+      title := "An invariant that every step keeps, with the world moving up its order, is kept by the command loop driveState at every fuel"
       pointer := .witness `Effect4.Machine.Lift.driveState_lift
       literature := [
         { work := "PFPL", locator := "ch. 28, pp. 261–268", relation := "proofTechnique" }
@@ -629,13 +632,13 @@ def registry : Registry where
       title := "Every admitted replay of a checked program ends in J: host answers admitted at the ghost token table keep the typed state"
       pointer := .witness `Effect4.Program.Typed.reachable_typed },
     { id := "run-work-selection", concept := "reactive-scheduling", role := .compatibility
-      title := "The opt-in control planner selects exactly a queued flush or the first runnable evaluation on a non-stuck machine"
+      title := "The opt-in control planner selects a decision exactly when the machine is not stuck and the decision flushes a non-empty queue or, with the queue empty, evaluates the first runnable fiber"
       pointer := .witness `Effect4.Run.nextControl_spec },
     { id := "scheduler-progress", concept := "reactive-scheduling", role := .progress
-      title := "Operational progress with successor transitions or live frontier classification"
+      title := "Every non-halted machine of a typed configuration takes a successor step or waits on a live frontier"
       pointer := .absent "Operational progress is an open obligation; machineTyped_not_halted provides an invariant consequence (stuck = none) without successor existence" },
     { id := "fair-tape-drains-armed", concept := "reactive-scheduling", role := .adequacy
-      title := "A fair finite tape that suffices leaves no armed owner at its live end (R12-a: the finite endpoint consequence of FairTape's final prefix; not general fairness, not infinite tapes)"
+      title := "A fair finite tape that suffices leaves no armed owner when its replay ends without being stuck; not general fairness, nor infinite tapes"
       pointer := .witness `Effect4.Machine.Scheduling.fairTape_unarmed },
     { id := "frontier-names-work", concept := "reactive-scheduling", role := .inversion
       title := "R12-b: at a live, unfinished machine whose tape ran out, the frontier is empty exactly at a deadlock: nothing runnable, nothing armed, no host request, no timer, no compile budget (not progress, not liveness)"
@@ -644,7 +647,7 @@ def registry : Registry where
       title := "M6b: one tape decision keeps J when its host answer, if any, is admitted"
       pointer := .witness `Effect4.Program.Typed.decision_preserves },
     { id := "fair-scheduling", concept := "reactive-scheduling", role := .adequacy
-      title := "Progress under weak fairness"
+      title := "Every weakly fair schedule makes progress"
       pointer := .absent "Weak fairness progress is open (R12; decisions row 86)"
       literature := [
         { work := "PFPL", locator := "chs. 39–41, pp. 371–406", relation := "excludedFeature" }
@@ -655,30 +658,6 @@ def registry : Registry where
     { id := "queue-first-profile-closed", concept := "reactive-scheduling", role := .preservation
       title := "Each first operation of the Queue's abstract model keeps the first profile, when its request keeps the step's premise (a helper of queue-expansion-agrees: the domain of the step goals; no agreement of a term with the model; decisions rows 219, 233 and 255)"
       pointer := .witness `Effect4.Queue.Model.first_profile_closed },
-    { id := "semaphore-profile-closed", concept := "store-typing", role := .preservation
-      title := "Each transition of Semaphore's abstract model keeps the first profile, with no premise on its request (the model's half of semaphore-accounting-preserved; nothing about a program, and no progress of a waiter; decisions rows 259 to 261 and 265)"
-      pointer := .witness `Effect4.Semaphore.Model.profile_closed },
-    { id := "waiting-wrapper-typed", concept := "store-typing", role := .compatibility
-      title := "The waiting wrapper at a caller's restore answers its result type at every typed scope, when the module's part is typed: its attempt answers the join of what its two exits answer, and its withdrawal answers a type; the wrapper with no loop answers its hint's type from the same part, with no premise on that type (waitAnswer_answers, HintTy.canonical) (the shared typing of a module that waits, decisions row 275, point 3; its users are Semaphore's take and its protected form, and the Queue's take and offer; a result type in normal form; no run)"
-      pointer := .witness `Effect4.Modules.waitRetryAt_answers },
-    { id := "protected-form-typed", concept := "store-typing", role := .compatibility
-      title := "The protected form keeps its body's effect type: one mask over an acquisition that answers a type, a body of any effect type at the restore site, and a release that answers a type under the exit's binder; the form has the body's answer, its failure type in normal form and its requirement (decisions row 276, point 1; its users are Semaphore's two protected forms; typing only: no run, no law of the mask and no release at an exit)"
-      pointer := .witness `Effect4.Modules.protectedBy_has },
-    { id := "pool-use-typed", concept := "store-typing", role := .compatibility
-      title := "Pool's use keeps its body's effect type at every typed scope: for a kept handle at the reference type of Pool's cell and a body of one effect type at every kept resource, the form has the body's answer, its failure type in normal form and its requirement; the lease and the return add no failure and no requirement, and the refusal at a closed pool adds none, since an interruption has no failure type (the protected form's second user; decisions rows 267, 276 and 279; a resource type in normal form whose item record and cell record are formed; typing only: no run, no law of the mask and no return at an exit)"
-      pointer := .witness `Effect4.Pool.use_types },
-    { id := "pool-make-typed", concept := "store-typing", role := .compatibility
-      title := "Pool's make answers the pool's handle at every typed scope, for an acquisition of one effect type whose answer is the resource's type: its failure type is the acquisition's in normal form, so a failed acquisition fails make, and its requirement is the acquisition's with the scope's key, so a pool is made inside a scope (decisions rows 267 and 268; a positive size, and a resource type in normal form whose item record and cell record are formed; typing only: no run and no finalizer's run; an acquisition whose answer type is another type is outside the statement)"
-      pointer := .witness `Effect4.Pool.make_types },
-    { id := "pool-close-typed", concept := "store-typing", role := .compatibility
-      title := "Pool's close answers the unit at every typed scope, with no failure and no requirement, for a kept handle at the reference type of Pool's cell: the close's first step, the posted wake at the counted waiters, and the closer's loop over the closer's step; so it is a release that cannot fail, and make registers it (decisions rows 268 and 276, point 2; a resource type in normal form whose item record and cell record are formed; typing only: no wait along a run, no end of the loop and no finalizer's run)"
-      pointer := .witness `Effect4.Pool.close_answers },
-    { id := "pool-profile-closed", concept := "store-typing", role := .preservation
-      title := "Each transition of Pool's abstract model keeps the first profile, with no premise on its request (the model's half of pool-profile-preserved; nothing about a program, and no progress of a waiter; decisions rows 267 to 269)"
-      pointer := .witness `Effect4.Pool.Model.profile_closed },
-    { id := "pool-lease-enrols", concept := "store-typing", role := .inversion
-      title := "One lease of Pool's model enrols its request exactly when the pool is open and a lease holds every item (on the profile's states; a helper of the public waiting wrapper; no fairness and no liveness)"
-      pointer := .witness `Effect4.Pool.Model.lease_enrols_iff },
     { id := "semaphore-visit-selects-earliest", concept := "reactive-scheduling", role := .inversion
       title := "One visit of Semaphore's model selects the earliest fitting waiter at or after its cursor, and that waiter leaves (a helper of semaphore-expansion-agrees' waiting clauses; one visit, no walk and no liveness; decisions row 259)"
       pointer := .witness `Effect4.Semaphore.Model.visit_selects_earliest },
@@ -694,10 +673,12 @@ def registry : Registry where
     { id := "pool-select-takes-first", concept := "reactive-scheduling", role := .inversion
       title := "One selection of Pool's model takes the first waiters of the state that it finds, at most its count, and it changes the waiters alone (a helper of pool-wake-selection; one selection, no run and no liveness)"
       pointer := .witness `Effect4.Pool.Model.select_takes_first },
-
     -- 5. exact-codecs
+    { id := "type-metadata-exact", concept := "exact-codecs", role := .compatibility
+      title := "Structural TypeScript metadata retains the exact stored Ty declaration"
+      pointer := .witness `Effect4.Codegen.Metadata.type_metadata_exact },
     { id := "decode-iff", concept := "exact-codecs", role := .decidability
-      title := "Exactness of JSON decoding modulo normJ"
+      title := "JSON decoding is exact modulo normJ: a JSON value decodes to a value exactly when that value's encoding equals it under normJ; named record values keep optional presence"
       pointer := .witness `Effect4.Schema.decode_iff
       literature := [
         { work := "RendelOstermann2010", locator := "audit P32", relation := "definitionUsed" }
@@ -709,7 +690,7 @@ def registry : Registry where
         { work := "FosterEtAl2007", locator := "audit P11", relation := "adaptedResult" }
       ] },
     { id := "of-schema-exact", concept := "exact-codecs", role := .compatibility
-      title := "Exactness of Schema reader modulo normS"
+      title := "The Schema reader is exact modulo normS: a representation that reads as a type is, under normS, that type's schema"
       pointer := .witness `Effect4.Schema.Bridge.ofSchema_exact
       literature := [
         { work := "RendelOstermann2010", locator := "audit P32", relation := "adaptedResult" }
@@ -718,17 +699,14 @@ def registry : Registry where
       title := "Retraction of Schema generation on reserved-free types"
       pointer := .witness `Effect4.Schema.Bridge.ofSchema_schema },
     { id := "document-json-exact", concept := "exact-codecs", role := .compatibility
-      title := "rc.112's persisted Schema JSON read into a representation is that JSON modulo normJ (Representation.ofJson_exact): the reader dispatches on the frozen tag table and admits its answer through the re-encode guard (Reencode.guard_exact); nothing of rc.112's field admission, which admits fewer documents, or of the preparation for the bridge (decisions row 396 (2); slice A1)"
+      title := "rc.112's persisted Schema JSON, read into a representation, is that JSON modulo normJ; nothing of rc.112's field admission, which admits fewer documents, or of the bridge's preparation"
       pointer := .witness `Effect4.Representation.ofJson_exact },
     { id := "document-json-complete", concept := "exact-codecs", role := .compatibility
-      title := "A JSON value whose normal form is a writer image is admitted at some nesting bound, with that normal form (DocumentJson.ofJson_complete), modulo the planned goal ofJson_image; nothing at the public reader's fixed bound (decisions row 396 (2); slice A1)"
+      title := "A JSON value whose normal form is a writer's image is admitted at some nesting bound with that normal form, modulo the planned goal ofJson_image; nothing at the public reader's fixed bound"
       pointer := .witness `Effect4.Schema.DocumentJson.ofJson_complete },
     { id := "collection-term-print-read", concept := "exact-codecs", role := .compatibility
-      title := "Every scoped term reconstructs after structural printing, including records, payload class constructions under classes that cover them (decisions row 120), and every static tuple index"
+      title := "Every scoped, unannotated term whose payload classes are covered reads back after structural printing, records and static tuple indices included"
       pointer := .witness `Effect4.Program.readTerm_printTerm },
-    { id := "record-codec-layout", concept := "exact-codecs", role := .compatibility
-      title := "Record JSON decoding is exact under normJ; named record values retain optional presence"
-      pointer := .witness `Effect4.Schema.decode_iff },
     { id := "service-identifier-injective", concept := "exact-codecs", role := .compatibility
       title := "At one signature's scope key, distinct service keys print distinct target Identifier types"
       pointer := .witness `Effect4.Program.keyIdentifier_injective },
@@ -741,16 +719,129 @@ def registry : Registry where
     { id := "mask-rows-table-premises", concept := "exact-codecs", role := .compatibility
       title := "The mask's two printed rows, the getter as the mask that answers its own restore and a restore site as pipe(E, saved), have two reserved heads and keep the row table's nine decided premises at the extended table; a restore site is readable exactly when its saved term is a readable leaf and its body is readable; read_print and read_exact keep their statements (decisions row 245; program syntax only)"
       pointer := .witness `Effect4.Program.mask_rows_table_premises },
-
+    { id := "sketch-wire", concept := "exact-codecs", role := .compatibility
+      title := "A sketch's bytes are its program's and its hole table's canonical bytes: whatever decodes is exactly a well-formed sketch's encoding, and a well-formed sketch reads back; nothing of renumbering a stored sketch when its application gains a row"
+      pointer := .witness `Effect4.Program.Sketch.decode_exact },
+    { id := "json-read-exact", concept := "exact-codecs", role := .compatibility
+      title := "A canonical carrier read from JSON is the carrier whose cases print (ShapeDoc.print) that JSON is (Canonical.ofJson_exact): the reader takes only the cases print, a number as the binary64 of a natural, hex exact, fields in the shape's order, a case's name checked against its tag; JSON whose objects come in any order, and whose lists may be arrays, reads once normalised by the shape (Canonical.ofJsonAnyOrder, Canonical.ofJsonAnyOrder_exact), the named normaliser, and the tools print each list as an array (Canonical.print, the public print; decisions row 418, D2), the encoding ts/eff/eff.gen.ts types; nothing of the round trip, which needs every natural at most 2^53 and no option holding a shape that prints null (the agent's schema form; decisions row 334)"
+      pointer := .witness `Effect4.Store.Canonical.ofJson_exact },
+    { id := "typed-print-connector", concept := "exact-codecs", role := .compatibility
+      title := "The typed print, the table-driven print with each node's address, writes a call's type arguments where the row check joins the call's request, in the order of the row's variables, and the type arguments of an approved eliminator site where the site's checked context needs them; a program with no such row and no such site (NoJoin) has the typed print that is its print, byte for byte (printTyped_eq_print); it does not say that tsgo accepts a printed call (decisions row 325)"
+      pointer := .witness `Effect4.Program.printTyped_eq_print },
+    { id := "typed-print-erasure", concept := "exact-codecs", role := .compatibility
+      title := "At a readable program and a lawful spelling, erasing the inserted type arguments from a successful typed print gives the plain print byte for byte; not that tsgo accepts the typed print, nor anything of its run"
+      pointer := .witness `Effect4.Codegen.eraseJoinArgs_printTyped },
+    { id := "typed-print-read", concept := "exact-codecs", role := .compatibility
+      title := "At a readable program and a lawful spelling, the typed reader reads a successful typed print back to its program after erasing inserted type arguments; the raw reader still refuses inserted arguments, and no equality of raw foreign spellings follows"
+      pointer := .witness `Effect4.Codegen.readTyped_printTyped },
+    { id := "binder-names-read", concept := "exact-codecs", role := .compatibility
+      title := "The reader takes any binder names: a text whose binders the renaming takes to the printer's names (Rename.expr), giving the print of a readable program, reads, to that program, or to the program it is the print of as it stands (read_renamed); each use resolves to its nearest binder, a layer clause closes the lexical scope, and a call's head is a name; law 11 keeps its statement, and law 12 holds under the renaming (read_exact); it says nothing of what tsgo accepts, and the TypeScript reader's agreement with this one is a finite check (decisions row 418; release item 3, part b)"
+      pointer := .witness `Effect4.Program.read_renamed },
+    { id := "module-defs-round-trip", concept := "exact-codecs", role := .compatibility
+      title := "Under a lawful row table and readable classes, a printed module reads back to its program, definition block, layers and services included; empty blocks and out-of-scope references are refused at print; nothing of tsgo's acceptance or rc.112's run"
+      pointer := .witness `Effect4.Api.printModule_roundTrip },
+    { id := "modeled-codec", concept := "exact-codecs", role := .compatibility
+      title := "Under codec admission at the value, a modeled value's JSON encoding decodes and reads back to that value; admission stays a premise, since naturals above 2^53 have no exact JSON image; no TypeScript codec or target execution"
+      pointer := .witness `Effect4.Schema.Modeled.codec_roundtrip },
+    { id := "record-field-laws", concept := "exact-codecs", role := .compatibility
+      title := "For a record with ascending field names, a field reference is a lens on the machine's record frame: reading at its name gives the field's encoding, and setting there writes what the reference's write gives; nothing of optional fields"
+      pointer := .witness `Effect4.Schema.FieldRef.frame_laws },
+    { id := "workspace-entry-exact", concept := "exact-codecs", role := .compatibility
+      title := "A workspace entry's reader answers only for its own value tree; no claim that the action is accepted or that its execution happened"
+      pointer := .witness `Effect4.Tool.WorkspaceEntry.ofVal_exact },
+    { id := "codec-profile-retains-value", concept := "exact-codecs", role := .compatibility
+      title := "A successful guarded JSON write reads back as the original canonical value; writing need not succeed, and no raw JSON text identity or native parser claim"
+      pointer := .witness `Effect4.Tool.CodecProfile.write_read },
+    { id := "json-read-located", concept := "exact-codecs", role := .compatibility
+      title := "The profile's located JSON reader is exact: a tree it reads as a carrier is that carrier's canonical print up to shape order, with no budget, and dropping refusal locations gives the unlocated reader; nothing of JSON text"
+      pointer := .witness `Effect4.Tool.CodecProfile.profileLocated_exact },
+    { id := "json-refusal-placed", concept := "exact-codecs", role := .compatibility
+      title := "Every refusal of the profile's located reader names a place the input or the shape has: a present value, a missing field under a present parent, or a place in the shape; nothing of which repair the place needs"
+      pointer := .witness `Effect4.Tool.CodecProfile.profileLocated_site },
+    { id := "json-trees-agree", concept := "exact-codecs", role := .compatibility
+      title := "Within the profile's limit, a tree over naturals and its binary64 conversion read alike, refusals mapped; nothing above the limit, which both refuse"
+      pointer := .witness `Effect4.Tool.CodecProfile.read_toBinary64 },
+    { id := "json-text-round-trip", concept := "exact-codecs", role := .compatibility
+      title := "Within the profile, the JSON text grammar parses back what its renderer writes; not the converse, that every text it parses is a rendering"
+      pointer := .witness `Effect4.NatJson.parse_render },
+    { id := "tool-method-descriptor", concept := "exact-codecs", role := .compatibility
+      title := "Each tool request's wire name is its key's descriptor name, so the method table has one owner; the hints destructive, idempotent and open-world are set by hand, with no law"
+      pointer := .witness `Effect4.Tool.method_name_agrees },
+    { id := "cas-node-read-exact", concept := "exact-codecs", role := .compatibility
+      title := "A successful node byte read returns the exact node those bytes encode, well formed and at version 0; no admission, hashing, capacity or persistence claim"
+      pointer := .witness `Effect4.Store.Node.read_exact },
+    { id := "cas-get-exact", concept := "exact-codecs", role := .compatibility
+      title := "A successful typed read names the carrier's exact resident node, after version, kind, specification and canonical payload checks; replay stays explicit; no atomicity or admission claim for an arbitrary interpreter"
+      pointer := .witness `Effect4.Store.Cas.get_exact },
+    { id := "cas-admission-handles", concept := "exact-codecs", role := .preservation
+      title := "Every successfully inserted node holds no handle in its content, since the kind's handle rule runs before edge and resident checks; no progress or host persistence claim"
+      pointer := .witness `Effect4.Store.putNode_ok_handleFree },
+    { id := "cas-advance-head", concept := "exact-codecs", role := .compatibility
+      title := "An accepted move of a root to a changed target checks the whole expected head and raises its generation by exactly one; no host persistence, crash or progress claim"
+      pointer := .witness `Effect4.Store.advance_head },
+    { id := "cas-advance-stale", concept := "exact-codecs", role := .compatibility
+      title := "A stale expected head refuses the move before any target or policy check; no host persistence, crash or progress claim"
+      pointer := .witness `Effect4.Store.advance_stale },
+    { id := "cas-advance-duplicate", concept := "exact-codecs", role := .compatibility
+      title := "Moving a root to its current target keeps the exact store and generation; no host persistence, crash or progress claim"
+      pointer := .witness `Effect4.Store.advance_duplicate },
+    { id := "cas-journal-fast-forward", concept := "exact-codecs", role := .preservation
+      title := "An accepted move of a journal root to a changed target reaches the prior head through designated parent fields; no host persistence, crash or progress claim"
+      pointer := .witness `Effect4.Store.journal_ff },
+    { id := "cas-commit-grows", concept := "exact-codecs", role := .preservation
+      title := "An accepted transaction keeps every earlier resident at its digest; no host persistence, crash or progress claim"
+      pointer := .witness `Effect4.Store.commit_grows },
+    { id := "cas-commit-bytes", concept := "exact-codecs", role := .preservation
+      title := "After an accepted transaction, reading an earlier resident returns the same node; no host persistence, crash or progress claim"
+      pointer := .witness `Effect4.Store.bytes_never_change },
+    { id := "cas-commit-reads", concept := "exact-codecs", role := .compatibility
+      title := "After an accepted transaction, every submitted node reads back at its digest, and conflicts refuse; no host persistence, crash or progress claim"
+      pointer := .witness `Effect4.Store.commit_reads },
+    { id := "cas-interrupted-closed", concept := "exact-codecs", role := .preservation
+      title := "An accepted cut of a transaction from a closed store, after the whole transaction is validated, leaves the store closed; no host persistence, crash or progress claim"
+      pointer := .witness `Effect4.Store.interrupted_closed },
+    { id := "cas-interrupted-roots", concept := "exact-codecs", role := .compatibility
+      title := "An accepted cut either keeps the exact old root table or returns exactly the committed store; no host persistence, crash or progress claim"
+      pointer := .witness `Effect4.Store.interrupted_roots },
+    { id := "cas-result-envelope", concept := "exact-codecs", role := .compatibility
+      title := "A node answers a designated query exactly when it is a version-0 result envelope of that query at the common specification, by its query field, never a reference inside the output; no result truth, host determinism or hash injectivity claim"
+      pointer := .witness `Effect4.Store.Node.resultQuery?_eq_some_iff },
+    { id := "cas-result-once", concept := "exact-codecs", role := .preservation
+      title := "Two bindings of a reached store that answer one designated query hold the same node, through commits, interrupted prefixes and checked restoration; no result truth, host determinism, progress or hash injectivity claim"
+      pointer := .witness `Effect4.Store.Cas.result_once },
+    { id := "cas-resident-injective", concept := "exact-codecs", role := .compatibility
+      title := "Two nodes resident in one store at equal addresses of their own encodings are equal, given both lookups; no hash injectivity or host persistence claim"
+      pointer := .witness `Effect4.Store.address_inj_resident },
+    { id := "object-exact", concept := "exact-codecs", role := .compatibility
+      title := "Reopening a built program's object gives back that program; no host execution or persistence claim"
+      pointer := .witness `Effect4.Program.Object.open_ofBuilt },
+    { id := "object-bytes-exact", concept := "exact-codecs", role := .compatibility
+      title := "Accepted object bytes are exactly its store node bytes and have a well-formed value; R13; no migration claim"
+      pointer := .witness `Effect4.Program.Object.read_exact },
+    { id := "object-load-exact", concept := "exact-codecs", role := .compatibility
+      title := "Saving and loading a built program recovers it when its encoded value is well formed; R13; no host persistence claim"
+      pointer := .witness `Effect4.Program.Object.load_bytes },
+    { id := "service-view-printed", concept := "exact-codecs", role := .compatibility
+      title := "TypeScript service success is domain service formation and TypeScript's naming conditions; R8; no claim on the refusal reported, no target compiler or host observation claim"
+      pointer := .witness `Effect4.Program.serviceFaultIn_tsProfile_iff },
+    { id := "service-view", concept := "exact-codecs", role := .adequacy
+      title := "When the domain services have no fault, every service has readable entries; no target compiler or host observation claim"
+      pointer := .witness `Effect4.Program.entriesOf_isSome },
+    { id := "program-digest-exact", concept := "exact-codecs", role := .compatibility
+      title := "A program files in the store under kind program (Content (Eff NativeOp), generated), so two programs with one address are equal or a digest collision (address_eq_or_collision at programs); nothing of a piece's key, which moves with its depth (the MCP note's ruling 3)"
+      pointer := .witness `Effect4.Store.address_eq_or_collision },
     -- 6. subtyping-algebra
+    { id := "raw-formation", concept := "subtyping-algebra", role := .decidability
+      title := "Raw formation checking agrees with distinct record names, admitted map keys, a deferred's admitted error column, and no type variable outside a template; a declared service carrier is a strict formation site (decisions rows 288, 297)"
+      pointer := .witness `Effect4.Program.Formation.checkInput_eq_none_iff },
     { id := "subn-refl", concept := "subtyping-algebra", role := .compatibility
-      title := "Reflexivity of normalized subtyping"
+      title := "Normalized subtyping is reflexive: every type is below itself"
       pointer := .witness `Effect4.Program.Ty.subN_refl
       literature := [
         { work := "TAPL", locator := "§15.2, p. 182", relation := "definitionUsed" }
       ] },
     { id := "subn-trans", concept := "subtyping-algebra", role := .transitivity
-      title := "Transitivity of normalized subtyping"
+      title := "Normalized subtyping is transitive: a type below one below a third is below the third"
       pointer := .witness `Effect4.Program.Ty.subN_trans
       literature := [
         { work := "TAPL", locator := "§15.2, p. 182", relation := "proofTechnique" }
@@ -762,52 +853,62 @@ def registry : Registry where
         { work := "TAPL", locator := "§16.3, p. 218", relation := "adaptedResult" }
       ] },
     { id := "normalize-idem", concept := "subtyping-algebra", role := .compatibility
-      title := "Normalization idempotence"
+      title := "Normalization is idempotent: normalizing a normal type changes nothing"
       pointer := .witness `Effect4.Program.Ty.normalize_idem },
     { id := "sub-antisymm-canonical", concept := "subtyping-algebra", role := .antisymmetry
-      title := "Antisymmetry of subtyping on canonical representatives CTy"
+      title := "Subtyping is antisymmetric on canonical types: two canonical types each below the other are equal"
       pointer := .witness `Effect4.Program.Ty.sub_antisymm_canonical
       literature := [
         { work := "Castagna2024", locator := "audit P6", relation := "adaptedResult" }
       ] },
     { id := "template-match-complete", concept := "subtyping-algebra", role := .decidability
-      title := "The match of a template by bounds is complete: on a template that is its own normal form, is admissible and holds no nominal reference, a normal request below some instance has a match, from any seed that the instance agrees with; no premise asks where a parameter first occurs or where never stands; the match is sound by its guard (matchB_sound), its bindings are the least (matchB_least), an argument list is checked at one final list of bindings (matchArgsB_sound), and smaller arguments have a match with smaller bindings (matchArgsB_monotone); every template of the tree is in reach, as a finite check; the row check and a binder term read the match by bounds with no guard (slice UNGUARD); it does not match under a union head or a nominal reference, and it establishes nothing of tsgo's inference (decisions rows 299, 303)"
+      title := "Matching a template by bounds is complete: for a normal, admissible template with no nominal reference, a normal request below some instance that agrees with the seed has a match; nothing under a union head or nominal reference, nor of tsgo's inference"
       pointer := .witness `Effect4.Program.Bounds.matchB_complete },
     { id := "slice-lattice-minimal", concept := "subtyping-algebra", role := .monotonicity
-      title := "For a monotone map from the type slices of one program to a preorder of types: a minimal valid slice exists below each valid slice, the one-pass descent ends at one below its start, a refined query has a minimal slice below a minimal slice of the wider query, and the join of two valid slices is valid for the join of their queries; no statement names Eff, Ty or the checker (decisions rows 282, 286)"
+      title := "For a monotone map from type slices to a preorder, every valid slice has a minimal one below it, which one-pass descent reaches; refined queries get smaller minimal slices; joins of valid slices are valid for joined queries; nothing about Eff, Ty or the checker"
       pointer := .witness `Effect4.SliceView.lattice_minimal },
     { id := "union-rule-lift", concept := "subtyping-algebra", role := .compatibility
       title := "A member rule lifted to every type by reading the union members of the normal form and joining the answers: it answers the least answer at never; at one normal union member it is the member rule, up to the join with the least answer; two types with one normal form have one answer; a member rule that is monotone in the order lifts to a monotone rule; a property of a value and an answer that the join keeps on each side passes from the union members to the lifted rule; the join law is an equation at a type, at a pair of types and at a carrier whose order is antisymmetric (lift_union_eq, lift_union_eq_pair, lift_union_eq_of_antisymm), and a map with the four properties of the lifted rule is the lifted rule, at a type and at a pair of types (lift_unique, lift_unique_pair); its order is read in Lean core's classes: a carrier with those classes is a carrier of answers (AnswerOrder.ofCore), and the checker's order on raw types is the order of canonical types by definition (subN_iff_le); the two record rules are its instances, and the fiber rule is the first converted rule (union-rule-extend) (decisions rows 282, 285, 293, 298, 300)"
       pointer := .witness `Effect4.Program.UnionRule.lift_laws },
     { id := "union-rule-extend", concept := "subtyping-algebra", role := .compatibility
-      title := "A converted eliminator of the checker is the full fallback of its member rule: the member rule's own answer where the member rule answers at the raw target, and the lifted rule over every normalized union member elsewhere; for every UnionRule.Eliminator it agrees with the member rule, it is the lifted rule where the member rule refuses, and it keeps every answer of the earlier guarded rule (Eliminator.extendAll_laws); it answers a least answer at never; its answer a puts the target below C a in Ty.subN, and an answer b is above a exactly when the target is below C b; a retained member that the member rule refuses refuses the whole target; it is monotone at every smaller type (Eliminator.extendAll_mono), and its answer equals the lifted rule's up to the order (Eliminator.extendAll_lift); the fiber, list and exit rules are instances (fiberTy, Checker.listOf?, Checker.exitOf?); the cause rule reads two heads, so it is the full fallback of Member.cause with four member facts of an upper type (causeInputError_upper); the option rule reads the normal form alone, so it is the lifted rule of Member.option, and it is the earlier normalized-head rule where the normal form has at most one member and is not never (optionTy_eq_normal; decisions row 304); the guarded rule's laws stay for their earlier consumers (Eliminator.extend_laws); it does not establish checker-monotone or anything that tsgo accepts (decisions rows 292 to 294, 296, 298 and 304; slice P2b)"
+      title := "A converted eliminator is the full fallback of its member rule: it gives the member rule's answer where that answers, the lifted rule over normalized union members elsewhere, and keeps the earlier guarded rule's answers; nothing of checker monotonicity or of what tsgo accepts"
       pointer := .witness `Effect4.Program.UnionRule.Eliminator.extendAll_laws },
     { id := "variance-semiring", concept := "subtyping-algebra", role := .compatibility
-      title := "The variance semiring: Var4, the four parity sets of the signed paths that reach an occurrence (bi, co, contra, inv), with join and composition, is a commutative idempotent semiring with bi as zero and co as one, ordered by inclusion with join as least upper bound; on the declared alphabet's image the walk's composition (Bounds.comp) is its product and the reference's Boolean reading (Ty.Variance.select) is its select (Bounds.comp_toVar4, Ty.Variance.select_toVar4); the polarity of a template's parameter is one fold of the generated TyAlgebra at a reading of the heads (Ty.polarity, HeadReading.sub); it establishes no subtyping fact of Ty (the OpenAI math review, slice VAR-1)"
+      title := "The four variances (bi, co, contra, inv) with join and composition form a commutative idempotent semiring with bi as zero and co as one, ordered by inclusion; the walk's composition and the Boolean select agree with it; no subtyping fact of Ty"
       pointer := .witness `Effect4.Program.Var4.semiring_laws },
     { id := "instantiate-respects-polarity", concept := "subtyping-algebra", role := .monotonicity
-      title := "Instantiation respects polarity: if every parameter's two bindings are related by raw Ty.sub at the parameter's polarity in a template (a bivariant parameter asks nothing, an invariant one both directions), the two instances are related; with matchArgsB_monotone it gives a smaller answer at a smaller request where the answer reads its parameters at co or bi; no semantic variance, nothing of tsgo's inference (slice VAR-2)"
+      title := "Instantiation respects polarity: if each parameter's two bindings are related by raw Ty.sub at its polarity in the template (nothing for bivariant, both ways for invariant), the two instances are related; no semantic variance, nothing of tsgo's inference"
       pointer := .witness `Effect4.Program.Ty.sub_instantiate_polarity },
     { id := "checked-types-closed", concept := "subtyping-algebra", role := .inversion
       title := "A formed program that the checker admits has closed types: at a closed environment, a typing signature with closed atoms and closed service carriers, and annotations formed outside a template; no premise on a row or on a layer reference; the whole-program checker has the same property, and an admitted program has closed types with no premise (typeOfProgram_closed, AdmittedProgram.closed); the checker alone does not have it (decisions rows 288 point 6 a, 297)"
       pointer := .witness `Effect4.Program.check_closed },
-
     -- 7. initial-algebras-folds
+    { id := "checker-combine-deps", concept := "initial-algebras-folds", role := .compatibility
+      title := "Combining the checker's answers for a program's actual dependencies gives its whole verdict, layer projections for every module and part key included; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Check.combine_deps },
+    { id := "checker-placed-verdict", concept := "initial-algebras-folds", role := .compatibility
+      title := "A part's verdict placed at a base equals checking that part at the base, annotation table included; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Check.run_placed },
+    { id := "checker-part-extension", concept := "initial-algebras-folds", role := .compatibility
+      title := "A part that types at signature a, where a extends b, gets the same verdict and annotation table at b; negative verdicts and module reuse are excluded; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Check.run_part_extends },
+    { id := "checker-explanation-replays", concept := "initial-algebras-folds", role := .compatibility
+      title := "A selected local explanation names an actual dependency with its exact placed refusal, and an aggregate failure needs no invented part; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Check.explain_replays },
     { id := "handler-fold-root", concept := "initial-algebras-folds", role := .fundamentalProperty
       title := "The handler fold reads a definition block and joins all its children"
       pointer := .witness `Effect4.Program.handlersOf_defs },
-
     { id := "document-json-fold-retraction", concept := "initial-algebras-folds", role := .compatibility
-      title := "G6: the unrestricted JSON retraction is proved in Lean; evidence within the semantic axiom ceiling remains open (owner ruling, view-graph slice)"
+      title := "The JSON fold's reader retracts its writer with no restriction, within the semantic axiom ceiling"
       pointer := .absent "Tools.Document.Json.Document.ofJson_json proves the unrestricted equation. Its existing Lean.Json carrier reaches Classical.choice, so neither the semantic ceiling [propext, Quot.sound] nor the proof-plan gate admits it. The theorem remains in tools/Tools/Document/Json.lean; the trust policy is unchanged." },
     { id := "layer-graph-glue", concept := "initial-algebras-folds", role := .compatibility
-      title := "G1: the named incidence observation of provide is the overlay of its operands, for every layer and atom algebra; no boundary hiding or execution claim (view-graph slice, row 443)"
+      title := "The named incidence graph of provide is the overlay of its operands' graphs, for every layer and atom algebra; no boundary hiding or execution claim"
       pointer := .witness `Tools.View.LayerGraph.hypergraph_provide },
     { id := "layer-graph-merge", concept := "initial-algebras-folds", role := .compatibility
-      title := "G2: swapping merge operands keeps the named incidence edge-set model, for every layer and atom algebra; not positional syntax, construction order, or last-wins evaluation (view-graph slice, row 443)"
+      title := "Swapping merge's operands keeps the named incidence graph's edge set, for every layer and atom algebra; nothing of positional syntax, construction order or last-wins evaluation"
       pointer := .witness `Tools.View.LayerGraph.hypergraph_merge_comm },
     { id := "hom-eq-cata-eff", concept := "initial-algebras-folds", role := .fundamentalProperty
-      title := "Pointwise equality of algebra homomorphisms with cata_eff"
+      title := "Every algebra homomorphism out of Eff equals cata_eff at every node"
       pointer := .witness `Effect4.Program.hom_eq_cata_eff
       literature := [
         { work := "MeijerFokkingaPaterson1991", locator := "audit P24", relation := "definitionUsed" },
@@ -820,25 +921,25 @@ def registry : Registry where
         { work := "TAPL", locator := "§16.1, p. 210", relation := "adaptedResult" }
       ] },
     { id := "cata-eff-congr-on", concept := "initial-algebras-folds", role := .compatibility
-      title := "Fold congruence along agreeing signature algebras"
+      title := "Two signature algebras that agree on what a program reads give the same fold on that program"
       pointer := .witness `Effect4.Program.cata_eff_congr_on },
     { id := "addressed-replacement", concept := "initial-algebras-folds", role := .compatibility
       title := "Successful same-sort path replacement reads back, retains the root sort, and restores the original tree"
       pointer := .witness `Effect4.Program.Node.replaceAt_spec },
     { id := "address-composes", concept := "initial-algebras-folds", role := .compatibility
-      title := "An address is a composite of child lenses: the node and the environment at p ++ q are the ones at q inside the node at p (Node.at_append, Node.envAt_append), and an edit at p ++ q is the edit at q inside the node at p, put back at p (Node.replaceAt_append); below an edit the edited node reads the replacement; nothing of typing, of behaviour, or of a moved subtree's variable levels and layer-reference targets (seat ORG's theory map, section 3)"
+      title := "An address composes from child lenses: the node, environment and edit at p ++ q are those at q inside the node at p; nothing of typing, behaviour, or a moved subtree's variable levels and layer-reference targets"
       pointer := .witness `Effect4.Program.Node.replaceAt_append },
     { id := "path-fold-natural", concept := "initial-algebras-folds", role := .compatibility
-      title := "A path fold is natural in its base: the fold from q ++ r is the fold from r with each yield read below q (foldMapAt_eff_base and six siblings), and a map that keeps the operation commutes with the fold (foldMapAt_eff_hom); the address list's shift is their instance; nothing of a judgment, a table, or a refusal's location, which the checker's base law owns (checker-base-natural; seat ORG's L5 and L6)"
+      title := "A path fold is natural in its base: folding from q ++ r is folding from r with each yield read below q, and an operation-keeping map commutes with the fold; nothing of judgments, tables or refusal locations"
       pointer := .witness `Effect4.Program.foldMapAt_eff_base },
     { id := "checker-base-natural", concept := "initial-algebras-folds", role := .compatibility
-      title := "The checker is natural in its base path: checking at q ++ p is checking at p with each refusal moved below q (Checker.check_rebase and its six siblings), so a subtree's table at q ++ a is its table at a with each entry moved below q (tableAt_rebase); nothing of the verdict's correctness (check_sound), of a definition block's module check, or of cost (seat ORG's L7 and L8)"
+      title := "The checker is natural in its base path: checking at q ++ p is checking at p with each refusal moved below q, so subtree tables shift the same way; nothing of the verdict's correctness, a definition block's module check, or cost"
       pointer := .witness `Effect4.Program.Checker.check_rebase },
     { id := "operation-data-scoped", concept := "initial-algebras-folds", role := .decidability
       title := "The scope fold decides a perform node: scoped exactly when its operation's own data (the alphabet's ScopedOp) and its request are"
       pointer := .witness `Effect4.Program.Eff.perform_scoped_iff },
     { id := "reference-expansion-complete", concept := "initial-algebras-folds", role := .substitution
-      title := "A program with well-formed layer references expands to a program with no reference site, at the bound of expandRefs"
+      title := "A program with well-formed layer references expands, at the bound of expandRefs, to a program with no reference site"
       pointer := .witness `Effect4.Program.expanded_refs_nil_of_wf },
     { id := "sketch-conservative", concept := "initial-algebras-folds", role := .compatibility
       title := "A program that performs no hole row is checked the same with any hole table appended after the application's rows, refusals included, at every environment and path (decisions rows 288, 291)"
@@ -868,7 +969,7 @@ def registry : Registry where
       title := "The address table of a program has one entry for each address of a node, and no other (mem_addresses_iff); an entry of a program holds the environment that the step function answers and the checker's answer there; the distinct refusals of the entries start with the located refusal of explain (refusals_head), and the list is empty exactly when the checker admits the program; an entry after a refused sibling is not reached and holds no answer; the table is a specification, and each entry costs up to one check of the program; no law orders the refusals after the head (decisions row 302)"
       pointer := .witness `Effect4.Program.refusals_nil_iff },
     { id := "edit-splices-table", concept := "initial-algebras-folds", role := .preservation
-      title := "An edit that keeps its focus's type splices the address table: in a program that the checker types, replace the sub-program at the address that focusAt answers by a program of the focus's type in the focus's environment; the edited program's table is the old table with the subtree's segment replaced by the new sub-program's table at the focus's environment and the subtree's own addresses (Table.splice), so nothing outside the subtree is checked again; nothing of an edit that changes the type, of layer references, of a refused program, or of a whole program with a block (cutover slice S1; Reps, Teitelbaum and Demers 1983; decisions rows 302 and 334)"
+      title := "In a typed program, replacing the focus by a program of its type in its environment splices the address table: only the subtree's segment changes; nothing of type-changing edits, layer references, refused programs or programs with a block"
       pointer := .witness `Effect4.Program.table_splice },
     { id := "edit-session-coherent", concept := "initial-algebras-folds", role := .preservation
       title := "What an edit session shows after an open and any run of edits is the checker's answer on its sketch, refusals and type, definition blocks and holes included, because its table stays its sketch's table: the open computes it part by part, and each edit keeps it, splicing below the root where the table types the root and the edited address and the checker gives the new sub-program the old type at the part's signature (Sketch.table_fill), and computing it again elsewhere; nothing of an edit of the hole table, of a run of the program, or of the cost (decisions row 334)"
@@ -880,7 +981,7 @@ def registry : Registry where
       title := "A spliced edit repaints its subtree and nothing else: the addresses an edit session shows again after an edit that kept its focus's type are the new subtree's, at the edited address, and every entry of the new table at another address is an entry of the old table; nothing of an edit that changes the type, which shows the whole table again, or of a page drawn from the table (decisions row 334; the live authoring note's repaint set)"
       pointer := .witness `Effect4.Program.EditSession.feed_repaint },
     { id := "module-address-table", concept := "initial-algebras-folds", role := .compatibility
-      title := "The address table of a sketch reads a whole program, definition block included: the root's entry holds the module check's answer, and every other address is read in the part that holds it, at the part's signature and environment, located at the whole program's address; the distinct refusals start with the sketch's check's refusal (Sketch.refusals_head), and the list is empty exactly when the sketch checks; every part of a typed module is typed (moduleHasTy_partAt_typed); no law orders the refusals after the head, and no law yet equates the table with the program's off a block (cutover slice S1; decisions rows 302, 328 and 333)"
+      title := "A sketch's refusal list is empty exactly when the sketch checks, and its address table reads each address in its own part, block included; no order of refusals after the head, and no equation with the program's table off a block"
       pointer := .witness `Effect4.Program.Sketch.refusals_nil_iff },
     { id := "module-annotate-table", concept := "initial-algebras-folds", role := .compatibility
       title := "A sketch's address table, computed part by part (Sketch.annotate: the module check's answer at the root, each body's table at its base in its declared request, the main program's table at [1], all at the block's signature), is its table's specification (Sketch.table), refused sketches and mismatched blocks included; nothing of the cost (decisions rows 328, 333 and 334)"
@@ -894,51 +995,94 @@ def registry : Registry where
     { id := "module-holes-conservative", concept := "initial-algebras-folds", role := .compatibility
       title := "A sketch whose whole program performs no hole, each body and the main program read at the block's signature, is checked by the module check as its program, refusals included (Sketch.check_filled_module); the module check is unchanged under an extension of the signature for such a program (checkModule_restrict); nothing of a program that performs a hole (decisions rows 282 and 328)"
       pointer := .witness `Effect4.Program.Sketch.check_filled_module },
-    { id := "sketch-wire", concept := "exact-codecs", role := .compatibility
-      title := "A sketch's bytes are its program's canonical bytes and its hole table's (Sketch.encode): a well-formed sketch reads back (Sketch.decode_encode), and whatever reads was that sketch's bytes, well-formed (Sketch.decode_exact); no consumer since the query tool was retired (seams §2.2), the session tool carrying a sketch through its generated codec; nothing of a stored sketch's renumbering when its application gains a row (decisions row 305, point 3)"
-      pointer := .witness `Effect4.Program.Sketch.decode_exact },
-    { id := "json-read-exact", concept := "exact-codecs", role := .compatibility
-      title := "A canonical carrier read from JSON is the carrier whose cases print (ShapeDoc.print) that JSON is (Canonical.ofJson_exact): the reader takes only the cases print, a number as the binary64 of a natural, hex exact, fields in the shape's order, a case's name checked against its tag; JSON whose objects come in any order, and whose lists may be arrays, reads once normalised by the shape (Canonical.ofJsonAnyOrder, Canonical.ofJsonAnyOrder_exact), the named normaliser, and the tools print each list as an array (Canonical.print, the public print; decisions row 418, D2), the encoding ts/eff/eff.gen.ts types; nothing of the round trip, which needs every natural at most 2^53 and no option holding a shape that prints null (the agent's schema form; decisions row 334)"
-      pointer := .witness `Effect4.Store.Canonical.ofJson_exact },
     { id := "call-instance-address", concept := "initial-algebras-folds", role := .inversion
       title := "The call instance at an address is the row check's answer: where callAt answers, the node there is a call of the instance's operation, its request has the instance's request type in the address's environment, and the row check at that type answers the instance's two columns; the instance keeps the row's bindings at the request (rowBindings), which instantiate the two columns where the row check answers (checkRow_rowBindings) (nothing about a run's call at that address: no registration records it; decisions row 310)"
       pointer := .witness `Effect4.Program.callAt_rowTy },
-    { id := "typed-print-connector", concept := "exact-codecs", role := .compatibility
-      title := "The typed print, the table-driven print with each node's address, writes a call's type arguments where the row check joins the call's request, in the order of the row's variables, and the type arguments of an approved eliminator site where the site's checked context needs them; a program with no such row and no such site (NoJoin) has the typed print that is its print, byte for byte (printTyped_eq_print); it does not say that tsgo accepts a printed call (decisions row 325)"
-      pointer := .witness `Effect4.Program.printTyped_eq_print },
-    { id := "typed-print-erasure", concept := "exact-codecs", role := .compatibility
-      title := "A successful typed print erases to the print: at a readable program and a lawful spelling, the named erasure of the inserted type arguments gives the print of the program, byte for byte; the erasure keeps an operation's own arguments and the stored type annotations; it does not say that tsgo accepts the typed print, or anything of its run (decisions row 325; slice P2b)"
-      pointer := .witness `Effect4.Codegen.eraseJoinArgs_printTyped },
-    { id := "typed-print-read", concept := "exact-codecs", role := .compatibility
-      title := "The reader reads a successful typed print back to its program after the named erasure, at a readable program and a lawful spelling, by the existing read_print; what the typed reader accepts is, after the erasure, a print as it stands or a text whose binders rename to a print (readTyped_exact); the raw reader still refuses an inserted argument before the erasure, and no equality of raw foreign spellings follows (decisions row 325; slice P3)"
-      pointer := .witness `Effect4.Codegen.readTyped_printTyped },
-    { id := "binder-names-read", concept := "exact-codecs", role := .compatibility
-      title := "The reader takes any binder names: a text whose binders the renaming takes to the printer's names (Rename.expr), giving the print of a readable program, reads, to that program, or to the program it is the print of as it stands (read_renamed); each use resolves to its nearest binder, a layer clause closes the lexical scope, and a call's head is a name; law 11 keeps its statement, and law 12 holds under the renaming (read_exact); it says nothing of what tsgo accepts, and the TypeScript reader's agreement with this one is a finite check (decisions row 418; release item 3, part b)"
-      pointer := .witness `Effect4.Program.read_renamed },
-    { id := "module-defs-round-trip", concept := "exact-codecs", role := .compatibility
-      title := "A module with a definition block reads back: the module printer prints each definition as a constant before the layers, an arrow from its request and its parameters, each a function named by its declaration (slice HO-3a), with its declared result type around a suspension of its body, an invocation as the definition's name applied to its request, and an invocation with programs as that name applied to the request and to each program as an arrow of the binder due at the call (slice HO-3b, read back under the block's invocation laws, LawfulInvokes); the block's module layers print after the services as constants named by their paths (printModuleLayers), and a reference to one prints as that name; when each declaration has columns readable under the module's payload classes (a column that names a class reads as the class's record), a canonical requirement row and a name with no layer path, each body and each of its own layers at the signature and spelling map its parameters extend (LawfulSpelling.withParams; a body's own hoisted layers print as constants at the top of its suspension, row 341, step 3b), the main program, each layer and each module layer read back at the block's signature through the block's spelling map, and each module layer's name decodes to its path, the module reads back to the program, its module layers rebuilt in order (readModule_printModule_defs), after its classes and the services of the rows it declares, which the file reader reads back exactly against the table (readRowServices_rowServiceDecls, readRowServices_exact; the file, ModuleEmission.readFile); the block's spelling map is lawful under the signature's invocation laws and readable names (LawfulSpelling.withDefs), which the native signature and the printer's name check give (nativeCalls, defsNamed_of_fault), so the program interface's module round trip holds for a program with a block (Api.printModule_roundTrip); the printer refuses an empty block and a reference out of its scope (Eff.inScope), and a header's requirement row reads back by the requirement reader (readKeys); the block's services, declared by its definitions' roles, print after the definitions as an Effect service's key and layer each (printServices) and give the roles back from the layers (roleOf), when serviceFault finds no fault (printServices_ok, restoreRoles); a method whose definition takes programs takes them after its arguments and passes them on, and the arity read back is the closure's parameters less those programs (slice HO-5, readServiceMethods_ok); it does not say that tsgo accepts the module or how rc.112 runs it (decisions rows 328, 338, 339 and 341, G6; slices PROC-3 and CO-6b)"
-      pointer := .witness `Effect4.Api.printModule_roundTrip },
-    { id := "modeled-codec", concept := "exact-codecs", role := .compatibility
-      title := "A modeled value survives JSON and back at the normal form of its type, under codec admission at the value (Ty.isCodecValue): decoding its encoding and reading the value back answers the value; admission stays a premise, since a natural above 2^53 inhabits nat and has no exact JSON image; no TypeScript codec and no target execution (decisions row 330, slice L1)"
-      pointer := .witness `Effect4.Schema.Modeled.codec_roundtrip },
-    { id := "record-field-laws", concept := "exact-codecs", role := .compatibility
-      title := "A field reference is a lens on the record frame: for a record with ascending names, at every identity context, the machine's read at the reference's name reads the field's encoding, and its overwrite at that name writes the record the reference's write gives (FieldRef.frame_laws); on carriers the reference is a lawful lens whose writes at two positions commute; nothing of an optional field (decisions row 330, slice L2)"
-      pointer := .witness `Effect4.Schema.FieldRef.frame_laws },
     { id := "annotate-table", concept := "initial-algebras-folds", role := .compatibility
       title := "The address table in one traversal: annotate, the checker's seven functions with a record at each node, answers the address table at every program, entry for entry and in its order; each node's checker arm runs once, and a child's environment comes from the answers before it; past a refused read the subtree is not reached, as in the table; no theorem counts the cost, and the left child's entries are copied at each node (decisions rows 302, 324)"
       pointer := .witness `Effect4.Program.annotate_eq_table },
     { id := "term-slot-environment", concept := "initial-algebras-folds", role := .inversion
       title := "On a typed node, the term in each slot whose rule extends the node's environment has a type at the environment that the slot table answers: the test of catchIf, the test, the step and the result of iterate, and an operation's own term at the instance of its parameter; the proof is the inversion of HasTy at the three constructors; it does not say that the environment is the only one, and it says nothing at a refused node (decisions row 302)"
       pointer := .witness `Effect4.Program.hasTy_extSlotEnv },
-
+    { id := "fold-cache-local-agreement", concept := "initial-algebras-folds", role := .compatibility
+      title := "Every answer a checked type-fold cache holds is cata_ty of the same layer at its source type, and prepared caches check, so lookup gives the fold at every type; nothing of speed, reuse after an edit, typing, or inherited inputs"
+      pointer := .witness `Effect4.Program.TyCache.check_agreement },
+    { id := "dependency-summary-exact", concept := "initial-algebras-folds", role := .decidability
+      title := "A distance table that check accepts on a finite graph with cycles reports a label at a node if and only if a directed path from the node reaches a node that seeds the label: each seed and each child's label has an entry, and each entry is a seed or has a child at a smaller distance, one distance per node and label; #axiom_audit checked runs it over the axiom walk's answers and their captured graph (ProofGraph.checkDependencies); nothing of the capture's fidelity to the environment, of a theorem that a node names, or of speed"
+      pointer := .witness `Tools.Graph.Summary.check_summary_exact },
+    { id := "view-reachability-summary-exact", concept := "initial-algebras-folds", role := .decidability
+      title := "A flow's distance table that checkReach accepts (every edge's ends below the position bound, and check on the reach graph) reports a target at a source if and only if Flow.Reach leads from the source to the target; an end at or above the bound is refused, never dropped; ReachTable answers directed queries under this law; nothing of a schedule, a layout, a forest or weak connectedness"
+      pointer := .witness `Tools.View.Flow.checkReach_exact },
+    { id := "references-move", concept := "initial-algebras-folds", role := .preservation
+      title := "Pasting a subtree whose layer references stay inside it, with rebased references, below the root, outside the module's layers and within one scope, keeps every layer reference well formed; nothing of typing, escaping references, variable levels, row positions or runs"
+      pointer := .witness `Effect4.Program.references_move },
+    { id := "source-annotation-agrees", concept := "initial-algebras-folds", role := .compatibility
+      title := "A sketch's one-pass table read through its layer references is the specification: each address of the program as written holds the expansion's entry there, and the root holds the check through the references, which succeeds exactly as admission's typeOfProgram does at the application and the hole table; nothing of sketch admission (admitSig) or of a refusal inside a copy, which keeps the expansion's address (decisions row 373 (7))"
+      pointer := .witness `Effect4.Program.Sketch.sourceAnnotate_eq_sourceTable },
+    { id := "source-feed-coherent", concept := "initial-algebras-folds", role := .preservation
+      title := "A successful feed under any policy keeps a coherent source table coherent; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.SourceSession.feed_coherent },
+    { id := "source-feed-edit", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful feed keeps the application and records the exact edit; an invalid edit keeps the source, and a valid edit gives its candidate; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.SourceSession.feed_keeps },
+    { id := "source-feed-draft", concept := "initial-algebras-folds", role := .compatibility
+      title := "From a coherent source with no reference fault, a draft feed of any edit whose candidate has none succeeds and agrees with the expanded edit's observation projected to the source; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.SourceSession.feed_draft },
+    { id := "source-feed-keep-exact", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful keepExact feed of a non-root edit from a coherent source keeps the root type and the type at the edited address, splicing where the whole-expansion guard allows and rechecking elsewhere; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.SourceSession.feed_keepExact },
+    { id := "source-feed-root", concept := "initial-algebras-folds", role := .compatibility
+      title := "Feeding a root edit that has a candidate is the full checked recheck of the module, actual dependency answers included; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.SourceSession.feed_root },
+    { id := "source-document-coherent", concept := "initial-algebras-folds", role := .preservation
+      title := "Every sealed document's session is coherent with its exact source table, with no separate coherence premise; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Doc.coherent },
+    { id := "source-session-draft-transport", concept := "initial-algebras-folds", role := .compatibility
+      title := "For every application, sketch and edit list, replaying the edits as drafts succeeds with the exactly edited sketch and its source table, refusals and root type; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.SourceSession.replay_drafts_view },
+    { id := "source-document-replay", concept := "initial-algebras-folds", role := .compatibility
+      title := "Replaying a history with one action appended runs that action through the same interpreter on the replayed history's state; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Doc.step_replay },
+    { id := "source-document-atomic", concept := "initial-algebras-folds", role := .compatibility
+      title := "A refused step offers no replacement document, so the caller keeps the original; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Doc.step_refuses },
+    { id := "source-document-step", concept := "initial-algebras-folds", role := .preservation
+      title := "A successful step from a coherent document keeps its origin and application, appends one action to its history, and stays coherent; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Doc.step_coherent },
+    { id := "source-document-commit", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful keepExact or recheck commit from a coherent document gives a positive root type, and keepExact needs and keeps an initially positive root; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Doc.commit_sound },
+    { id := "source-document-local-keep", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful keepExact commit of one change at a non-root place keeps the root type and the type at that place, even when the root was refused; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Doc.commit_one_keepExact },
+    { id := "source-document-single-transport", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful keepExact or recheck commit of one change at a path gives the old single-edit observation through its exact replacement edit, keepExact requiring an initially positive root; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Doc.commit_single_sound },
+    { id := "source-document-revert", concept := "initial-algebras-folds", role := .compatibility
+      title := "An accepted action followed at once by a revert of its selected entry restores the prior program and keeps the appended hole rows; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Doc.revert_program },
+    { id := "kept-fill-reference", concept := "initial-algebras-folds", role := .compatibility
+      title := "For a coherent source with a typed root, at a non-root address, keepExact certification of a fill equals the old certification when neither base nor filling has references; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.kept_eq_certified },
+    { id := "pending-fill-construction", concept := "initial-algebras-folds", role := .preservation
+      title := "Every sealed pending fill set has conflict-free, incomparable entries, each certified by the anchor's keepExact feed; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.FillSet.add_wf },
+    { id := "pending-fill-publication", concept := "initial-algebras-folds", role := .compatibility
+      title := "A successful publication stepped at its coherent anchor, with a positive reference-free base and reference-free entries, gives the sketch the old materialization gives; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.FillSet.publish_eq_materialize },
+    { id := "source-session-coherent", concept := "initial-algebras-folds", role := .preservation
+      title := "Every sealed document shows its exact source table, refusals and root type, with no separate coherence premise; no native execution, progress or cost claim"
+      pointer := .witness `Effect4.Program.SourceSession.reached_view },
+    { id := "source-session-undo", concept := "initial-algebras-folds", role := .compatibility
+      title := "An edit of a sketch as written, then the edit that puts back the old sub-program, restores a coherent source session exactly; nothing of undoing a run (decisions row 373 (7))"
+      pointer := .witness `Effect4.Program.SourceSession.feed_undo },
     -- 8. context-requirements
     { id := "layer-provide-assoc-conditional", concept := "context-requirements", role := .compatibility
       title := "Provide associates when keys read from the inner layer remain provided by the middle or required by the inner"
       pointer := .witness `Effect4.Program.provide_assoc_conditional },
     { id := "layer-provide-tensor-interchange", concept := "context-requirements", role := .compatibility
-      title := "Provide interchanges with merge when each upper layer requires only its own lower layer's keys"
+      title := "Provide interchanges with merge when each upper layer requires only keys its own lower layer gives: (a merge b) provide (c merge d) is (a provide c) merge (b provide d)"
       pointer := .witness `Effect4.Program.provide_tensor_interchange },
-
     { id := "satisfies-empty", concept := "context-requirements", role := .compatibility
       title := "The empty requirement is satisfied by every context"
       pointer := .witness `Effect4.Machine.Env.Context.satisfies_empty
@@ -949,7 +1093,7 @@ def registry : Registry where
       title := "A singleton requirement is satisfied iff the key is present in the context"
       pointer := .witness `Effect4.Machine.Env.Context.satisfies_single },
     { id := "satisfies-union", concept := "context-requirements", role := .compatibility
-      title := "Union requirement satisfaction splits across components"
+      title := "A context satisfies a union of requirements exactly when it satisfies each part"
       pointer := .witness `Effect4.Machine.Env.Context.satisfies_union },
     { id := "satisfies-weaken", concept := "context-requirements", role := .weakening
       title := "Context satisfaction is monotone under requirement row inclusion"
@@ -958,19 +1102,24 @@ def registry : Registry where
       title := "A checked emission's main declaration carries its answer, error and complete requirement row"
       pointer := .witness `Effect4.Codegen.ModuleEmission.annotation_complete },
     { id := "provide-discharges", concept := "context-requirements", role := .preservation
-      title := "Providing a layer discharges its output services from requirement rows"
+      title := "Providing a layer removes from the requirement row every key the layer outputs and does not itself require"
       pointer := .witness `Effect4.Program.Provision.LayerTy.provide_discharges
       literature := [
         { work := "Leijen2014", locator := "audit P22", relation := "adaptedResult" }
       ] },
     { id := "provide-closed", concept := "context-requirements", role := .fundamentalProperty
-      title := "A closed dependency layer that covers all requirements yields a closed program"
+      title := "Providing a closed layer whose outputs cover every requirement gives a closed result"
       pointer := .witness `Effect4.Program.Provision.LayerTy.provide_closed },
     { id := "build-total", concept := "context-requirements", role := .progress
       title := "Build totality: under a typed leaf semantics, a layer the checker types builds under every context satisfying its requirement row, and the built context satisfies its output row (restored, decisions row 147)"
       pointer := .witness `Effect4.Program.Provision.build_total },
-
     -- 9. host-session-protocol
+    { id := "checker-ask-value", concept := "host-session-protocol", role := .compatibility
+      title := "Every certified oracle's ask returns exactly the uncached checker's verdict, and semantic traces hold answers, not invocation counts; no admission, native execution or progress claim"
+      pointer := .witness `Effect4.Program.Check.Checked.ask_value },
+    { id := "checker-oracle-agrees", concept := "host-session-protocol", role := .compatibility
+      title := "Every certified checker oracle is the uncached checker, so no arbitrary native callback or forged package passes as an oracle"
+      pointer := .witness `Effect4.Program.Check.Oracle.eq_uncached },
     { id := "handler-fit-protocol", concept := "host-session-protocol", role := .compatibility
       title := "Equal successful handler interfaces give equal session protocol rows"
       pointer := .witness `Effect4.Program.Handler.rows_of_interface },
@@ -980,7 +1129,6 @@ def registry : Registry where
     { id := "imposed-wrap-tensor", concept := "host-session-protocol", role := .compatibility
       title := "Wrapping only left entries keeps the combined interface equal to the two separate interfaces appended"
       pointer := .witness `Effect4.Program.wrap_tensor },
-
     { id := "run-admitted-history", concept := "host-session-protocol", role := .compatibility
       title := "Every reached recorded run has its built program's call table and a history of session-admitted native decisions, at its compile budget; no progress or outside-host claim"
       pointer := .witness `Effect4.Run.reached_history },
@@ -1006,55 +1154,34 @@ def registry : Registry where
       title := "A reply admitted at its call's checked instance is a handle-free member of the instance's answer column, and the machine prepares it unchanged, at a row whose answer column allocates nothing; a failure admitted there holds no reserved defect; the registration keeps its call's address and the session reads programCallAt there, from a table made once at open (reached_callInstance); in a recorded, funded run that address holds a call of the operation in the program (origin_addresses_call); the expansion of layer references keeping it there is open (decisions rows 183, 323)"
       pointer := .witness `Effect4.Program.instance_prepared_success },
     { id := "tool-serve-appends", concept := "host-session-protocol", role := .compatibility
-      title := "An accepted tool action appends itself to the transcript; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
+      title := "An accepted tool action appends itself to the transcript; no native execution, rollback of external effects or host progress claim"
       pointer := .witness `Effect4.Tool.serve_appends },
     { id := "tool-serve-refuses", concept := "host-session-protocol", role := .preservation
-      title := "A refused tool request leaves the whole state unchanged; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
+      title := "A refused tool request leaves the whole state unchanged; no native execution, rollback of external effects or host progress claim"
       pointer := .witness `Effect4.Tool.serve_refuses },
     { id := "tool-serve-query", concept := "host-session-protocol", role := .preservation
-      title := "Every tool query, a dry run included, leaves the whole state unchanged; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
+      title := "Every tool query, dry runs included, leaves the whole state unchanged; no native execution, rollback of external effects or host progress claim"
       pointer := .witness `Effect4.Tool.serve_query },
     { id := "tool-serve-transparent", concept := "host-session-protocol", role := .compatibility
-      title := "Serving through any certified oracle equals serving uncached, the checked trace included; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
+      title := "Serving through any certified oracle is serving uncached, checked trace included; no native execution, rollback of external effects or host progress claim"
       pointer := .witness `Effect4.Tool.serve_transparent },
     { id := "tool-transcript-replays", concept := "host-session-protocol", role := .compatibility
-      title := "A tool state's transcript replays from the empty state to its raw state; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)"
+      title := "A tool state's transcript replays from the empty state to its raw state; no native execution, rollback of external effects or host progress claim"
       pointer := .witness `Effect4.Tool.transcript_replays },
     { id := "tool-serve-answers", concept := "host-session-protocol", role := .compatibility
-      title := "Every reply that serve gives pairs with its request (Wire.responds); no JSON decoding exactness, native driver or host progress claim (seams S3b, R6)"
+      title := "Every reply that serve gives pairs with its request; no exact JSON decoding, native driver or host progress claim"
       pointer := .witness `Effect4.Tool.serve_answers },
     { id := "workspace-load-own", concept := "host-session-protocol", role := .compatibility
-      title := "After an exchange commits an accepted action, loading the head it reports gives the state serve reached from the resolved base; no repeated host effect, host progress or hash injectivity claim (seams ST4, R6 and R13)"
+      title := "After an exchange commits an accepted action, loading the reported head gives the state that serve reaches from the resolved base; no repeated host effect, host progress or hash injectivity claim"
       pointer := .witness `Effect4.Tool.Exchange.load_own },
     { id := "workspace-commits-once", concept := "host-session-protocol", role := .compatibility
-      title := "An accepted action commits one transaction whose last node is its entry and whose one move publishes that entry; no host acknowledgement or exactly-once host effect claim (seams ST4, R6)"
+      title := "An accepted action commits one transaction whose last node is its workspace entry and whose one root move publishes that entry; no host acknowledgement or exactly-once host effect claim"
       pointer := .witness `Effect4.Tool.Exchange.apply_commits_once },
     { id := "workspace-refuses", concept := "host-session-protocol", role := .preservation
-      title := "A query or a refused request returns the store it was given; no IO rollback claim (seams ST4, R6)"
+      title := "A query or a refused request leaves the store it was given unchanged; no IO rollback claim"
       pointer := .witness `Effect4.Tool.Exchange.apply_refuses },
-    { id := "workspace-entry-exact", concept := "exact-codecs", role := .compatibility
-      title := "A workspace entry's reader answers only its own value tree; no action acceptance or execution truth claim (seams ST4, R13)"
-      pointer := .witness `Effect4.Tool.WorkspaceEntry.ofVal_exact },
-    { id := "codec-profile-retains-value", concept := "exact-codecs", role := .compatibility
-      title := "A successful guarded JSON write reads back as the original canonical value; no total writing, raw JSON text identity or native parser claim (seams S3b, R8)"
-      pointer := .witness `Effect4.Tool.CodecProfile.write_read },
-    { id := "json-read-located", concept := "exact-codecs", role := .compatibility
-      title := "The profile's located JSON reader is exact: a tree it reads as a carrier is that carrier's canonical print, normalised by the shape (ShapeDoc.order); it needs no budget, and dropping a refusal's location gives the unlocated reader (ShapeDoc.readLocated_erases); nothing of JSON text, which json-text-round-trip states (wave 2, A2 and its repair)"
-      pointer := .witness `Effect4.Tool.CodecProfile.profileLocated_exact },
-    { id := "json-refusal-placed", concept := "exact-codecs", role := .compatibility
-      title := "A refusal of the profile's located reader names a place the input or the shape has: a present value, a missing field at a present parent, or a place in the shape (JsonSite); nothing of which repair the place asks for (wave 2, A2)"
-      pointer := .witness `Effect4.Tool.CodecProfile.profileLocated_site },
-    { id := "json-trees-agree", concept := "exact-codecs", role := .compatibility
-      title := "Within the profile, the tree over naturals and the binary64 tree read alike: a tree whose naturals are at most the profile's limit reads as the binary64 tree it converts to; nothing above the limit, which both refuse (wave 2, C6)"
-      pointer := .witness `Effect4.Tool.CodecProfile.read_toBinary64 },
-    { id := "json-text-round-trip", concept := "exact-codecs", role := .compatibility
-      title := "Within the profile, the one JSON text grammar reads back what its renderer writes (NatJson.parse_render); both session drivers read through it; not the converse, that every text it reads is a rendering (wave 2, the grammar for both drivers)"
-      pointer := .witness `Effect4.NatJson.parse_render },
-    { id := "tool-method-descriptor", concept := "exact-codecs", role := .compatibility
-      title := "The tool's method table has one owner: each request's wire name is its key's descriptor name (method_name_agrees), the supported methods are the descriptors' names and versions (supportedMethods_descriptors), and a method's listing carries no output schema, which describe answers as Result (listing_outputSchema, describe_result); the hints destructive, idempotent and open-world are set by hand, with no law (wave 1, R5.1)"
-      pointer := .witness `Effect4.Tool.method_name_agrees },
     { id := "built-admission-exact", concept := "host-session-protocol", role := .compatibility
-      title := "Built.ofSketch returns exactly the full program-admission refusal at the application extended by the sketch's hole rows, and Built.ofProgram at the recorded application exactly; no native forgery, host execution, or progress claim (seams S4, R6 and R13)"
+      title := "Building from a sketch refuses exactly with the full program-admission refusal at the application extended by the sketch's hole rows, and building from a program exactly at the recorded application; no native forgery, host execution or progress claim"
       pointer := .witness `Effect4.Api.Built.ofSketch_error_iff },
     { id := "service-session-checked", concept := "host-session-protocol", role := .compatibility
       title := "A service session succeeds exactly when construction and full admission succeed and the result has no service requirements; no host progress or transport support claim (R6 and R13)"
@@ -1066,13 +1193,13 @@ def registry : Registry where
       title := "The queue consumes the next request and acknowledges replies without changing state; tensor equations retain the other state component (R6 and R13). No general client agreement or host progress."
       pointer := .witness `Effect4.Run.Reactor.queue_spec },
     { id := "live-session-persists", concept := "host-session-protocol", role := .compatibility
-      title := "Restoring a live session's own record returns its exact run after full admission and ordered journal replay, retaining recorded row spellings and empty session names; no repeated host effects or host reconnection claim (seams S4, R6 and R13)"
+      title := "Restoring a live session's own saved record gives back its exact run, after full admission and ordered journal replay, keeping recorded row spellings and empty session names; no repeated host effects or host reconnection claim"
       pointer := .witness `Effect4.LiveRecord.restore_save },
     { id := "block-call-instance", concept := "host-session-protocol", role := .preservation
       title := "On a program that the module check admits, the call instance answers at every call, with the call's operation: in a definition's body at the block's signature and its declared request, in a block's main program at the block's signature, and in a program with no block (programCallAt over Eff.partAt); the session's call table is its lookup, and HostSession.instanceAt_complete supplies an instance at each call of an admitted program; Run.reached_callInstance reads that table in a reached run; it does not say that the expansion of layer references keeps a call at its address, nor anything of a run (decisions rows 323, 328, 333)"
       pointer := .witness `Effect4.Program.checkModule_programCallAt },
     { id := "session-failure-shape-free", concept := "host-session-protocol", role := .preservation
-      title := "A session-accepted failing reply carries no reserved defect: the failure half of admit_sound (decisions row 191, E4-HOST-CE-008)"
+      title := "A failing reply that the session accepts carries no reserved defect, at any type"
       pointer := .witness `Effect4.Api.HostSession.preflight_failure_noShapeDefect
       contestedBy := ["E4-HOST-CE-008"] },
     { id := "frontier-awaithost", concept := "host-session-protocol", role := .inversion
@@ -1081,7 +1208,18 @@ def registry : Registry where
     { id := "host-progress", concept := "host-session-protocol", role := .progress
       title := "Host session progress under external answers"
       pointer := .assumed "docs/core/host-boundary.md" "Host session progress is subject to external driver execution; outside closed runtime" },
-
+    { id := "rows-loop-frontier", concept := "host-session-protocol", role := .simulation
+      title := "In a funded, at-rest, host-driven recorded LoopedRows run, every waited call is a host row, and past a budget bound the meaning under the reply tape waits there with the stores; a wait is no failure; no progress claim; nothing of forks, scopes or interruptions"
+      pointer := .witness `Effect4.Run.rows_loop_frontier },
+    { id := "rows-loop-frontier-host", concept := "host-session-protocol", role := .simulation
+      title := "Under any host whose answers are the run's and which leaves the waited call unanswered, past a budget bound the LoopedRows meaning waits at that call with the machine's stores and the host where the answers left it; the host's silence is a premise"
+      pointer := .witness `Effect4.Run.rows_loop_frontier_host },
+    { id := "replay-at-call-instance", concept := "host-session-protocol", role := .preservation
+      title := "At a row of a live run that applied the reply stored at a key, the session held that reply at the run before the row and its preflight admitted it, and the session's instance lookup is the checker's instanceAt on the run's program: a success prepares a member of the row's shape-decided column or of the call's checked instance, and a failure holds no shape defect; LiveRecord.restore answers a Live after full admission and journal replay, so the law reads every restored run; the converse half is Live.replay_recorded; nothing of membership in the instance from the row's columns (admitAnswer_instance), handle rows, AnswerOk or progress (decisions rows 98 and 373 (8))"
+      pointer := .witness `Effect4.Live.replay_at_call_instance },
+    { id := "run-conforms-postcondition", concept := "host-session-protocol", role := .adequacy
+      title := "A reached, funded, at-rest, host-driven StraightRows run that conforms to the declared row protocols meets every postcondition its call tree satisfies under them; nothing of non-conforming runs or of the protocols' demands"
+      pointer := .witness `Effect4.Run.conforms_sat },
     -- 10. translation-simulation
     { id := "recorded-call-tree-prefix", concept := "translation-simulation", role := .inversion
       title := "Each recorded call binding on StraightRows without cause handlers names a wait in the admitted call tree, using replies submitted in that run; arbitrary command budget, no progress"
@@ -1093,13 +1231,13 @@ def registry : Registry where
         { work := "Leroy2009", locator := "audit C10", relation := "analogy" }
       ] },
     { id := "loop-agreement", concept := "translation-simulation", role := .simulation
-      title := "Loop agreement on the loop-bearing fragment (Looped)"
+      title := "Every program in the loop-bearing fragment Looped satisfies loop agreement"
       pointer := .witness `Effect4.Program.Agreement.loopAgreement },
     { id := "block-handler-monotone", concept := "translation-simulation", role := .monotonicity
-      title := "A block meaning refines when the call budget increases and the parameters approximate pointwise at every context and request (PROC-6)"
+      title := "A block's meaning refines when the call budget grows by one and the parameters approximate pointwise at every context and request"
       pointer := .witness `Effect4.Program.Denote.denoteBlockB_approx },
     { id := "block-handler-unfolds", concept := "translation-simulation", role := .compatibility
-      title := "An invocation converges exactly when its body finishes with argument trees at the caller's budget, at the fixed host, context, request and stores (PROC-6)"
+      title := "At a fixed host, context, request and stores, an invocation converges to an exit exactly when its body, given the argument trees at the caller's budget, converges to that exit"
       pointer := .witness `Effect4.Program.Denote.invoke_unfolds_at_limitB
       literature := [
         { work := "XiaEtAl2020", locator := "audit P37, section 4.2", relation := "analogy" }
@@ -1138,13 +1276,13 @@ def registry : Registry where
       title := "The meaning of a StraightRows program under a run's reply tape is the root's exit with the stores, or the frontier: for a recorded run that is funded, at rest and driven by a host (one fiber; nothing about an interruption, a clock step, a delayed cell read or a handle row; DI-69, decisions row 310)"
       pointer := .witness `Effect4.Run.denoteRows_eq_session },
     { id := "rows-denotation-host", concept := "translation-simulation", role := .simulation
-      title := "H9, the host as a handler: for a recorded StraightRows run that is funded, at rest, driven by a host and finished, under any host (a comodel of the row signature) whose answers are the run's, the host's run of the call tree is the root's exit with the stores and the host ends where the answers left it (one fiber; no progress claim; nothing about a run stopped at a call, an interruption, a clock step or a handle row; decisions row 310; the coalgebra note, slice CO-5)"
+      title := "For a funded, at-rest, host-driven, finished StraightRows run, any host answering as the run did runs the call tree to the root's exit and stores, ending where the answers left it; one fiber; no progress claim; nothing of pending calls, interruptions, clock steps or handle rows"
       pointer := .witness `Effect4.Run.denoteRows_eq_session_host },
     { id := "rows-loop-session", concept := "translation-simulation", role := .simulation
-      title := "H8 on loops: for a recorded run of a LoopedRows program the row fragment with loops admits (LoopedDataRows), funded, at rest and driven by a host, past a budget bound the coarse observation of the budgeted meaning under the run's reply tape is the root's exit with the stores, or none (one fiber; no global compile-depth premise; a budget cut is no failure and no divergence; nothing of a waiting position's stores or request, a scope, a handle allocation, a fork or an interruption; the host-meaning widening, slice L1)"
+      title := "For a funded, at-rest, host-driven recorded LoopedRows run, past a budget bound the budgeted meaning under the run's reply tape gives the root's exit with the stores, or none; one fiber; a budget cut is no failure; nothing of waits, scopes, handles, forks or interruptions"
       pointer := .witness `Effect4.Run.h8_loopedRows },
     { id := "rows-loop-host", concept := "translation-simulation", role := .simulation
-      title := "H9 on loops: for a finished recorded run of the same fragment, under any host whose answers are the run's, past a budget bound the budgeted meaning under the host is the root's exit with the stores and the host ends where the answers left it (no progress claim; nothing of a run stopped at a call; the host-meaning widening, slice L1)"
+      title := "For a finished recorded LoopedRows run, any host whose answers are the run's gives, past a budget bound, the root's exit with the stores and ends where the answers left it; no progress claim; nothing of a run stopped at a call"
       pointer := .witness `Effect4.Run.denoteRowsB_eq_session_host },
     { id := "rows-block-host", concept := "translation-simulation", role := .simulation
       title := "H9 on definition blocks: a reached, funded, at-rest, host-driven BlockRows run already has a root exit. Under matching host answers, its budgeted meaning eventually has that exit, stores and host state. One fiber; empty initial context; no progress claim. Context admission and scheduler generalization remain planned (decisions row 379)."
@@ -1152,12 +1290,6 @@ def registry : Registry where
     { id := "rows-loop-driver", concept := "translation-simulation", role := .simulation
       title := "H9 at the driver on loops: open a LoopedRows program the row fragment with loops admits, evaluate its root and drive it with a reactor inside the envelope that answers with exits (Run.runWith); when the run is funded, at rest and its root exited, past a budget bound the reactor read as a host runs the budgeted call tree to the root's exit with the stores and ends at the drive's state (no progress claim; the host-meaning widening, Q9)"
       pointer := .witness `Effect4.Run.runWith_denotesB },
-    { id := "rows-loop-frontier", concept := "host-session-protocol", role := .simulation
-      title := "H8's detailed frontier on loops: for a recorded run of a LoopedRows program the row fragment with loops admits, funded, at rest and driven by a host, every call the machine waits on is a host row, and past a budget bound the detailed observation of the budgeted meaning under the run's reply tape waits at that row and request, with the machine's stores and the tape read to its end (no progress claim: a wait is a frontier, never a failure; nothing of a fork, a scope or an interruption; the host-meaning widening, slice L4)"
-      pointer := .witness `Effect4.Run.rows_loop_frontier },
-    { id := "rows-loop-frontier-host", concept := "host-session-protocol", role := .simulation
-      title := "H9's detailed frontier on loops: the same under any host whose answers are the run's and which leaves the waited call unanswered: past a budget bound the meaning under the host waits at that call, with the machine's stores and the host where the answers left it (the host's silence is a premise; the host-meaning widening, slice L4)"
-      pointer := .witness `Effect4.Run.rows_loop_frontier_host },
     { id := "rows-loop-straight", concept := "translation-simulation", role := .compatibility
       title := "The budgeted row meaning extends the row meaning: on StraightRows it is denoteRows finished, at every budget (the host-meaning widening, Q1)"
       pointer := .witness `Effect4.Program.Denote.denoteRowsB_straight },
@@ -1165,33 +1297,23 @@ def registry : Registry where
       title := "The budgeted row meaning extends the loop meaning: on Looped it is denoteB injected on the left of the coproduct, at the same budget (the host-meaning widening, Q1)"
       pointer := .witness `Effect4.Program.Denote.denoteRowsB_looped },
     { id := "rows-denotation-driver", concept := "translation-simulation", role := .simulation
-      title := "H9 at the driver: open a StraightRows program, evaluate its root and drive it with a reactor inside the envelope that answers with exits (Run.runWith); when the run is funded, at rest and its root exited, the reactor read as a host runs the call tree to the root's exit with the stores and ends at the drive's state (one fiber; no progress claim: nothing shows that the drive finishes, that its rounds suffice or that the run is funded; the coalgebra note, slice CO-6)"
+      title := "If an enveloping, exits-only reactor drives a StraightRows program to a funded, at-rest exit, the reactor read as a host runs the call tree to that exit and stores, ending at the drive's state; one fiber; no claim that the drive finishes, suffices or is funded"
       pointer := .witness `Effect4.Run.runWith_denotes },
     { id := "m7-route", concept := "translation-simulation", role := .fundamentalProperty
-      title := "M7 conditional route: typed exits and stores from ledger hypotheses M5 and M6"
+      title := "From the hypotheses M5 (the typed load) and M6 (every decision keeps typing), runs have typed exits and typed stores and never halt"
       pointer := .witness `Effect4.Program.Typed.m7_of_ledger
       literature := [
         { work := "WrightFelleisen1994", locator := "audit P36", relation := "analogy" }
       ] },
-    { id := "m7-exits-typed", concept := "translation-simulation", role := .adequacy
-      title := "M7a: every exit the observation records fits its fiber's declared type on M7Fragment"
+    { id := "m7-proved", concept := "translation-simulation", role := .adequacy
+      title := "On M7Fragment, every exit the observation records fits its fiber's declared type, the observed stores fit a world that describes them, and the frame machine never halts"
       pointer := .witness `Effect4.Program.Typed.m7_proved
       literature := [
         { work := "WrightFelleisen1994", locator := "audit P36", relation := "analogy" }
       ] },
-    { id := "m7-stores-typed", concept := "translation-simulation", role := .adequacy
-      title := "M7b: the observed stores fit at a world that describes them on M7Fragment"
-      pointer := .witness `Effect4.Program.Typed.m7_proved },
-    { id := "m7-never-halts", concept := "translation-simulation", role := .progress
-      title := "M7c: the frame machine never halts on M7Fragment (row 139's stuck = none in J)"
-      pointer := .witness `Effect4.Program.Typed.m7_proved },
     { id := "m7-admitted", concept := "translation-simulation", role := .fundamentalProperty
       title := "M7a–c for a program the API admits at the empty row table, with a closed requirement row and an answer-free tape"
       pointer := .witness `Effect4.Program.Typed.m7_admitted },
-    { id := "admitted-source-lawful", concept := "residual-program-typing", role := .compatibility
-      title := "An admitted program's signature, its row table and its service declarations, is lawful: program admission runs admitSig (the bridge from admission to the typed state)"
-      pointer := .witness `Effect4.Program.Typed.lawfulSig_of_admitted
-      contestedBy := ["E4-TYPED-CE-041"] },
     { id := "m7-exit-handles-valid", concept := "translation-simulation", role := .preservation
       title := "Recorded exits name only live scope handles on every reachable machine (row 139)"
       pointer := .witness `Effect4.Program.Typed.exitHandles_valid },
@@ -1205,7 +1327,7 @@ def registry : Registry where
       title := "No replay at the empty row table allocates an external handle"
       pointer := .witness `Effect4.Program.Sched.replay_externals },
     { id := "run-controls-replay", concept := "translation-simulation", role := .simulation
-      title := "Journaled control rows leave the raw replay's machine whenever every added phase progressed"
+      title := "When every added phase progressed, playing journaled control rows gives the raw replay's machine"
       pointer := .witness `Effect4.Run.play_controls_eq_replay },
     { id := "run-tape-replay", concept := "translation-simulation", role := .simulation
       title := "A journal's machine is the raw replay of its tape: the controls that progressed and the reply applications, each as the decision the session hands the machine (machine equality for any run and any journal whose tape reads to its end; no session ledger, no journal that stops at a frontier, no lowered engine; decisions row 254)"
@@ -1235,13 +1357,13 @@ def registry : Registry where
       title := "A stored step translates to a term reading its carrier value from caller terms reading the input encodings and canonical record names; folds require aligned caller value and source scope lengths, and deferred comparisons require DeferredIdentity at the carrier interpretation; captured sources resolve at their original scope; each module separately proves its value equation against an independent model; no optional field, allocation, wrapper, run or host behavior follows (decisions row 330)"
       pointer := .witness `Effect4.Modules.Step.sound },
     { id := "step-frame", concept := "translation-simulation", role := .preservation
-      title := "On an update spine of an input, a field that no overwrite of the step names keeps its value: on carriers with no premise on the record's names (Step.frame), and on the machine's record frame for ascending names (Step.frame_read); nothing of a step that is no spine (decisions row 330, slice L2)"
+      title := "On an update spine of an input, a field that no overwrite of the step names keeps its value, on carriers for any record and on the machine's record frame for ascending names; nothing of a step that is not a spine"
       pointer := .witness `Effect4.Modules.Step.frame },
     { id := "latch-steps-agree", concept := "translation-simulation", role := .simulation
-      title := "Each of the Latch's four steps, written natively in the step language, agrees with the model of rc.112's class Latch: isOpen, open and release with scheduleUnsafe's one flush per batch, flushScheduled and closeUnsafe; the reply and the next state through the table, the cell's value being the carrier's image; each by the step language's reading law and one equation of Lean values; nothing of await, interruption, the posted flush's fiber or liveness (decisions row 330, slice L3)"
+      title := "Each of the Latch's four steps, written in the step language, agrees in reply and next state with the model of rc.112's Latch class (isOpen, open and release, flushScheduled, closeUnsafe); nothing of await, interruption, the posted flush's fiber or liveness"
       pointer := .witness `Effect4.Latch.Model.latch_steps_agree },
     { id := "latch-registration-agrees", concept := "translation-simulation", role := .simulation
-      title := "Latch initial construction, await registration and first-match withdrawal read the independent model's reply and next cell; registration uses the table's identity and hint, withdrawal assumes an injective table and aligned value and source scope lengths; cleanup searches waiters before the attached scheduled batch and keeps the scheduled flag, including duplicate registrations; no interruption delivery, posted-flush execution, liveness or host behavior follows (decisions row 330)"
+      title := "The Latch's construction, await registration and first-match withdrawal give the independent model's reply and next cell, withdrawal assuming an injective table and aligned scope lengths; no interruption delivery, posted-flush execution, liveness or host behaviour follows"
       pointer := .witness `Effect4.Latch.Model.latch_registration_agrees },
     { id := "partitioned-semaphore-bookkeeping", concept := "translation-simulation", role := .simulation
       title := "PartitionedSemaphore's four scalar step terms read the independent natural-count model: initialization, availability, attempted acquisition, and reservation of the unmet need; reservation assumes insufficient availability and a request within capacity; initialization returns the scalar record, availability returns its count, and attempted acquisition and reservation return their replies with next scalar records, under successful readings of the input images; no waiter registration, identity allocation, wake delivery, cancellation, wrapper, schedule, progress, codec admission or host behavior (decisions rows 330, 331 and 335)"
@@ -1249,9 +1371,6 @@ def registry : Registry where
     { id := "pubsub-single-steps-agree", concept := "translation-simulation", role := .simulation
       title := "Six pure PubSub bookkeeping sources read the independent capacity-one, replay-zero, natural-message model: initial, subscription with a fresh logical name, tryPublish, poll, unsubscribe and slide; input sources read their exact images, and folds require aligned value and source scope lengths; observations contain each reply and next model state; no host subscription-object identity relation, handle allocation, delivery, lifetime, backpressure execution, arbitrary capacity or whole module run (decisions rows 330, 331 and 335)"
       pointer := .witness `Effect4.PubSub.Model.single_steps_agree },
-    { id := "stream-source-declarations", concept := "store-typing", role := .compatibility
-      title := "An accepted definition-backed Stream source derives its normalized batch/completion protocol, open and close state requests, and unit close answer from the supplied operation declarations; each invocation uses the corresponding declaration name; no body admission, nonempty batch, execution, finalization or host behavior follows"
-      pointer := .witness `Effect4.Stream.Source.fromDefinitions_declarations },
     { id := "channel-batch-transform", concept := "translation-simulation", role := .compatibility
       title := "The authored Channel batch dispatcher selects the wrapped batch transformation only for an exact Chunk input, selects unchanged completion for End, and propagates input failure with its resulting stores; actual handler elaboration and aligned scopes are premises; the selected handler's complete meaning includes its failure and stores; no execution of stored definition calls, nonempty output, scheduling or host simulation"
       pointer := .witness `Effect4.Channel.Internal.mapEffectOf_protocol },
@@ -1270,170 +1389,21 @@ def registry : Registry where
     { id := "ref-steps-agree", concept := "translation-simulation", role := .simulation
       title := "Each of Ref's thirteen effectful operations agrees with the independent model of latest's Ref (Effect 4.0.1): allocation appends the initial value; on one allocated cell holding the encoded value, with a callback that evaluates to the encoded next value, each operation's reply and final stores are the model's; the laws compare replies and final stores under their allocation and callback-evaluation premises, not write events, so they say nothing of whether an operation writes an unchanged value; no scheduling, whole run, host object identity, callback exception or reentrant mutation (decisions row 335)"
       pointer := .witness `Effect4.Ref.ref_steps_agree },
-    -- the checked caches and summaries of the openai/math probe
-    -- (docs/research/2026-10-09-openai-math-probe/OPERATIONAL-PLAN.md; seat FC)
-    { id := "fold-cache-local-agreement", concept := "initial-algebras-folds", role := .compatibility
-      title := "Every answer that accepted entries of a type-fold cache hold is cata_ty of the same layer at its own source type: check accepts entries whose children stand in earlier entries and whose answers meet the layer's local equation over the generated view, so payloads, names, flags and child order are part of each equation; check accepts the entries that prepare builds at every type, so answer returns the fold at every type (answer_eq); nothing of speed, of reuse after an edit, of a typing judgment, or of an input the layer inherits (slice D6, serving R14)"
-      pointer := .witness `Effect4.Program.TyCache.check_agreement },
-    { id := "dependency-summary-exact", concept := "initial-algebras-folds", role := .decidability
-      title := "A distance table that check accepts on a finite graph with cycles reports a label at a node if and only if a directed path from the node reaches a node that seeds the label: each seed and each child's label has an entry, and each entry is a seed or has a child at a smaller distance, one distance per node and label; #axiom_audit checked runs it over the axiom walk's answers and their captured graph (ProofGraph.checkDependencies); nothing of the capture's fidelity to the environment, of a theorem that a node names, or of speed"
-      pointer := .witness `Tools.Graph.Summary.check_summary_exact },
-    { id := "view-reachability-summary-exact", concept := "initial-algebras-folds", role := .decidability
-      title := "A flow's distance table that checkReach accepts (every edge's ends below the position bound, and check on the reach graph) reports a target at a source if and only if Flow.Reach leads from the source to the target; an end at or above the bound is refused, never dropped; ReachTable answers directed queries under this law; nothing of a schedule, a layout, a forest or weak connectedness"
-      pointer := .witness `Tools.View.Flow.checkReach_exact },
-    -- the landings of 2026-10-13 (decisions rows 376 and 377)
-    { id := "replay-at-call-instance", concept := "host-session-protocol", role := .preservation
-      title := "At a row of a live run that applied the reply stored at a key, the session held that reply at the run before the row and its preflight admitted it, and the session's instance lookup is the checker's instanceAt on the run's program: a success prepares a member of the row's shape-decided column or of the call's checked instance, and a failure holds no shape defect; LiveRecord.restore answers a Live after full admission and journal replay, so the law reads every restored run; the converse half is Live.replay_recorded; nothing of membership in the instance from the row's columns (admitAnswer_instance), handle rows, AnswerOk or progress (decisions rows 98 and 373 (8))"
-      pointer := .witness `Effect4.Live.replay_at_call_instance },
-    { id := "run-conforms-postcondition", concept := "host-session-protocol", role := .adequacy
-      title := "A reached run that conforms to the declared row protocols meets every postcondition its call tree meets under them (Effects.Program.Sat), through denoteRows_eq_session_host and the checked host's soundness; nothing of a run that does not conform, or of the protocols' demands, which conforms checks and no theorem reads yet (the claims packet, slice PROTOCOL)"
-      pointer := .witness `Effect4.Run.conforms_sat },
     { id := "run-agrees-model", concept := "translation-simulation", role := .simulation
-      title := "A reached run that a reference model validates is the model's run of its call tree: its exit and stores are the ones the model's host gives the tree; nothing of a run the model does not validate, or of termination (the claims packet, slice MODEL)"
+      title := "A reached, funded, at-rest, host-driven StraightRows run that a reference model validates has the exit and stores that the model's host gives its call tree; nothing of runs the model does not validate, or of termination"
       pointer := .witness `Effect4.Run.agrees_hostRun },
-    { id := "references-move", concept := "initial-algebras-folds", role := .preservation
-      title := "A subtree whose layer references stay inside it keeps every reference well formed when it is pasted with Node.rebaseRefs, at an address below the root, outside the module's layers and in one scope; nothing of typing, of references that leave the subtree, of variable levels or row positions, or of any run (decisions row 336 (6); seat ORG's L9)"
-      pointer := .witness `Effect4.Program.references_move },
     { id := "cas-restore-roots", concept := "translation-simulation", role := .compatibility
-      title := "Checked empty-store restoration retains the exact root table, including legacy generations; no historical ancestry, generation provenance, hash injectivity, filesystem correctness, or host progress claim (seams ST2, R13)"
+      title := "Checked restoration into the empty store keeps the exact root table, legacy generations included; no ancestry, generation provenance, hash injectivity, filesystem correctness or host progress claim"
       pointer := .witness `Effect4.Store.restore_roots },
     { id := "cas-restore-closed", concept := "translation-simulation", role := .preservation
-      title := "Checked empty-store restoration establishes node closure through shared admission; no historical ancestry, generation provenance, hash injectivity, filesystem correctness, or host progress claim (seams ST2, R13)"
+      title := "Checked restoration into the empty store, through shared admission, gives a store closed under node references; no ancestry, generation provenance, hash injectivity, filesystem correctness or host progress claim"
       pointer := .witness `Effect4.Store.restore_closed },
     { id := "cas-restore-targets", concept := "translation-simulation", role := .preservation
-      title := "Every restored root resolves to a durable resident of its fixed kind; no historical ancestry, generation provenance, hash injectivity, filesystem correctness, or host progress claim (seams ST2, R13)"
+      title := "After checked restoration, every root resolves to a durable resident of its fixed kind; no ancestry, generation provenance, hash injectivity, filesystem correctness or host progress claim"
       pointer := .witness `Effect4.Store.restore_targets },
-    { id := "cas-node-read-exact", concept := "exact-codecs", role := .compatibility
-      title := "Successful node byte reading returns its exact encoded node; no admission, hashing, capacity, or persistence claim (seams ST1a, R13)"
-      pointer := .witness `Effect4.Store.Node.read_exact },
-    { id := "cas-get-exact", concept := "exact-codecs", role := .compatibility
-      title := "A successful typed read names the carrier's exact resident node after version, kind, per-value specification, and canonical payload checks; replay stays explicit, with no atomicity or admission claim for an arbitrary interpreter (seams ST1a, R13)"
-      pointer := .witness `Effect4.Store.Cas.get_exact },
-    { id := "cas-admission-handles", concept := "exact-codecs", role := .preservation
-      title := "Every successful node insertion passes the kind's handle rule before edge and resident checks; no progress or host persistence claim (seams ST1a, R13)"
-      pointer := .witness `Effect4.Store.putNode_ok_handleFree },
-    { id := "cas-advance-head", concept := "exact-codecs", role := .compatibility
-      title := "Changed accepted root moves check the complete expected head and increase its generation exactly once; no host persistence, crash, or progress claim (seams ST1b, R13)"
-      pointer := .witness `Effect4.Store.advance_head },
-    { id := "cas-advance-stale", concept := "exact-codecs", role := .compatibility
-      title := "A stale complete expected head refuses before every target or policy check; no host persistence, crash, or progress claim (seams ST1b, R13)"
-      pointer := .witness `Effect4.Store.advance_stale },
-    { id := "cas-advance-duplicate", concept := "exact-codecs", role := .compatibility
-      title := "An identical complete target retains the exact store and generation; no host persistence, crash, or progress claim (seams ST1b, R13)"
-      pointer := .witness `Effect4.Store.advance_duplicate },
-    { id := "cas-journal-fast-forward", concept := "exact-codecs", role := .preservation
-      title := "A changed accepted journal target reaches the prior head through designated parent fields; no host persistence, crash, or progress claim (seams ST1b, R13)"
-      pointer := .witness `Effect4.Store.journal_ff },
-    { id := "cas-commit-grows", concept := "exact-codecs", role := .preservation
-      title := "Accepted transactions retain every earlier resident at its digest; no host persistence, crash, or progress claim (seams ST1b, R13)"
-      pointer := .witness `Effect4.Store.commit_grows },
-    { id := "cas-commit-bytes", concept := "exact-codecs", role := .preservation
-      title := "Reading an earlier resident after an accepted transaction returns the same node; no host persistence, crash, or progress claim (seams ST1b, R13)"
-      pointer := .witness `Effect4.Store.bytes_never_change },
-    { id := "cas-commit-reads", concept := "exact-codecs", role := .compatibility
-      title := "Every submitted node reads back after an accepted transaction; conflicts refuse; no host persistence, crash, or progress claim (seams ST1b, R13)"
-      pointer := .witness `Effect4.Store.commit_reads },
-    { id := "cas-interrupted-closed", concept := "exact-codecs", role := .preservation
-      title := "An accepted cut from a closed store retains node closure after complete transaction validation; no host persistence, crash, or progress claim (seams ST1b, R13)"
-      pointer := .witness `Effect4.Store.interrupted_closed },
-    { id := "cas-interrupted-roots", concept := "exact-codecs", role := .compatibility
-      title := "An accepted cut retains the exact old root table or returns the exact committed store; no host persistence, crash, or progress claim (seams ST1b, R13)"
-      pointer := .witness `Effect4.Store.interrupted_roots },
-    { id := "cas-result-envelope", concept := "exact-codecs", role := .compatibility
-      title := "A node answers a designated query exactly when it is the node of a version-0 result envelope of that query at the common specification; the query field, never a reference inside the output; no result truth, host determinism, or hash injectivity claim (seams ST3, R13)"
-      pointer := .witness `Effect4.Store.Node.resultQuery?_eq_some_iff },
-    { id := "cas-result-once", concept := "exact-codecs", role := .preservation
-      title := "Two bindings of a reached store that answer one designated query hold the same node, through commits, interrupted prefixes and checked restoration; the result rule scans every binding; no result truth, host determinism, progress, or hash injectivity claim (seams ST3, R13)"
-      pointer := .witness `Effect4.Store.Cas.result_once },
-    { id := "cas-resident-injective", concept := "exact-codecs", role := .compatibility
-      title := "Two nodes resident at their own equal addresses in one store are equal; both lookup premises remain; no hash injectivity or host persistence claim (seams K0, R13)"
-      pointer := .witness `Effect4.Store.address_inj_resident },
-    { id := "object-exact", concept := "exact-codecs", role := .compatibility
-      title := "Reopening a built program recovers it; R13; no host execution or persistence claim"
-      pointer := .witness `Effect4.Program.Object.open_ofBuilt },
-    { id := "object-bytes-exact", concept := "exact-codecs", role := .compatibility
-      title := "Accepted object bytes are exactly its store node bytes and have a well-formed value; R13; no migration claim"
-      pointer := .witness `Effect4.Program.Object.read_exact },
-    { id := "object-load-exact", concept := "exact-codecs", role := .compatibility
-      title := "Saving and loading a built program recovers it when its encoded value is well formed; R13; no host persistence claim"
-      pointer := .witness `Effect4.Program.Object.load_bytes },
-    { id := "service-view-printed", concept := "exact-codecs", role := .compatibility
-      title := "TypeScript service success is domain service formation and TypeScript's naming conditions; R8; no claim on the refusal reported, no target compiler or host observation claim"
-      pointer := .witness `Effect4.Program.serviceFaultIn_tsProfile_iff },
-    { id := "service-view", concept := "exact-codecs", role := .adequacy
-      title := "Domain service success provides readable service entries; R8; no target compiler or host observation claim"
-      pointer := .witness `Effect4.Program.entriesOf_isSome },
-    { id := "program-digest-exact", concept := "exact-codecs", role := .compatibility
-      title := "A program files in the store under kind program (Content (Eff NativeOp), generated), so two programs with one address are equal or a digest collision (address_eq_or_collision at programs); nothing of a piece's key, which moves with its depth (the MCP note's ruling 3)"
-      pointer := .witness `Effect4.Store.address_eq_or_collision },
-    { id := "answer-flow-history", concept := "store-typing", role := .preservation
-      title := "A per-fiber frame predicate that each command keeps, given its local facts at each arm, holds through every admitted history of a program of the direct lexical fragment (PlaceFunding.NativeFlow.history), and a place ledger whose debit reads it stays funded (LocalOn.history_funded); nothing of a crew's answer-class model, its local facts, progress or a host observation"
-      pointer := .witness `Effect4.Program.PlaceFunding.NativeFlow.history },
-    { id := "source-annotation-agrees", concept := "initial-algebras-folds", role := .compatibility
-      title := "A sketch's one-pass table read through its layer references is the specification: each address of the program as written holds the expansion's entry there, and the root holds the check through the references, which succeeds exactly as admission's typeOfProgram does at the application and the hole table; nothing of sketch admission (admitSig) or of a refusal inside a copy, which keeps the expansion's address (decisions row 373 (7))"
-      pointer := .witness `Effect4.Program.Sketch.sourceAnnotate_eq_sourceTable },
-    { id := "source-feed-coherent", concept := "initial-algebras-folds", role := .preservation
-      title := "A successful feed preserves the source table under initial coherence and the selected policy; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.SourceSession.feed_coherent },
-    { id := "source-feed-edit", concept := "initial-algebras-folds", role := .compatibility
-      title := "A successful feed retains the application and exact edit; an invalid edit retains the source, and a valid edit returns its candidate; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.SourceSession.feed_keeps },
-    { id := "source-feed-draft", concept := "initial-algebras-folds", role := .compatibility
-      title := "Every draft from a coherent source agrees with the existing expanded edit observation and exact source projection; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.SourceSession.feed_draft },
-    { id := "source-feed-keep-exact", concept := "initial-algebras-folds", role := .compatibility
-      title := "A successful nonroot keepExact feed retains root and local types, using the exact whole-expansion guard for splice or recheck; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.SourceSession.feed_keepExact },
-    { id := "source-feed-root", concept := "initial-algebras-folds", role := .compatibility
-      title := "Every root edit with a candidate equals the entire checked module recheck, including actual dependency answers; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.SourceSession.feed_root },
-    { id := "source-document-coherent", concept := "initial-algebras-folds", role := .preservation
-      title := "Every sealed document has its exact source table, without a separate coherence premise; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.Doc.coherent },
-    { id := "source-session-draft-transport", concept := "initial-algebras-folds", role := .compatibility
-      title := "Every old application, sketch, and edit list has canonical draft replay with the exact edited sketch, source table, refusals, and root observation; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.SourceSession.replay_drafts_view },
-    { id := "source-document-replay", concept := "initial-algebras-folds", role := .compatibility
-      title := "Appending an action replays through the same interpreter and exact history ledger; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.Doc.step_replay },
-    { id := "source-document-atomic", concept := "initial-algebras-folds", role := .compatibility
-      title := "A refused step offers no replacement document, so the caller retains the original document; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.Doc.step_refuses },
-    { id := "source-document-step", concept := "initial-algebras-folds", role := .preservation
-      title := "A successful step from a coherent document retains its origin and application, appends one action, and remains coherent; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.Doc.step_coherent },
-    { id := "source-document-commit", concept := "initial-algebras-folds", role := .compatibility
-      title := "A successful keepExact or recheck commit is positive, with initial positivity required for keepExact; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.Doc.commit_sound },
-    { id := "source-document-local-keep", concept := "initial-algebras-folds", role := .compatibility
-      title := "A successful single nonroot kept change retains the exact root and local observations, including an initially refused root; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.Doc.commit_one_keepExact },
-    { id := "source-document-single-transport", concept := "initial-algebras-folds", role := .compatibility
-      title := "The old single-edit observation holds under its exact replacement and initial positive-root premise for keepExact; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.Doc.commit_single_sound },
-    { id := "source-document-revert", concept := "initial-algebras-folds", role := .compatibility
-      title := "An accepted action and its immediate selected-entry revert restore the prior program and retain appended hole rows; no admission, progress, or native execution claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.Doc.revert_program },
-    { id := "kept-fill-reference", concept := "initial-algebras-folds", role := .compatibility
-      title := "For coherent sources at nonroot addresses, keepExact acceptance equals old certification when both base and filling have no references; no admission, progress, or native execution claim (seams S2, R14)"
-      pointer := .witness `Effect4.Program.kept_eq_certified },
-    { id := "pending-fill-construction", concept := "initial-algebras-folds", role := .preservation
-      title := "Every sealed pending set has conflict-free, incomparable entries certified by the anchor's keepExact feed; no admission, progress, or native execution claim (seams S2, R14)"
-      pointer := .witness `Effect4.Program.FillSet.add_wf },
-    { id := "pending-fill-publication", concept := "initial-algebras-folds", role := .compatibility
-      title := "A successful publication agrees with old materialization at its exact coherent anchor, under positive-base and reference-free premises; no admission, progress, or native execution claim (seams S2, R14)"
-      pointer := .witness `Effect4.Program.FillSet.publish_eq_materialize },
-    { id := "source-session-coherent", concept := "initial-algebras-folds", role := .preservation
-      title := "Every sealed document shows its exact source table, refusals, and root type without a separate coherence premise; source-session-draft-transport retains the old application, sketch, and edit-list scope; no native execution, progress, or cost claim (seams S1, R14)"
-      pointer := .witness `Effect4.Program.SourceSession.reached_view },
-    { id := "source-session-undo", concept := "initial-algebras-folds", role := .compatibility
-      title := "An edit of a sketch as written, then the edit that puts back the old sub-program, restores a coherent source session exactly; nothing of undoing a run (decisions row 373 (7))"
-      pointer := .witness `Effect4.Program.SourceSession.feed_undo },
-    -- the banked module of the vertical slice (decisions row 378; seat BANK)
     { id := "ref-cache-agrees", concept := "translation-simulation", role := .simulation
       title := "The banked Ref cache's code refines its model on every tape of storage's answers: each of the block's three bodies (make, get, invalidate), at its request with the cell holding the image of a cached value and get's loader read as a row of any table (paramsAsRows), observes the model's answer, the cell at the model's next value and the unread tape, under every reply tape whose successes lie in the image; and every recorded run of a fresh cache read once, funded, at rest and driven by a host, observes the model's read at the run's applied replies, through denoteRows_eq_session; the cache has no waiter, so the wake order is empty; nothing of an invocation by Eff.invoke (HO-2's invoke-unfolds, PROC-6), of several calls in one run, of a loader that writes the cell, of any host's storage, of a fiber-sharing schedule, or of progress (decisions row 378 (1) to (6) and (18))"
       pointer := .witness `Effect4.Ref.Cache.cache_agrees },
-    -- the banked cache imposed on an application that invalidates it (decisions row 378 (8); seat IMPOSE)
     { id := "ref-cache-invalidated-reads-through", concept := "translation-simulation", role := .compatibility
       title := "An invalidated banked cache reads through to storage: under any host, invalidate and then get, its loader a row of the host's table, at a cell holding the image of any cached value, asks the host once at the row and answers its answer, holding a success in the cell; it is the model's read after the model's invalidate, carried to the block's code by the steps of ref-cache-agrees, and unfolded on an invocation by Eff.invoke under provideContext by denoteBlockB and hostRunBlockB_invoke_get; its first reader is the built service's TodoApp_add then TodoApp_list of the cached to-do (hostRunBlockB), under the reference model; nothing of machine replay agreement before block inlining (PROC-6, row 378 (23)), of an application that skips the invalidation, or of a fiber-sharing schedule (decisions row 378 (2), (8) and (23))"
       pointer := .witness `Effect4.Ref.Cache.invalidate_get }

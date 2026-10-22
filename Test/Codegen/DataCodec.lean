@@ -98,7 +98,7 @@ def failPayload : List Err := ((Payload.image.ofVal failFrame).map Err.payload).
     (Val.exitErr (Cause.fail (errOf failFrame)))).isSome
 
 /-! Prepared boundary operations reuse one source-bound wire interpretation.
-These readers serve `decode-encode`, `decode-iff` and `record-codec-layout`. -/
+These readers serve `decode-encode` and `decode-iff`. -/
 
 def preparedPerson : Schema.Codec.Prepared personTy := Schema.Codec.prepare personTy
 
