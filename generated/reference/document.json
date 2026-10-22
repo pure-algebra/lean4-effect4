@@ -32,10 +32,11 @@
     [[{"link": "dictionary/", "label": "dictionary"}],
      [{"code": "docs/core/controlled-english.md"}],
      [{"text": "567"}]],
-    [[{"link": "semantics/", "label": "semantics"}],
+    [[{"link": "../../.lake/gen/reference/semantics/index.html",
+       "label": "semantics"}],
      [{"code": "Tools.SemanticsDocument"},
       {"text": ", "},
       {"code": "generated/semantics.md"}],
-     [{"text": "3007"}]]],
+     [{"text": "—"}]]],
    "kind": "table",
    "headers": ["page", "source", "rows"]}]}

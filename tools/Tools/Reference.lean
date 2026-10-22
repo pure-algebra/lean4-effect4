@@ -26,14 +26,15 @@ over a row's fields (`Template`, listed in `templates`).
 * `dictionary`: every tree anchor of the dictionary (`docs/core/controlled-english.md` §3) and
   what its file holds for it (`Finding`);
 * `semantics`: the semantics report's own document (`Tools.SemanticsDocument`), read back from its
-  JSON (`Tools.Document.Json.Document.ofJson`);
+  JSON (`Tools.Document.Json.Document.ofJson`), in the set that the build writes under
+  `.lake/gen/reference/` alone (`builtSemantics`): rewritten at each report, it is never committed;
 * the index, at the root of the set.
 
 A pin is a cited line of the vendored rc.112 sources. Its link leaves the set for the repository:
-from a page one folder below the set's root (`generated/reference/`) it climbs three folders to
-`vendor/`. The site's check reads such a link at the set's root, where the URL parser's walk stops,
-so the driver lists each pinned file as a file of the site after checking that the file holds the
-line (`Pin.file`).
+from a page one folder below the set's root it climbs to `vendor/`: three folders from
+`generated/reference/`, four from `.lake/gen/reference/` (the set's `root`). The site's check reads
+such a link at the set's root, where the URL parser's walk stops, so the driver lists each pinned
+file as a file of the site after checking that the file holds the line (`Pin`).
 -/
 
 namespace Tools.Reference
@@ -97,10 +98,10 @@ def Pin.of? (cite : String) : Option Pin := do
   | [a, b] => return { file, first := ← a.toNat?, last := ← b.toNat? }
   | _ => none
 
-/-- The pin's link from a page at `depth` folders below the set's root, with GitHub's line
+/-- The pin's link from a page at `depth` folders below the repository's root, with GitHub's line
 fragment. -/
 def Pin.href (p : Pin) (depth : Nat) : String :=
-  String.join (List.replicate (depth + 2) "../") ++ vendorSrc ++ p.file ++ "#L" ++ toString p.first ++
+  String.join (List.replicate depth "../") ++ vendorSrc ++ p.file ++ "#L" ++ toString p.first ++
     (if p.last == p.first then "" else "-L" ++ toString p.last)
 
 /-- A citation's cell: a link to its pin, labelled as the citation is written under `vendorSrc`, or
@@ -146,26 +147,26 @@ def layerDocs : List (String × List String × String) := ctor_docs% Effect4.Pro
 primitive it compiles to and its pin (`arms`); each constructor of `LayerTerm` with the combinator
 and the pin its docstring cites, the first span of each; each derived form with its head, arity,
 argument classes and pin. -/
-def forms : Document where
+def forms (root : Nat := 2) : Document where
   title := "forms"
   producer := producer ["src/Effect4/Program/Eff.lean", "src/Effect4/Codegen/Forms.lean"]
   body := [
     .part "eff" "Eff" [
       .table ["constructor", "combinator", "primitive", "cite"]
         (Effect4.Program.arms.map fun a =>
-          [[.code ("Eff." ++ a.constructor)], [.code a.combinator], [.code a.primitive], citeCell 1 a.cite])],
+          [[.code ("Eff." ++ a.constructor)], [.code a.combinator], [.code a.primitive], citeCell (root + 1) a.cite])],
     .part "layer-term" "LayerTerm" [
       .table ["constructor", "combinator", "cite"]
         (layerDocs.map fun (name, _, doc) =>
           let ss := spans doc
           [[.code ("LayerTerm." ++ name)], orDash ((ss.head?.map fun s => [Inline.code s]).getD []),
-           orDash (((ss.find? (·.contains ".ts:")).map (citeCell 1)).getD [])])],
+           orDash (((ss.find? (·.contains ".ts:")).map (citeCell (root + 1))).getD [])])],
     .part "derived" "Forms.all" [
       .table ["id", "head", "arity", "arguments", "citation"]
         (Effect4.Codegen.Forms.all.map fun f =>
           [[.code f.id], [.code f.head], [.text (arityWord f.arity)],
            orDash (", ".intercalate (f.arguments.map argWord) |> fun s => if s.isEmpty then [] else [.text s]),
-           citeCell 1 f.citation])]]
+           citeCell (root + 1) f.citation])]]
 
 /-! ## native -/
 
@@ -176,7 +177,7 @@ def nativeRows : List Effect4.Program.Row :=
 /-- **The page `native`**: the row of every spelled native operation, its columns the fields of
 `Row`: the spelling an operation prints as, its shape, its kind, its request, answer and error
 types (`Ty.render`), its trailing arguments and its pin. -/
-def native : Document where
+def native (root : Nat := 2) : Document where
   title := "native"
   producer := producer ["src/Effect4/Program/Native.lean", "src/Effect4/Program/Eff.lean"]
   body := [
@@ -188,7 +189,7 @@ def native : Document where
          orDash (r.trailing.map fun
            | .name s => Inline.code s
            | .str v => Inline.code v.quote),
-         citeCell 1 r.cite])]
+         citeCell (root + 1) r.cite])]
 
 /-! ## marks -/
 
@@ -472,36 +473,50 @@ def dictionary (es : List Entry) (read : String → Option String) : Document :=
 
 /-! ## The set -/
 
-/-- The page of the set at the root: each page with its subject's declarations and its rows. -/
-def index (pages : List (String × List String × Nat)) : Document where
+/-- The page of the set at the root: each page by its link, with its subject's declarations and its
+rows (a dash for a page this set does not hold). -/
+def index (pages : List (String × String × List String × Option Nat)) : Document where
   title := "reference"
   producer := producer ["the pages below"]
   body := [
     .table ["page", "source", "rows"]
-      (pages.map fun (path, sources, rows) =>
-        [[.link (path ++ "/") path], sources.map Inline.code |>.intersperse (.text ", "), [.text (toString rows)]])]
+      (pages.map fun (href, path, sources, rows) =>
+        [[.link href path], sources.map Inline.code |>.intersperse (.text ", "),
+         [.text ((rows.map toString).getD "—")]])]
 
 /-- The rows of a document's tables, at every depth. -/
 def rows (d : Document) : Nat :=
   (Block.collect { Algebra.collect (fun _ => ([] : List Unit)) with
     table := fun _ rs => rs.map fun _ => () } d.body).length
 
-/-- **The set**: the index at the root, then each page one folder down, the semantics report last,
-titled by its subject's name like every page. The semantics page's Markdown is
-`generated/semantics.md`, so it writes none of its own. -/
-def site (dictionaryPage semantics : Document) (pinned : List String) : Site :=
+/-- The semantics page of the build's set, from the committed set's root (`generated/reference/`):
+the build writes the set with the semantics page under `.lake/gen/reference/`, never committed. -/
+def builtSemantics : String := "../../.lake/gen/reference/semantics/index.html"
+
+/-- **The set**, its root `root` folders below the repository's: the index at the root, then each
+page one folder down. With the semantics report's document, the set holds it as its last page,
+titled by its subject's name like every page; its Markdown is `generated/semantics.md`, so it
+writes none of its own. Without it, the index links the build's semantics page
+(`builtSemantics`), which the site's check reads as a file at the set's root. -/
+def site (dictionaryPage : Document) (semantics : Option Document) (pinned : List String)
+    (root : Nat := 2) : Site :=
   let pages : List (String × List String × Document) := [
-    ("forms", ["Effect4.Program.arms", "LayerTerm", "Effect4.Codegen.Forms.all"], forms),
-    ("native", ["Effect4.Program.NativeOp.spelled", "nativeSignature"], native),
+    ("forms", ["Effect4.Program.arms", "LayerTerm", "Effect4.Codegen.Forms.all"], forms root),
+    ("native", ["Effect4.Program.NativeOp.spelled", "nativeSignature"], native root),
     ("marks", ["Tools.View.Glyph", "Tools.Form"], marks),
     ("refusals", ["Effect4.Ingest.Code", "ReadRefusal", "PrintRefusal", "ClassRefusal"], refusals),
-    ("dictionary", ["docs/core/controlled-english.md"], dictionaryPage),
-    ("semantics", ["Tools.SemanticsDocument", "generated/semantics.md"], { semantics with title := "semantics" })]
+    ("dictionary", ["docs/core/controlled-english.md"], dictionaryPage)] ++
+    (semantics.map fun d =>
+      ("semantics", ["Tools.SemanticsDocument", "generated/semantics.md"], { d with title := "semantics" })).toList
+  let semanticsRow := match semantics with
+    | some _ => []
+    | none => [(builtSemantics, "semantics", ["Tools.SemanticsDocument", "generated/semantics.md"], none)]
   { pages :=
       { path := [], space := "index",
-        doc := index (pages.map fun (p, s, d) => (p, s, rows d)) } ::
+        doc := index (pages.map (fun (p, s, d) => (p ++ "/", p, s, some (rows d))) ++ semanticsRow) } ::
       pages.map fun (p, _, d) => { path := [p], space := p, doc := d, markdown := p != "semantics" }
-    files := ["page.css", "looks.css", "site.json"] ++ pinned
+    files := ["page.css", "looks.css", "site.json"] ++ pinned ++
+      (if semantics.isNone then [builtSemantics.replace "../" ""] else [])
     contents := [] }
 
 /-- The pins of the set's pages: every link that climbs to `vendorSrc`, as its file under the

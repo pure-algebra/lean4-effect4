@@ -85,16 +85,17 @@ Rules of the set:
   type shows on the page at the next build.
 - `Finding` has five values. A `declaration` is a line that declares the name. A `word` is the name
   in the file with no such line. The values `file`, `missing` and `no file` complete the alphabet.
-- The semantics page reads its committed document. `make gen-reference-semantics` takes it from a
-  fresh report first.
+- The semantics page stands in the set that `make gen-reference-semantics` writes under
+  `.lake/gen/reference/`, from a fresh report. It is never committed. The committed index links it.
 
 ## 3. Receipt
 
 ### 3.1 The one thing to know first
 
-The semantics page adds 3.3 MB to the tree: `semantics/document.json` (1.6 MB) and
-`semantics/index.html` (1.7 MB). The other six pages hold 0.45 MB. A rerun of the report rewrites
-both files, and `make gen-reference` alone never touches them.
+The semantics page is not committed (coordinator, 2026-10-22): its two files hold 3.3 MB and change
+at each report. `make gen-reference-semantics` writes the whole set with it under
+`.lake/gen/reference/`, and the committed index links it there. `generated/reference/` holds the
+index and five pages, 21 files, 0.5 MB. No path under `generated/` needs a `.gitignore` line.
 
 ### 3.2 Base and head
 
@@ -104,18 +105,18 @@ Base `007c7cd17`. Head: the commit of this note on `claude/docs-generator-eaebde
 
 | File | Added | Removed |
 | --- | --- | --- |
-| `tools/Tools/Reference.lean` (new) | 525 | 0 |
+| `tools/Tools/Reference.lean` (new) | 540 | 0 |
 | `tools/Drivers/Reference.lean` (new) | 82 | 0 |
-| `Test/Audit/ReferencePages.lean` (new) | 42 | 0 |
+| `Test/Audit/ReferencePages.lean` (new) | 43 | 0 |
 | `tools/Tools/Site.lean` | 24 | 11 |
 | `tools/Tools/Document/page.css` | 0 | 3 |
 | `tools/Drivers/Site.lean` | 1 | 1 |
 | `tools/Drivers/DocSpecimen.lean` | 2 | 1 |
 | `scripts/generate.py` | 27 | 1 |
-| `Makefile` (an appended section) | 11 | 0 |
+| `Makefile` (an appended section) | 13 | 0 |
 | `docs/GENERATED.md` (the row `reference`) | 1 | 0 |
 | `Test/All.lean` (after `Test.Audit.SiteControls`) | 1 | 0 |
-| `generated/reference/` (23 files, new) | 47,787 | 0 |
+| `generated/reference/` (21 files, new) | 6,209 | 0 |
 
 ### 3.4 Commands and results
 
@@ -128,6 +129,7 @@ Base `007c7cd17`. Head: the commit of this note on `claude/docs-generator-eaebde
 | `tools/view/v -d` | the specimen written to `tools/view/out/docs` |
 | `python3 scripts/check-language.py --strict` on the six `index.md` | PASS |
 | `python3 scripts/check-language.py --strict docs/GENERATED.md` | PASS |
+| `lake env lean --run tools/Drivers/Reference.lean .lake/gen/reference REPORT`, at the report of `generated/semantics.md` | 7 pages; pins climb four folders |
 
 ### 3.5 Axiom output
 
@@ -148,7 +150,7 @@ reports 0 modulo planned goals. The battery is the gated module.
 - `Kind` has no docstrings. The page reads `Kind.means` instead.
 - The ingest README still renders the native rows from TypeScript. Its native table could read
   `generated/reference/native/index.md` instead.
-- The semantics page's title is overridden to `semantics` in the set. `generated/semantics.md`
+- The semantics page's title is overridden to `semantics` in the built set. `generated/semantics.md`
   keeps the report's title until the report changes it.
 - A `lean_exe` entry is not needed: the driver runs through `lake env lean --run`, as `TsGen` does.
 - The pages landed in one commit, not three. They share one module, one driver and one battery,
@@ -168,8 +170,9 @@ columns show are the tree's own words, read by `ctor_docs%`.
    over a row's fields, listed in `Tools.Reference.templates`.
 3. A pin links its vendored file and line, and the driver refuses a pin whose file lacks the line.
 4. The dictionary page checks each anchor against its file. The dictionary stays hand-written.
-5. The semantics page is the report's document in the set's shell. Its Markdown stays
-   `generated/semantics.md`.
+5. The semantics page is the report's document in the set's shell. It is a build artifact under
+   `.lake/gen/reference/` (`make gen-reference-semantics`), never committed, and the committed index
+   links it. Its Markdown stays `generated/semantics.md`.
 6. The face of the data is the look's and is written into `looks.css`. `page.css` names no face.
 7. Proposed: `reference` joins `GEN_GROUPS` and `HERMETIC_GROUPS`, and its paths join
    `GENERATED_PATHS`. The coordinator owns those lines.

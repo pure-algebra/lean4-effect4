@@ -18,7 +18,7 @@ namespace Test.Audit.ReferencePages
 open Tools.Document Tools.Reference
 
 -- forms, native, marks and refusals: each passes its check and reads back
-#guard [forms, native, marks, refusals].all fun d =>
+#guard [forms, native, marks, refusals, forms 3, native 3].all fun d =>
   (d.check matches .ok ()) && (Json.Document.reads (Json.Document.json d) matches .ok _)
 
 -- the dictionary page, from a fixture: a declaration, a word, and two paths with no file
@@ -34,9 +34,10 @@ open Tools.Document Tools.Reference
     ((entries text).flatMap (·.anchors)).map (fun a => (find a (files.lookup a.path)).text) ==
       ["declaration", "word", "no file", "no file"]
 
--- the index, with a row per page
+-- the index, with a row per page: one of the set, one built outside it
 #guard
-  let d := index [("forms", ["Effect4.Program.arms"], rows forms)]
+  let d := index [("forms/", "forms", ["Effect4.Program.arms"], some (rows forms)),
+    (builtSemantics, "semantics", [], none)]
   (d.check matches .ok ()) && (Json.Document.reads (Json.Document.json d) matches .ok _)
 
 end Test.Audit.ReferencePages

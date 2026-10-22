@@ -314,8 +314,8 @@ def graphs(out, checking):
 def reference(out, checking):
     """Write the reference pages from the tree's data, then compare or install them.
 
-    The driver reads the committed semantics document of the set and writes every file of the
-    set into a fresh folder. Install mode removes a committed file the run did not write; check
+    The driver writes every file of the committed set into a fresh folder; the semantics page is
+    not one of them (`make gen-reference-semantics` builds it under .lake/gen). Install mode removes a committed file the run did not write; check
     mode refuses it, as it refuses a file whose bytes differ.
     """
     target = ROOT / 'generated/reference'
