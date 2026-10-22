@@ -26,8 +26,7 @@ path under the prelude's folder (`closureOf`, from `importedBy`).
   package, that no import needs; a dynamic `import(…)` is not read.
 - **The source** is the library's prelude folder, under its checkout (`source`). The compiler
   reads the whole folder (`folder`) and copies the closure of each module's imports
-  (`Compiler.emitTs`). The code generator's folder (`tools/Drivers/Emit.lean`) copies the closure
-  from `prelude.ts`, which every one of its modules imports (`closure`, `write`).
+  (`Compiler.emitTs`).
 -/
 
 namespace Compiler.Prelude
@@ -114,14 +113,6 @@ def closureOf {m : Type → Type} [Monad m] (read : String → ExceptT String m 
   return found.mergeSort fun a b =>
     Effect4.Codegen.bytesLe a.1.toUTF8.data.toList b.1.toUTF8.data.toList
 
-/-- **The prelude's import closure** under `dir`, from `root`: `closureOf`, each file read from
-the disk. -/
-def closure (dir : System.FilePath) (from_ : List String := [root]) :
-    IO (List (String × ByteArray)) := do
-  match ← (closureOf (fun path => ExceptT.lift (IO.FS.readBinFile (dir / path))) from_).run with
-  | .ok files => pure files
-  | .error why => throw (IO.userError why)
-
 /-- The folder an emitted folder holds the prelude's files under. -/
 def under : String := "prelude/"
 
@@ -153,12 +144,5 @@ def folder (dir : System.FilePath) : IO (List (String × ByteArray)) := do
       files := files ++ [(relative, ← IO.FS.readBinFile path)]
   return files.mergeSort fun a b =>
     Effect4.Codegen.bytesLe a.1.toUTF8.data.toList b.1.toUTF8.data.toList
-
-/-- Write each file at its path under `out`, creating its folders. -/
-def write (out : System.FilePath) (files : List (String × ByteArray)) : IO Unit := do
-  for (path, bytes) in files do
-    let file := out / path
-    if let some dir := file.parent then IO.FS.createDirAll dir
-    IO.FS.writeBinFile file bytes
 
 end Compiler.Prelude

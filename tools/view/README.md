@@ -108,16 +108,8 @@ A page of a program shows its code beside its tree: the TypeScript the code gene
 it, laid out at 80 columns. While a program is built, the code grows with the tree, and each hole
 is a call the host answers until it is filled.
 
-The code generator's output, as files to read:
-
-```sh
-lake env lean --run tools/Drivers/Emit.lean OUT   # OUT/README.md indexes every program
-```
-
-Each program has a module (`OUT/corpus/NAME.ts`) and its tree (`NAME.tree.txt`). A module imports
-exactly the names it uses, and its header carries its program's address and type. It is laid out
-at Effect's own width, 120 columns. The index says whether the core's reading boundary admits each
-module as written.
+The code generator's output, as files to read, is the compiler's emission:
+`lake exe effect4 emit --group corpus --out OUT`.
 
 In the window: Right or Space plays the motion to the next frame, Left steps back, Home and End
 go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwait`, `pGen`,
@@ -140,7 +132,7 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Tools/View/Organic.lean` | organic strokes: da Vinci's split, bounded noise, collars, round corners; the band laws |
 | `tools/Tools/View/AlgGraph.lean` | the algebraic graph and Mokhov's axioms, proved of its edge-set model |
 | `tools/Tools/View/Flow.lean` | a program's own graph: its flow as a fold of the program, its waits resolved by the binder table, and its layout (across by a fold, down along a checked order) |
-| `tools/Tools/View/FlowLaws.lean`, `FlowOrder.lean` | the layout's laws: well formed by fold induction, edges descend, boxes apart, and what a flow orders first stands above |
+| `tools/Tools/View/FlowLaws.lean` | the layout's laws: well formed by fold induction, edges descend, boxes apart, and what a flow orders first stands above |
 | `tools/Tools/View/FlowSpecimen.lean` | the program graph's specimen, one case a page |
 | `tools/Tools/View/Motion.lean` | the data join and the moments of a step; `sample` and its end law |
 | `tools/Tools/View/Program.lean`, `Build.lean`, `Run.lean` | the frames of a program built by edits, and of a run |
@@ -148,13 +140,11 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Tools/View/Inc.lean` | the page's lines and flow along an edit, from the texts the frame before left |
 | `tools/Tools/View/Retained.lean` | a picture as objects in groups; the patch from one frame to the next, and its laws |
 | `tools/Tools/View/Live.lean` | the live step: one request in, one patch out |
-| `tools/Tools/View/LiveChecks.lean` | the live view's checks at every frame of the view's builds |
 | `tools/Tools/View/Specimen.lean` | the graph specimen |
 | `tools/Compiler/Code/Doc.lean` | a document and its layout at a width: groups lie flat when they fit |
 | `src/Effect4/Codegen/TsFold.lean` | the fold of TypeScript's syntax: its algebra and uniqueness (generated into the core, group `TsFold`) |
 | `tools/Compiler/Code/TypeScript.lean` | printed TypeScript as two algebras of its syntax: the house and the readable layout |
 | `tools/Compiler/Code/Module.lean` | a generated module: its exact imports, its address and header block, its layout; the code plane |
-| `tools/Drivers/Emit.lean` | the driver: the generated folder, each module's reading verdict and the index |
 | `tools/Drivers/View.lean` | the driver: frames to `.draw`, `.svg` and text |
 | `tools/Drivers/Live.lean` | the live driver: session requests in, patch rows out |
 | `draw.c`, `play.c`, `replay.h`, `paint.h` | the replay to PNG or into the terminal (`--kitty`), the window and its live mode, the shared replay, the painter |

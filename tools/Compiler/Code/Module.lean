@@ -26,8 +26,7 @@ The checks are the core's, run on the structured module the text is laid out fro
 boundary admits it (`Effect4.Codegen.admitModule`: bindings, read-back, typing, envelope), and
 the program it reads back must equal the program printed. The printed text itself is not parsed
 here: it is the structured module laid out, and its flat form is the house print
-(`Ts.flat_fold_expr`). The code generator's folder (`tools/Drivers/Emit.lean`) writes a refusal
-in a module's header and in its index, never hidden. The compiler (`Compiler.emitTs`) refuses,
+(`Ts.flat_fold_expr`). The compiler (`Compiler.emitTs`) refuses a module that does not read back,
 and writes nothing.
 -/
 
