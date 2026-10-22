@@ -38,7 +38,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lib.lean_imports import header_imports, imports_of, source_closure, workspace_source  # noqa: E402
+from lib.lean_imports import header_imports, imports_of, module_name, source_closure, workspace_source  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 UNREADABLE = 'lean-imports-closure-unreadable'
@@ -70,17 +70,6 @@ _AMBIENT = re.compile(r"^\s*(?:@\[[^\]]*\b(?:simp|aesop|macro|term_elab|command_
                       r"|(?:scoped\s+|local\s+)?(?:instance|notation|infix|infixl|infixr|prefix|postfix|macro|macro_rules|syntax|elab|elab_rules|attribute|set_option)\b)")
 # The batteries the whole-tree gates own: the sweep runs them.
 _SWEEP_ONLY = {'Test.All', 'Test.Audit.AxiomGate'}
-
-
-def _module_of(path: str) -> str | None:
-    """The module a workspace source path holds, by `SOURCE_DIRS`' order."""
-    p = Path(path)
-    if p.suffix != '.lean':
-        return None
-    parts = p.with_suffix('').parts
-    if parts[:1] in (('src',), ('tools',)):
-        parts = parts[1:]
-    return '.'.join(parts)
 
 
 def _short(name: str) -> str:
@@ -143,7 +132,7 @@ def _edits(base: str) -> tuple[dict[str, list[int]], dict[str, set[str]]]:
             start, count = int(m.group(3)), int(m.group(4) or '1')
             edited[path].extend(range(start, start + max(count, 1)))
         elif line.startswith('-') and not line.startswith('---') and old and (m := _DECL.match(line[1:])):
-            if (module := _module_of(old)) is not None:
+            if (module := module_name(old)) is not None:
                 removed.setdefault(module, set()).add(_short(m.group(1)))
     return edited, removed
 
@@ -166,8 +155,8 @@ def touched(base: str) -> list[str]:
     stale: list[str] = []
     for path, lines in edited.items():
         source = ROOT / path
-        module = _module_of(path)
-        if module is None or not source.is_file() or not path.startswith(('src/', 'tools/')):
+        module = module_name(path)
+        if module is None or not source.is_file() or not path.startswith(('src/', 'tools/', 'examples/')):
             continue
         text_lines = source.read_text(encoding='utf-8', errors='replace').splitlines()
         current = {_short(m.group(1)) for t in text_lines if (m := _DECL.match(t))}
@@ -213,13 +202,13 @@ def touched(base: str) -> list[str]:
             frontier = {n for n in reached if n.startswith('_private.')}
     word = re.compile(r"(?<![\w'?!])(?:" + '|'.join(sorted(map(re.escape, by_text))) + r")(?![\w'?!])") \
         if by_text else None
-    modules = {m for p in edited if (m := _module_of(p))}
+    modules = {m for p in edited if (m := module_name(p))}
     sweep = _SWEEP_ONLY
     # The batteries are the modules `Test.All` reaches; a fixture under `Test/` is no target.
-    batteries = {m for p in closure(['Test.All'], None) if (m := _module_of(p)) and m.startswith('Test.')}
+    batteries = {m for p in closure(['Test.All'], None) if (m := module_name(p)) and m.startswith('Test.')}
     out, unread = [], []
     for battery in sorted((ROOT / 'Test').rglob('*.lean')):
-        module = _module_of(str(battery.relative_to(ROOT)))
+        module = module_name(str(battery.relative_to(ROOT)))
         if module in sweep or module not in batteries:
             continue
         text = battery.read_text(encoding='utf-8', errors='replace')

@@ -98,9 +98,21 @@ def imports_of(path: Path) -> list[str]:
     return header_imports(Path(path).read_text(encoding='utf-8', errors='replace'))
 
 
-# Where a workspace module's source stands: the library roots `src` and `tools`, then the
-# repository itself (`Test`, `harness`).
-SOURCE_DIRS = ('src', 'tools', '.')
+# Where a workspace module's source stands: the library roots `src`, `tools` and `examples`
+# (the `srcDir` of each `lakefile.toml` library), then the repository itself (`Test`, `harness`).
+SOURCE_DIRS = ('src', 'tools', 'examples', '.')
+
+
+def module_name(path) -> str | None:
+    """The module that the workspace source at `path` (relative to the repository) holds, or None
+    for a file that is no Lean source. The inverse of `workspace_source`."""
+    p = Path(path)
+    if p.suffix != '.lean':
+        return None
+    parts = p.with_suffix('').parts
+    if parts[:1] and parts[0] in SOURCE_DIRS:
+        parts = parts[1:]
+    return '.'.join(parts)
 
 
 def workspace_source(root: Path, module: str) -> Path | None:

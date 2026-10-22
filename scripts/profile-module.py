@@ -24,16 +24,13 @@ import subprocess
 import sys
 from collections import defaultdict
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from lib.lean_imports import module_name  # noqa: E402
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / ".lake" / "gen" / "profile"
 
 
-def module_of(path: pathlib.Path) -> str:
-    rel = path.resolve().relative_to(ROOT)
-    parts = list(rel.with_suffix("").parts)
-    if parts[0] in ("src", "tools"):
-        parts = parts[1:]
-    return ".".join(parts)
 
 
 def ms(nanos) -> float:
@@ -45,7 +42,7 @@ def main() -> int:
         print(__doc__.strip().split("\n\n")[1])
         return 2
     path = pathlib.Path(sys.argv[1])
-    module = module_of(path)
+    module = module_name(path.resolve().relative_to(ROOT))
     OUT.mkdir(parents=True, exist_ok=True)
     log = OUT / f"{module}.profile.txt"
     stats = OUT / f"{module}.aesop.jsonl"

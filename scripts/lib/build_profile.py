@@ -8,7 +8,7 @@ import re
 import sys
 from pathlib import Path
 
-from lean_imports import imports_of as lean_imports_of
+from lean_imports import SOURCE_DIRS, module_name, imports_of as lean_imports_of
 
 ROOT = Path(__file__).resolve().parents[2]
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
@@ -16,12 +16,11 @@ BUILT = re.compile(r"Built ([A-Za-z0-9_.'«»]+) \(([0-9.]+)(ms|s)\)")
 
 
 def module_sources() -> dict[str, Path]:
+    """Every workspace module of the library folders (`SOURCE_DIRS`) and the batteries (`Test`)."""
     found: dict[str, Path] = {}
-    for base in ("src", "tools"):
+    for base in [d for d in SOURCE_DIRS if d != "."] + ["Test"]:
         for path in (ROOT / base).rglob("*.lean"):
-            found[".".join(path.relative_to(ROOT / base).with_suffix("").parts)] = path
-    for path in (ROOT / "Test").rglob("*.lean"):
-        found[".".join(path.relative_to(ROOT).with_suffix("").parts)] = path
+            found[module_name(path.relative_to(ROOT))] = path
     return found
 
 
