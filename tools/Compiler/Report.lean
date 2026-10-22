@@ -23,8 +23,9 @@ as given, the output root its paths are under, and its events in order:
 with `styled := false` it writes text alone, the `plain` format; with `styled := true` it adds
 ANSI escapes and the line in progress, the `tty` format, and `strip_pieces` proves the tty fold
 with its escapes removed is the plain fold at every text (concept 7, `initial-algebras-folds`;
-the text is a parameter the proof never inspects). `document r` folds the report to a `Tools.Document`: `json` is `Document.json` of
-it, which `Document.ofJson` reads back (`Document.ofJson_json`), and `md` its Markdown fold.
+the text is a parameter the proof never inspects). `Report.json r` is the report's own lossless JSON, read back by `Report.ofJson`
+(`Report.ofJson_json`): the `json` format. `document r` folds the report to a `Tools.Document`,
+the readable view, and `md` is its Markdown fold.
 
 The marks are the design language's (`Tools.View.Page`, `Tools.View.Glyph`): `□` a fold started
 and not finished, `┄┄` the wait while a fold is in progress, `■` a fold finished or an artifact
@@ -177,6 +178,7 @@ structure Report where
 namespace Report
 
 open Tools.Document (Document Block Inline Line)
+open Lean (Json)
 
 /-- The exit code: `2` at a usage error, `1` at a refusal, `0` otherwise. -/
 def exit (r : Report) : UInt32 :=
@@ -192,7 +194,7 @@ def artifacts (r : Report) : List Written :=
 def refusals (r : Report) : List String :=
   r.events.filterMap fun
     | .refusal _ why => some why
-    | .usage command why => some s!"{command}: {why}"
+    | .usage command why => some (if command.isEmpty then why else s!"{command}: {why}")
     | _ => none
 
 /-! ## The text: one fold, two formats
@@ -588,11 +590,11 @@ def artifactRow (w : Written) : List Line :=
   [[.text w.role.word], [.text w.form.word], [.text w.kind.word], [.code w.path],
    [.text (toString w.size)], [.code w.sha256]]
 
-/-- A reading as a part of the document: its JSON when it has one, its text otherwise. -/
+/-- A reading as a part of the document: its text, and its JSON when it has one. -/
 def readingPart (i : Nat) (what text : String) (json : Option String) : Block :=
-  .part s!"reading-{i}" what [match json with
-    | some j => .code "json" j
-    | none => .code "text" text]
+  .part s!"reading-{i}" what ([.code "text" text] ++ match json with
+    | some j => [.code "json" j]
+    | none => [])
 
 /-- **The report as a document**: its command line as the title; the command, its arguments, its
 root and its exit code as fields; the events as a list (`eventLines`); the artifacts as a table;
@@ -604,17 +606,223 @@ def document (r : Report) : Document :=
   { title := " ".intercalate ("effect4" :: r.arguments)
     body := [.fields [("command", [.code r.command]),
       ("arguments", [.code (" ".intercalate r.arguments)]),
-      ("out", [.text (r.out.getD "none")]),
+      ("out", match r.out with | some root => [.code root] | none => [.text "no output root"]),
       ("exit", [.text (toString r.exit)])],
       .items (eventLines none r.events),
       .table ["role", "form", "kind", "path", "bytes", "sha256"] (r.artifacts.map artifactRow)] ++
       readings.zipIdx.map fun ((what, text, json), i) => readingPart i what text json }
 
-/-- **The json format**: the document's JSON, laid out, then a line break. -/
-def json (r : Report) : String := (Tools.Document.Json.Document.json (document r)).pretty ++ "\n"
-
 /-- **The md format**: the document's Markdown. -/
 def md (r : Report) : String := (document r).markdown
+
+/-! ## The transport: the report as JSON, read back
+
+`Report.json` is the report's own lossless JSON, the protocol another CLI folds: the format word,
+the command, the arguments as a list, the output root as a string or `null`, and the events in
+order, each tagged by its `event` word with every field, a reading's text and its JSON both.
+`Report.ofJson` reads it back and refuses a field it does not know; `Report.ofJson_json` is the
+retraction (concept 7, `initial-algebras-folds`, claim `cli-report-transport`). The document
+(`Report.document`) stays the readable view. -/
+
+/-- The version of the transport, on every report. -/
+def format : String := "effect4-report/1"
+
+/-- An object's fields, in the order of their names. -/
+private def entries (what : String) : Json → Except String (List (String × Json))
+  | .obj kvs => .ok kvs.toList
+  | _ => .error s!"{what}: not an object"
+
+/-- An object's fields, refused when it holds a field not in `names`. -/
+private def fields (what : String) (names : List String) (j : Json) : Except String (List (String × Json)) := do
+  let fs ← entries what j
+  if let some (k, _) := fs.find? (fun (k, _) => !names.contains k) then throw s!"{what}: unknown field {k}"
+  return fs
+
+private def field (what key : String) (fs : List (String × Json)) : Except String Json :=
+  match fs.lookup key with
+  | some v => .ok v
+  | none => .error s!"{what}: no field {key}"
+
+private def str (what : String) : Json → Except String String
+  | .str s => .ok s
+  | _ => .error s!"{what}: not a string"
+
+private def nat (what : String) : Json → Except String Nat
+  | .num ⟨.ofNat n, 0⟩ => .ok n
+  | _ => .error s!"{what}: not a natural number"
+
+private def arr (what : String) : Json → Except String (List Json)
+  | .arr xs => .ok xs.toList
+  | _ => .error s!"{what}: not an array"
+
+/-- An optional text: the text, or `null`. -/
+def optJson : Option String → Json
+  | none => .null
+  | some s => .str s
+
+private def readOpt (what : String) : Json → Except String (Option String)
+  | .null => .ok none
+  | .str s => .ok (some s)
+  | _ => .error s!"{what}: not a string or null"
+
+def Role.all : List Role := [.program, .host, .run]
+
+def readRole (j : Json) : Except String Role := do
+  let w ← str "role" j
+  match Role.all.find? (·.word == w) with
+  | some r => return r
+  | none => throw s!"role {w}: not a role"
+
+/-- A form as JSON: its word, and a print's target. -/
+def formJson : Form → Json
+  | .object => Json.mkObj [("form", "object")]
+  | .print target => Json.mkObj [("form", "print"), ("target", target)]
+  | .record => Json.mkObj [("form", "record")]
+  | .index => Json.mkObj [("form", "index")]
+
+def readForm (j : Json) : Except String Form := do
+  let fs ← fields "form" ["form", "target"] j
+  match ← str "form" (← field "form" "form" fs) with
+  | "object" => return .object
+  | "print" => return .print (← str "target" (← field "form" "target" fs))
+  | "record" => return .record
+  | "index" => return .index
+  | w => throw s!"form {w}: not a form"
+
+def Kind.all : List Kind :=
+  [.object, .certificate, .program, .module, .surface, .recipe, .closure, .manifest, .prelude,
+   .document, .figure, .table]
+
+def readKind (j : Json) : Except String Kind := do
+  let w ← str "kind" j
+  match Kind.all.find? (·.word == w) with
+  | some k => return k
+  | none => throw s!"kind {w}: not a kind"
+
+/-- A written file as JSON: every field. -/
+def writtenJson (w : Written) : Json :=
+  Json.mkObj [("role", w.role.word), ("form", formJson w.form), ("kind", w.kind.word),
+    ("path", w.path), ("size", w.size), ("sha256", w.sha256)]
+
+def readWritten (j : Json) : Except String Written := do
+  let fs ← fields "file" ["role", "form", "kind", "path", "size", "sha256"] j
+  return { role := ← readRole (← field "file" "role" fs), form := ← readForm (← field "file" "form" fs)
+           kind := ← readKind (← field "file" "kind" fs), path := ← str "path" (← field "file" "path" fs)
+           size := ← nat "size" (← field "file" "size" fs), sha256 := ← str "sha256" (← field "file" "sha256" fs) }
+
+/-- An event as JSON, tagged by its `event` word, every field present. -/
+def eventJson : Event → Json
+  | .started what => Json.mkObj [("event", "started"), ("what", what)]
+  | .finished what => Json.mkObj [("event", "finished"), ("what", what)]
+  | .measure word n => Json.mkObj [("event", "measure"), ("word", word), ("count", n)]
+  | .artifact w => Json.mkObj [("event", "artifact"), ("file", writtenJson w)]
+  | .reading what text json =>
+    Json.mkObj [("event", "reading"), ("what", what), ("text", text), ("json", optJson json)]
+  | .refusal step why => Json.mkObj [("event", "refusal"), ("step", step), ("why", why)]
+  | .usage command why => Json.mkObj [("event", "usage"), ("command", command), ("why", why)]
+
+def readEvent (j : Json) : Except String Event := do
+  let tag ← str "event" (← field "event" "event" (← entries "event" j))
+  let fs ← fields s!"event {tag}" (match tag with
+    | "started" | "finished" => ["event", "what"]
+    | "measure" => ["event", "word", "count"]
+    | "artifact" => ["event", "file"]
+    | "reading" => ["event", "what", "text", "json"]
+    | "refusal" => ["event", "step", "why"]
+    | "usage" => ["event", "command", "why"]
+    | _ => ["event"]) j
+  let get (k : String) := field s!"event {tag}" k fs
+  match tag with
+  | "started" => return .started (← str "what" (← get "what"))
+  | "finished" => return .finished (← str "what" (← get "what"))
+  | "measure" => return .measure (← str "word" (← get "word")) (← nat "count" (← get "count"))
+  | "artifact" => return .artifact (← readWritten (← get "file"))
+  | "reading" =>
+    return .reading (← str "what" (← get "what")) (← str "text" (← get "text")) (← readOpt "json" (← get "json"))
+  | "refusal" => return .refusal (← str "step" (← get "step")) (← str "why" (← get "why"))
+  | "usage" => return .usage (← str "command" (← get "command")) (← str "why" (← get "why"))
+  | t => throw s!"event: no event {t}"
+
+/-- **The report as JSON**, lossless: the format, the command, the arguments, the root or `null`,
+and the events in order. -/
+def Report.json (r : Report) : Json :=
+  Json.mkObj [("format", format), ("command", r.command),
+    ("arguments", .arr (r.arguments.map Json.str).toArray), ("out", optJson r.out),
+    ("events", .arr (r.events.map eventJson).toArray)]
+
+/-- **The report read from its JSON**, in the format `format` alone. -/
+def Report.ofJson (j : Json) : Except String Report := do
+  let fs ← fields "report" ["format", "command", "arguments", "out", "events"] j
+  let f ← str "format" (← field "report" "format" fs)
+  unless f == format do throw s!"report: format {f}, not {format}"
+  let command ← str "command" (← field "report" "command" fs)
+  let arguments ← (← arr "arguments" (← field "report" "arguments" fs)).mapM (str "argument")
+  let out ← readOpt "out" (← field "report" "out" fs)
+  let events ← (← arr "events" (← field "report" "events" fs)).mapM readEvent
+  return { command, arguments, out, events }
+
+/-- Step of `cli-report-transport`: a list lifts its element retraction. -/
+private theorem mapM_retraction {α β : Type} (write : α → β) (read : β → Except String α)
+    (law : ∀ x, read (write x) = .ok x) (xs : List α) :
+    (xs.map write).mapM read = .ok xs := by
+  induction xs with
+  | nil => rfl
+  | cons head tail ih =>
+    simp only [List.map_cons, List.mapM_cons, law, ih]
+    rfl
+
+private theorem readRole_word (r : Role) : readRole (.str r.word) = .ok r := by
+  cases r <;> rfl
+
+private theorem readForm_formJson (f : Form) : readForm (formJson f) = .ok f := by
+  cases f <;> rfl
+
+private theorem readKind_word (k : Kind) : readKind (.str k.word) = .ok k := by
+  cases k <;> rfl
+
+/-- Step of `cli-report-transport`, consumed by its artifact case. -/
+private theorem readWritten_writtenJson (w : Written) : readWritten (writtenJson w) = .ok w := by
+  cases w with
+  | mk role form kind path size sha256 =>
+    change (do
+      let role ← readRole (.str role.word)
+      let form ← readForm (formJson form)
+      let kind ← readKind (.str kind.word)
+      pure (Written.mk role form kind path size sha256)) = .ok (Written.mk role form kind path size sha256)
+    rw [readRole_word, readForm_formJson, readKind_word]
+    rfl
+
+/-- Step of `cli-report-transport`, consumed by `Report.ofJson_json`. -/
+private theorem readEvent_eventJson (e : Event) : readEvent (eventJson e) = .ok e := by
+  cases e with
+  | artifact w =>
+    change (do let f ← readWritten (writtenJson w); pure (Event.artifact f)) = .ok (Event.artifact w)
+    rw [readWritten_writtenJson]
+    rfl
+  | reading what text json => cases json <;> rfl
+  | _ => rfl
+
+private theorem readOpt_optJson (what : String) (o : Option String) : readOpt what (optJson o) = .ok o := by
+  cases o <;> rfl
+
+/-- **The transport's retraction**: the report read from its own JSON is the report. Placement:
+concept `initial-algebras-folds`, claim `cli-report-transport` (proposed, the report note §10).
+Consumer: the OCaml shell's reader, and the battery's finite check through `Lean.Json.parse`. It
+states equality of report values; it makes no claim about another language's JSON parser. -/
+theorem Report.ofJson_json (r : Report) : Report.ofJson (Report.json r) = .ok r := by
+  cases r with
+  | mk command arguments out events =>
+    change (do
+      let arguments ← (arguments.map Json.str).mapM (str "argument")
+      let out ← readOpt "out" (optJson out)
+      let events ← (events.map eventJson).mapM readEvent
+      pure (Report.mk command arguments out events)) = .ok (Report.mk command arguments out events)
+    rw [mapM_retraction Json.str (str "argument") (fun _ => rfl), readOpt_optJson,
+      mapM_retraction eventJson readEvent readEvent_eventJson]
+    rfl
+
+/-- **The json format**: the report's own JSON (`Report.json`), laid out, then a line break. -/
+def jsonText (r : Report) : String := (Report.json r).pretty ++ "\n"
 
 /-! ## The formats, named -/
 
@@ -640,7 +848,7 @@ def Format.parse (word : String) : Option Format := Format.all.find? (·.name ==
 def Format.text : Format → Report → String
   | .tty => Report.tty
   | .plain => Report.plain
-  | .json => Report.json
+  | .json => Report.jsonText
   | .md => Report.md
 
 /-! ## The log: the one IO -/
@@ -674,6 +882,20 @@ def Log.folding {α : Type} (l : Log) (what : String) (body : IO α) : IO α := 
   unless ← l.refusedSince from_ do l.event (.finished what)
   return a
 
+/-- **One file written under the root**: its folder made, its bytes written, then the artifact
+recorded; an error is a refusal at `step`, and no artifact is recorded. Whether it was written. -/
+def Log.write (l : Log) (step : String) (root : System.FilePath) (w : Written) (bytes : ByteArray) :
+    IO Bool := do
+  try
+    let file := root / w.path
+    if let some dir := file.parent then IO.FS.createDirAll dir
+    IO.FS.writeBinFile file bytes
+    l.event (.artifact w)
+    return true
+  catch e =>
+    l.event (.refusal step s!"{w.path}: {e}")
+    return false
+
 /-- The report of a log. -/
 def Log.report (l : Log) (command : String) (arguments : List String) : IO Report := do
   return { command, arguments, out := ← l.root.get, events := (← l.events.get).toList }
@@ -688,30 +910,34 @@ def liveSink (styled : Bool) (out : IO.FS.Stream) : IO ((Event → IO Unit) × I
     out.putStr (shown ps)
     out.flush, state)
 
-/-- **A command run and shown**: the title, the events as they arrive, then the close and the
-summary, for a text format; the document at the end, for `json` and `md`; the refusals' words
-alone on the error stream under `quiet`. The exit code is the report's. -/
+/-- **A command run and shown** (decisions row 444 (7)): the `tty` and `plain` formats are for
+a person and go to the error stream, the title and the events as they arrive, then the close and
+the summary; the `json` and `md` formats are the requested result and go to the standard output,
+a failed report included; under `quiet` the refusals' words alone, on the error stream. The exit
+code is the report's. -/
 def print (format : Format) (quiet : Bool) (command : String) (arguments : List String)
     (body : Log → IO Unit) : IO UInt32 := do
   let out ← IO.getStdout
+  let err ← IO.getStderr
   let styled := format == .tty
   let (live, state) ← match quiet, format with
-    | false, .tty | false, .plain => liveSink styled out
+    | false, .tty | false, .plain => liveSink styled err
     | _, _ => do pure (fun _ => pure (), ← IO.mkRef none)
   let log : Log := { events := ← IO.mkRef #[], root := ← IO.mkRef none, live }
   unless quiet do
     match format with
-    | .tty | .plain => out.putStr (shown (title .standard styled { command, arguments, events := [] }))
+    | .tty | .plain => err.putStr (shown (title .standard styled { command, arguments, events := [] }))
     | _ => pure ()
   try body log catch e => log.event (.refusal command (toString e))
   let r ← log.report command arguments
   if quiet then
-    for why in r.refusals do (← IO.getStderr).putStrLn why
+    for why in r.refusals do err.putStrLn why
   else
     match format with
-    | .tty | .plain => out.putStr (shown (close .standard styled (← state.get) ++ summary .standard styled r))
+    | .tty | .plain => err.putStr (shown (close .standard styled (← state.get) ++ summary .standard styled r))
     | .json | .md => out.putStr (format.text r)
   out.flush
+  err.flush
   return r.exit
 
 end Report

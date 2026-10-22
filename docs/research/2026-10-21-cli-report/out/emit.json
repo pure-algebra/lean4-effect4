@@ -1,97 +1,120 @@
-{"title": "effect4 emit --group todo --out .lake/effect4/todo/ts --format json",
- "producer": [],
- "format": "effect4-document/1",
- "body":
- [{"rows":
-   [{"line": [{"code": "emit"}], "label": "command"},
-    {"line":
-     [{"code": "emit --group todo --out .lake/effect4/todo/ts --format json"}],
-     "label": "arguments"},
-    {"line": [{"text": ".lake/effect4/todo/ts"}], "label": "out"},
-    {"line": [{"text": "0"}], "label": "exit"}],
-   "kind": "fields"},
-  {"lines":
-   [[{"text": "■ folding the program todo"},
-     {"text": " · 5 definitions · 4 rows · 35 nodes · 4 calls"}],
-    [{"text": "■ printing for ts"}, {"text": " · 11 files"}]],
-   "kind": "items"},
-  {"rows":
-   [[[{"text": "program"}],
-     [{"text": "print ts"}],
-     [{"text": "module"}],
-     [{"code": "todo.gen.ts"}],
-     [{"text": "4929"}],
-     [{"code":
-       "12813d1312fd2f3196f138aa005b6634a28fe600ccd702c3575b296b242199c5"}]],
-    [[{"text": "program"}],
-     [{"text": "print ts"}],
-     [{"text": "prelude"}],
-     [{"code": "prelude/control.ts"}],
-     [{"text": "3227"}],
-     [{"code":
-       "471f71a8eb0121ef49695d5cd9e8ea1435e4b354af3c0e29c3834d8aba77ac00"}]],
-    [[{"text": "program"}],
-     [{"text": "print ts"}],
-     [{"text": "prelude"}],
-     [{"code": "prelude/prelude-atoms.gen.ts"}],
-     [{"text": "15457"}],
-     [{"code":
-       "98140a53a40ba0b88b7fa4857729544f2306ef95aff7cd0dde18bf179acf7ef6"}]],
-    [[{"text": "program"}],
-     [{"text": "print ts"}],
-     [{"text": "prelude"}],
-     [{"code": "prelude/prelude.ts"}],
-     [{"text": "29661"}],
-     [{"code":
-       "7001d9c995e74b16fc72322e6763b833a00611e297c09afeadcc3f17d49330dc"}]],
-    [[{"text": "program"}],
-     [{"text": "print ts"}],
-     [{"text": "prelude"}],
-     [{"code": "prelude/records.ts"}],
-     [{"text": "2644"}],
-     [{"code":
-       "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee"}]],
-    [[{"text": "program"}],
-     [{"text": "print ts"}],
-     [{"text": "prelude"}],
-     [{"code": "prelude/tuples.ts"}],
-     [{"text": "344"}],
-     [{"code":
-       "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"}]],
-    [[{"text": "program"}],
-     [{"text": "print ts"}],
-     [{"text": "surface"}],
-     [{"code": "todo.surface.gen.ts"}],
-     [{"text": "2863"}],
-     [{"code":
-       "3a696ef29e4cbafbd2625a7d2a0de65302a98ffbf1247a027380e4e72848d7aa"}]],
-    [[{"text": "program"}],
-     [{"text": "object"}],
-     [{"text": "object"}],
-     [{"code": "todo.eff"}],
-     [{"text": "5713"}],
-     [{"code":
-       "ebf361e27f030719b4b55c2078fae00c89187057882b66967aa451ceb749108d"}]],
-    [[{"text": "program"}],
-     [{"text": "print ts"}],
-     [{"text": "program"}],
-     [{"code": "todo.eff.json"}],
-     [{"text": "5213"}],
-     [{"code":
-       "1cc3347827bb44d497b104129850c264f37cd09e13d2ff12e6c1ba044f141f56"}]],
-    [[{"text": "program"}],
-     [{"text": "print ts"}],
-     [{"text": "certificate"}],
-     [{"code": "certificate.json"}],
-     [{"text": "4589"}],
-     [{"code":
-       "f524006b5aa9024a7816b3feed8feec249fb5c3ee98c96641b98df2d4c72a1cc"}]],
-    [[{"text": "program"}],
-     [{"text": "index"}],
-     [{"text": "manifest"}],
-     [{"code": "manifest.json"}],
-     [{"text": "92854"}],
-     [{"code":
-       "6cff2a73e6afe464f40cf1c0123d05937d4d5dd58ca87741525629d6e03f8491"}]]],
-   "kind": "table",
-   "headers": ["role", "form", "kind", "path", "bytes", "sha256"]}]}
+{"out": ".lake/effect4/todo/ts",
+ "format": "effect4-report/1",
+ "events":
+ [{"what": "folding the program todo", "event": "started"},
+  {"word": "definitions", "event": "measure", "count": 5},
+  {"word": "rows", "event": "measure", "count": 4},
+  {"word": "nodes", "event": "measure", "count": 35},
+  {"word": "calls", "event": "measure", "count": 4},
+  {"what": "folding the program todo", "event": "finished"},
+  {"what": "printing for ts", "event": "started"},
+  {"word": "files", "event": "measure", "count": 11},
+  {"what": "printing for ts", "event": "finished"},
+  {"file":
+   {"size": 4929,
+    "sha256":
+    "12813d1312fd2f3196f138aa005b6634a28fe600ccd702c3575b296b242199c5",
+    "role": "program",
+    "path": "todo.gen.ts",
+    "kind": "module",
+    "form": {"target": "ts", "form": "print"}},
+   "event": "artifact"},
+  {"file":
+   {"size": 3227,
+    "sha256":
+    "471f71a8eb0121ef49695d5cd9e8ea1435e4b354af3c0e29c3834d8aba77ac00",
+    "role": "program",
+    "path": "prelude/control.ts",
+    "kind": "prelude",
+    "form": {"target": "ts", "form": "print"}},
+   "event": "artifact"},
+  {"file":
+   {"size": 15457,
+    "sha256":
+    "98140a53a40ba0b88b7fa4857729544f2306ef95aff7cd0dde18bf179acf7ef6",
+    "role": "program",
+    "path": "prelude/prelude-atoms.gen.ts",
+    "kind": "prelude",
+    "form": {"target": "ts", "form": "print"}},
+   "event": "artifact"},
+  {"file":
+   {"size": 29661,
+    "sha256":
+    "7001d9c995e74b16fc72322e6763b833a00611e297c09afeadcc3f17d49330dc",
+    "role": "program",
+    "path": "prelude/prelude.ts",
+    "kind": "prelude",
+    "form": {"target": "ts", "form": "print"}},
+   "event": "artifact"},
+  {"file":
+   {"size": 2644,
+    "sha256":
+    "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "role": "program",
+    "path": "prelude/records.ts",
+    "kind": "prelude",
+    "form": {"target": "ts", "form": "print"}},
+   "event": "artifact"},
+  {"file":
+   {"size": 344,
+    "sha256":
+    "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de",
+    "role": "program",
+    "path": "prelude/tuples.ts",
+    "kind": "prelude",
+    "form": {"target": "ts", "form": "print"}},
+   "event": "artifact"},
+  {"file":
+   {"size": 2863,
+    "sha256":
+    "3a696ef29e4cbafbd2625a7d2a0de65302a98ffbf1247a027380e4e72848d7aa",
+    "role": "program",
+    "path": "todo.surface.gen.ts",
+    "kind": "surface",
+    "form": {"target": "ts", "form": "print"}},
+   "event": "artifact"},
+  {"file":
+   {"size": 5713,
+    "sha256":
+    "ebf361e27f030719b4b55c2078fae00c89187057882b66967aa451ceb749108d",
+    "role": "program",
+    "path": "todo.eff",
+    "kind": "object",
+    "form": {"form": "object"}},
+   "event": "artifact"},
+  {"file":
+   {"size": 5213,
+    "sha256":
+    "1cc3347827bb44d497b104129850c264f37cd09e13d2ff12e6c1ba044f141f56",
+    "role": "program",
+    "path": "todo.eff.json",
+    "kind": "program",
+    "form": {"target": "ts", "form": "print"}},
+   "event": "artifact"},
+  {"file":
+   {"size": 4589,
+    "sha256":
+    "f524006b5aa9024a7816b3feed8feec249fb5c3ee98c96641b98df2d4c72a1cc",
+    "role": "program",
+    "path": "certificate.json",
+    "kind": "certificate",
+    "form": {"target": "ts", "form": "print"}},
+   "event": "artifact"},
+  {"file":
+   {"size": 92854,
+    "sha256":
+    "079c13fe2b10872b055acba76a0756c06aa8cefd8b66acd671d05f9d10444bcf",
+    "role": "program",
+    "path": "manifest.json",
+    "kind": "manifest",
+    "form": {"form": "index"}},
+   "event": "artifact"}],
+ "command": "emit",
+ "arguments":
+ ["emit",
+  "--group",
+  "todo",
+  "--out",
+  ".lake/effect4/todo/ts",
+  "--format",
+  "json"]}

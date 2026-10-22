@@ -1,5 +1,3 @@
-✔ [1813/1814] Built Compiler.Report:c.o (982ms)
-✔ [1814/1814] Built effect4:exe (2.5s)
 effect4 check --group todo --format plain
   ■ folding the program todo      5 definitions · 4 rows · 35 nodes · 4 calls
     todo: checked; the service TodoApp

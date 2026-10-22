@@ -9,8 +9,8 @@ Base `ff59aa6f7`, branch `cli-report`.
 Every command of `Compiler.Main` now returns a `Report` (`tools/Compiler/Report.lean`) and prints nothing itself.
 A report is the command's name, its arguments as given, and its events in order. An event is a fold started or finished, a measure, an artifact written, a reading given, or a refusal.
 The terminal output is one fold of that value (`Report.pieces`), in four formats: `tty`, `plain`, `json` and `md`.
-The `json` format is the report folded to a `Tools.Document` and written by `Document.json`. So `Document.ofJson` reads it back, and the OCaml shell folds the same value later.
-What changed for a caller: the output is a report in every format, and `--json` is now an alias of `--format json`. A refusal stands inside the report on the standard output.
+The `json` format is the report's own lossless JSON (`Report.json`, §10), which `Report.ofJson` reads back, so the OCaml shell folds the same value later. The `md` format is the report folded to a `Tools.Document`, the readable view.
+What changed for a caller: the output is a report in every format, and `--json` is now an alias of `--format json`. The `tty` and `plain` formats go to the error stream, `json` and `md` to the standard output (row 444 (7), §10).
 
 ## 2. Today
 
@@ -106,14 +106,14 @@ The `tty` format: the title and each `■` line's words bold, the measures and t
 ### 4.3 The document
 
 `Report.document r : Tools.Document.Document` is the report as a document. Its title is the command line. A `fields` block gives the command, its arguments, the output root and the exit code. An `items` block lists the events in order, one line each with its mark. A `table` lists the artifacts (role, form, kind, path, bytes, sha256). Each reading is a `code` block, its JSON when it has one, its text otherwise.
-`json` is `Document.json` of it, one document, pretty-printed; `md` is `Document.markdown` of it.
+`md` is `Document.markdown` of it. The `json` format was this document's JSON at `f2663d78d`; since the review (§10) it is the report's own transport, `Report.json`.
 
 ## 5. The laws, placed under concept 7, `initial-algebras-folds`
 
 | Law | Statement | Evidence |
 | --- | --- | --- |
 | (a) strip | `Report.strip (piecesWith t true r) = piecesWith t false r` at every text `t`: the tty fold with its escapes and its lines in progress removed is the plain fold. The text is a parameter the proof never inspects, so the theorem rests on `[propext, Quot.sound]` alone (§9, the audit). | `Report.strip_pieces` (`tools/Compiler/Report.lean`), proved; its string image at the standard text, a terminal's reading of `tty r` equal to `plain r`, a finite evaluation in `Test/Codegen/CompilerReport.lean` |
-| (b) read-back | `Document.ofJson (Document.json (Report.document r)) = .ok (Report.document r)` | `Document.ofJson_json` applied at the report's document, and `Document.reads` on the JSON of a real report: a reader and a finite evaluation in `Test/Codegen/CompilerReport.lean` |
+| (b) read-back | `Report.ofJson (Report.json r) = .ok r` (§10, the transport); and `Document.ofJson (Document.json (Report.document r)) = .ok (Report.document r)` for the document view | `Report.ofJson_json`, proved, and `Document.ofJson_json` applied at the report's document; the `json` text read back through `Lean.Json.parse`: readers and finite evaluations in `Test/Codegen/CompilerReport.lean` |
 | (c) determinism | the events of a command are a function of the object, the target and the pins, never of the clock or the output root | by construction where the bytes written are; see §5.1 |
 
 Consumer of (a): the live sink prints what the batch fold prints. Consumer of (b): the OCaml shell's reader. Consumer of (c): a gate that compares two runs.
@@ -128,12 +128,16 @@ The repair is the layout note's slice 1 (its proposed row 442: no artifact carri
 
 | Flag | Where | Meaning |
 | --- | --- | --- |
-| `--format tty\|plain\|json\|md` | every command | the format; the default is `tty` when the standard output is a terminal and `NO_COLOR` is unset, else `plain` |
+| `--format tty\|plain\|json\|md`, `--format=F` | every command | the format; the default is `tty` when the standard output is a terminal and `NO_COLOR` is unset, else `plain` |
 | `--quiet` | every command | the refusal's words alone, on the error stream; nothing on success |
 | `--json` | every command | an alias of `--format json` for one release; the docstring of `Compiler.Main` says so |
+| `--help`, `--version` | every command | the usage, or the version, as a reading; exit `0` (§10) |
+| `--` | every command | ends the flags; the rest of the line is the command's as given (§10) |
 | `--group NAME` | `lake exe effect4` | the source, as before |
 
-The three are read before the command, in any position (`takeFormat`), so no command's own reader sees them. `check --json`, `inspect --json` and `run --json` therefore mean the report in JSON. `run`'s line modes are `--text` and `--typed`; the value-tree line of every request is the reading's JSON, in the json and md formats. `inspect --what relations --form json` keeps its meaning: the document form.
+The streams (row 444 (7), §10): `tty` and `plain` are for a person and go to the error stream. `json` and `md` are the requested result and go to the standard output, a failed report included. The exit code stays `0`, `1` on a refusal, `2` on a usage error.
+
+The flags are read before the command, in any position (`takeFlags`), so no command's own reader sees them. `check --json`, `inspect --json` and `run --json` therefore mean the report in JSON. `run`'s line modes are `--text` and `--typed`; the value-tree line of every request is the reading's JSON, in the json and md formats. `inspect --what relations --form json` keeps its meaning: the document form.
 
 ## 7. What changes, by file
 
@@ -313,9 +317,75 @@ The audit names 68 declarations that reach `Classical.choice` (Compiler (Main, R
 - The report's claim `cli-report-strip` is proposed below and not yet in the registry; the theorem names it in its docstring.
 - A live `tty` is checked by reading, not by a test. The sink and the batch fold call the same `step` and `close`, and the terminal shows one line in progress.
 
-## 10. Proposed decisions rows
+### Proposed decisions rows (ruled as row 444)
 
 1. **The report.** A command of `Compiler.Main` returns a `Report` and prints nothing; the printing is `Report.print`, one place, in one of four formats. The events' vocabulary is `Compiler.Report.Event`.
 2. **The flags.** `--format tty|plain|json|md`, `--quiet`, and `--json` as an alias of `--format json` for one release; read before the command, from anywhere on the line.
 3. **The law.** `cli-report-strip` under concept 7, `initial-algebras-folds`: `strip (piecesWith t true r) = piecesWith t false r` at every text, proved (`Report.strip_pieces`). The read-back of the report's document is an instance of `document-json-fold-retraction`.
 4. **The kinds.** The report's `Kind` takes the layout note's words and adds `prelude`, `document`, `figure` and `table` until the note names them (§8, question 1).
+
+## 10. The review's five findings: the fixes and their receipt
+
+Codex reviewed `f2663d78d` (merged at `dbfc9b2aa`) and found five issues, each with a probe. The fixes landed on `cli-report`, rebased onto `refactor/phase1-phase3` at `dbfc9b2aa`, as one further commit. `landing/review-probes.log` reruns each probe on the fixed binary.
+
+### The one thing the coordinator must know
+
+The `json` format is no longer the document's JSON: it is the report's own transport, `Report.json`, read back by `Report.ofJson` (`Report.ofJson_json`, proved). And the streams changed by the ruling: `tty` and `plain` go to the error stream, `json` and `md` to the standard output. A script that read the plain text from the standard output reads nothing now.
+
+### The findings and the fixes
+
+| Finding | Fix | Evidence |
+| --- | --- | --- |
+| 1, blocker: `inspectDocuments` recorded a rendering refusal and went on to write and remove; a run naming no session deleted a good run's eleven TSV files | `inspectPlan` renders every document first and refuses as a whole; `publicationOf` computes the writes and the removals from the folder as read; the writes and the removals follow, and a refusal returns before any of it | the probe: the folder is byte for byte as before, exit 1; the battery's control on the plan and on `Publication.apply` over a folder as data |
+| 2, major: `Report.document` lost a reading's text under its JSON, the order across readings and refusals, the argument boundaries, and an absent root | `Report.json` and `Report.ofJson`: the format word, the arguments as a list, the root as a string or `null`, the events in order, tagged, a reading's text and JSON both; `Report.ofJson_json` is the retraction, claim `cli-report-transport` under concept 7; the document keeps both fields of a reading and names an absent root in words; `json` prints the transport, `md` the document | `Report.ofJson_json`; the battery reads the `json` text back through `Lean.Json.parse`; the controls refuse an unknown field, another format word and a foreign event word |
+| 3, major: `emitCommand` wrote the whole batch and then recorded artifacts; with the prelude folder obstructed, `todo.gen.ts` was written and none was reported | `Log.write`, one writer for `emit`, `check --out` and `inspect --out`: the folder made, the bytes written, the artifact recorded; an error is a refusal at that file, and the writing stops there | the probe: the module is reported, the refusal names `prelude/control.ts`, exit 1 |
+| 4, major: `runHosted` finished the running step before examining the outcomes; a refused request still printed `■` | a refused request is recorded inside the step, so the step stands `□`; the later requests still run and give their readings | the probe: `□ running on the Lean machine`, the refusal, then the good request's line; the battery's `eventLines` reader |
+| 5, minor: `takeFlags` forgot `--quiet` and the format when a later flag read wrong; no `--`, `--format=F`, `--help` or `--version` | `takeFlags` gives the flags read so far with the error; `--` ends the flags; `--format=F`; `--help` and `--version` are readings with exit `0` | the probe: `--quiet … --format bogus` writes the error stream alone; the battery's reader of each |
+
+Whole-folder atomic publication is out of scope: `emit` and `inspect --out` write file by file, and a run that stops reports what it wrote.
+
+### The ruling applied, row 444 (7)
+
+`Report.print` writes the `tty` and `plain` formats to the error stream, the live sink included. It writes the `json` and `md` formats to the standard output, a failed report included. `--quiet` prints the refusals' words alone on the error stream. The exit codes stay `0`, `1` and `2`. The flag table in `Compiler.Main` and §6 say so.
+
+### Base, head and files
+
+Base `dbfc9b2aa` (`refactor/phase1-phase3` after the merge and row 444). The head is the one commit that holds this section and the fixes.
+
+| File | Change |
+| --- | --- |
+| `tools/Compiler/Report.lean` | the transport (`Report.json`, `Report.ofJson`, `Report.ofJson_json`); `jsonText`; `Log.write`; `print` on the ruled streams; the document names an absent root and keeps both fields of a reading |
+| `tools/Compiler/Main.lean` | `Flags` with `help` and `version`; `takeFlags` with `--`, `--format=F`, and the flags kept on an error; `versionText`; `inspectPlan`, `Publication`, `publicationOf`, `Publication.apply`, `inspectDocuments` rewritten; `emit` and `check --out` through `Log.write`; `runHosted` hollow on a refused request; the flag table |
+| `Test/Codegen/CompilerReport.lean` | law (b) over the transport with its controls; the flags; the publication; the hollow step |
+| this note | §1, §4.3 and §6 follow the ruling; this section; `out/` recaptured; `landing/review-probes.log`, the audit, the batteries, the generate and determinism logs rerun |
+
+### Commands and results
+
+Run from the worktree on 2026-10-21, one `lake` at a time with `LEAN_NUM_THREADS=3`.
+
+| Command | Result | Evidence |
+| --- | --- | --- |
+| `lake build Compiler.Report Compiler.Main Compiler.Exe Test.Codegen.CompilerEmit Test.Codegen.CompilerReport` | Pass; 1,357 jobs | the build log |
+| the five probes on the fixed binary | each as the fix says | `landing/review-probes.log` |
+| `lake env lean -DwarningAsError=true docs/research/2026-10-21-cli-report/landing/audit.lean` | Exit 1: 113 of 1,281 declarations reach `Classical.choice` | `landing/audit.log` |
+| `make batteries-touched BASE=dbfc9b2aa` | Pass; 1 battery, 1,350 jobs | `landing/batteries.log` |
+| `python3 scripts/generate.py --only graphs`, twice | Pass; `git status generated/` clean after each | `landing/generate-1.log`, `landing/generate-2.log` |
+| `python3 scripts/check-language.py --strict docs/research/2026-10-21-cli-report/README.md` | Pass | the note |
+| the three formats of `check`, `emit` and `inspect` on the to-do | recaptured | `out/` |
+| `inspect --form json` and `emit` into two folders, the reports compared | `inspect` equal; `emit` differs at `todo.gen.ts`, `todo.surface.gen.ts` and `manifest.json`, as before | `landing/determinism.log` |
+
+### The axiom output
+
+The audit names 113 declarations that reach `Classical.choice`, 45 more than at `f2663d78d`. The new ones are the transport's reader and its retraction: `readWritten`, `readEvent`, `Report.ofJson` and `Report.ofJson_json` with their private steps. A reader compares strings, and Lean's string comparison leads to the axiom. So the theorem's statement reaches it through the reader it names. `Tools.Document.Json.Document.ofJson_json` reaches it the same way, checked by the same audit on its module. The generic fold and its laws, and every declaration of the battery, rest on `[propext, Quot.sound]`. No exception was added.
+
+### Open obligations
+
+- Whole-folder atomic publication: a run that stops leaves the files written so far, reported.
+- The claims `cli-report-strip` and `cli-report-transport` are proposed and not yet in the registry.
+- A reading's JSON in the document view stays a code block of text (row 444 (5)); the transport carries it as a string field.
+
+### Proposed decisions rows
+
+1. **The transport.** `Report.json` is the report's lossless JSON and the protocol another CLI folds; `Report.ofJson_json` is its retraction, claim `cli-report-transport` under concept 7. The document is the readable view, and `md` its fold.
+2. **The publication.** A command writes nothing before every output is prepared. One writer records each file as it is written, and a run that stops reports what it wrote. Whole-folder atomicity is not claimed.
+3. **The flags.** `--`, `--format=F`, `--help` and `--version` join the table; a flag that reads wrong keeps the format and the quiet read before it.

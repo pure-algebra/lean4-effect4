@@ -1,4 +1,4 @@
-docs/research/2026-10-21-cli-report/landing/audit.lean:5:0: error: #axiom_audit: 68 of 1185 declarations reach axioms outside [propext, Quot.sound]:
+docs/research/2026-10-21-cli-report/landing/audit.lean:5:0: error: #axiom_audit: 113 of 1281 declarations reach axioms outside [propext, Quot.sound]:
   Compiler.typedJson reaches [Classical.choice]
   Compiler.RunOptions.read._f reaches [Classical.choice]
   Compiler.RunOptions.read reaches [Classical.choice]
@@ -10,32 +10,72 @@ docs/research/2026-10-21-cli-report/landing/audit.lean:5:0: error: #axiom_audit:
   Compiler.runFrom reaches [Classical.choice]
   Compiler.Report.foldItem reaches [Classical.choice]
   Compiler.Report.Log.report reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.nat._sparseCasesOn_1 reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.readRole_word reaches [Classical.choice]
   Compiler.Report.tty reaches [Classical.choice]
   Compiler.Report.Log.event reaches [Classical.choice]
+  Compiler.Report.readEvent reaches [Classical.choice]
   Compiler.Report.pad reaches [Classical.choice]
   Compiler.Report.md reaches [Classical.choice]
-  Compiler.Report.json reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.readKind_word reaches [Classical.choice]
+  Compiler.Report.Report.ofJson reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.readWritten_writtenJson reaches [Classical.choice]
   Compiler.Report.liveSink reaches [Classical.choice]
+  Compiler.Report.formJson reaches [Classical.choice]
   Compiler.Report.eventLines._unsafe_rec reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.entries reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.str reaches [Classical.choice]
   Compiler.Report.eventLines._sunfold reaches [Classical.choice]
+  Compiler.Report.Report.json reaches [Classical.choice]
   Compiler.Report.plain reaches [Classical.choice]
+  Compiler.Report.eventJson reaches [Classical.choice]
   Compiler.Report.document reaches [Classical.choice]
+  Compiler.Report.readWritten reaches [Classical.choice]
   Compiler.Report.Text.standard reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.fields reaches [Classical.choice]
   Compiler.Report.Log.refusedSince reaches [Classical.choice]
+  Compiler.Report.readRole reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.readForm_formJson reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.fields.match_1 reaches [Classical.choice]
   Compiler.Report.Format.text reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.readEvent_eventJson reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.field.match_1 reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.readOpt_optJson reaches [Classical.choice]
+  Compiler.Report.readForm reaches [Classical.choice]
+  Compiler.Report.readKind reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.readOpt reaches [Classical.choice]
   Compiler.Report.eventLines._f reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.field reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.arr.match_1 reaches [Classical.choice]
+  Compiler.Report.writtenJson reaches [Classical.choice]
   Compiler.Report.Written.ofEmitted reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.fields.match_3 reaches [Classical.choice]
   Compiler.Report.Kind.ofEmitted reaches [Classical.choice]
   Compiler.Report.print reaches [Classical.choice]
+  Compiler.Report.Log.write reaches [Classical.choice]
   Compiler.Report.short reaches [Classical.choice]
   Compiler.Report.eventLines reaches [Classical.choice]
+  Compiler.Report.optJson reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.arr._sparseCasesOn_1 reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.readOpt._sparseCasesOn_1 reaches [Classical.choice]
   Compiler.Report.measuresText reaches [Classical.choice]
   Compiler.Report.Log.folding reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.str.match_1 reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.entries.match_1 reaches [Classical.choice]
   Compiler.Report.grouped reaches [Classical.choice]
   Compiler.Report.padLeft reaches [Classical.choice]
+  Compiler.Report.jsonText reaches [Classical.choice]
   Compiler.Report.pieces reaches [Classical.choice]
+  Compiler.Report.Report.ofJson_json reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.str._sparseCasesOn_1 reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.entries._sparseCasesOn_1 reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.readOpt.match_1 reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.nat reaches [Classical.choice]
   Compiler.Report.lines reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.arr reaches [Classical.choice]
   Compiler.Report.Form.ofEmitted reaches [Classical.choice]
+  _private.Compiler.Report.0.Compiler.Report.nat.match_1 reaches [Classical.choice]
+  Compiler.publicationOf reaches [Classical.choice]
   Compiler.Options.read reaches [Classical.choice]
   Compiler.dispatch reaches [Classical.choice]
   Compiler.usageError reaches [Classical.choice]
@@ -46,9 +86,12 @@ docs/research/2026-10-21-cli-report/landing/audit.lean:5:0: error: #axiom_audit:
   Compiler.CheckOptions.read reaches [Classical.choice]
   Compiler.InspectOptions.read._sunfold reaches [Classical.choice]
   Compiler.InspectOptions.read reaches [Classical.choice]
+  Compiler.takeFlags._sunfold reaches [Classical.choice]
   Compiler.checkCommand reaches [Classical.choice]
   Compiler.run reaches [Classical.choice]
+  Compiler.takeFlags reaches [Classical.choice]
   Compiler.inspectCommand reaches [Classical.choice]
+  Compiler.takeFlags._f reaches [Classical.choice]
   Compiler.emissionOf reaches [Classical.choice]
   Compiler.runCommand reaches [Classical.choice]
   Compiler.Options.read._unsafe_rec reaches [Classical.choice]
@@ -57,8 +100,10 @@ docs/research/2026-10-21-cli-report/landing/audit.lean:5:0: error: #axiom_audit:
   Compiler.Options.read._sunfold reaches [Classical.choice]
   Compiler.emitCommand reaches [Classical.choice]
   Compiler.mainOver reaches [Classical.choice]
+  Compiler.inspectPlan reaches [Classical.choice]
   Compiler.inspectBuilt reaches [Classical.choice]
   Compiler.inspectDocuments reaches [Classical.choice]
+  Compiler.takeFlags._unsafe_rec reaches [Classical.choice]
   Compiler.openCommand reaches [Classical.choice]
   Compiler.InspectOptions.read._f reaches [Classical.choice]
   Compiler.CheckOptions.read._unsafe_rec reaches [Classical.choice]
@@ -67,7 +112,7 @@ docs/research/2026-10-21-cli-report/landing/audit.lean:5:0: error: #axiom_audit:
   Compiler.refusalText reaches [Classical.choice]
   Compiler.builtOf reaches [Classical.choice]
   Compiler.measured reaches [Classical.choice]
-24 of them stand under no other (the first 8 shown); each one's path to its axiom:
+37 of them stand under no other (the first 8 shown); each one's path to its axiom:
   Compiler.typedJson  (Compiler.Run)
   → Compiler.jsonText  (Compiler.Json)
   → String.fromUTF8!  (Init.Data.String.Basic)
@@ -96,6 +141,11 @@ docs/research/2026-10-21-cli-report/landing/audit.lean:5:0: error: #axiom_audit:
   → _private.Init.System.ST.0.ST.Prim.inhabitedFromRef  (Init.System.ST)
   → Classical.inhabited_of_nonempty  (Init.Classical)
   → Classical.choice  (Init.Prelude)
+  _private.Compiler.Report.0.Compiler.Report.nat._sparseCasesOn_1  (Compiler.Report)
+  → String.instOrd  (Init.Data.Ord.String)
+  → ⋯ 9 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
   Compiler.Report.Log.event  (Compiler.Report)
   → ST.Ref.modify  (Init.System.ST)
   → ⋯ 3 more toolchain constants
@@ -105,11 +155,5 @@ docs/research/2026-10-21-cli-report/landing/audit.lean:5:0: error: #axiom_audit:
   → String.length  (Init.Data.String.Length)
   → ⋯ 7 more toolchain constants
   → Classical.propDecidable  (Init.Classical)
-  → Classical.choice  (Init.Prelude)
-  Compiler.Report.Log.refusedSince  (Compiler.Report)
-  → ST.Ref.get  (Init.System.ST)
-  → ST.Prim.Ref.get  (Init.System.ST)
-  → _private.Init.System.ST.0.ST.Prim.inhabitedFromRef  (Init.System.ST)
-  → Classical.inhabited_of_nonempty  (Init.Classical)
   → Classical.choice  (Init.Prelude)
 exit 1

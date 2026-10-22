@@ -11,5 +11,5 @@
     M-bM-^TM-^@M-bM-^VM-6 program/todo.eff                            ^[[2m     5,713 B  ebf3M-bM-^@M-&^[[0m
     M-bM-^TM-^@M-bM-^VM-6 program/todo.eff.json                       ^[[2m     5,213 B  1cc3M-bM-^@M-&^[[0m
     M-bM-^TM-^@M-bM-^VM-6 program/certificate.json                    ^[[2m     4,589 B  f524M-bM-^@M-&^[[0m
-    M-bM-^TM-^@M-bM-^VM-6 program/manifest.json                       ^[[2m    92,854 B  6cffM-bM-^@M-&^[[0m
+    M-bM-^TM-^@M-bM-^VM-6 program/manifest.json                       ^[[2m    92,854 B  079cM-bM-^@M-&^[[0m
   M-bM-^VM-  ^[[1m11 artifacts^[[0m in ^[[2m.lake/effect4/todo/ts^[[0m

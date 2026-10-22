@@ -1,0 +1,84 @@
+== 1. inspect: a good run, then a run naming a session that does not exist, into the same folder
+    ─▶ program/todo.calls-edges.gen.tsv                   172 B  3e4d…
+  ■ 11 artifacts in /P
+11 files before
+effect4 inspect --group todo --session Nope --what relations --form tsv --out /P --format plain
+  ■ folding the program todo      5 definitions · 4 rows · 35 nodes · 4 calls
+  □ reading the relations as tsv
+    todo: {"_tag":"missingService","name":"Nope"}
+exit 
+the folder is byte for byte as before
+== 2. the json format is the report's own JSON; md is the document view
+{"out": null,
+ "format": "effect4-report/1",
+ "events":
+ [{"what": "folding the program todo", "event": "started"},
+  {"word": "definitions", "event": "measure", "count": 5},
+  {"word": "rows", "event": "measure", "count": 4},
+  {"word": "nodes", "event": "measure", "count": 35},
+  {"word": "calls", "event": "measure", "count": 4},
+  {"what": "folding the program todo", "event": "finished"},
+  {"what": "certificate",
+   "text":
+   "todo: checked; the service TodoApp\n\nprogram   sha256 ebf361e27f030719b4b55c2078fae00c89187057882b66967aa451ceb749108d\ntype      void\nrows      TodoRepo.insert(string) { readonly done: boolean; readonly id: number; readonly title: string } ! readonly [\"SqlError\", string] needs k30_6\n          TodoRepo.all(void) ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly [\"SqlError\", string] needs k30_6\n          TodoRepo.setDone(readonly [number, boolean]) Option.Option<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly [\"SqlError\", string] needs k30_6\n          TodoRepo.delete(number) boolean ! readonly [\"SqlError\", string] needs k30_6\nservices  TodoRepo k30_6 (Test.Dogfood.Scenario.Todo.todoRepoKey)\ndefines   TodoAppContext(void) Context.Context<\"k30_6\"> needs k30_6\n          TodoApp_add(readonly [Context.Context<\"k30_6\">, string]) { readonly done: boolean; readonly id: number; readonly title: string } ! readonly [\"SqlError\", string] | readonly [\"EmptyTitle\", \"a title is required\"]\n          TodoApp_list(Context.Context<\"k30_6\">) ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }> ! readonly [\"SqlError\", string]\n          TodoApp_complete(readonly [Context.Context<\"k30_6\">, number]) { readonly done: boolean; readonly id: number; readonly title: string } ! readonly [\"SqlError\", string] | { readonly _tag: \"NotFound\"; readonly id: number }\n          TodoApp_remove(readonly [Context.Context<\"k30_6\">, number]) void ! readonly [\"SqlError\", string] | { readonly _tag: \"NotFound\"; readonly id: number }",
+# effect4 check --group todo --format md
+
+command: `check` · arguments: `check --group todo --format md` · out: no output root · exit: 0
+
+- ■ folding the program todo · 5 definitions · 4 rows · 35 nodes · 4 calls
+
+## certificate
+
+```text
+todo: checked; the service TodoApp
+
+program   sha256 ebf361e27f030719b4b55c2078fae00c89187057882b66967aa451ceb749108d
+type      void
+rows      TodoRepo.insert(string) { readonly done: boolean; readonly id: number; readonly title: string } ! readonly ["SqlError", string] needs k30_6
+== 3. emit with the prelude folder obstructed by a file
+effect4 emit --group todo --out /E/ts --format plain
+  ■ folding the program todo      5 definitions · 4 rows · 35 nodes · 4 calls
+  ■ printing for ts               11 files
+    ─▶ program/todo.gen.ts                              5,058 B  96f5…
+    prelude/control.ts: already exists (error code: 17, file exists)
+      file: /E/ts/prelude
+  ■ 1 artifact in /E/ts
+exit 
+prelude
+todo.gen.ts
+== 4. run with a request the build refuses, then a good one
+effect4 run --group todo --script /script.json --format plain
+  □ running on the Lean machine   2 requests
+    the entry complete is refused: {"_tag":"typing","refusal":{"site":[1,0],"reason":{"_tag":"requestNotSubtype","row":"TodoRepo.setDone","request":{"_tag":"pro
+    add("milk") -> {"_tag":"Success","value":{"done":false,"id":1,"title":"milk"}} | [2,[[1,"milk",false]]]
+exit 
+== 5. flags: a bad format after --quiet; --format=json; --help; --version; -- ends the flags
+-- stdout:
+-- stderr:
+--format bogus names no format; choose tty, plain, json or md
+exit 2
+{"out": null,
+ "format": "effect4-report/1",
+ "events":
+effect4 --help --format plain
+    usage: check [--out FILE.obj] | open FILE.obj | emit [--target ts|ocaml] [--check] [--out DIR] [
+exit 
+effect4 --version --format plain
+    effect4 effect@4.0.0-rc.112 lean 4.33.1
+exit 
+effect4 --format plain -- check --group todo
+  ■ folding the program todo      5 definitions · 4 rows · 35 nodes · 4 calls
+== the streams (row 444 (7)): plain on the error stream, json on the standard output
+-- plain, bytes on stdout:
+       0
+-- json, bytes on stderr:
+       0
+-- a failed json report on stdout, its usage event:
+1
+exit 2
+== the exit codes of the probes above (bash)
+1. inspect, a session that does not exist: exit 1
+3. emit, the prelude folder obstructed: exit 1
+4. run, a refused request: exit 1
+5. --help: exit 0
+5. --version: exit 0

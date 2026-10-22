@@ -30,10 +30,17 @@ the command, from anywhere on the line, so no command's own reader sees them:
 
 | Flag | Meaning |
 | --- | --- |
-| `--format tty\|plain\|json\|md` | the format; `tty` when the standard output is a terminal and `NO_COLOR` is unset, else `plain` |
+| `--format tty\|plain\|json\|md`, `--format=F` | the format; `tty` when the standard output is a terminal and `NO_COLOR` is unset, else `plain` |
 | `--quiet` | the refusals' words alone, on the error stream; nothing on success |
 | `--json` | an alias of `--format json`, kept for one release; it was each command's own JSON output |
+| `--help`, `--version` | the usage, or the version, as a reading; exit `0` |
+| `--` | ends the flags; the rest of the line is the command's as given |
 | `--group NAME` | `lake exe effect4`: the source, one of the tree's groups (`mainOver`) |
+
+The streams (decisions row 444 (7)): `tty` and `plain` are for a person and go to the error
+stream; `json` and `md` are the requested result and go to the standard output, a failed report
+included. The exit code is `0`, `1` on a refusal, `2` on a usage error. A flag that reads wrong
+keeps the format and the quiet read before it.
 
 - `open FILE.obj` reads and admits a saved object, then gives its certificate as a reading.
   It needs no group, application source, prelude or host.
@@ -100,7 +107,7 @@ def kindsText : String :=
     "; ts is the default target; ocaml lowers the declared roots"
 
 /-- The report's flags, in words. -/
-def flagsText : String := "[--format tty|plain|json|md] [--quiet] [--json]"
+def flagsText : String := "[--format tty|plain|json|md] [--quiet] [--json] [--help] [--version] [--]"
 
 /-- The command line, in words. -/
 def usage : String :=
@@ -109,24 +116,49 @@ def usage : String :=
 
 /-! ## The report's flags -/
 
-/-- **The report's flags**: the format, when one is named, and `--quiet`. -/
+/-- **The report's flags**: the format, when one is named, `--quiet`, and the two requests that
+end the line with exit `0`, `--help` and `--version`. -/
 structure Flags where
   format : Option Format := none
   quiet : Bool := false
+  help : Bool := false
+  version : Bool := false
   deriving DecidableEq, Repr
 
-/-- Read the report's flags from anywhere on the command line, and give the line without them;
-or name the flag that reads wrong. -/
-def takeFlags : List String → Flags → Except String (Flags × List String)
-  | [], f => .ok (f, [])
+/-- The format a word names, or why not. -/
+def formatOf (word : String) : Except String Format :=
+  match Format.parse word with
+  | some format => .ok format
+  | none => .error s!"--format {word} names no format; choose tty, plain, json or md"
+
+/-- Read the report's flags from anywhere on the command line, and give the line without them:
+`--format F`, `--format=F`, `--json` (the alias of `--format json`), `--quiet`, `--help`,
+`--version`; `--` ends the flags and leaves the rest as given. A flag that reads wrong gives the
+flags read so far, so the format and `--quiet` chosen before it still hold, and why. -/
+def takeFlags : List String → Flags → Flags × Except String (List String)
+  | [], f => (f, .ok [])
+  | "--" :: rest, f => (f, .ok rest)
   | "--format" :: word :: rest, f =>
-    match Format.parse word with
-    | some format => takeFlags rest { f with format := some format }
-    | none => .error s!"--format {word} names no format; choose tty, plain, json or md"
-  | ["--format"], _ => .error "--format needs tty, plain, json or md"
+    match formatOf word with
+    | .ok format => takeFlags rest { f with format := some format }
+    | .error why => (f, .error why)
+  | ["--format"], f => (f, .error "--format needs tty, plain, json or md")
   | "--json" :: rest, f => takeFlags rest { f with format := some .json }
   | "--quiet" :: rest, f => takeFlags rest { f with quiet := true }
-  | a :: rest, f => (takeFlags rest f).map fun (f, others) => (f, a :: others)
+  | "--help" :: rest, f => takeFlags rest { f with help := true }
+  | "--version" :: rest, f => takeFlags rest { f with version := true }
+  | a :: rest, f =>
+    if a.startsWith "--format=" then
+      match formatOf (a.drop 9).toString with
+      | .ok format => takeFlags rest { f with format := some format }
+      | .error why => (f, .error why)
+    else
+      match takeFlags rest f with
+      | (f, .ok others) => (f, .ok (a :: others))
+      | (f, .error why) => (f, .error why)
+
+/-- What `--version` gives: the Effect profile the compiler prints for, and the Lean it is built with. -/
+def versionText : String := s!"effect4 {rc112.name} lean {Lean.versionString}"
 
 /-- The format when none is named: `tty` at a terminal with `NO_COLOR` unset, else `plain`. -/
 def defaultFormat : IO Format := do
@@ -282,19 +314,12 @@ def checkCommand (log : Log) (source : Source) (elaborated : Elaborated) (out : 
   let built ← measured log source
   if let some file := out then
     let path := System.FilePath.mk file
-    let written ← log.folding "writing the object" do
-      let mut written : List Written := []
-      for (_, result) in built do
-        if let .ok b := result then
-          try
-            let bytes : ByteArray := ⟨(Object.ofBuilt b).bytes.toArray⟩
-            IO.FS.writeBinFile path bytes
-            written := written ++ [Written.of .program .object .object (path.fileName.getD file) bytes]
-          catch error => log.event (.refusal "check" s!"{file}: {error}")
-      pure written
-    unless written.isEmpty do
-      log.setOut ((path.parent.map (·.toString)).getD ".")
-      for w in written do log.event (.artifact w)
+    let root := (path.parent.map (·.toString)).getD "."
+    for (_, result) in built do
+      if let .ok b := result then
+        log.setOut root
+        let bytes : ByteArray := ⟨(Object.ofBuilt b).bytes.toArray⟩
+        let _ ← log.write "check" root (Written.of .program .object .object (path.fileName.getD file) bytes) bytes
   for (name, result) in built do
     match result, source with
     | .error _, _ => pure ()
@@ -396,10 +421,9 @@ def emitCommand (log : Log) (source : Source) (elaborated : Elaborated) (output 
   let some e := result | return
   match output with
   | .write =>
-    let files := e.files o.kinds
     log.setOut out.toString
-    Prelude.write out (files.map fun a => (a.path, a.bytes))
-    for a in files do log.event (.artifact (Written.ofEmitted target a))
+    for a in e.files o.kinds do
+      unless ← log.write name out (Written.ofEmitted target a) a.bytes do return
   | .describe =>
     log.event (.reading "manifest" (if o.pretty then prettyText e.manifest else jsonText e.manifest)
       (some (jsonText e.manifest)))
@@ -408,7 +432,8 @@ def emitCommand (log : Log) (source : Source) (elaborated : Elaborated) (output 
 /-- **`run` over a host**: the script, the project's or the one that `--script FILE` names, each
 request with its module (`modulesOf`); then each request on the Lean machine (`served`), one
 reading each, its line in the mode and the result's value tree as JSON. A refused build is the
-build's located refusal, as `check` gives it. A usage error runs nothing. -/
+build's located refusal, as `check` gives it, recorded inside the running step, so the step stands
+hollow when any request was refused; the later requests still run. A usage error runs nothing. -/
 def runHosted (log : Log) (app : Application NativeOp) (h : Hosted) (passed : List Request)
     (o : RunOptions) : IO Unit := do
   let script ← match o.script with
@@ -427,13 +452,14 @@ def runHosted (log : Log) (app : Application NativeOp) (h : Hosted) (passed : Li
     | .error why => return (← log.event (.usage "run" why))
   let outcomes ← log.folding "running on the Lean machine" do
     log.event (.measure "requests" requests.length)
-    pure (served h o.budget requests h.initial)
+    let outcomes := served h o.budget requests h.initial
+    for outcome in outcomes do
+      if let .error why := outcome then log.event (.refusal "run" why.text)
+    pure outcomes
   for outcome in outcomes do
-    match outcome with
-    | .ok served =>
+    if let .ok served := outcome then
       log.event (.reading (requestText served.request) (served.line h o.mode)
         (some (served.line h .json)))
-    | .error why => log.event (.refusal "run" why.text)
 
 /-- **`run`**: the options read (`RunOptions.read`), then the source's host (`Source.hosted?`); a
 source with no host refuses, as a usage error. -/
@@ -515,9 +541,42 @@ def documentKind : InspectDocument.Form → Report.Kind
   | .svg => .figure
   | .tsv => .table
 
+/-- **Every document of an inspection, rendered** before anything is written: each program's
+selected object (`inspectBuilt`) and its files in the form (`InspectDocument.files`); or the first
+refusal, by its program. -/
+def inspectPlan (programs : List (String × Api.Built)) (session : Option String)
+    (form : InspectDocument.Form) (what : String) : Except String (List (String × String)) :=
+  programs.foldlM (fun outputs (name, original) => do
+    let b ← (inspectBuilt original session).mapError (s!"{name}: " ++ ·)
+    let files ← (InspectDocument.files form name (Graphs.document b what)).mapError (s!"{name}: " ++ ·)
+    return outputs ++ files) []
+
+/-- **What a publication does to a folder**: the files it writes, and the files it removes: the
+programs' prior files of a multi-file form (`InspectDocument.owns`) that it does not write again. -/
+structure Publication where
+  writes : List (String × String)
+  removals : List String
+  deriving DecidableEq, Repr
+
+/-- The publication of rendered outputs into a folder whose files are `existing`. -/
+def publicationOf (form : InspectDocument.Form) (names : List String) (existing : List String)
+    (outputs : List (String × String)) : Publication :=
+  { writes := outputs
+    removals := if form == .svg || form == .tsv then
+      existing.filter fun file =>
+        names.any (fun name => InspectDocument.owns form name file) && !(outputs.any (·.1 == file))
+    else [] }
+
+/-- A publication applied to a folder as data: the files by name, the removals gone, the writes in
+place. A refused plan is applied to nothing, so the folder stays as it was. -/
+def Publication.apply (p : Publication) (folder : List (String × String)) : List (String × String) :=
+  (folder.filter fun (file, _) => !p.removals.contains file && !p.writes.any (·.1 == file)) ++ p.writes
+
 /-- Render every document before writing. SVG and TSV require a folder for their separate files.
 The selected form replaces this program's prior generated files, including an empty selection.
-Without `--out`, each document is a reading; with it, each file is an artifact. -/
+Without `--out`, each document is a reading; with it, the publication (`publicationOf`) is
+computed from the folder as it is, then each file is written and recorded (`Log.write`), then the
+stale files are removed. A refusal before the publication touches no file. -/
 def inspectDocuments (log : Log) (source : Source) (what : What) (left : List String) : IO Unit := do
   let o ← match InspectOptions.read left {} with
     | .ok o => pure o
@@ -528,39 +587,34 @@ def inspectDocuments (log : Log) (source : Source) (what : What) (left : List St
   if o.out.isNone && o.form == .json && programs.length > 1 then
     return (← usageError log "inspect" "JSON for several programs needs --out DIR, one document per file")
   if anyRefused programs then return
+  let built := programs.filterMap fun (name, result) => result.toOption.map (name, ·)
   let outputs ← log.folding s!"reading the {what.name} as {o.form.name}" do
-    let mut outputs : List (String × String) := []
-    for (name, result) in programs do
-      if let .ok original := result then
-        let rendered := do
-          let b ← inspectBuilt original o.session
-          InspectDocument.files o.form name (Graphs.document b what.name)
-        match rendered with
-        | .error why => log.event (.refusal "inspect" s!"{name}: {why}")
-        | .ok files => outputs := outputs ++ files
-    log.event (.measure "files" outputs.length)
-    pure outputs
+    match inspectPlan built o.session o.form what.name with
+    | .error why => log.event (.refusal "inspect" why); pure none
+    | .ok outputs => log.event (.measure "files" outputs.length); pure (some outputs)
+  let some outputs := outputs | return
   unless (outputs.map Prod.fst).eraseDups.length == outputs.length do
     return (← usageError log "inspect" "programs repeat an output file name")
-  try
-    match o.out with
-    | none =>
-      for (name, content) in outputs do
-        log.event (.reading s!"{name} as {o.form.name}" content
-          (if o.form == .json then some content else none))
-    | some directory =>
+  match o.out with
+  | none =>
+    for (name, content) in outputs do
+      log.event (.reading s!"{name} as {o.form.name}" content
+        (if o.form == .json then some content else none))
+  | some directory =>
+    try
+      let folder := System.FilePath.mk directory
+      IO.FS.createDirAll folder
+      let existing ← (← folder.readDir).toList.filterMapM fun entry => do
+        return if ← entry.path.isDir then none else some entry.fileName
+      let publication := publicationOf o.form (built.map (·.1)) existing outputs
       log.setOut directory
-      IO.FS.createDirAll directory
-      for (name, content) in outputs do
-        IO.FS.writeFile (System.FilePath.mk directory / name) content
-        log.event (.artifact (Written.of .program (.print o.form.name) (documentKind o.form) name
-          content.toUTF8))
-      if o.form == .svg || o.form == .tsv then
-        for entry in ← (System.FilePath.mk directory).readDir do
-          if programs.any (fun (name, _) => InspectDocument.owns o.form name entry.fileName) &&
-              !(outputs.any (fun (name, _) => name == entry.fileName)) then
-            unless ← entry.path.isDir do IO.FS.removeFile entry.path
-  catch error => log.event (.refusal "inspect" (toString error))
+      for (name, content) in publication.writes do
+        unless ← log.write "inspect" folder
+            (Written.of .program (.print o.form.name) (documentKind o.form) name content.toUTF8)
+            content.toUTF8 do
+          return
+      for file in publication.removals do IO.FS.removeFile (folder / file)
+    catch error => log.event (.refusal "inspect" (toString error))
 
 /-- **`inspect`**: the reading that `--what` names (`Compiler.Inspect`), of the application's built
 program or of each program of a group, under its name: its text, with its JSON beside it.
@@ -617,21 +671,29 @@ def commandOf (rest : List String) : String := (takeGroup rest).2.head?.getD ""
 
 /-- **A command line shown**: its report's flags read (`takeFlags`), the format resolved
 (`defaultFormat`), the body run into a log and shown (`Report.print`). A flag that reads wrong is
-a usage error, shown in the default format. -/
+a usage error, shown in the format and the quiet read before it. `--help` gives the usage and
+`--version` the version as readings, with exit `0`. -/
 def reported (args : List String) (body : Log → List String → IO Unit) : IO UInt32 := do
-  match takeFlags args {} with
-  | .error why => Report.print (← defaultFormat) false "" args fun log => log.event (.usage "" why)
-  | .ok (flags, given) =>
-    let format ← match flags.format with
-      | some f => pure f
-      | none => defaultFormat
-    Report.print format flags.quiet (commandOf given) args fun log => body log given
+  let (flags, rest) := takeFlags args {}
+  let format ← match flags.format with
+    | some f => pure f
+    | none => defaultFormat
+  let command := match rest with
+    | .ok given => commandOf given
+    | .error _ => ""
+  Report.print format flags.quiet command args fun log =>
+    match rest with
+    | .error why => log.event (.usage "" why)
+    | .ok given =>
+      if flags.help then log.event (.reading "usage" usage none)
+      else if flags.version then log.event (.reading "version" versionText none)
+      else body log given
 
 /-- **The command line over a source**: the report's flags, then `dispatch`. `args` are the
 arguments as given, which the report's title shows; `rest` are the ones the command reads. -/
 def run (source : Source) (elaborated : Elaborated) (args rest : List String) : IO UInt32 :=
   reported args fun log given =>
-    let rest := ((takeFlags rest {}).toOption.map (·.2)).getD rest
+    let rest := ((takeFlags rest {}).2.toOption).getD rest
     dispatch log source elaborated given rest
 
 /-- **The compiler's entry point** over one application: `check`, `emit`, `describe`, `inspect` or
