@@ -78,7 +78,7 @@ VENDOR_SOURCES := $(wildcard vendor/effect-4.0.0-rc.112/src/*.ts vendor/effect-4
 # ---------------------------------------------------------------------------- build
 
 .PHONY: build build-tools
-build: wire-roots ## lake build: the core and the law graph; connect orphan modules first
+build: wire-roots ## @entry lake build: the core and the law graph; connect orphan modules first
 	@mkdir -p $(GEN)
 	set -o pipefail; $(LAKE) build Effect4 Effect4Laws 2>&1 | tee $(GEN)/build.log
 
@@ -87,13 +87,13 @@ wire-roots:
 	$(PY) scripts/wire-roots.py
 
 .PHONY: build-profile
-build-profile: ## where the last `make build` spent its time: the critical path and the slowest modules (.lake/gen/build-profile.md)
+build-profile: ## @measurements where the last `make build` spent its time: the critical path and the slowest modules (.lake/gen/build-profile.md)
 	@$(PY) scripts/build-profile.py $(GEN)/build.log
 
 # The duplicate statements of the law graph: `#statement_census` (tools/ProofGraph/StatementCensus.lean)
 # over every module under src/Effect4/Laws, written to $(GEN)/statement-census.txt, which
 # `make status` reads. A measuring instrument, never a gate.
-statement-census: ## the law graph's groups of theorems with one statement, into .lake/gen/statement-census.txt (make status reads it)
+statement-census: ## @measurements the law graph's groups of theorems with one statement, into .lake/gen/statement-census.txt (make status reads it)
 	@mkdir -p $(GEN)
 	$(LAKE) build Effect4Laws ProofGraph.StatementCensus
 	@mods="$$(find src/Effect4/Laws -name '*.lean' | sed -e 's|^src/||' -e 's|\.lean$$||' -e 's|/|.|g' | sort | tr '\n' ' ')"; \
@@ -101,15 +101,15 @@ statement-census: ## the law graph's groups of theorems with one statement, into
 	$(LAKE) env lean $(GEN)/StatementCensus.lean > $(GEN)/statement-census.tmp && mv $(GEN)/statement-census.tmp $(GEN)/statement-census.txt
 	@head -1 $(GEN)/statement-census.txt
 
-bank-census: ## every Effect4 aesop rule bank: its rules, simp lemmas and the clauses that name it (an instrument)
+bank-census: ## @measurements every Effect4 aesop rule bank: its rules, simp lemmas and the clauses that name it (an instrument)
 	$(LAKE) build Effect4Laws
 	$(LAKE) env lean tools/BankCensusRun.lean
 
-profile-module: ## FILE=<src/…/X.lean>: re-elaborate one built module with the profiler and aesop's statistics; summary here, raw logs in .lake/gen/profile/
+profile-module: ## @measurements FILE=<src/…/X.lean>: re-elaborate one built module with the profiler and aesop's statistics; summary here, raw logs in .lake/gen/profile/
 	@test -n "$(FILE)" || { echo "usage: make profile-module FILE=src/Effect4/Laws/…/X.lean"; exit 2; }
 	$(PY) scripts/profile-module.py $(FILE)
 
-build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, Effect4Gen and its native guard)
+build-tools: build # the generator and checker roots (Tools, OCaml5, Conform, Effect4Gen and its native guard)
 	$(LAKE) build Tools OCaml5 Conform Effect4Gen Effect4GenNative
 
 # ---------------------------------------------------------------------------- gen
@@ -307,7 +307,7 @@ $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LEAN_INPUTS)
 # The site's written copy (docs/site/README.md): Markdown that a writer edits and every build reads.
 SITE_COPY := $(shell find docs/site -name '*.md' 2>/dev/null | sort)
 .PHONY: site
-site: $(GEN)/semantics ## the documentation site into .lake/gen/site (Lean's pages, CSS files, the JSON contract)
+site: $(GEN)/semantics ## @reports the documentation site into .lake/gen/site (Lean's pages, CSS files, the JSON contract)
 	$(call build_imports,tools/Drivers/Site.lean)
 	rm -rf $(GEN)/site-next && mkdir -p $(GEN)/site-next
 	$(LAKE) env lean --run tools/Drivers/Site.lean $(GEN)/site-next $(GEN)/semantics-report
@@ -319,7 +319,7 @@ site: $(GEN)/semantics ## the documentation site into .lake/gen/site (Lean's pag
 # Publish the site from this Mac through wrangler's own sign-in (`wrangler login`, once): no API
 # token and no repository secret. Cloudflare Pages project effect4-docs, production (decisions row 363).
 .PHONY: deploy-site
-deploy-site: site ## publish .lake/gen/site to Cloudflare Pages (effect4-docs) with wrangler's sign-in
+deploy-site: site ## @reports publish .lake/gen/site to Cloudflare Pages (effect4-docs) with wrangler's sign-in
 	wrangler pages deploy $(GEN)/site --project-name=effect4-docs --branch=main \
 	  --commit-hash=$$(git rev-parse HEAD) --commit-message="$$(git log -1 --format=%s)"
 
@@ -359,14 +359,14 @@ HERMETIC_GROUPS := variances derived eff wire cas ts readme fixtures graphs exam
 GEN_GROUPS := variances derived lcnf eff wire cas ts readme host-protocol census fixtures graphs examples reference
 
 .PHONY: gen gen-hermetic $(addprefix gen-,$(GEN_GROUPS)) clean-gen
-gen: $(addprefix $(GEN)/,$(GEN_GROUPS)) ## regenerate every stale generated group, in order
-gen-hermetic: $(addprefix $(GEN)/,$(HERMETIC_GROUPS)) ## the Lean-only groups (no host runtime)
+gen: $(addprefix $(GEN)/,$(GEN_GROUPS)) ## @entry regenerate every stale generated group, in order
+gen-hermetic: $(addprefix $(GEN)/,$(HERMETIC_GROUPS)) ## @generators the Lean-only groups (no host runtime)
 # one group: make gen-eff, make gen-lcnf, ...
 $(addprefix gen-,$(GEN_GROUPS)): gen-%: $(GEN)/%
 # The semantics report is no group: no gate and no `make gen` waits on it (owner, 2026-10-18).
 .PHONY: gen-semantics
-gen-semantics: $(GEN)/semantics ## on demand: the semantics report into generated/semantics.md (no gate reads it)
-clean-gen: ## forget the generation markers (the next `make gen` re-cuts everything)
+gen-semantics: $(GEN)/semantics ## @reports on demand: the semantics report into generated/semantics.md (no gate reads it)
+clean-gen: # forget the generation markers (the next `make gen` re-cuts everything)
 	rm -rf $(GEN)
 
 # Every committed path a generator writes. The drift check diffs exactly these.
@@ -406,7 +406,7 @@ $(CORPUS)/index.tsv: $(CHK)/gen-corpus.key
 	@touch $@
 
 .PHONY: corpus
-corpus: $(CORPUS)/index.tsv ## the printed corpus under .lake/corpus (Lean's 400 programs and the wire corpus)
+corpus: $(CORPUS)/index.tsv ## @generators the printed corpus under .lake/corpus (Lean's 400 programs and the wire corpus)
 
 # The pinned install is a local producer. A content key prevents same-byte checkouts
 # from reinstalling packages. Linked installs are validated and never changed here.
@@ -432,7 +432,7 @@ Test/Corpus/node_modules: | ts/eff/node_modules
 	ln -s ../../ts/eff/node_modules $@
 
 .PHONY: doctor
-doctor: ## the tools and installs every tier needs, with their versions
+doctor: ## @entry the tools and installs every tier needs, with their versions
 	@printf 'lean       %s\n' "$$(lean --version 2>&1 | head -1)"
 	@printf 'lake       %s\n' "$$(lake --version 2>&1 | head -1)"
 	@printf 'python3    %s\n' "$$(python3 --version 2>&1)"
@@ -462,7 +462,7 @@ doctor: ## the tools and installs every tier needs, with their versions
 # (ts/eff/check.ts); the OCaml engine's cross face reads the runs
 # (ocaml/engine/test/reference/corpora.ml). No gate runs the producer.
 .PHONY: gen-truth-corpus
-gen-truth-corpus: $(GEN)/derived ## on demand: write Test/Corpus/corpus.json and generated/*.ts from Truth.lean's corpus (no host run)
+gen-truth-corpus: $(GEN)/derived ## @generators on demand: write Test/Corpus/corpus.json and generated/*.ts from Truth.lean's corpus (no host run)
 	$(call build_imports,tools/Drivers/Truth.lean)
 	$(LAKE) env lean -M4096 $(call native_flags,tools/Drivers/Truth.lean) --run tools/Drivers/Truth.lean --corpus Test/Corpus
 
@@ -474,16 +474,16 @@ FORCE:
 # The aggregates hold only the gates that test behaviour (owner, 2026-10-10): the proofs, and the
 # runs compared with an outside implementation. The batteries, the axiom gate over the whole tree,
 # the ratchets, the policies, the drift and the document checks stay callable by name, at a sweep.
-check: build ## after a change: the core and the law graph; audit the landing's modules with `#axiom_audit`
+check: build ## @entry after a change: the core and the law graph; audit the landing's modules with `#axiom_audit`
 .PHONY: batteries-touched
-batteries-touched: ## the batteries a change against BASE (default HEAD) edits or names, read from Lean's .ilean references (build the edited modules first); the whole run is the sweep's
+batteries-touched: ## @entry the batteries a change against BASE (default HEAD) edits or names, read from Lean's .ilean references (build the edited modules first); the whole run is the sweep's
 	@set -e; mods="$$($(PY) scripts/lean-imports.py --touched --base $(or $(BASE),HEAD))"; \
 	if [ -z "$$mods" ]; then echo "batteries-touched: no battery reached"; \
 	else echo "batteries-touched: $$(echo $$mods | wc -w | tr -d ' ') batteries"; $(LAKE) build $$mods; fi
-check-ts: $(addprefix $(CHK)/,tsgo target ts-reader tsdiag ingest-smoke service-identity) ## every comparison with Effect and tsgo 7
-check-ocaml: $(addprefix $(CHK)/,native compiler ocaml) ## every comparison on the OCaml route
-check-full: check check-ts check-ocaml ## the build and every outside oracle
-check-sweep: $(addprefix $(CHK)/,roots docs language census schema-pins tools program-object) check-gen ## batteries, axioms, drift and documents
+check-ts: $(addprefix $(CHK)/,tsgo target ts-reader tsdiag ingest-smoke service-identity) ## @gates every comparison with Effect and tsgo 7
+check-ocaml: $(addprefix $(CHK)/,native compiler ocaml) ## @gates every comparison on the OCaml route
+check-full: check check-ts check-ocaml ## @entry the build and every outside oracle
+check-sweep: $(addprefix $(CHK)/,roots docs language census schema-pins tools program-object) check-gen ## @entry batteries, axioms, drift and documents
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -497,12 +497,12 @@ endef
 # The kernel rung, at a sweep only: every compiled Effect4 and Test declaration in the closure of the
 # battery roots, replayed through the kernel into one environment of their dependencies
 # (tools/Drivers/KernelReplay.lean). Never a bare `leanchecker`: it holds one environment per core.
-check-kernel: ## (sweep) replay every compiled Effect4 and Test declaration through the kernel, after its self-test
+check-kernel: ## @sweep (sweep) replay every compiled Effect4 and Test declaration through the kernel, after its self-test
 	$(LAKE) build kernel-replay Test
 	$(LAKE) exe kernel-replay --self-test
 	$(LAKE) exe kernel-replay Test
 
-check-gen: gen-hermetic $(CORPUS)/index.tsv ## regenerate the stale Lean-only groups and the corpus index; refuse a changed committed file
+check-gen: gen-hermetic $(CORPUS)/index.tsv ## @sweep regenerate the stale Lean-only groups and the corpus index; refuse a changed committed file
 	$(refuse_drift)
 	@echo 'PASS check-gen: every Lean-only generated file is what its generator emits'
 
@@ -513,7 +513,7 @@ check-gen-full:
 
 # one check: make check-roots, make check-docs, ...
 $(addprefix check-,$(CHECKS)): check-%: $(CHK)/%
-clean-check: ## forget local check markers; retain shared passes
+clean-check: # forget local check markers; retain shared passes
 	@mkdir -p $(CHK)
 	find $(CHK) -maxdepth 1 -type f ! -name 'gen-*' -delete
 
@@ -558,7 +558,6 @@ _run-roots:
 # One TypeScript compiler, tsgo 7 (AGENTS.md; decisions rows 57 and 168): no `typescript` package below
 # 7 is installed under ts/ or tools/. The recipe is receipt J's line (step 7 (iii)); the
 # marker reads the installed manifest inventory and the manifests and locks that fill it.
-check-tsgo:
 TSGO_INPUTS = $(shell find -L ts tools -path '*/node_modules/typescript/package.json' -print) \
   $(wildcard ts/*/package.json ts/*/bun.lock tools/*/package.json)
 $(eval $(call cached_check,tsgo,none,$(TSGO_INPUTS),))
@@ -634,7 +633,7 @@ _run-ts-reader:
 # opam switch `rocq`. No gate runs it; rocq/README.md gives the compile that checks the proofs.
 ROCQ_TMP := $(GEN)/rocq-types
 .PHONY: gen-rocq
-gen-rocq: ## regenerate rocq/Eff_types.v, rocq/Skeleton.v and rocq/StoreCode.v (the opam switch rocq)
+gen-rocq: ## @generators regenerate rocq/Eff_types.v, rocq/Skeleton.v and rocq/StoreCode.v (the opam switch rocq)
 	$(LAKE) build Effect4.Run.Tree Effect4.Store.Domain.Word OCaml5.Lcnf.Gallina
 	$(LAKE) env lean -M4096 --run src/OCaml5/Tools/GallinaGen.lean rocq/Skeleton.v rocq/StoreCode.v
 	@rm -rf $(ROCQ_TMP) && mkdir -p $(ROCQ_TMP) && cp rocq/tools/split_types.ml $(ROCQ_TMP)/
@@ -650,7 +649,7 @@ gen-rocq: ## regenerate rocq/Eff_types.v, rocq/Skeleton.v and rocq/StoreCode.v (
 ROCQ_LANE_TMP := $(GEN)/rocq-lane
 ROCQ_LANE_SOURCES := Eff_types Skeleton
 .PHONY: gen-rocq-lane
-gen-rocq-lane: ## regenerate the comparison lane's runner ocaml/engine/test/rocq/rocq_run.ml and .mli (the opam switch rocq)
+gen-rocq-lane: ## @generators regenerate the comparison lane's runner ocaml/engine/test/rocq/rocq_run.ml and .mli (the opam switch rocq)
 	@rm -rf $(ROCQ_LANE_TMP) && mkdir -p $(ROCQ_LANE_TMP)
 	cp rocq/tools/split_types.ml $(patsubst %,rocq/%.v,$(ROCQ_LANE_SOURCES) LaneExtract) $(ROCQ_LANE_TMP)/
 	cd $(ROCQ_LANE_TMP) && opam exec --switch=rocq -- ocamlfind ocamlopt -package compiler-libs.common -linkpkg split_types.ml -o split_types
@@ -659,10 +658,10 @@ gen-rocq-lane: ## regenerate the comparison lane's runner ocaml/engine/test/rocq
 	for x in ml mli; do { printf '(* GENERATED by `make gen-rocq-lane` (Rocq'"'"'s extraction of rocq/LaneExtract.v); do not edit.\n   Test input of the comparison lane (test_rocq.ml); nothing else links it. *)\n'; cat $(ROCQ_LANE_TMP)/rocq_run.$$x; } > ocaml/engine/test/rocq/rocq_run.$$x; done
 
 .PHONY: gen-store-rocq
-gen-store-rocq: ## regenerate StoreCode and check unchanged Skeleton; keep Eff_types
+gen-store-rocq: ## @generators regenerate StoreCode and check unchanged Skeleton; keep Eff_types
 	$(PY) scripts/generate.py --only store-rocq
 
-gen-architecture: gen-semantics | build ## the architecture map, measured from the tree, into .lake/gen/architecture-map.html (a report)
+gen-architecture: gen-semantics | build ## @reports the architecture map, measured from the tree, into .lake/gen/architecture-map.html (a report)
 	node scripts/check-proofgraph-input.mjs
 	$(LAKE) build architecture-map
 	@mkdir -p $(GEN)
@@ -691,13 +690,13 @@ _run-target:
 	$(BUN) tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv
 
 .PHONY: gen-assignability
-gen-assignability: ## promote a fresh assignability differential to generated/assignability.tsv
+gen-assignability: ## @generators promote a fresh assignability differential to generated/assignability.tsv
 	$(call build_imports,tools/Tools/TyVectors.lean)
 	@mkdir -p .lake/target && $(LAKE) env lean -M4096 --run tools/Tools/TyVectors.lean .lake/target/ty-vectors.tsv
 	$(BUN) tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv --promote
 
 .PHONY: gen-row-citations
-gen-row-citations: ## promote a fresh rows/atoms report to generated/row-citations.tsv
+gen-row-citations: ## @generators promote a fresh rows/atoms report to generated/row-citations.tsv
 	$(BUN) tools/target/rows.ts --repo . --promote
 
 # The OCaml lane (the effect4 opam switch; local only until the runner has one): the eff
@@ -736,9 +735,8 @@ $(CHK)/tsdiag.key: $(CORPUS)/index.tsv | ts/eff/node_modules ts/prelude/node_mod
 _run-tsdiag:
 	$(NODE) tools/tsdiag/run-tsdiag.mjs $(abspath $(CORPUS)) $(abspath .lake/tsdiag)
 
-.PHONY: check-tsdiag gen-tsdiag
-check-tsdiag: $(CHK)/tsdiag
-gen-tsdiag: $(CORPUS)/index.tsv | ts/eff/node_modules ts/prelude/node_modules ## promote a fresh diagnostics run to generated/tsdiag-agreement.tsv
+.PHONY: gen-tsdiag
+gen-tsdiag: $(CORPUS)/index.tsv | ts/eff/node_modules ts/prelude/node_modules ## @generators promote a fresh diagnostics run to generated/tsdiag-agreement.tsv
 	$(NODE) tools/tsdiag/run-tsdiag.mjs $(abspath $(CORPUS)) $(abspath .lake/tsdiag) --promote
 
 # The ingest smoke: the printed corpus through the foreign recognizer's printed contract.
@@ -776,17 +774,26 @@ _run-tools:
 # ---------------------------------------------------------------------------- help
 
 .PHONY: status
-status: ## one screen, measured: HEAD and dirty paths, build and check freshness, generated drift, claims, ledger goals, registers, stale references
+status: ## @entry one screen, measured: HEAD and dirty paths, build and check freshness, generated drift, claims, ledger goals, registers, stale references
 	@$(PY) scripts/status.py
 
 .PHONY: help clean
-help: ## this list
-	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-	@echo
-	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
-	@echo '                     host-protocol, census, fixtures, graphs'
-
-clean: ## lake clean (drops the build, the generation and check markers)
+help: ## @entry this list
+	@for section in entry gates sweep generators reports measurements; do \
+	  case $$section in \
+	    entry) echo 'Entry points (a person types these)';; \
+	    gates) echo 'Behaviour gates (check-full)';; \
+	    sweep) echo 'Sweep (by name, when the owner asks)';; \
+	    generators) echo 'Generators (each writes committed files)';; \
+	    reports) echo 'Reports and the site (never committed)';; \
+	    measurements) echo 'Measurements';; \
+	  esac; \
+	  awk -v sec="$$section" 'BEGIN {FS = ":.*## @"} /^[a-zA-Z0-9_-]+:.*## @/ {split($$2, w, " "); if (w[1] == sec) {d = $$2; sub(/^[a-z]+ /, "", d); printf "  %-24s %s\n", $$1, d}}' $(MAKEFILE_LIST); \
+	  echo; \
+	done
+	@echo '  gen-<group>              one generated group: $(GEN_GROUPS)'
+	@echo '  check-<lane>             one lane: $(CHECKS)'
+clean: ## @entry lake clean (drops the build, the generation and check markers)
 	$(LAKE) clean
 
 # reference pages
@@ -795,9 +802,9 @@ clean: ## lake clean (drops the build, the generation and check markers)
 # rewritten at each report and never committed: gen-reference-semantics writes the whole set with
 # it into .lake/gen/reference/, which the committed index links.
 .PHONY: gen-reference gen-reference-semantics
-gen-reference: ## the reference pages into generated/reference (forms, native, marks, refusals, dictionary, semantics)
+gen-reference: ## @generators the reference pages into generated/reference (forms, native, marks, refusals, dictionary, semantics)
 	$(PY) scripts/generate.py --only reference
-gen-reference-semantics: $(GEN)/semantics ## the reference set with its semantics page into .lake/gen/reference (never committed)
+gen-reference-semantics: $(GEN)/semantics ## @reports the reference set with its semantics page into .lake/gen/reference (never committed)
 	$(LAKE) build Drivers.Reference
 	rm -rf $(GEN)/reference
 	$(LAKE) env lean -M4096 --run tools/Drivers/Reference.lean $(GEN)/reference $(GEN)/semantics-report
@@ -811,5 +818,5 @@ $(GEN)/examples: $(GEN)/derived $(EXAMPLES_SOURCES) scripts/generate.py lean-too
 	$(PY) scripts/generate.py --only examples
 	@mkdir -p $(GEN) && touch $@
 .PHONY: gen-examples
-gen-examples: $(GEN)/examples ## the examples' folders and index, generated/examples/
+gen-examples: $(GEN)/examples ## @generators the examples' folders and index, generated/examples/
 GENERATED_PATHS += generated/examples generated/reference
