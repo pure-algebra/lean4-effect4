@@ -1,0 +1,2 @@
+service	state	init	clauses	requires	forwards	rows
+BoundedBufferApp	Context.Context<never>	4	transfer@5/1			
