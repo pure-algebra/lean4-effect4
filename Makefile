@@ -800,14 +800,19 @@ clean: ## @entry lake clean (drops the build, the generation and check markers)
 # The reference set (docs/GENERATED.md, group reference): one page for each table of the tree's
 # data, folded by tools/Drivers/Reference.lean into generated/reference/. The semantics page is
 # rewritten at each report and never committed: gen-reference-semantics writes the whole set with
-# it into .lake/gen/reference/, which the committed index links.
-.PHONY: gen-reference gen-reference-semantics
-gen-reference: ## @generators the reference pages into generated/reference (forms, native, marks, refusals, dictionary, semantics)
+# it into .lake/gen/reference-site/; the committed index links the report's Markdown.
+REFERENCE_SOURCES := $(shell $(PY) scripts/lean-imports.py --closure tools/Drivers/Reference.lean) \
+  docs/core/controlled-english.md tools/Tools/Document/page.css $(wildcard tools/view/looks/*.tokens.json) \
+  generated/semantics.md
+$(GEN)/reference: $(REFERENCE_SOURCES) scripts/generate.py lean-toolchain lake-manifest.json
 	$(PY) scripts/generate.py --only reference
-gen-reference-semantics: $(GEN)/semantics ## @reports the reference set with its semantics page into .lake/gen/reference (never committed)
+	@mkdir -p $(GEN) && touch $@
+.PHONY: gen-reference gen-reference-semantics
+gen-reference: $(GEN)/reference ## @generators the reference pages into generated/reference (forms, native, marks, refusals, dictionary)
+gen-reference-semantics: $(GEN)/semantics ## @reports the reference set with its semantics page into .lake/gen/reference-site (never committed)
 	$(LAKE) build Drivers.Reference
-	rm -rf $(GEN)/reference
-	$(LAKE) env lean -M4096 --run tools/Drivers/Reference.lean $(GEN)/reference $(GEN)/semantics-report
+	rm -rf $(GEN)/reference-site
+	$(LAKE) env lean -M4096 --run tools/Drivers/Reference.lean $(GEN)/reference-site $(GEN)/semantics-report
 # examples
 # The examples' folders (`generated/examples/`, `scripts/generate.py`'s `examples` family): each
 # example of `examples/Examples/All.lean` emitted and inspected through `lake exe effect4`, and
