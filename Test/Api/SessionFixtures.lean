@@ -26,7 +26,7 @@ def recordedRepository : Run.Reactor (Repo × List String) := fun row sent state
     (answer, (next, state.2 ++ [row.spelling]))
 
 def todoBuilt : Option Built :=
-  Test.Dogfood.Scenario.Todo.Cached.built? Test.Dogfood.Scenario.Todo.application
+  Test.Dogfood.Scenario.Todo.Cached.built? Examples.Todo.application
 def cachedBuilt : Option Built :=
   Test.Dogfood.Scenario.Todo.Cached.built? Test.Dogfood.Scenario.Todo.Cached.cached
 def todoSession : Option Built := todoBuilt.bind fun b => (b.session "TodoApp").toOption
@@ -63,7 +63,7 @@ def clientMain : Src NativeOp :=
     app "pair" [fourth, app "pair" [fifth, app "pair" [sixth, app "pair" [seventh, unit]]]]]]])
 
 def clientBuilt : Option Built :=
-  (Test.Dogfood.Scenario.Todo.application.serviceModule "TodoApp").toOption.bind fun m =>
+  (Examples.Todo.application.serviceModule "TodoApp").toOption.bind fun m =>
     (Effect4.Api.Author.build { m with main := clientMain }).toOption
 
 def clientRun : Option (Run × (Repo × List String)) :=

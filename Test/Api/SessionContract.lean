@@ -177,11 +177,11 @@ example (row : Row) (state : Test.Dogfood.Scenario.Todo.Repo × List String)
 -- Law reader: the repository handles its list row while the queue stays unchanged.
 example (remaining : List Val) (state : Test.Dogfood.Scenario.Todo.Repo × List String) :
     Run.Reactor.tensor Run.Reactor.queue recordedRepository
-      Test.Dogfood.Scenario.Todo.TodoRepo.row.all.row .unit (remaining, state) =
-      (recordedRepository Test.Dogfood.Scenario.Todo.TodoRepo.row.all.row .unit state).map
+      Examples.Todo.TodoRepo.row.all.row .unit (remaining, state) =
+      (recordedRepository Examples.Todo.TodoRepo.row.all.row .unit state).map
         (fun (answer, next) => (answer, (remaining, next))) :=
   Run.Reactor.tensor_right Run.Reactor.queue recordedRepository
-    Test.Dogfood.Scenario.Todo.TodoRepo.row.all.row .unit remaining state rfl
+    Examples.Todo.TodoRepo.row.all.row .unit remaining state rfl
 
 -- Law reader: the checked lifetime of the concrete Example fixture requires only typed keys.
 example (before after : Built) (_source : exampleBuilt = some before)

@@ -1,9 +1,9 @@
 import Test.Dogfood.Scenario.Data
 import Test.Dogfood.P2HandlerLayers.Data
-import Effect4.Program.Authoring.Application
-import Effect4.Library.Ref.Cache
+import Examples.CachedTodo
 
-/-! Data shared by the scenario battery and fixture writers. -/
+/-! The to-do's reference model and the helpers that the batteries and fixture writers share. The
+program is `Examples.Todo` (`examples/Examples/Todo.lean`). -/
 
 set_option autoImplicit false
 set_option maxRecDepth 8192
@@ -13,98 +13,7 @@ namespace Test.Dogfood.Scenario.Todo
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Authoring.Atom (eq pair)
 open Test.Dogfood.P2HandlerLayers (recordVal built?)
-
-/-! ## 1. The data and the rows -/
-
-eff_record Todo where id : .nat, title : .string, done : .bool
-eff_failure NotFound where id : .nat
-eff_failure SqlError message
-eff_failure EmptyTitle message
-
-/-- The repository's service key (decisions row 378 (19), slice E3): the namespace `TodoRepo`
-is the service of this key, and each of its rows is a method of it, so each row's requirement
-column names the key. The name `30` is free (`Env.firstFreeName` is `4`). The code `6` is the
-built-in code whose carrier is `unit` (`nativeServiceTypes`), so admission finds a carrier for
-the key (`SigApp.serviceTy`): the machine never reads the service's value, because the host
-answers the rows. -/
-def todoRepoKey : ServiceKey := ⟨⟨30⟩, ⟨6⟩⟩
-
-eff_rows TodoRepo key todoRepoKey error SqlError.ty cite "the to-do scenario" where
-  insert(.string) : Todo.ty,
-  all(.unit) : .list Todo.ty,
-  setDone(.prod .nat .bool) : .option Todo.ty,
-  delete(.nat) : .bool
-
-/-! ## 2. The API -/
-
-/-- `add(title)`: an empty title fails and asks the repository nothing. -/
-def add (title : TermSrc) : Src NativeOp := eff do
-  if eq title (str "") then
-    EmptyTitle.raise (str "a title is required")
-  else
-    TodoRepo.insert title
-
-/-- `list()`: every to-do. -/
-def list : Src NativeOp := TodoRepo.all unit
-
-/-- `complete(id)`: the to-do, marked done; a missing one fails with its id. -/
-def complete (id : TermSrc) : Src NativeOp := eff do
-  let updated ← TodoRepo.setDone (pair id (bool true))
-  selectOptionWith updated (NotFound.raise id) fun todo => succeed todo
-
-/-- `remove(id)`: a missing to-do fails with its id. -/
-def remove (id : TermSrc) : Src NativeOp := eff do
-  let removed ← TodoRepo.delete id
-  if removed then succeed unit else NotFound.raise id
-
-/-! ### The application
-
-The four programs as one application (`Application`,
-`src/Effect4/Program/Authoring/Application.lean`; the claims packet's slice APP). Each entry's
-body is the program above, at its parameter read by `var`. A request of the API is an entry at
-its arguments, built through the application's module. -/
-
-/-- `insert(title)`: the stored to-do has the title, and it is not done. The promise reads the
-request at level 0 and the answer at level 1 (`RowProtocol`,
-`src/Effect4/Program/RowProtocol.lean`). -/
-def insertProtocol : RowProtocol :=
-  { post := .app "and"
-      (termsOfList [.app "eq" (termsOfList [.field .required (.var 1) "title", .var 0]),
-        .app "not" (termsOfList [.field .required (.var 1) "done"])]) }
-
-/-- A to-do that stands for "none" where a term needs a value of the record. -/
-def noTodo : Term :=
-  .record Todo.fields ["id", "title", "done"]
-    (termsOfList [.lit (.nat 0), .lit (.str ""), .lit (.bool false)])
-
-/-- `setDone(id, done)`: an answered to-do has the id and the flag of the request. -/
-def setDoneProtocol : RowProtocol :=
-  { post := .app "or"
-      (termsOfList [.app "not" (termsOfList [.app "isSome" (termsOfList [.var 1])]),
-        .app "and"
-          (termsOfList
-            [.app "eq" (termsOfList
-              [.field .required (.app "getOrElse" (termsOfList [.var 1, noTodo])) "id",
-               .app "fst" (termsOfList [.var 0])]),
-             .app "eq" (termsOfList
-              [.field .required (.app "getOrElse" (termsOfList [.var 1, noTodo])) "done",
-               .app "snd" (termsOfList [.var 0])])])]) }
-
-/-- The declared protocols of the repository's rows, by spelling. -/
-def protocols : RowProtocols :=
-  [("TodoRepo.insert", insertProtocol), ("TodoRepo.setDone", setDoneProtocol)]
-
-/-- The to-do application: the repository's four rows, their protocols, and the API's four
-programs. -/
-def application : Application NativeOp :=
-  { name := "todo"
-    rows := TodoRepo.rows
-    protocols := protocols
-    entries :=
-      [ { name := "add", params := [("title", .string)], body := add (var "title") }
-      , { name := "list", body := list }
-      , { name := "complete", params := [("id", .nat)], body := complete (var "id") }
-      , { name := "remove", params := [("id", .nat)], body := remove (var "id") } ] }
+open Examples.Todo
 
 /-- One entry at its arguments, built through the application's module. -/
 def builtAt (name : String) (args : List TermSrc) : Option Api.Built :=
@@ -151,33 +60,5 @@ def repository : Run.Reactor Repo := fun row sent state =>
     | .nat id => some (ok (.bool (state.2.any (·.1 == id))), (state.1, state.2.filter (·.1 != id)))
     | _ => none
   else none
-
-/-! ## The banked cache, imposed on the service
-
-Here, beside the application, so the cached service builds from law-free modules: the LCNF route
-and the to-do lane's fixture import no law module (`Test/Dogfood/Scenario/Todo/HostRun.lean`). -/
-
-/-- `list`'s method reads through the banked cache: `get` at the cache's cell, with the entry's
-program, `TodoRepo.all()`, as its loader (decisions row 378 (8)). -/
-def readingThrough (cache : TermSrc) (body : Src NativeOp) : Src NativeOp :=
-  Def.invokeWith "listCacheGet" [cache] [fun _ => body]
-
-/-- A write's method empties the cache after the entry's program succeeds: an application that
-holds the cache invalidates it after each write (decisions row 378 (23)). A failure skips it. -/
-def invalidatingAfter (cache : TermSrc) (body : Src NativeOp) : Src NativeOp :=
-  bindWith body fun answer =>
-    andThen (Def.invoke "listCacheInvalidate" [cache]) (succeed answer)
-
-/-- **The banked Ref cache, imposed on the to-do's service** (decisions row 378 (8)): the bank's
-block at the to-do's types (`Ref.Cache.block`; `Test/Dogfood/Bank.lean` records its digest). Its
-cell is made once by `listCacheMake` and handed to each wrapper as a `TermSrc`. `list` reads
-through it, and `add`, `complete` and `remove` invalidate it after a successful write. The entries
-do not change. -/
-def listCache : Application.Imposed NativeOp where
-  block := Effect4.Ref.Cache.block Todo.ty SqlError.ty
-  stateTy := Effect4.Ref.Cache.cellTy Todo.ty
-  make := "listCacheMake"
-  around := [("list", readingThrough), ("add", invalidatingAfter),
-    ("complete", invalidatingAfter), ("remove", invalidatingAfter)]
 
 end Test.Dogfood.Scenario.Todo

@@ -26,6 +26,8 @@ prelude's folder and the inputs are data here; the IO that reads them is `Compil
   imports. So the wire corpus's folder names `effect` alone. The red control: a folder whose root
   reaches the adapter, as the root imported the package before 2026-10-20, names
   `@effect/sql-sqlite-bun`.
+- **The tree's groups** (`Compiler.Groups.all`): the wire corpus, the SQLite package's programs and
+  each example of `Examples.all`, and the to-do alone lowers native roots.
 - **A program with a SQL row** (`Test.Api.PackagesContract.pSqlite`, at `Packages.sqliteBun`): its
   module imports `Sql` from the copied adapter (`Compiler.hostImports`), the reading boundary
   admits it, and its folder holds the adapter and names the SQL package. The red control: the file
@@ -382,7 +384,7 @@ def folderBefore : List (String × ByteArray) :=
 
 -- red: read as the envelope that a host wraps, with no services, the reading boundary refuses the
 -- file at its first row service, which names no layer path.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match b.typed.emit declaration with
     | .ok e =>
@@ -397,7 +399,7 @@ def folderBefore : List (String × ByteArray) :=
 
 -- green: with the table's row services read first, as `Api.readFile` reads them, it admits the
 -- file, to exactly the built program; and the to-do emits.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match b.typed.emit declaration with
     | .ok e =>
@@ -409,6 +411,16 @@ def folderBefore : List (String × ByteArray) :=
       | .error _ => false
     | .error _ => false
   | .error _ => false
+
+/-! ## The tree's groups -/
+
+-- The groups of `lake exe effect4`: the wire corpus, the SQLite package's programs, then each
+-- example of `Examples.all` under its application's name; only the to-do lowers native roots.
+#guard Groups.all.map Source.name == ["corpus", "sql"] ++ Examples.all.map (·.name) &&
+  Examples.all.map (·.name) == ["todo", "cachedTodo"] &&
+  (Groups.all.filterMap fun
+    | .application app lowered => if lowered.roots.isEmpty then none else some app.name
+    | .programs .. => none) == ["todo"]
 
 /-! ## A program with a SQL row: the adapter, imported and copied -/
 
@@ -502,12 +514,12 @@ def here : Elaborated := elaborated%
 -- The declared names of the closure's literal keys: the dogfood to-do's repository key and the SQL
 -- layer's. `check` names a key's declaration beside its spelling, and a key no declaration states
 -- prints alone.
-#guard here.namesOf ⟨⟨30⟩, ⟨6⟩⟩ == ["Test.Dogfood.Scenario.Todo.todoRepoKey"] &&
+#guard here.namesOf ⟨⟨30⟩, ⟨6⟩⟩ == ["Examples.Todo.todoRepoKey"] &&
   here.namesOf ⟨⟨8⟩, ⟨4⟩⟩ == ["Test.Api.PackagesContract.kSql"] &&
   keyLine ⟨⟨1⟩, ⟨9⟩⟩ (here.namesOf ⟨⟨1⟩, ⟨9⟩⟩) == "k1_9" &&
-  (match check Test.Dogfood.Scenario.Todo.application with
+  (match check Examples.Todo.application with
     | .ok b => (certificateLines "todo" b here.namesOf).contains
-        "services  TodoRepo k30_6 (Test.Dogfood.Scenario.Todo.todoRepoKey)"
+        "services  TodoRepo k30_6 (Examples.Todo.todoRepoKey)"
     | .error _ => false)
 
 /-! ## The readings: one query of the tool protocol each -/
@@ -517,7 +529,7 @@ def here : Elaborated := elaborated%
 
 -- `rows` is the certificate's rows: the inspection at the root holds the application's table in
 -- its signature context, one line a row.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match reading b .rows with
     | .ok r => jsonText r.json == jsonText (tree b.table) && (r.text.splitOn "\n").length == 4
@@ -525,7 +537,7 @@ def here : Elaborated := elaborated%
   | .error _ => false
 
 -- `types` is the address table: its first line is the root, at the program's type.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match reading b .types with
     | .ok r => (r.text.splitOn "\n").head? == some ("[] " ++ Tools.Code.effTyText b.ty)
@@ -534,7 +546,7 @@ def here : Elaborated := elaborated%
 
 -- `graph` is the program's public JSON, the bytes of `<name>.eff.json` without their newline, and
 -- its indented text reads back to the same tree.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match reading b .graph with
     | .ok r => (jsonText r.json).toUTF8.data.toList ++ [10] == (programJson b.program).data.toList &&
@@ -545,7 +557,7 @@ def here : Elaborated := elaborated%
   | .error _ => false
 
 -- `surface` is the service's four methods, as its Schemas state them.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match reading b .surface with
     | .ok r => (r.text.splitOn "\n").map (fun l => (l.splitOn "(").headD "") ==
@@ -590,7 +602,7 @@ def here : Elaborated := elaborated%
   (InspectOptions.read ["--out", "--form", "json"] {}).toOption.isNone
 
 -- reader: the session adapter uses the same checked constructor as direct library use.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b => (inspectBuilt b (some "TodoApp")).toOption.isSome &&
       (inspectBuilt b (some "unknown-service")).toOption.isNone
   | .error _ => false

@@ -235,7 +235,7 @@ example (r : Report) :
 
 -- control: a session that does not exist refuses the plan, before any file; the good plan gives
 -- the to-do's documents, one file in Markdown.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     (inspectPlan [("todo", b)] (some "Nope") .md "relations").toOption.isNone &&
       ((inspectPlan [("todo", b)] (some "TodoApp") .md "relations").toOption.map (·.map (·.1))) ==

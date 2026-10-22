@@ -7,6 +7,7 @@ set_option maxRecDepth 8192
 
 namespace Test.Dogfood.Scenario.Todo
 
+open Examples.Todo
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Test.Dogfood.P2HandlerLayers (recordVal)
 

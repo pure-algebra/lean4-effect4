@@ -32,14 +32,14 @@ namespace Test.Dogfood.ApplicationDefs
 
 open Effect4 Effect4.Program Effect4.Program.Authoring Effect4.Machine
 open Effect4.Program.Denote (blockOf?)
-open Test.Dogfood.Scenario.Todo (application)
+open Examples.Todo (application)
 open Test.Dogfood.Bank (refCache refusedAt milk observe)
 
 /-- `cachedList`: a cell made by the cache, then a read through it, the to-do's `all` the loader. -/
 def cachedList : Src NativeOp :=
   bindWith (Def.invoke "listCacheMake" []) fun cell =>
     Def.invokeWith "listCacheGet" [cell]
-      [fun _ => Test.Dogfood.Scenario.Todo.TodoRepo.all unit]
+      [fun _ => Examples.Todo.TodoRepo.all unit]
 
 /-- The entry `cachedList`, with no parameter. -/
 def entry : Application.Entry NativeOp := { name := "cachedList", body := cachedList }
@@ -78,7 +78,7 @@ def opened : NativeEff :=
 -- finite evaluation: at the application's signature it answers the to-dos, and only the repository
 -- fails
 #guard (Checker.check cached.signature [] [] opened).toOption.map (fun t => (t.answer, t.error)) =
-  some ((Ty.list Test.Dogfood.Scenario.Todo.Todo.ty).normalize, Test.Dogfood.Scenario.Todo.SqlError.ty)
+  some ((Ty.list Examples.Todo.Todo.ty).normalize, Examples.Todo.SqlError.ty)
 -- control: without the definitions, the scope reader refuses the first invocation, by name
 #guard ({ cached with defs := [] } : Application NativeOp).openProgram entry =
   .error ⟨[0], .unboundDef "listCacheMake"⟩

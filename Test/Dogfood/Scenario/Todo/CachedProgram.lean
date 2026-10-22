@@ -15,10 +15,9 @@ set_option autoImplicit false
 namespace Test.Dogfood.Scenario.Todo.Cached
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Test.Dogfood.Scenario.Todo (application listCache)
 
-/-- The to-do with the banked cache imposed on its service. -/
-def cached : Application NativeOp := { application with imposed := [listCache] }
+/-- The to-do with the banked cache imposed on its service (`Examples.CachedTodo`). -/
+def cached : Application NativeOp := Examples.CachedTodo.application
 
 /-- The service's name. -/
 def service : String := "TodoApp"

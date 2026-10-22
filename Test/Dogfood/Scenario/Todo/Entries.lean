@@ -13,6 +13,7 @@ set_option autoImplicit false
 
 namespace Test.Dogfood.Scenario.Todo
 
+open Examples.Todo
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 
 /-- An entry's open program, or a unit program where the entry does not elaborate. -/

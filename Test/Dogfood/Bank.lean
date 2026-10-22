@@ -38,7 +38,8 @@ open Effect4 Effect4.Program Effect4.Machine
 open Effect4.Machine.Env (Requirement)
 open Effect4.Program.Denote (blockOf? paramsAsRows)
 open Effect4.Program.Authoring (About Evidence ClaimRecord)
-open Test.Dogfood.Scenario.Todo (application repository Repo todo noTodo)
+open Test.Dogfood.Scenario.Todo (repository Repo todo)
+open Examples.Todo (application noTodo)
 
 export Effect4.Bank (Entry)
 
@@ -47,12 +48,12 @@ element type `Todo` and the loader's error `SqlError`. Its bodies call no host r
 is a program parameter of `get`. Its agreement theorem is `cache_agrees`. -/
 def refCache : Entry where
   name := "Ref.Cache"
-  block := Ref.Cache.block Test.Dogfood.Scenario.Todo.Todo.ty
-    Test.Dogfood.Scenario.Todo.SqlError.ty
+  block := Ref.Cache.block Examples.Todo.Todo.ty
+    Examples.Todo.SqlError.ty
   digest := "c2bbfd58a550c7efe4e44b2800597bc708c41c7ebfe60dff1dada2a9eabd410c"
   rows := []
-  types := [("A", Test.Dogfood.Scenario.Todo.Todo.ty),
-    ("E", Test.Dogfood.Scenario.Todo.SqlError.ty)]
+  types := [("A", Examples.Todo.Todo.ty),
+    ("E", Examples.Todo.SqlError.ty)]
   model := (``Effect4.Ref.Cache.Model.read).getPrefix
   claim := { statement := ``Effect4.Ref.Cache.cache_agrees, about := .implementation,
              evidence := .«theorem» }
@@ -95,14 +96,14 @@ def todoProgram (p : Authoring.Src NativeOp) : NativeEff :=
   | .error _ => .succeed (.lit .unit)
 
 /-- The loader that the to-do's `list` passes: the to-do's own `list`, one call of `all`. -/
-def loadList : Effs NativeOp := .cons (todoProgram Test.Dogfood.Scenario.Todo.list) .nil
+def loadList : Effs NativeOp := .cons (todoProgram Examples.Todo.list) .nil
 
 /-- A read of the cache at the cell, level 0, with the to-do's loader. -/
 def read : NativeEff := .invoke 1 (.var 0) loadList
 
 /-- The to-do's write of a new to-do, "tea". -/
 def addTea : NativeEff :=
-  todoProgram (Test.Dogfood.Scenario.Todo.TodoRepo.insert (Authoring.str "tea"))
+  todoProgram (Examples.Todo.TodoRepo.insert (Authoring.str "tea"))
 
 /-- A pair of two values, as the atom `pair` builds it. -/
 def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
@@ -130,7 +131,7 @@ def milk : Val := Val.list [todo 1 "milk" false]
 /-- `get` alone on a fresh cell: the client of `get_session`, its loader the to-do's `all` read as
 a row. -/
 def freshGet : NativeEff :=
-  .bind (Ref.Cache.makeBody Test.Dogfood.Scenario.Todo.Todo.ty) (paramsAsRows 1 Ref.Cache.getBody)
+  .bind (Ref.Cache.makeBody Examples.Todo.Todo.ty) (paramsAsRows 1 Ref.Cache.getBody)
 
 -- finite evaluation: the to-do's `all`, the loader's row, is a data row of the to-do's table, the
 -- fragment premise of `get_session`

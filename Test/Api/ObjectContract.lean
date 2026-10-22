@@ -14,7 +14,7 @@ open Effect4 Effect4.Program Effect4.Store Effect4.Api
 
 /-- The to-do's service, built as `Compiler.check` builds it. -/
 def todoBuilt : Option Built :=
-  match Test.Dogfood.Scenario.Todo.application.serviceModule "TodoApp" with
+  match Examples.Todo.application.serviceModule "TodoApp" with
   | .ok m => (Author.build m).toOption
   | .error _ => none
 

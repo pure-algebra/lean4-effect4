@@ -1,4 +1,5 @@
 import Compiler.Main
+import Examples.All
 import Test.Dogfood.Scenario.Todo.HostLane
 import Test.Api.PackagesContract
 
@@ -23,9 +24,9 @@ groups stand here, so the battery `Test/Codegen/CompilerEmit.lean` reads what it
   corpus's five, each admitted at the package's table (`Packages.sqliteBun`). Each module imports
   `Sql` from the prelude's adapter (`Compiler.adapters`), which the folder copies, so the folder
   imports `@effect/sql-sqlite-bun` too.
-- `todo`, the dogfood to-do (`Test.Dogfood.Scenario.Todo.application`): one application, emitted
-  as a project's executable emits its own (`Compiler.emitTs`), with the native roots of its host
-  lane (`todoLowered`).
+- **the examples** (`Examples.all`, `examples/Examples/All.lean`): each one application under its name,
+  emitted as a project's executable emits its own (`Compiler.emitTs`). The to-do, `todo`, has the
+  native roots of its host lane (`todoLowered`); the others lower no root.
 -/
 
 namespace Compiler.Groups
@@ -37,11 +38,14 @@ def todoLowered : Lowered :=
       `Test.Dogfood.Scenario.Todo.HostLane.start, `Test.Dogfood.Scenario.Todo.HostLane.script,
       `Test.Dogfood.Scenario.Todo.Host.serveBuiltVal, `Test.Dogfood.Scenario.Todo.Host.resultVal] }
 
+/-- The native roots of the examples that declare them, by the application's name. -/
+def lowered : List (String × Lowered) := [("todo", todoLowered)]
+
 /-- **The tree's groups**, by name: the wire corpus, the SQLite package's programs at its table,
-and the dogfood to-do with its native roots. -/
+and each example. -/
 def all : List Source :=
   [.programs "corpus" Effect4.Program.Wire.Corpus.all,
-   .programs "sql" Test.Api.PackagesContract.sqlitePrograms { rows := Effect4.Program.Packages.sqliteBun },
-   .application Test.Dogfood.Scenario.Todo.application todoLowered]
+   .programs "sql" Test.Api.PackagesContract.sqlitePrograms { rows := Effect4.Program.Packages.sqliteBun }] ++
+    Examples.all.map fun app => .application app ((lowered.lookup app.name).getD {})
 
 end Compiler.Groups

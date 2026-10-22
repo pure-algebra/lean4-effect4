@@ -87,7 +87,7 @@ def brokenUntyped : Run.Reactor Repo := fun row sent state =>
 Each line is a finite evaluation (decisions row 301). -/
 
 /-- The repository's four rows. -/
-def rows : RowTable := TodoRepo.rows.map (·.row)
+def rows : RowTable := Examples.Todo.TodoRepo.rows.map (·.row)
 
 /-- A state with two to-dos, the second done. -/
 def twoTodos : Repo := (3, [(1, "milk", false), (2, "eggs", true)])
@@ -115,11 +115,11 @@ def requests : List (Nat × Val × Repo) := [
 #guard (rows[0]?.map fun row => broken.reactor row (.str "bread") twoTodos !=
   model.reactor row (.str "bread") twoTodos) == some true
 -- finite evaluation: the failure's code is the rows' error column `SqlError.ty`.
-#guard Modeled.ty (α := SqlError) == Test.Dogfood.Scenario.Todo.SqlError.ty
+#guard Modeled.ty (α := SqlError) == Examples.Todo.SqlError.ty
 -- control: a request that does not read is declined, as `repository` declines it.
 #guard (rows[0]?.map fun row => (model.reactor row (.nat 3) twoTodos).isNone &&
   (repository row (.nat 3) twoTodos).isNone) == some true
 -- finite evaluation: the derived `Todo`'s code is the row's record type `Todo.ty`.
-#guard Modeled.ty (α := Todo) == Ty.normalize Test.Dogfood.Scenario.Todo.Todo.ty
+#guard Modeled.ty (α := Todo) == Ty.normalize Examples.Todo.Todo.ty
 
 end Test.Dogfood.Scenario.Todo.Typed
