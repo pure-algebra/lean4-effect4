@@ -353,10 +353,10 @@ $(GEN)/graphs: $(GEN)/derived $(GRAPH_SOURCES) $(GRAPH_OUT) scripts/generate.py 
 	@mkdir -p $(GEN) && touch $@
 
 # The groups generate.py can regenerate into a temporary directory (no host runtime).
-HERMETIC_GROUPS := variances derived eff wire cas ts readme fixtures graphs
+HERMETIC_GROUPS := variances derived eff wire cas ts readme fixtures graphs examples reference
 # `gen`'s order, which is the producers' order above; lcnf is named here, between derived
 # and eff, and nowhere in HERMETIC_GROUPS.
-GEN_GROUPS := variances derived lcnf eff wire cas ts readme host-protocol census fixtures graphs
+GEN_GROUPS := variances derived lcnf eff wire cas ts readme host-protocol census fixtures graphs examples reference
 
 .PHONY: gen gen-hermetic $(addprefix gen-,$(GEN_GROUPS)) clean-gen
 gen: $(addprefix $(GEN)/,$(GEN_GROUPS)) ## regenerate every stale generated group, in order
@@ -812,4 +812,4 @@ $(GEN)/examples: $(GEN)/derived $(EXAMPLES_SOURCES) scripts/generate.py lean-too
 	@mkdir -p $(GEN) && touch $@
 .PHONY: gen-examples
 gen-examples: $(GEN)/examples ## the examples' folders and index, generated/examples/
-GENERATED_PATHS += generated/examples
+GENERATED_PATHS += generated/examples generated/reference

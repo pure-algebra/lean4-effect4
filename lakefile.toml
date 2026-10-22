@@ -118,8 +118,7 @@ moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 # function `Compiler.main`, which a project's executable calls by static import, over one
 # application. `check` builds the application's service module and prints its certificate;
 # `emit --target ts` writes the checked emission, the prelude's import closure and a manifest into
-# one folder; `describe` prints that manifest; `run` runs the application's requests on the Lean
-# machine over its host. A tool root like `Tools`, outside the axiom gate's audit. Its one `main` is `Compiler.Exe`, the `effect4` executable.
+# one folder; `describe` prints that manifest. A tool root like `Tools`, outside the axiom gate's audit. Its one `main` is `Compiler.Exe`, the `effect4` executable.
 [[lean_lib]]
 name = "Compiler"
 srcDir = "tools"
@@ -132,7 +131,7 @@ moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 [[lean_lib]]
 name = "Examples"
 srcDir = "examples"
-globs = ["Examples.+"]
+globs = ["Examples", "Examples.+"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The report drivers, compiled (`lake exe <name> …`): the semantics report and its refusal controls

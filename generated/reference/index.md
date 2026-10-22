@@ -10,5 +10,5 @@ inputs: the pages below
 | [marks](marks/) | `Tools.View.Glyph`, `Tools.Form` | 237 |
 | [refusals](refusals/) | `Effect4.Ingest.Code`, `ReadRefusal`, `PrintRefusal`, `ClassRefusal` | 51 |
 | [dictionary](dictionary/) | `docs/core/controlled-english.md` | 567 |
-| [semantics](../../.lake/gen/reference/semantics/index.html) | `Tools.SemanticsDocument`, `generated/semantics.md` | — |
+| [semantics](../semantics.md) | `Tools.SemanticsDocument`, `generated/semantics.md` | — |
 

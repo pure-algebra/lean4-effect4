@@ -491,7 +491,7 @@ def rows (d : Document) : Nat :=
 
 /-- The semantics page of the build's set, from the committed set's root (`generated/reference/`):
 the build writes the set with the semantics page under `.lake/gen/reference/`, never committed. -/
-def builtSemantics : String := "../../.lake/gen/reference/semantics/index.html"
+def builtSemantics : String := "../semantics.md"
 
 /-- **The set**, its root `root` folders below the repository's: the index at the root, then each
 page one folder down. With the semantics report's document, the set holds it as its last page,

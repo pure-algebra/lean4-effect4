@@ -209,7 +209,8 @@ def openCommand (log : Log) (args : List String) : IO Unit := do
       | .error why => log.event (.refusal "open" (jsonText (tree why))); pure none
     catch error => log.event (.refusal "open" s!"{file}: {error}"); pure none
   if let some b := loaded then
-    log.event (.reading "certificate" (jsonText (certificate b)) (some (jsonText (certificate b))))
+    log.event (.reading "certificate"
+      ("\n".intercalate (certificateLines s!"{file}: opened" b)) (some (jsonText (certificate b))))
 
 /-- The options of `emit` and `describe`: the target, the output folder, the kinds, and whether
 `describe` indents the manifest. -/

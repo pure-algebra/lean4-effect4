@@ -20,7 +20,7 @@ import Effect4.Tool.Serve
 open Effect4 Effect4.Program Effect4.Store Compiler
 
 def main (args : List String) : IO UInt32 := do
-  let b ← match Compiler.check Test.Dogfood.Scenario.Todo.application with
+  let b ← match Compiler.check Examples.Todo.application with
     | .ok b => pure b
     | .error why => IO.eprintln why.text; return 1
   match args with
@@ -63,6 +63,23 @@ def run(command, expected=0, cwd=ROOT):
     return result
 
 
+def report(result):
+    """The run as the report's JSON (`--json`, decisions row 444 (7))."""
+    return json.loads(result.stdout)
+
+
+def readings(result):
+    """The readings of a report, in order: what, its text and its JSON."""
+    return [(e['what'], e['text'], e.get('json')) for e in report(result)['events']
+            if e['event'] == 'reading']
+
+
+def refusal(result, step):
+    """The words of the first refusal a report records at `step`."""
+    return next(e['why'] for e in report(result)['events']
+                if e['event'] == 'refusal' and e['step'] == step)
+
+
 def main():
     if not BINARY.is_file():
         raise SystemExit('Build first: LEAN_NUM_THREADS=3 lake build effect4 Effect4.Tool.Serve')
@@ -78,7 +95,7 @@ def main():
         obj = folder / 'todo.obj'
         first = run([BINARY, 'check', '--group', 'todo', '--json'])
         saved = run([BINARY, 'check', '--group', 'todo', '--json', '--out', obj])
-        assert saved.stdout == first.stdout and not saved.stderr
+        assert readings(saved) == readings(first) and not saved.stderr
         content = obj.read_bytes()
         run([BINARY, 'check', '--group', 'todo', '--out', obj, '--json'])
         assert obj.read_bytes() == content
@@ -86,11 +103,13 @@ def main():
 
         plain = run([BINARY, 'check', '--group', 'todo'])
         plain_saved = run([BINARY, 'check', '--group', 'todo', '--out', obj])
-        assert plain.stdout == plain_saved.stdout
+        assert not plain.stdout and not plain_saved.stdout
+        assert 'checked' in plain.stderr and 'checked' in plain_saved.stderr
         passed('saving preserves text check output')
 
-        opened = run([BINARY, 'open', obj], cwd=folder)
-        assert opened.stdout == first.stdout and not opened.stderr
+        opened = run([BINARY, 'open', obj, '--json'], cwd=folder)
+        assert [j for _, _, j in readings(opened)] == [j for _, _, j in readings(first)]
+        assert not opened.stderr and 'opened' in readings(opened)[0][1]
         passed('open outside the project needs no group, source, or prelude')
 
         for args in [['open'], ['open', obj, 'extra'], ['open', '--json'],
@@ -101,7 +120,10 @@ def main():
                      ['check', '--group', 'todo', '--out', obj, '--out', obj],
                      ['check', '--group', 'corpus', '--out', obj]]:
             result = run([BINARY, *args], 2)
-            assert not result.stdout and 'usage:' in result.stderr
+            if '--json' in args:
+                assert result.stdout and not result.stderr
+            else:
+                assert not result.stdout and result.stderr
             assert obj.read_bytes() == content
         passed('usage errors and multiple-program saving preserve existing output')
 
@@ -127,9 +149,9 @@ def main():
                                  ('truncated.obj', 'node', None),
                                  ('empty.obj', 'node', None),
                                  ('ill-typed.obj', 'admission', 'illTyped')]:
-            result = run([BINARY, 'open', folder / name], 1, cwd=folder)
-            assert not result.stdout and result.stderr.startswith('open: ')
-            why = json.loads(result.stderr.removeprefix('open: '))
+            result = run([BINARY, 'open', folder / name, '--json'], 1, cwd=folder)
+            assert not result.stderr
+            why = json.loads(refusal(result, 'open'))
             assert why['_tag'] == tag, why
             if inner:
                 assert why['why']['_tag'] == inner, why
@@ -144,9 +166,10 @@ def main():
         expected = run([*lean, 'readings'])
         for line in expected.stdout.splitlines():
             reading = json.loads(line)
-            args = [BINARY, 'inspect', '--group', 'todo', '--what', reading['name']]
-            assert run(args).stdout == reading['text'] + '\n'
-            assert run([*args, '--json']).stdout == reading['json'] + '\n'
+            args = [BINARY, 'inspect', '--group', 'todo', '--what', reading['name'], '--json']
+            (_, text, as_json), = readings(run(args))
+            assert text == reading['text'], reading['name']
+            assert as_json == reading['json'], reading['name']
         passed('four direct readings match the previous Tool query text and JSON')
     print(f'PASS program-object: {checks} CLI control groups')
 
