@@ -1,5 +1,6 @@
 import Examples.Todo
 import Examples.CachedTodo
+import Examples.BoundedBuffer
 
 /-!
 # The examples, as one list
@@ -15,6 +16,6 @@ open Effect4.Program Effect4.Program.Authoring
 
 /-- **The examples**, in the order the index lists them. -/
 def all : List (Application NativeOp) :=
-  [Todo.application, CachedTodo.application]
+  [Todo.application, CachedTodo.application, BoundedBuffer.application]
 
 end Examples
