@@ -3,7 +3,7 @@ inputs: docs/core/controlled-english.md, the files its anchors name
 -->
 # dictionary
 
-entries: 361 · anchors: 503 · declaration: 473 · word: 12 · file: 18 · missing: 0 · no file: 0
+entries: 361 · anchors: 503 · declaration: 477 · word: 8 · file: 18 · missing: 0 · no file: 0
 
 ## 3.1 Compilers and intermediate representations
 
@@ -26,7 +26,7 @@ entries: 361 · anchors: 503 · declaration: 473 · word: 12 · file: 18 · miss
 | `face` | — | `src/Effect4/Api.lean` | file |
 |  | — | `Test/contracts/faces.contract.md` | file |
 | `runtime` | `run` | `src/Effect4/Api.lean` | declaration |
-|  | `run` | `ocaml/engine/kit/kit.mli` | word |
+|  | `run` | `ocaml/engine/kit/kit.mli` | declaration |
 | `print (prints, printed, printer, printing)` | `printT` | `src/Effect4/Codegen/Templates.lean` | declaration |
 |  | `printModule` | `src/Effect4/Codegen/Print.lean` | declaration |
 | `read (reader, read back)` | `readEff` | `src/Effect4/Codegen/Read.lean` | declaration |
@@ -227,9 +227,9 @@ entries: 361 · anchors: 503 · declaration: 473 · word: 12 · file: 18 · miss
 | `` `Expr` `` | — | — | — |
 | `elaboration (elaborate, elaborates, elaborated, elaborating, elaborator)` | `elaborate` | `src/Effect4/Program/Authoring.lean` | declaration |
 |  | `elaborateModule` | `src/Effect4/Program/Authoring.lean` | declaration |
-| `macro` | `eff` | `src/Effect4/Program/Authoring/Sugar.lean` | word |
+| `macro` | `eff` | `src/Effect4/Program/Authoring/Sugar.lean` | declaration |
 | `authoring lift` | `succeed` | `src/Effect4/Program/Authoring/Lifts.lean` | declaration |
-| `sugar` | `eff` | `src/Effect4/Program/Authoring/Sugar.lean` | word |
+| `sugar` | `eff` | `src/Effect4/Program/Authoring/Sugar.lean` | declaration |
 |  | `expandDoElems` | `src/Effect4/Program/Authoring/Sugar.lean` | declaration |
 | `tactic` | `authoring_scoped` | `src/Effect4/Laws/Program/Authoring/Tactic.lean` | declaration |
 | `tactic goal` | — | — | — |
@@ -291,7 +291,7 @@ entries: 361 · anchors: 503 · declaration: 473 · word: 12 · file: 18 · miss
 | `named run` | `NamedRun` | `Test/Dogfood/Scenario.lean` | word |
 | `battery` | — | `Test/All.lean` | file |
 | `census` | `#traversal_census` | `src/Effect4/Laws/Auto/Traversals.lean` | declaration |
-|  | `#auto_census` | `src/Effect4/Laws/Auto/Census.lean` | word |
+|  | `#auto_census` | `src/Effect4/Laws/Auto/Census.lean` | declaration |
 |  | `#semantics_census` | `src/Effect4/Laws/Auto/Semantics.lean` | declaration |
 | `gate` | `#effect4_axiom_gate` | `Test/Audit/AxiomGate.lean` | declaration |
 | `check (make check)` | — | — | — |

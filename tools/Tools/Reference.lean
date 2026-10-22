@@ -403,20 +403,23 @@ def declaredWord (name : String) : String :=
   let w := ((name.dropWhile (fun c => c == '.' || c == '#')).dropEndWhile (· == '%')).toString
   ((w.splitOn ".").getLast?).getD w
 
-/-- The keywords that open a declaration of a name. -/
+/-- The keywords that open a declaration of a name: Lean's, and OCaml's `val` and `type` for an
+interface file. -/
 def keywords : List String :=
   ["def", "theorem", "lemma", "abbrev", "structure", "inductive", "class", "instance", "opaque",
-   "axiom", "proof_goal", "elab", "macro", "syntax", "initialize", "builtin_initialize"]
+   "axiom", "proof_goal", "elab", "macro", "syntax", "initialize", "builtin_initialize", "val", "type"]
 
 /-- The modifiers a declaration's keyword may follow. -/
-def modifiers : List String := ["private", "protected", "noncomputable", "partial", "unsafe", "public", "nonrec"]
+def modifiers : List String :=
+  ["private", "protected", "noncomputable", "partial", "unsafe", "public", "nonrec", "scoped", "local"]
 
 /-- A character of a Lean identifier. -/
 def identChar (c : Char) : Bool := c.isAlphanum || c == '_' || c == '\'' || c == '!' || c == '?'
 
 /-- Whether a line declares the name `n`, whose word is `w` (`declaredWord`): after its attributes
 and modifiers, a keyword then a name whose last component is `w`; a constructor `| w`; a field
-`w :`; or a `syntax`, `elab` or `macro` line that spells `n` in quotes (a command, `#plan_status`). -/
+`w :`; or a `syntax`, `elab` or `macro` line that spells `n` in quotes (a command, `#plan_status`),
+or a line that opens with that spelling (a syntax written over two lines). -/
 def declares (n w : String) (line : String) : Bool :=
   let toks := (line.trimAscii.toString.splitOn " ").filter (!·.isEmpty)
   let toks := toks.dropWhile fun t => t.startsWith "@[" || t.endsWith "]" || modifiers.contains t
@@ -424,7 +427,8 @@ def declares (n w : String) (line : String) : Bool :=
   match toks with
   | k :: m :: _ =>
     (keywords.contains k && last m == w) || (k == "|" && last m == w) || (k == w && m == ":") ||
-      (["syntax", "elab", "macro"].contains k && (line.splitOn ("\"" ++ n)).length > 1)
+      (["syntax", "elab", "macro"].contains k && (line.splitOn ("\"" ++ n)).length > 1) ||
+      k.startsWith ("\"" ++ n)
   | _ => false
 
 /-- Whether `text` holds `w` as a word: no identifier character on either side. -/
