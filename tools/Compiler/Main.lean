@@ -548,7 +548,7 @@ def inspectPlan (programs : List (String × Api.Built)) (session : Option String
     (form : InspectDocument.Form) (what : String) : Except String (List (String × String)) :=
   programs.foldlM (fun outputs (name, original) => do
     let b ← (inspectBuilt original session).mapError (s!"{name}: " ++ ·)
-    let files ← (InspectDocument.files form name (Graphs.document b what)).mapError (s!"{name}: " ++ ·)
+    let files ← (InspectDocument.files form name (Graphs.document name b what)).mapError (s!"{name}: " ++ ·)
     return outputs ++ files) []
 
 /-- **What a publication does to a folder**: the files it writes, and the files it removes: the

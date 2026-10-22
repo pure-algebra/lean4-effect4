@@ -12,7 +12,7 @@ import Tools.View.Flow
 /-!
 # Program relations and their graph queries
 
-The four relations are the source of every figure and of the mapping table (row 443).
+The four relations are the source of every table and figure (row 443).
 Their carrier is data: a node is its address, its scope, its sort, its constructor and what it
 names; a definition, a host row and a call likewise (`Relations`). Keys are positions; names are
 labels. Nodes retain stored reference occurrences. Calls use the checked expansion of
@@ -20,8 +20,8 @@ labels. Nodes retain stored reference occurrences. Calls use the checked expansi
 is not execution. The node relation is one generated fold, including `cata_layer` at layer
 children.
 
-The tables (`tables`), the figures (`boundary`, `boxes`, `calls`, `layers`) and the mapping are
-folds of the carrier. No query reads a cell back. The JSON and the TSV are the document's folds
+The tables (`tables`) and the figures (`boundary`, `boxes`, `calls`, `layers`, `wiring`) are folds
+of the carrier. No query reads a cell back. The JSON and the TSV are the document's folds
 of the tables.
 
 The boundary records incidence, not scheduling, handler composition, or layer evaluation.
@@ -357,7 +357,7 @@ def calls (r : Relations) (opens : Bool := false) : Block :=
     { key := (Target.row h.i).key, label := h.spelling, status := "row " ++ (glyph .eff "perform").1, form := .port,
       ref := opening opens "rows" }
   let es := r.calls.map fun c => (c.scope.key, c.target.key)
-  figure "calls" "Calls from definitions and main to definitions and host rows." ns es
+  figure "calls" "calls" ns es
 
 /-- The hosts, by their namespaces. -/
 def hosts (r : Relations) : List String := (r.rows.map (·.host)).eraseDups
@@ -393,7 +393,7 @@ def boundary (r : Relations) (opens : Bool := false) : Block :=
     { key := "wire:" ++ key, label := (boxes.find? (·.key == key)).map (·.label) |>.getD key
       status := "wire " ++ (glyph .eff "service").1, form := .wire }
   let es := providers.map (fun key => (key, "wire:" ++ key)) ++ ds.map (fun (a, b) => ("wire:" ++ a, b))
-  figure "boundary" "Boundary incidence: shared service wires join providers to consumers; no execution order is claimed." (boxes ++ wires) es
+  figure "boundary" "boundary" (boxes ++ wires) es
 
 /-- Contract every wire in the boundary by joining each incoming edge to each outgoing edge. -/
 def boxes (r : Relations) (opens : Bool := false) : Block :=
@@ -403,8 +403,8 @@ def boxes (r : Relations) (opens : Bool := false) : Block :=
     let contracted := wires.flatMap fun wire =>
       (es.filter (·.2 == wire.key)).flatMap fun (a, _) =>
         (es.filter (·.1 == wire.key)).map (fun (_, b) => (a, b))
-    figure "boundary-boxes" "The boundary with each service wire contracted." (ns.filter (·.form != .wire)) contracted
-  | _ => .graph "boundary-boxes" "The boundary with each service wire contracted." [] []
+    figure "boundary-boxes" "boxes" (ns.filter (·.form != .wire)) contracted
+  | _ => .graph "boundary-boxes" "boxes" [] []
 
 /-- Layer constructors and their nearest enclosing layer constructor, by address.
 The node relation's generated fold enters layers through `cata_layer`; lists are transparent here. -/
@@ -421,8 +421,7 @@ def layers (r : Relations) (opens : Bool := false) : Block :=
     | first :: rest =>
       let parent := rest.foldl (fun acc a => if a.address.length > acc.address.length then a else acc) first
       some (key parent, key n)
-  figure "layers" (if rs.isEmpty then "This program has no stored layer constructors."
-    else "Stored layer constructor positions and reference targets; this picture states no merge commutativity.") ns es
+  figure "layers" "layers" ns es
 
 /-- **The layer term's wiring**, the hypergraph form of the note's §2.3: a layer constructor that
 provides a service (`succeed`, `effect`) is a box keyed by its address, with an edge to the wire
@@ -452,29 +451,13 @@ def wiring (r : Relations) : Block :=
       { key := boxKey n, label := n.glyph.2 ++ " " ++ " ".intercalate ((keysOf n).map keyText),
         status := "layer " ++ n.glyph.1, detail := address n.address }) ++
     wires.map (fun k => { key := wireKey k, label := keyText k, status := "wire " ++ (glyph .eff "service").1, form := .wire })
-  figure "wiring" (if boxes.isEmpty then "This program's layer term provides no service."
-    else "The layer term's wiring: a providing constructor is a box keyed by its address, a service key a wire keyed by its name; a read inside a box plugs its wire in. No evaluation order is claimed.") ns (provides ++ reads)
+  figure "wiring" "wiring" ns (provides ++ reads)
 
-/-- Each mapping row names an entity or dependency present in the same relations. -/
-def mapping (r : Relations) : Block :=
-  .table ["ours", "Effect TypeScript", "algebra"]
-    ((hosts r).map (fun h => cells [h ++ " host namespace", "Layer<Tag> supplied by the host", "comodel of the row operation syntax signature"]) ++
-     (services r).map (fun s => cells [s ++ " service block", "Layer.effect(Tag, map(init, closures))", "handler with one program per method"]) ++
-     [cells ["main", "Effect.provide(program, layer)", "term over the handled methods"]] ++
-     (dependencies r).map (fun (a, b) => cells [a ++ " to " ++ b, "Layer.provide", "provider-to-consumer incidence"]) ++
-     (r.nodes.filter (·.sort == .layer)).map
-       (fun n => cells ["layer at " ++ address n.address,
-         if n.ctor == "ref" then "reference to a hoisted layer constant" else "Layer." ++ n.ctor,
-         if n.ctor == "merge" || n.ctor == "mergeAll" then
-           "incidence overlay; tensor only for disjoint services"
-         else if n.ctor == "provide" || n.ctor == "provideMerge" then "shared-wire incidence overlay"
-         else if n.ctor == "ref" then "reference to " ++ r.namesText n.names
-         else "constructor of the layer signature"]))
-
-/-- One document, selected by a command reading. All formats fold this value. -/
-def document (b : Api.Built) (what : String) : Tools.Document.Document :=
+/-- **One document, selected by a command reading**, titled by the program's name and the reading's.
+It holds the program's relations and figures and no other words. A figure with no node is left out.
+All formats fold this value. -/
+def document (name : String) (b : Api.Built) (what : String) : Tools.Document.Document :=
   let r := read b
-  let mappingPart := Block.part "mapping" "The program and its boundary" [mapping r]
   let opens := what == "relations"
   let figures := if what == "handlers" then []
     else if what == "boundary" then [boundary r, boxes r]
@@ -486,10 +469,8 @@ def document (b : Api.Built) (what : String) : Tools.Document.Document :=
      .part "relation-rows" "Rows" [rowsTable r], .part "relation-calls" "Calls" [callsTable r],
      .part "relation-handlers" "Handlers" [handlersTable b r]]
     else if what == "handlers" then [.part "relation-handlers" "Handlers" [handlersTable b r]] else []
-  { title := "The program as relations and graphs"
+  { title := name ++ " · " ++ what
     producer := ["GENERATED by Compiler.Graphs; do not edit", "python3 scripts/generate.py --only graphs"]
-    body := [.para [.text "Node addresses name stored syntax. Call addresses name the checked expansion; origin names the stored call or reference."]] ++ tables ++
-      (if what == "handlers" then [] else [mappingPart]) ++
-      figures.map (fun | .graph _ caption [] [] => .para [.text caption] | block => block) }
+    body := tables ++ figures.filter fun | .graph _ _ [] _ => false | _ => true }
 
 end Compiler.Graphs
