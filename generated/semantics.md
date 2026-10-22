@@ -5,7 +5,7 @@ inputs: tools/ProofGraph/Registry.lean, tools/Tools/Semantics.lean, tools/Driver
 -->
 # Semantics evidence
 
-Effect4 makes 289 claims about Effect's runtime: 262 proved, 4 modulo, 18 goal, 1 refuted, 3 absent, 1 assumed.
+Effect4 makes 317 claims about Effect's runtime: 306 proved, 2 modulo, 3 goal, 1 refuted, 4 absent, 1 assumed.
 
 A claim's evidence comes from its Lean declaration and is never written by hand (decisions row 203). `The open work` lists the planned goals that the remaining claims rest on, and why each waits.
 
@@ -26,27 +26,7 @@ A register record links a claim to a historical attack. Read the whole row: an e
 
 ## Open work
 
-The open part of the plan: 23 planned goals, and 5 theorems proved modulo them. A goal's docstring, written with its statement, says why its proof waits. A chain shows how a theorem reaches a goal. Each step is an edge of the plan, from a node to a node its proof reaches first.
-
-### combine_deps
-
-No docstring says why this goal waits.
-
-Module: `Effect4.Laws.Program.CheckAgreement` · Claims: `checker-combine-deps`, `checker-ask-value` · Requirements: `R14`
-
-```lean
-∀ (i : Effect4.Program.Check.CheckInput),
-  Eq
-    (Effect4.Program.Check.Internal.combine i
-      (List.map (fun d => Effect4.Program.Check.run d.input)
-        (Effect4.Program.Check.Internal.deps i)))
-    (Effect4.Program.Check.run i)
-```
-
-Proved modulo this goal (2), each by its shortest chain of nearest nodes:
-
-- `ask_value` → `combine_deps`
-- `open_coherent` → `ask_value` → `combine_deps`
+The open part of the plan: 8 planned goals, and 2 theorems proved modulo them. A goal's docstring, written with its statement, says why its proof waits. A chain shows how a theorem reaches a goal. Each step is an edge of the plan, from a node to a node its proof reaches first.
 
 ### explain_replays
 
@@ -60,115 +40,6 @@ Module: `Effect4.Laws.Program.CheckAgreement` · Claims: `checker-explanation-re
   Eq (Effect4.Program.Check.explain o input).value (Option.some explanation) →
     Eq explanation.part (Option.some key) →
       Effect4.Program.Check.ExplanationReplays input key explanation.refusal
-```
-
-### coherent
-
-Placement: initial-algebras-folds; source-session-coherent's reachable-state obligation, R14. The sealed replay witnesses every accepted action history, including revert. Consumer: SourceSession.reached_view. This establishes no admission or progress claim.
-
-Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-document-coherent`, `source-session-coherent` · Requirements: `R14`
-
-```lean
-∀ (d : Effect4.Program.Doc), d.session.Coherent
-```
-
-Proved modulo this goal (1), each by its shortest chain of nearest nodes:
-
-- `reached_view` → `coherent`
-
-### commit_one_keepExact
-
-A single kept edit retains both exact observations, including an initially refused root.
-
-Module: `Effect4.Laws.Program.SourceDocument` · Claims: `source-document-local-keep` · Requirements: `R14`
-
-```lean
-∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
-  {place : Effect4.Program.Place} {change : Effect4.Program.Change}
-  {receipt : Effect4.Program.Receipt} {path : List Nat} {expected : Effect4.Program.NativeEff},
-  d.session.Coherent →
-    Ne path List.nil →
-      Eq (Effect4.Program.Place.resolve d.session.app d.session.sketch place)
-          (Except.ok { fst := path, snd := expected }) →
-        Eq
-            (Effect4.Program.Doc.step o d snap
-                (Effect4.Program.DocAction.commit
-                  (List.cons { fst := place, snd := change } List.nil)
-                  Effect4.Program.FeedPolicy.keepExact)).value
-            (Except.ok { fst := next, snd := receipt }) →
-          And (Eq next.session.view.type d.session.view.type)
-            (Eq (Effect4.Program.Table.typedAt next.session.table path)
-              (Effect4.Program.Table.typedAt d.session.table path))
-```
-
-### commit_single_sound
-
-The old single-edit observations, with the required initial positive-root premise.
-
-Module: `Effect4.Laws.Program.SourceDocument` · Claims: `source-document-single-transport` · Requirements: `R14`
-
-```lean
-∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
-  {path : List Nat} {expected : Effect4.Program.NativeEff} {change : Effect4.Program.Change}
-  {policy : Effect4.Program.FeedPolicy} {receipt : Effect4.Program.Receipt},
-  d.session.Coherent →
-    Or (Eq policy Effect4.Program.FeedPolicy.keepExact)
-        (Eq policy Effect4.Program.FeedPolicy.recheck) →
-      (Eq policy Effect4.Program.FeedPolicy.keepExact →
-          Exists fun T => Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T)) →
-        Eq
-            (Effect4.Program.Doc.step o d snap
-                (Effect4.Program.DocAction.commit
-                  (List.cons { fst := Effect4.Program.Place.at_ path expected, snd := change }
-                    List.nil)
-                  policy)).value
-            (Except.ok { fst := next, snd := receipt }) →
-          And (Eq snap d.snap)
-            (And (Eq next.id d.id)
-              (And (Eq next.revision (instHAdd.hAdd d.revision 1))
-                (And next.session.Coherent
-                  (And (Eq next.session.app d.session.app)
-                    (And
-                      (Exists fun e =>
-                        And
-                          (Eq (Effect4.Program.DocInternal.editOf d.session path change)
-                            (Except.ok e))
-                          (Eq (d.session.sketch.edit d.session.app e)
-                            (Option.some next.session.sketch)))
-                      (Exists fun T' =>
-                        And (Eq (next.session.sketch.sourceCheck d.session.app) (Except.ok T'))
-                          (Eq policy Effect4.Program.FeedPolicy.keepExact →
-                            And (Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T'))
-                              (Eq (Effect4.Program.Table.typedAt next.session.table path)
-                                (Effect4.Program.Table.typedAt d.session.table path)))))))))
-```
-
-### commit_sound
-
-Corrected old commit observation: keepExact needs an initially positive root.
-
-Module: `Effect4.Laws.Program.SourceDocument` · Claims: `source-document-commit` · Requirements: `R14`
-
-```lean
-∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
-  {items : List (Prod Effect4.Program.Place Effect4.Program.Change)}
-  {policy : Effect4.Program.FeedPolicy} {receipt : Effect4.Program.Receipt},
-  d.session.Coherent →
-    Or (Eq policy Effect4.Program.FeedPolicy.keepExact)
-        (Eq policy Effect4.Program.FeedPolicy.recheck) →
-      (Eq policy Effect4.Program.FeedPolicy.keepExact →
-          Exists fun T => Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T)) →
-        Eq (Effect4.Program.Doc.step o d snap (Effect4.Program.DocAction.commit items policy)).value
-            (Except.ok { fst := next, snd := receipt }) →
-          And (Eq snap d.snap)
-            (And (Eq next.origin d.origin)
-              (And (Eq next.snap.revision (instHAdd.hAdd d.snap.revision 1))
-                (And next.session.Coherent
-                  (And (Eq next.session.app d.session.app)
-                    (Exists fun T' =>
-                      And (Eq (next.session.sketch.sourceCheck next.session.app) (Except.ok T'))
-                        (Eq policy Effect4.Program.FeedPolicy.keepExact →
-                          Eq (d.session.sketch.sourceCheck d.session.app) (Except.ok T')))))))
 ```
 
 ### revert_program
@@ -190,61 +61,6 @@ Module: `Effect4.Laws.Program.SourceDocument` · Claims: `source-document-revert
           (Except.ok { fst := back, snd := inverse }) →
         And (Eq back.session.sketch.program before.session.sketch.program)
           (Eq back.session.sketch.holes after.session.sketch.holes)
-```
-
-### step_coherent
-
-No docstring says why this goal waits.
-
-Module: `Effect4.Laws.Program.SourceDocument` · Claims: `source-document-step` · Requirements: `R14`
-
-```lean
-∀ {o : Effect4.Program.Check.Oracle} {d next : Effect4.Program.Doc} {snap : Effect4.Program.Snap}
-  {action : Effect4.Program.DocAction} {receipt : Effect4.Program.Receipt},
-  d.session.Coherent →
-    Eq (Effect4.Program.Doc.step o d snap action).value
-        (Except.ok { fst := next, snd := receipt }) →
-      And (Eq snap d.snap)
-        (And (Eq next.origin d.origin)
-          (And (Eq next.history (instHAppendOfAppend.hAppend d.history (List.cons action List.nil)))
-            (And next.session.Coherent (Eq next.session.app d.session.app))))
-```
-
-### add_wf
-
-No docstring says why this goal waits.
-
-Module: `Effect4.Laws.Program.FillSet` · Claims: `pending-fill-construction` · Requirements: `R14`
-
-```lean
-∀ (o : Effect4.Program.Check.Oracle) (fs : Effect4.Program.FillSet)
-  (submissions : List (Prod (List Nat) Effect4.Program.NativeEff)),
-  (Effect4.Program.FillSet.add o fs submissions).value.fst.WellFormed
-```
-
-### publish_eq_materialize
-
-No docstring says why this goal waits.
-
-Module: `Effect4.Laws.Program.FillSet` · Claims: `pending-fill-publication` · Requirements: `R14`
-
-```lean
-∀ {o : Effect4.Program.Check.Oracle} {fs : Effect4.Program.FillSet} {d next : Effect4.Program.Doc}
-  {action : Effect4.Program.DocAction} {receipt : Effect4.Program.Receipt}
-  {T : Effect4.Program.EffTy},
-  Eq fs.anchor d.snap →
-    Eq fs.source d.session →
-      d.session.Coherent →
-        Eq (fs.base.sourceCheck fs.app) (Except.ok T) →
-          Eq (Effect4.Program.Eff.refSites List.nil fs.base.program) List.nil →
-            (∀ (x : Prod (List Nat) Effect4.Program.NativeEff),
-                List.instMembership.mem fs.entries x →
-                  Eq (Effect4.Program.Eff.refSites List.nil x.snd) List.nil) →
-              Eq fs.publication (Except.ok action) →
-                Eq (Effect4.Program.Doc.step o d fs.anchor action).value
-                    (Except.ok { fst := next, snd := receipt }) →
-                  Eq (Effect4.Program.FillReference.materialize fs.app fs.base fs.entries)
-                    (Except.ok next.session.sketch)
 ```
 
 ### once_placed_outside_census
@@ -277,193 +93,55 @@ Proved modulo this goal (1), each by its shortest chain of nearest nodes:
 
 - `once_placed_pushes_once` → `once_placed_outside_census`
 
-### feed_coherent
+### wrap_tensor
 
-No docstring says why this goal waits.
+Concept 9, host-session-protocol. Claim imposed-wrap-tensor, role compatibility, R6. Reach: applications share declarations and have disjoint entry names. Wrappers name only left entries. All three serviceDefs constructions succeed. The combined service concatenates the entry lists. Consumer: handler interface composition. The owner chooses interface equality after removing state. This states no equality of clause behaviour, state translation, build or host execution.
 
-Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-feed-coherent` · Requirements: `R14`
-
-```lean
-∀ {o : Effect4.Program.Check.Oracle} {policy : Effect4.Program.FeedPolicy}
-  {s next : Effect4.Program.SourceSession} {e : Effect4.Program.Edit}
-  {step : Effect4.Program.Edit.Step},
-  s.Coherent →
-    Eq (Effect4.Program.SourceSession.feed o policy s e).value
-        (Except.ok { fst := next, snd := step }) →
-      next.Coherent
-```
-
-### feed_draft
-
-Exact old feedStep observations through the existing expansion edit engine. The expression uses EditSession.feed as its reference; it defines no second edit interpreter. Reach: coherent source sessions, every edit, and certified oracles. Consumer: replay_drafts_view and transport of source-session-coherent. R14.
-
-Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-feed-draft` · Requirements: `R14`
+Module: `Effect4.Laws.Program.Handler` · Claims: `imposed-wrap-tensor` · Requirements: `R6`
 
 ```lean
-∀ (o : Effect4.Program.Check.Oracle) (s : Effect4.Program.SourceSession),
-  s.Coherent →
-    ∀ (e : Effect4.Program.Edit),
-      Exists fun next =>
-        Exists fun step =>
-          And
-            (Eq (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft s e).value
-              (Except.ok { fst := next, snd := step }))
-            (And (Eq step.edit e)
-              (And
-                (Eq step.replaced
-                  (Effect4.Program.SourceSession.feed_draft.match_1
-                    (fun x => Option Effect4.Program.NativeEff)
-                    ((Effect4.Program.Node.eff s.sketch.program).at_ e.path)
-                    (fun old => Option.some old) fun x => Option.none))
-                (Effect4.Program.SourceSession.feed_draft.match_5 (fun x => Prop)
-                  (s.sketch.edit s.app e)
-                  (fun _ => And (Eq next s) (Eq step.delta Effect4.Program.Edit.Delta.unchanged))
-                  fun candidate =>
-                  And (Eq next.app s.app)
-                    (And (Eq next.sketch candidate)
-                      (have expanded := Effect4.Program.EditSession.open s.app s.sketch.expand;
-                      have reference :=
-                        Effect4.Program.SourceSession.feed_draft.match_7
-                          (fun x => Prod Effect4.Program.EditSession Effect4.Program.Edit.Delta)
-                          (Effect4.Program.Edit.expanded candidate.expand e)
-                          (fun edit =>
-                            ite (Eq (s.expandedEditAgrees candidate e) Bool.true)
-                              (expanded.feed edit)
-                              { fst := Effect4.Program.EditSession.open s.app candidate.expand,
-                                snd := Effect4.Program.Edit.Delta.rechecked })
-                          fun _ =>
-                          { fst := Effect4.Program.EditSession.open s.app candidate.expand,
-                            snd := Effect4.Program.Edit.Delta.rechecked };
-                      And
-                        (Eq next.table
-                          (Effect4.Program.Table.atSource candidate.sites
-                            (Effect4.Program.Eff.firstRefFault candidate.program)
-                            reference.fst.table))
-                        (Eq step.delta
-                          (Effect4.Program.Edit.Delta.atSource candidate.sites reference.snd)))))))
-```
-
-### feed_keepExact
-
-No docstring says why this goal waits.
-
-Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-feed-keep-exact` · Requirements: `R14`
-
-```lean
-∀ {o : Effect4.Program.Check.Oracle} {s next : Effect4.Program.SourceSession}
-  {e : Effect4.Program.Edit} {step : Effect4.Program.Edit.Step},
-  s.Coherent →
-    Ne e.path List.nil →
-      Eq (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.keepExact s e).value
-          (Except.ok { fst := next, snd := step }) →
-        And (Eq next.view.type s.view.type)
-          (And
-            (Eq (Effect4.Program.Table.typedAt next.table e.path)
-              (Effect4.Program.Table.typedAt s.table e.path))
-            (And
-              (Eq (s.expandedEditAgrees next.sketch e) Bool.true →
-                Eq step.delta (Effect4.Program.Edit.Delta.spliced (List.cons e.path List.nil)))
-              (Eq (s.expandedEditAgrees next.sketch e) Bool.false →
-                Eq step.delta Effect4.Program.Edit.Delta.rechecked)))
-```
-
-### feed_keeps
-
-No docstring says why this goal waits.
-
-Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-feed-edit` · Requirements: `R14`
-
-```lean
-∀ {o : Effect4.Program.Check.Oracle} {policy : Effect4.Program.FeedPolicy}
-  {s next : Effect4.Program.SourceSession} {e : Effect4.Program.Edit}
-  {step : Effect4.Program.Edit.Step},
-  Eq (Effect4.Program.SourceSession.feed o policy s e).value
-      (Except.ok { fst := next, snd := step }) →
-    And (Eq next.app s.app)
-      (And (Eq step.edit e)
-        (And (Eq (s.sketch.edit s.app e) Option.none → Eq next s)
-          (∀ (candidate : Effect4.Program.Sketch),
-            Eq (s.sketch.edit s.app e) (Option.some candidate) → Eq next.sketch candidate)))
-```
-
-### feed_root
-
-The root feed is exactly the module recheck route, including its actual part trace.
-
-Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-feed-root` · Requirements: `R14`
-
-```lean
-∀ (o : Effect4.Program.Check.Oracle) (policy : Effect4.Program.FeedPolicy)
-  (s : Effect4.Program.SourceSession) (e : Effect4.Program.Edit)
-  (candidate : Effect4.Program.Sketch),
-  Eq e.path List.nil →
-    Eq (s.sketch.edit s.app e) (Option.some candidate) →
-      Eq (Effect4.Program.SourceSession.feed o policy s e)
-        (Effect4.Program.SourceSession.recheck o policy s candidate e s.sketch.program)
-```
-
-### feed_undo
-
-No docstring says why this goal waits.
-
-Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-session-undo` · Requirements: `R14`
-
-```lean
-∀ {o : Effect4.Program.Check.Oracle} {s next : Effect4.Program.SourceSession} {a : List Nat}
-  {q old : Effect4.Program.NativeEff} {candidate : Effect4.Program.Sketch}
-  {step : Effect4.Program.Edit.Step},
-  s.Coherent →
-    Eq ((Effect4.Program.Node.eff s.sketch.program).at_ a)
-        (Option.some (Effect4.Program.Node.eff old)) →
-      Eq (s.sketch.fillAt a q) (Option.some candidate) →
+∀ (a b : Effect4.Program.Authoring.Application Effect4.Program.NativeOp)
+  (ms : List (Effect4.Program.Authoring.Application.Imposed Effect4.Program.NativeOp))
+  (service : String)
+  (combined left right : List (Effect4.Program.Authoring.DefSrc Effect4.Program.NativeOp)),
+  Eq a.declarations b.declarations →
+    (∀ (e : Effect4.Program.Authoring.Application.Entry Effect4.Program.NativeOp),
+        List.instMembership.mem a.entries e →
+          ∀ (e' : Effect4.Program.Authoring.Application.Entry Effect4.Program.NativeOp),
+            List.instMembership.mem b.entries e' → Ne e.name e'.name) →
+      (∀ (m : Effect4.Program.Authoring.Application.Imposed Effect4.Program.NativeOp),
+          List.instMembership.mem ms m →
+            ∀
+              (around :
+                Prod String
+                  (Effect4.Program.Authoring.TermSrc →
+                    Effect4.Program.Authoring.Src Effect4.Program.NativeOp →
+                      Effect4.Program.Authoring.Src Effect4.Program.NativeOp)),
+              List.instMembership.mem m.around around →
+                List.instMembership.mem a.entryNames around.fst) →
         Eq
-            (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft s
-                (Effect4.Program.Edit.fill a q)).value
-            (Except.ok { fst := next, snd := step }) →
-          Exists fun back =>
-            Eq
-              (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft next
-                  (Effect4.Program.Edit.fill a old)).value
-              (Except.ok { fst := s, snd := back })
-```
-
-### replay_drafts_view
-
-The old draft-list reach, stated through the sole document replay. Placement: source-session-coherent, initial-algebras-folds, R14. This retains every old application, initial sketch, and edit list without a coherence premise. Consumer: the draft case of Doc.coherent and transport of the old reached_view observation. It establishes no admission, progress, or native behavior.
-
-Module: `Effect4.Laws.Program.SourceTable` · Claims: `source-session-draft-transport` · Requirements: `R14`
-
-```lean
-∀ (app : Effect4.Program.SigApp) (initial : Effect4.Program.Sketch)
-  (edits : List Effect4.Program.Edit) (id : Effect4.Program.DocId),
-  Exists fun session =>
-    And
-      (Eq
-        (Effect4.Program.replayDoc { id := id, app := app, sketch := initial }
-          (List.map Effect4.Program.DocAction.draft edits))
-        (Except.ok session))
-      (And (Eq session.app app)
-        (And (Eq session.sketch (List.foldl (fun s e => (s.edit app e).getD s) initial edits))
-          (And (Eq session.view.table (session.sketch.sourceTable app))
-            (And (Eq session.view.refusals (session.sketch.sourceRefusals app))
-              (Eq session.view.type (session.sketch.sourceCheck app).toOption)))))
-```
-
-### kept_eq_certified
-
-No docstring says why this goal waits.
-
-Module: `Effect4.Laws.Program.FillSet` · Claims: `kept-fill-reference` · Requirements: `R14`
-
-```lean
-∀ (s : Effect4.Program.SourceSession),
-  s.Coherent →
-    ∀ (p : List Nat) (q : Effect4.Program.NativeEff),
-      Ne p List.nil →
-        Eq (Effect4.Program.Eff.refSites List.nil s.sketch.program) List.nil →
-          Eq (Effect4.Program.Eff.refSites List.nil q) List.nil →
-            Iff (Effect4.Program.FeedCertified s { fst := p, snd := q })
-              (Eq (Effect4.Program.FillReference.certifiedB s.sketch s.app p q) Bool.true)
+            ({ name := a.name, rows := a.rows, services := a.services, layers := a.layers,
+                  defs := a.defs, imposed := ms, protocols := a.protocols, types := a.types,
+                  entries := instHAppendOfAppend.hAppend a.entries b.entries }.serviceDefs
+              service)
+            (Except.ok combined) →
+          Eq
+              ({ name := a.name, rows := a.rows, services := a.services, layers := a.layers,
+                    defs := a.defs, imposed := ms, protocols := a.protocols, types := a.types,
+                    entries := a.entries }.serviceDefs
+                service)
+              (Except.ok left) →
+            Eq (b.serviceDefs service) (Except.ok right) →
+              have read := fun defs =>
+                have ds := List.map Effect4.Program.Authoring.DefSrc.decl defs;
+                (Effect4.Program.Handler.ofService ds
+                      { name := service, init := 0,
+                        methods := Effect4.Program.serviceMethods service ds }).bind
+                  (Effect4.Program.Handler.interface ds);
+              Eq (read combined) do
+                let cs ← read left
+                let cs' ← read right
+                instAlternativeOption.pure (instHAppendOfAppend.hAppend cs cs')
 ```
 
 ### ofProgram_approx
@@ -482,7 +160,7 @@ Module: `Effect4.Laws.Run.Tree` · Claims: — · Requirements: `R12`
 
 ### ofProgram_eq_denoteRowsB
 
-Where Lean has a tree, this is it: on `Budget.v`'s fragment, the tree is `denoteRowsB`'s, node for node. A planned goal: a proof over Lean's code needs `denoteRowsB` printed too.
+Where Lean has a tree, this is it: on `Plain`, the tree is `denoteRowsB`'s, node for node. A planned goal: a proof over Lean's code needs `denoteRowsB` printed too.
 
 Module: `Effect4.Laws.Run.Tree` · Claims: — · Requirements: `R6`
 
@@ -716,7 +394,7 @@ Effect4.Program.Typed.SavedMaskImage
 
 ### modeled-membership
 
-On the checked domain, every carrier value's encoding inhabits its type at every allocation table: the refusal fold answers none at the type, and the carrier and its image are the carrier fold's (Model.member); an instance of Modeled inherits it across its equivalence, with no proof of its own (Modeled.member); nothing for an identity type, an optional field or a refused constructor, and no codec admission (decisions row 330, slice L1)
+On the checked domain, every carrier value's encoding inhabits its type at every allocation table, and each Modeled instance inherits this through its equivalence; nothing for identity types, optional fields or refused constructors, and no codec admission
 
 Membership on the checked domain (claim `modeled-membership`): every carrier value's encoding inhabits its type, at every allocation table.
 
@@ -837,7 +515,7 @@ Module: `Effect4.Laws.Program.TyDeclsInhabited`
 
 ### recursive-types-normalize
 
-Membership under a table is invariant under type normalization, which spells a reference with no argument as a handle: the admission fold under any oracle keeps its admission (cata_declAlg_normalize, hasTy_normalize's induction over declAlg; the congruence arms through AdmitsNormalize); the wiring slice's fits_normalize and fits_subN under a table need it
+Membership under a declaration table is unchanged by type normalization, which spells a reference with no argument as a handle: a value is a member of the normal form exactly when it is a member of the type
 
 Membership under the table is invariant under normalization (claim `recursive-types-normalize`). It is what the checker's order needs: `Ty.subN` compares normal forms, and a reference keeps its name in its normal form (decisions row 406 (1)). Proved modulo its part `cata_declAlg_normalize`. Consumer: `Ty.subN` under a table, and the world's `fits_normalize` once the table enters the world. It establishes nothing of `Fits`.
 
@@ -911,7 +589,7 @@ Module: `Effect4.Laws.Schema.Modeled`
 
 ### store-safety
 
-Store safety through inductive configuration typing
+Stores are safe: an inductive typing of configurations keeps every store well typed
 
 Literature: TAPL, §13.5, pp. 165–169 (excludedFeature)
 
@@ -1164,11 +842,12 @@ Module: `Effect4.Laws.Program.PlaceFunding.Flow`
 
 ## Residual Program Typing
 
-TypedProg, the protocol-indexed judgment on residual programs. 20 claims: 19 proved, 1 refuted.
+TypedProg, the protocol-indexed judgment on residual programs. 21 claims: 20 proved, 1 refuted.
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
 | `instantiated-formation` | compatibility | proved | `Effect4.Program.rowTy_instantiated_formed` | — |
+| `program-refusal-located` | decidability | proved | `Effect4.Program.programRefusal_none_iff` | — |
 | `seq-typed` | compatibility | proved | `Effect4.Program.Typed.seq_typed` | — |
 | `close-typed` | preservation | proved | `Effect4.Program.Typed.close_typed` | — |
 | `sound-at-app-signature` | compatibility | proved | `Effect4.Program.Denote.run_typed_app` | — |
@@ -1211,9 +890,23 @@ Module: `Effect4.Laws.Program.Template`
               (Effect4.Program.Formation.instantiatedSites row bindings)))
 ```
 
+### program-refusal-located
+
+A program's located refusal is none exactly when the checker types the program; the refusal names an address and a reason in the typing's alphabet; nothing of how to repair the place
+
+The refusal is absent exactly when the program types. Both sides test the references' formation (`Eff.firstRefFault_eq_none`); where it holds, both read the one module check of the expansion, and where it fails, the refusal names the reference and the program has no type.
+
+Module: `Effect4.Program.CheckedTyping`
+
+```lean
+∀ {Op : Type} (sig : Effect4.Program.Signature Op) (program : Effect4.Program.Eff Op),
+  Iff (Eq (Effect4.Program.programRefusal sig program) Option.none)
+    (Eq (Effect4.Program.typeOfProgram sig program).isSome Bool.true)
+```
+
 ### seq-typed
 
-The seqR compatibility lemma: denoteR sequences with typed continuations
+Sequencing is typed under denoteR: a typed program guarded on success, followed by a continuation typed at every fitting answer in every later world and with the same error type, is typed
 
 The `seqR` compatibility lemma. A first program typed at `mid`, a value continuation typed at `ty` at every later world on every value that fits `mid`'s answer column, and equal error columns: the sequence `denoteR` builds is typed at `ty`. A failure of the first program skips the continuation and must fit `ty`'s error column, which the equal columns give. The instance of `seqGuard_typed` at `seqR`.
 
@@ -1312,7 +1005,7 @@ Module: `Effect4.Laws.Program.Typed.LayerArm` · Literature: XiaEtAl2020, audit 
 Register record `E4-TYPED-CE-020` (REPAIRED)
 
 ```text
-| `E4-TYPED-CE-020` | REPAIRED 2026-10-01 (seat D2, merged `aabb1b5e`: `DenotesTyped` takes row 170's premise `layerRefsWF`, discharged at the load by `layerRefsWF_of_typeOf`); SEEDED 2026-10-01 (seat D2) | `DenotesTyped` is false at a root whose layer reference targets a reference | Codex's candidate (`docs/research/2026-10-01-landing/codex-second-eyes/2016-d1-review.md`): three `provideLayer`s of `Test.Program.TypedSplit.key` with unit bodies, the last `.ref [1,0,0]` to `.ref [0,0]`; the point `[1,1]` is `PointTyped` at `pure unit` through `Eff.expandIn`, the run's `.ref` arm answers `badShapeExit` (reading, not compiled) | decisions row 170: the premise `layerRefsWF` on `DenotesTyped`, discharged at the load from `typeOfProgram` |
+| `E4-TYPED-CE-020` | REPAIRED 2026-10-01 (seat D2, merged `aabb1b5e`: `DenotesTyped` takes row 170's premise `layerRefsWF`, discharged at the load by `layerRefsWF_of_typeOf`); SEEDED 2026-10-01 (seat D2) | `DenotesTyped` is false at a root whose layer reference targets a reference | Codex's candidate (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/codex-second-eyes/2016-d1-review.md`): three `provideLayer`s of `Test.Program.TypedSplit.key` with unit bodies, the last `.ref [1,0,0]` to `.ref [0,0]`; the point `[1,1]` is `PointTyped` at `pure unit` through `Eff.expandIn`, the run's `.ref` arm answers `badShapeExit` (reading, not compiled) | decisions row 170: the premise `layerRefsWF` on `DenotesTyped`, discharged at the load from `typeOfProgram` |
 ```
 
 Register record `E4-TYPED-CE-021` (REPAIRED)
@@ -1384,13 +1077,12 @@ Module: `Effect4.Laws.Program.Author`
 ```lean
 ∀ {before after : Effect4.Api.Built} {candidate : Effect4.Api.Program},
   Eq (before.rebuild candidate) (Except.ok after) →
-    And (Eq after.program candidate)
-      (And (Eq after.app before.app) (Eq after.rowNames before.rowNames))
+    And (Eq after.program candidate) (Eq after.app before.app)
 ```
 
 ### denote-typed-layer-free
 
-M5 on the layer-free fragment: every arm but provideLayer's, assembled by induction on fuel
+On the layer-free fragment, every source's denotation is typed: M5 for every arm but provideLayer's, assembled by induction on fuel
 
 M5 on the layer-free fragment: a program none of whose nodes is a `provideLayer` satisfies the fundamental property; the layer family's arm cannot be reached there (`provideLayerArm_of_layerFree`).
 
@@ -1403,7 +1095,7 @@ Module: `Effect4.Laws.Program.Typed.Assembly` · Literature: XiaEtAl2020, audit 
 
 ### load-typed-layer-free
 
-The typed load on the layer-free fragment: a checked program loads into J (M5's load connector, the marker premise discharged)
+On the layer-free fragment, a checked program loads into J at every fuel
 
 The typed load on the layer-free fragment: a checked program none of whose nodes is a `provideLayer` loads into `J` (`denotesTyped_of_layerFree`, then the load connector).
 
@@ -1442,7 +1134,7 @@ Register record `E4-TYPED-CE-031` (REPAIRED)
 
 ### load-typed
 
-M5: a lawful, checked, closed source with an empty requirement row loads into J
+A lawful, checked, closed source with an empty requirement row loads into J (M5)
 
 M5 (`loadsTyped`): a lawful, checked, closed source whose requirement row is empty loads into `J` at the initial world, at every fuel and compile budget.
 
@@ -1455,7 +1147,7 @@ Module: `Effect4.Laws.Program.Typed.LayerArm`
 
 ### load-typed-checked
 
-The typed load for every checked program: M5 with no lawful-signature or closed-row premise
+Every checked program with an empty requirement row loads into a typed machine in J, with no lawful-signature or closed-row premise
 
 The typed load for a checked closed program: row 117's empty requirement row applies at the load. The source's lawful-signature premise is not read here.
 
@@ -1531,7 +1223,7 @@ Module: `Effect4.Laws.Program.Typed.Seq`
 
 ### on-failure-typed
 
-The onFailure shape (catchCause, catchIf, orDie, a finalizer's cleanup) is typed
+The onFailure shape (catchCause, catchIf, orDie, finalizer cleanup) is typed: a typed program guarded on failure, with its answer below the target's, then a continuation typed at each failing exit in every later world, is typed at the target
 
 The `onFailure` shape (`catchCause`, `catchIf`, `orDie`, a finalizer's cleanup): the continuation at every failure `mid` admits; a success skips it and must fit `ty`'s answer column, below which `mid`'s is.
 
@@ -1634,7 +1326,7 @@ Module: `Effect4.Laws.Program.Typed.AdmittedSource`
 Register record `E4-TYPED-CE-041` (REPAIRED)
 
 ```text
-| `E4-TYPED-CE-041` | REPAIRED 2026-10-04 (seat S, branch `seat/sigapp`: decisions row 21's slice, step 2; `lawfulSig_of_admitted` has no premise, `[propext, Quot.sound]`); SEEDED 2026-10-04 (Claude, the Σ_app slice survey; kernel-checked by `decide +kernel`) | A program the API admits denotes a lawful source: `AdmittedProgram program table` implies `LawfulSig ⟨table, []⟩`, the premise of M5–M7 (`ProgramSource.lawful`) | `Test/Counterexamples/Program/AdmissionUnserved.lean`, one witness per clause the API did not check: a row requiring the key at service code 30, which no built-in carrier serves, performed by the program; a row whose answer mentions an unbound parameter; a parameter under a union head. Each was admitted by `admitProgram` and refused by `admitSig`. Repaired: `admitProgram` refuses each with the refusal `admitSig` gives (`refused`: `.signature (.unservedKey 0 appKey)`; `refused_unscoped`: `.signature (.row 0 .notWellScoped)`; `refused_union`: `.signature (.row 0 (.templateNotAdmissible "request"))`; `decide +kernel`), `not_lawful` stays, and each old acceptance is a red control under `#guard_msgs (error)`; the green controls admit clause 1's program once the application declares the key's carrier (`admitted_served`) and type a read of the declared service at its carrier (`admitted_reads_declared`, against `refused_reads_undeclared`) | decisions row 21's slice, step 2 (`docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md`): program admission runs the signature's located refusal (`admitSig`, `src/Effect4/Program/SigApp.lean`) at `AdmittedProgram program app`, whose certificate holds `admitSig app = .ok ()`; the bridge `lawfulSig_of_admitted` is `admitSig_ok_iff` read off that field, and the premise `AdmissionGap` is deleted |
+| `E4-TYPED-CE-041` | REPAIRED 2026-10-04 (seat S, branch `seat/sigapp`: decisions row 21's slice, step 2; `lawfulSig_of_admitted` has no premise, `[propext, Quot.sound]`); SEEDED 2026-10-04 (Claude, the Σ_app slice survey; kernel-checked by `decide +kernel`) | A program the API admits denotes a lawful source: `AdmittedProgram program table` implies `LawfulSig ⟨table, []⟩`, the premise of M5–M7 (`ProgramSource.lawful`) | `Test/Counterexamples/Program/AdmissionUnserved.lean`, one witness per clause the API did not check: a row requiring the key at service code 30, which no built-in carrier serves, performed by the program; a row whose answer mentions an unbound parameter; a parameter under a union head. Each was admitted by `admitProgram` and refused by `admitSig`. Repaired: `admitProgram` refuses each with the refusal `admitSig` gives (`refused`: `.signature (.unservedKey 0 appKey)`; `refused_unscoped`: `.signature (.row 0 .notWellScoped)`; `refused_union`: `.signature (.row 0 (.templateNotAdmissible "request"))`; `decide +kernel`), `not_lawful` stays, and each old acceptance is a red control under `#guard_msgs (error)`; the green controls admit clause 1's program once the application declares the key's carrier (`admitted_served`) and type a read of the declared service at its carrier (`admitted_reads_declared`, against `refused_reads_undeclared`) | decisions row 21's slice, step 2 (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md`): program admission runs the signature's located refusal (`admitSig`, `src/Effect4/Program/SigApp.lean`) at `AdmittedProgram program app`, whose certificate holds `admitSig app = .ok ()`; the bridge `lawfulSig_of_admitted` is `admitSig_ok_iff` read off that field, and the premise `AdmissionGap` is deleted |
 ```
 
 ## Scope Lifetime & Finalization
@@ -1662,7 +1354,7 @@ Lifetimes, finalizer registration, and LIFO unwinding. 16 claims: 15 proved, 1 m
 
 ### finalizer-starts-bounded
 
-Every native decision prefix starts an onExit finalizer no more often than it pushes that source's finalizer frame; arbitrary program, table and budget; no progress, source uniqueness or cleanup-log claim
+On every reachable native machine, for any program, table and budget, a source's onExit finalizer starts no more often than its finalizer frame is pushed; no progress, source uniqueness or cleanup-log claim
 
 Finalizer starts spend recorded pushes, retaining any unspent stack credits. Every native decision prefix satisfies the bound.
 
@@ -1693,7 +1385,7 @@ Module: `Effect4.Laws.Program.FinalizerRun`
 
 ### once-placed-finalizer
 
-A once-placed source pushes its finalizer frame at most once across every fiber of a native decision prefix; no progress or log-writer claim
+A once-placed source has its finalizer frame pushed at most once across all fibers of every reachable native machine; no progress or log-writer claim
 
 Control-source uniqueness obligation of the at-most-once claim. A once-placed source pushes its finalizer frame at most once across all fibers. The census case is proved (`census_pushes_once`); the rest is `once_placed_outside_census`. Consumer: the atomic cleanup-log claim. It supplies no finalizer progress.
 
@@ -1763,7 +1455,7 @@ Module: `Effect4.Machine.Scope` · Literature: ATTAPL, ch. 3, pp. 87–136 (anal
 
 ### close-reentrant-add
 
-Re-entrant finalizer addition observes closed state immediately
+Adding a finalizer to a scope that is closing sees it closed at once: the finalizer runs immediately with the close's exit
 
 The sharp form of "state before finalizers": a finalizer that re-enters the scope while it closes sees a `Closed` scope, so its own registration runs immediately with the closing exit rather than being recorded. census: rule.scope-close-lifo-state-first
 
@@ -1780,7 +1472,7 @@ Module: `Effect4.Machine.Scope`
 
 ### close-seq-protocol
 
-The sequential close walk meets the ambient iterator protocol at one row for admitted finalizers
+The sequential close walk of admitted finalizers meets the ambient iterator protocol at one row
 
 A typed walk frame has its protocol: coinduction from the invariant.
 
@@ -1814,7 +1506,7 @@ Effect4.Program.Typed.MaskRestoration
 
 ### saved-mask-pop-discipline
 
-At one fixed base bit, the frame machine keeps the chain of restoring frames on a fiber's stack: FrameFiber.popFrom from an empty scratch stack, getCont, Machine.frameExitState and the entry of each region keep it, and two fibers with one base and one stack have one flag (a local law at every demand, skip flag and carried cause; no statement of a run, of a completed exit, of cleanup or of delivery)
+At a fixed base bit, popping, getCont, frame exit and region entry keep the chain of restoring frames on a fiber's stack, and fibers with one base and stack share one flag; a local law: nothing of runs, exits, cleanup or delivery
 
 The saved mask's chain through a pop of the stack (the proposed registry claim `saved-mask-pop-discipline`; concept `scope-lifetime-finalization`, requirement R11). It is a step of the open run-level half of `saved-mask-restoration`. Each field cites one theorem of this module, so its status is derived from theirs (`#plan_status`).
 
@@ -1833,7 +1525,7 @@ Module: `Effect4.Laws.Machine.MaskDiscipline`
 
 ### saved-mask-chain-runs
 
-Each live fiber of a run of a compiled program holds the saved mask's chain at its start flag: the invariant MaskRuns, at a table of start flags, is kept by every decision tape and fuel at the compiled program's interpreter, from each machine that holds it; each command keeps it under the condition just before a clearing, which the command loop discharges, so each entry outside the machine that returns a machine keeps it, with no premise for the condition (the lift of saved-mask-pop-discipline to runs; no typing, no admission and no premise on the table; no bracket of a region, no flag or stack of an exited fiber, no cleanup's multiplicity, no delivery, no budget, no liveness)
+Every replay of a compiled program, at any tape and fuel, keeps the saved-mask invariant MaskRuns from a machine that holds it, extending its start flags; no typing, admission or table premise; nothing of brackets, exited fibers, cleanup, delivery or liveness
 
 Each live fiber of a run of a compiled program holds the saved mask's chain at its start flag (the proposed registry claim `saved-mask-chain-runs`; concept `scope-lifetime-finalization`, requirement R11). It is the placed statement of the claim: the lift of `saved_mask_pop_discipline` to runs, at the compiled program's interpreter `interpOf root table` and under the native evaluator `evaluatorFor root table`. A printed form of the statement hides that instance.
 
@@ -1868,7 +1560,7 @@ Module: `Effect4.Laws.Program.MaskRuns`
 
 ### saved-mask-region-bracket
 
-A region of a compiled program ends at its entry's stack and at its entry flag, for an arbitrary body: at two cuts of one command loop's run where a pending command steps the fiber, the later cut's stack shape above ++ below is a premise, and it is the region's only mark on the machine; the theorem then gives the entry's stack and the entry flag at the region's end, which is the fiber that the pop of the own frames leaves where no own frame answers, and the pop goes on from it; it does not give that a body's run keeps that shape (the run-level half of saved-mask-restoration; no premise on an exit, by stepped-fiber-live; no cleanup, no release count, no delivery, no budget, no liveness; nothing of a region whose fiber exits inside it; the client premise of the mask's derived form stays: nothing acquired or registered before the body begins, decisions rows 227, 244 to 246)
+At two cuts of one command loop that step one fiber, with the later stack shape as premise, a region ends at its entry stack and flag; nothing of a body keeping that shape, cleanup, delivery, liveness, or fibers exiting inside; the mask's client premise stays
 
 A region of a compiled program ends at its entry's stack and at its entry flag, for an arbitrary body (the proposed registry claim `saved-mask-region-bracket`; concept `scope-lifetime-finalization`, requirement R11). It is the run-level half of `saved-mask-restoration`, at the compiled program's interpreter `interpOf p table` and under the native evaluator.
 
@@ -2106,7 +1798,7 @@ Multi-fiber execution, decision steps, and configuration invariants. 25 claims: 
 
 ### machine-typed-not-halted
 
-Halted machine configuration outside MachineTyped invariant
+No halted machine configuration satisfies the MachineTyped invariant
 
 A halted machine is outside `J` (row 139; probe C's `typedState_halt`, read at `J`).
 
@@ -2189,7 +1881,7 @@ Module: `Effect4.Laws.Program.Typed.Commands.Clauses.All` · Literature: WrightF
 Register record `E4-TYPED-CE-025` (REPAIRED)
 
 ```text
-| `E4-TYPED-CE-025` | REPAIRED 2026-10-03 (row 134 (b), the waiter column `MachineWide.waiters`; the refuted goals `M6Ledger.step_loop` and `step_deliver` are proved over it: `loop_preserves`, `deliver_preserves`, `Typed/Commands/Clauses/All.lean`, `053aa3d9`, `[propext, Quot.sound]`); SEEDED 2026-10-01 (seat D3, `5789df56`, merged `7d50cfe6`; kernel-checked at `[propext, Quot.sound]`) | `StepPreserves` for `loop` and `deliver` is false: completing a Deferred owes its waiters the completion at tokens no clause relates to the cell | `docs/research/2026-10-01-landing/seat-D3/probes/LoopDeliver.lean`: `loop_false`, `deliver_false` | row 134 (b): a waiter column in `J` (ruled; seat D5) |
+| `E4-TYPED-CE-025` | REPAIRED 2026-10-03 (row 134 (b), the waiter column `MachineWide.waiters`; the refuted goals `M6Ledger.step_loop` and `step_deliver` are proved over it: `loop_preserves`, `deliver_preserves`, `Typed/Commands/Clauses/All.lean`, `053aa3d9`, `[propext, Quot.sound]`); SEEDED 2026-10-01 (seat D3, `5789df56`, merged `7d50cfe6`; kernel-checked at `[propext, Quot.sound]`) | `StepPreserves` for `loop` and `deliver` is false: completing a Deferred owes its waiters the completion at tokens no clause relates to the cell | `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/seat-D3/probes/LoopDeliver.lean`: `loop_false`, `deliver_false` | row 134 (b): a waiter column in `J` (ruled; seat D5) |
 ```
 
 ### step-deliver-preserves
@@ -2209,7 +1901,7 @@ Module: `Effect4.Laws.Program.Typed.Commands.Clauses.All`
 Register record `E4-TYPED-CE-025` (REPAIRED)
 
 ```text
-| `E4-TYPED-CE-025` | REPAIRED 2026-10-03 (row 134 (b), the waiter column `MachineWide.waiters`; the refuted goals `M6Ledger.step_loop` and `step_deliver` are proved over it: `loop_preserves`, `deliver_preserves`, `Typed/Commands/Clauses/All.lean`, `053aa3d9`, `[propext, Quot.sound]`); SEEDED 2026-10-01 (seat D3, `5789df56`, merged `7d50cfe6`; kernel-checked at `[propext, Quot.sound]`) | `StepPreserves` for `loop` and `deliver` is false: completing a Deferred owes its waiters the completion at tokens no clause relates to the cell | `docs/research/2026-10-01-landing/seat-D3/probes/LoopDeliver.lean`: `loop_false`, `deliver_false` | row 134 (b): a waiter column in `J` (ruled; seat D5) |
+| `E4-TYPED-CE-025` | REPAIRED 2026-10-03 (row 134 (b), the waiter column `MachineWide.waiters`; the refuted goals `M6Ledger.step_loop` and `step_deliver` are proved over it: `loop_preserves`, `deliver_preserves`, `Typed/Commands/Clauses/All.lean`, `053aa3d9`, `[propext, Quot.sound]`); SEEDED 2026-10-01 (seat D3, `5789df56`, merged `7d50cfe6`; kernel-checked at `[propext, Quot.sound]`) | `StepPreserves` for `loop` and `deliver` is false: completing a Deferred owes its waiters the completion at tokens no clause relates to the cell | `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/seat-D3/probes/LoopDeliver.lean`: `loop_false`, `deliver_false` | row 134 (b): a waiter column in `J` (ruled; seat D5) |
 ```
 
 ### store-frame-typing
@@ -2315,7 +2007,7 @@ Module: `Effect4.Laws.Program.Typed.Commands.Launch`
 Register record `E4-TYPED-CE-029` (REPAIRED)
 
 ```text
-| `E4-TYPED-CE-029` | REPAIRED 2026-10-03 (row 134 (e), fresh-bounded fiber ids; the refuted goal `M6Ledger.step_launch` is proved over it: `launch_preserves`, `Typed/Commands/Launch.lean`); SEEDED 2026-10-01 (seat D3, `5789df56`, merged `7d50cfe6`; kernel-checked at `[propext, Quot.sound]`) | `StepPreserves` for `launch` is false: a race's live set may name the next fiber id | `docs/research/2026-10-01-landing/seat-D3/probes/Races.lean`: `Launch.launch_false` | row 134 (e): fresh-bounded fiber ids (ruled; seat D5) |
+| `E4-TYPED-CE-029` | REPAIRED 2026-10-03 (row 134 (e), fresh-bounded fiber ids; the refuted goal `M6Ledger.step_launch` is proved over it: `launch_preserves`, `Typed/Commands/Launch.lean`); SEEDED 2026-10-01 (seat D3, `5789df56`, merged `7d50cfe6`; kernel-checked at `[propext, Quot.sound]`) | `StepPreserves` for `launch` is false: a race's live set may name the next fiber id | `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-01-landing/seat-D3/probes/Races.lean`: `Launch.launch_false` | row 134 (e): fresh-bounded fiber ids (ruled; seat D5) |
 ```
 
 ### step-registration-done-preserves
@@ -2335,7 +2027,7 @@ Module: `Effect4.Laws.Program.Typed.Commands.Registration`
 
 ### drivestate-lift
 
-Command loop invariant lifting for driveState
+An invariant that every step keeps, with the world moving up its order, is kept by the command loop driveState at every fuel
 
 Lift 1, the command loop. The original interface is the constant-budget instance of the indexed command fold.
 
@@ -2383,7 +2075,7 @@ Module: `Effect4.Laws.Program.Typed.Commands.Clauses.All`
 
 ### run-work-selection
 
-The opt-in control planner selects exactly a queued flush or the first runnable evaluation on a non-stuck machine
+The opt-in control planner selects a decision exactly when the machine is not stuck and the decision flushes a non-empty queue or, with the queue empty, evaluates the first runnable fiber
 
 The selected control belongs to the declared two-choice policy.
 
@@ -2410,11 +2102,11 @@ Module: `Effect4.Laws.Run`
 
 ### scheduler-progress
 
-Operational progress with successor transitions or live frontier classification
+Every non-halted machine of a typed configuration takes a successor step or waits on a live frontier
 
 ### fair-tape-drains-armed
 
-A fair finite tape that suffices leaves no armed owner at its live end (R12-a: the finite endpoint consequence of FairTape's final prefix; not general fairness, not infinite tapes)
+A fair finite tape that suffices leaves no armed owner when its replay ends without being stuck; not general fairness, nor infinite tapes
 
 A fair finite tape leaves nothing armed at its live end (R12-a, the finite endpoint consequence): when the whole tape suffices and its replay is not stuck, `FairTape` at the split `tape ++ []` asks each armed owner for a later servicing decision inside the empty suffix, so no owner is armed. Concept `reactive-scheduling`, claim `fair-tape-drains-armed`. Reach: one finite tape, at any interpreter and fuel. It does not establish liveness on infinite tapes, termination, host progress, general scheduler fairness (`flush_fair` permits rearming), or that the frontier names the remaining waits (R12-b). It serves R12 as the finite half of "liveness under `FairTape`".
 
@@ -2481,7 +2173,7 @@ Module: `Effect4.Laws.Program.Typed.Commands.Clauses.All`
 
 ### fair-scheduling
 
-Progress under weak fairness
+Every weakly fair schedule makes progress
 
 Literature: PFPL, chs. 39–41, pp. 371–406 (excludedFeature)
 
@@ -2633,7 +2325,7 @@ Module: `Effect4.Laws.Library.Pool.Profile`
 
 ## Exact Codecs
 
-Invertible embeddings for JSON and Schema representations. 36 claims: 35 proved, 1 modulo.
+Invertible embeddings for JSON and Schema representations. 49 claims: 48 proved, 1 modulo.
 
 | Claim | Role | Status | Evidence |
 | --- | --- | --- | --- |
@@ -2645,7 +2337,6 @@ Invertible embeddings for JSON and Schema representations. 36 claims: 35 proved,
 | `document-json-exact` | compatibility | proved | `Effect4.Representation.ofJson_exact` |
 | `document-json-complete` | compatibility | modulo | `Effect4.Schema.DocumentJson.ofJson_complete`, modulo `ofJson_image` |
 | `collection-term-print-read` | compatibility | proved | `Effect4.Program.readTerm_printTerm` |
-| `record-codec-layout` | compatibility | proved | `Effect4.Schema.decode_iff` |
 | `service-identifier-injective` | compatibility | proved | `Effect4.Program.keyIdentifier_injective` |
 | `error-payload-exact` | compatibility | proved | `Effect4.Program.errOf_valOfErr` |
 | `payload-class-decl-exact` | compatibility | proved | `Effect4.Codegen.admitModule_classDecls` |
@@ -2655,10 +2346,17 @@ Invertible embeddings for JSON and Schema representations. 36 claims: 35 proved,
 | `typed-print-connector` | compatibility | proved | `Effect4.Program.printTyped_eq_print` |
 | `typed-print-erasure` | compatibility | proved | `Effect4.Codegen.eraseJoinArgs_printTyped` |
 | `typed-print-read` | compatibility | proved | `Effect4.Codegen.readTyped_printTyped` |
+| `binder-names-read` | compatibility | proved | `Effect4.Program.read_renamed` |
 | `module-defs-round-trip` | compatibility | proved | `Effect4.Api.printModule_roundTrip` |
 | `modeled-codec` | compatibility | proved | `Effect4.Schema.Modeled.codec_roundtrip` |
 | `record-field-laws` | compatibility | proved | `Effect4.Schema.FieldRef.frame_laws` |
+| `workspace-entry-exact` | compatibility | proved | `Effect4.Tool.WorkspaceEntry.ofVal_exact` |
 | `codec-profile-retains-value` | compatibility | proved | `Effect4.Tool.CodecProfile.write_read` |
+| `json-read-located` | compatibility | proved | `Effect4.Tool.CodecProfile.profileLocated_exact` |
+| `json-refusal-placed` | compatibility | proved | `Effect4.Tool.CodecProfile.profileLocated_site` |
+| `json-trees-agree` | compatibility | proved | `Effect4.Tool.CodecProfile.read_toBinary64` |
+| `json-text-round-trip` | compatibility | proved | `Effect4.NatJson.parse_render` |
+| `tool-method-descriptor` | compatibility | proved | `Effect4.Tool.method_name_agrees` |
 | `cas-node-read-exact` | compatibility | proved | `Effect4.Store.Node.read_exact` |
 | `cas-get-exact` | compatibility | proved | `Effect4.Store.Cas.get_exact` |
 | `cas-admission-handles` | preservation | proved | `Effect4.Store.putNode_ok_handleFree` |
@@ -2671,7 +2369,14 @@ Invertible embeddings for JSON and Schema representations. 36 claims: 35 proved,
 | `cas-commit-reads` | compatibility | proved | `Effect4.Store.commit_reads` |
 | `cas-interrupted-closed` | preservation | proved | `Effect4.Store.interrupted_closed` |
 | `cas-interrupted-roots` | compatibility | proved | `Effect4.Store.interrupted_roots` |
+| `cas-result-envelope` | compatibility | proved | `Effect4.Store.Node.resultQuery?_eq_some_iff` |
+| `cas-result-once` | preservation | proved | `Effect4.Store.Cas.result_once` |
 | `cas-resident-injective` | compatibility | proved | `Effect4.Store.address_inj_resident` |
+| `object-exact` | compatibility | proved | `Effect4.Program.Object.open_ofBuilt` |
+| `object-bytes-exact` | compatibility | proved | `Effect4.Program.Object.read_exact` |
+| `object-load-exact` | compatibility | proved | `Effect4.Program.Object.load_bytes` |
+| `service-view-printed` | compatibility | proved | `Effect4.Program.serviceFaultIn_tsProfile_iff` |
+| `service-view` | adequacy | proved | `Effect4.Program.entriesOf_isSome` |
 | `program-digest-exact` | compatibility | proved | `Effect4.Store.address_eq_or_collision` |
 
 ### type-metadata-exact
@@ -2693,17 +2398,18 @@ And
 
 ### decode-iff
 
-Exactness of JSON decoding modulo normJ
+JSON decoding is exact modulo normJ: a JSON value decodes to a value exactly when that value's encoding equals it under normJ; named record values keep optional presence
 
-The JSON pair is an exact embedding modulo `N_J` (decisions row 128; `AGENTS.md`'s exact embedding with the normaliser `Codec.normJ`): a JSON decodes to a value exactly when it is that value's encoding up to the order of object entries.
+The JSON pair is an exact embedding modulo `N_J` (decisions row 128; `AGENTS.md`'s exact embedding with the normaliser `Codec.normJ`): a JSON decodes to a value exactly when it is that value's encoding up to the order of object entries. It holds under every table of key names.
 
 Module: `Effect4.Laws.Schema.Codec` · Literature: RendelOstermann2010, audit P32 (definitionUsed)
 
 ```lean
-∀ {t : Effect4.Program.Ty} {j : Effect4.Json} {v : Effect4.Machine.Val},
-  Iff (Eq (Effect4.Schema.decode t j) (Option.some v))
+∀ {names : Effect4.Program.KeyNames} {t : Effect4.Program.Ty} {j : Effect4.Json}
+  {v : Effect4.Machine.Val},
+  Iff (Eq (Effect4.Schema.decode names t j) (Option.some v))
     (Exists fun j' =>
-      And (Eq (Effect4.Schema.encode t v) (Option.some j'))
+      And (Eq (Effect4.Schema.encode names t v) (Option.some j'))
         (Eq (Effect4.Schema.Codec.normJ j') (Effect4.Schema.Codec.normJ j)))
 ```
 
@@ -2716,15 +2422,16 @@ S-3 round trip without an arbitrary default JSON inhabitant or a failing `get!`.
 Module: `Effect4.Laws.Schema.Codec` · Literature: FosterEtAl2007, audit P11 (adaptedResult)
 
 ```lean
-∀ {t : Effect4.Program.CTy} {v : Effect4.Machine.Val},
+∀ {names : Effect4.Program.KeyNames} {t : Effect4.Program.CTy} {v : Effect4.Machine.Val},
   Eq (Effect4.Program.Val.hasTy v t.toRaw) Bool.true →
-    Eq (t.toRaw.isCodecValue v) Bool.true →
-      Eq ((Effect4.Schema.encode t.toRaw v).bind (Effect4.Schema.decode t.toRaw)) (Option.some v)
+    Eq (Effect4.Program.Ty.isCodecValue names t.toRaw v) Bool.true →
+      Eq ((Effect4.Schema.encode names t.toRaw v).bind (Effect4.Schema.decode names t.toRaw))
+        (Option.some v)
 ```
 
 ### of-schema-exact
 
-Exactness of Schema reader modulo normS
+The Schema reader is exact modulo normS: a representation that reads as a type is, under normS, that type's schema
 
 Exactness of the reader, modulo `N_S` (decisions row 128): a representation `ofSchema` reads is the read type's schema up to the annotation entries that change no decoding. By `fun_induction ofSchema`: one case per arm and branch of the reader, the refusing ones closed by `nomatch`.
 
@@ -2753,7 +2460,7 @@ Module: `Effect4.Schema.Bridge`
 
 ### document-json-exact
 
-rc.112's persisted Schema JSON read into a representation is that JSON modulo normJ (Representation.ofJson_exact): the reader dispatches on the frozen tag table and admits its answer through the re-encode guard (Reencode.guard_exact); nothing of rc.112's field admission, which admits fewer documents, or of the preparation for the bridge (decisions row 396 (2); slice A1)
+rc.112's persisted Schema JSON, read into a representation, is that JSON modulo normJ; nothing of rc.112's field admission, which admits fewer documents, or of the bridge's preparation
 
 Exactness of the reader: what it answers is its input, modulo `normJ`.
 
@@ -2767,7 +2474,7 @@ Module: `Effect4.Schema.DocumentJson`
 
 ### document-json-complete
 
-A JSON value whose normal form is a writer image is admitted at some nesting bound, with that normal form (DocumentJson.ofJson_complete), modulo the planned goal ofJson_image; nothing at the public reader's fixed bound (decisions row 396 (2); slice A1)
+A JSON value whose normal form is a writer's image is admitted at some nesting bound with that normal form, modulo the planned goal ofJson_image; nothing at the public reader's fixed bound
 
 The reader is complete against the writer's image (claim `document-json-complete`): a JSON value with a writer image's normal form is admitted at some bound, and what it answers has that normal form. Proved modulo the goal `ofJson_image`, through the guard's laws (`Reencode.guard_congr`, `Reencode.guard_image`). Consumer: slice A2's comparison of the rows' types with rc.112's documents.
 
@@ -2789,7 +2496,7 @@ Module: `Effect4.Laws.Schema.DocumentJson`
 
 ### collection-term-print-read
 
-Every scoped term reconstructs after structural printing, including records, payload class constructions under classes that cover them (decisions row 120), and every static tuple index
+Every scoped, unannotated term whose payload classes are covered reads back after structural printing, records and static tuple indices included
 
 The term round trip (`collection-term-print-read`): a scoped term whose class constructions the classes cover reads back from its printing. Since decisions row 120, part E2, a class construction prints as `new Tag({ … })` and reads back from the module's classes, with `_tag` restored first (`Classes.classTag?`); placed at R8 (`translation-simulation`) as a step of `read_print`, and at R3 as the record terms' printed form.
 
@@ -2801,22 +2508,6 @@ Module: `Effect4.Laws.Codegen.ReadLeaf`
     Eq (Effect4.Program.Term.covers classes t) Bool.true →
       Eq t.unannotated Bool.true →
         Eq (Effect4.Program.readTerm classes n (Effect4.Program.printTerm n t)) (Except.ok t)
-```
-
-### record-codec-layout
-
-Record JSON decoding is exact under normJ; named record values retain optional presence
-
-The JSON pair is an exact embedding modulo `N_J` (decisions row 128; `AGENTS.md`'s exact embedding with the normaliser `Codec.normJ`): a JSON decodes to a value exactly when it is that value's encoding up to the order of object entries.
-
-Module: `Effect4.Laws.Schema.Codec`
-
-```lean
-∀ {t : Effect4.Program.Ty} {j : Effect4.Json} {v : Effect4.Machine.Val},
-  Iff (Eq (Effect4.Schema.decode t j) (Option.some v))
-    (Exists fun j' =>
-      And (Eq (Effect4.Schema.encode t v) (Option.some j'))
-        (Eq (Effect4.Schema.Codec.normJ j') (Effect4.Schema.Codec.normJ j)))
 ```
 
 ### service-identifier-injective
@@ -2858,7 +2549,7 @@ Module: `Effect4.Laws.Codegen.Admit`
   {allowed : List Effect4.Codegen.Bindings.Origin} {ambient : List TypeScript.Import}
   {module : TypeScript.Module} {r : Effect4.Codegen.ModuleReading table name allowed ambient},
   Eq (Effect4.Codegen.admitModule name module table allowed ambient) (Except.ok r) →
-    Eq (Effect4.Program.splitClasses module.decls).fst r.classDecls
+    Eq (Effect4.Program.splitClasses module.decls).fst (r.classDecls List.nil)
 ```
 
 ### mask-rows-table-premises
@@ -2877,7 +2568,7 @@ Effect4.Program.MaskRowsPremises
 
 ### sketch-wire
 
-A sketch's bytes are its program's canonical bytes and its hole table's (Sketch.encode): a well-formed sketch reads back (Sketch.decode_encode), and whatever reads was that sketch's bytes, well-formed (Sketch.decode_exact); no consumer since the query tool was retired (seams §2.2), the session tool carrying a sketch through its generated codec; nothing of a stored sketch's renumbering when its application gains a row (decisions row 305, point 3)
+A sketch's bytes are its program's and its hole table's canonical bytes: whatever decodes is exactly a well-formed sketch's encoding, and a well-formed sketch reads back; nothing of renumbering a stored sketch when its application gains a row
 
 Exactness: whatever reads as a sketch was that sketch's bytes, and its value trees are well-formed. The pointer of `sketch-wire`.
 
@@ -2893,15 +2584,15 @@ Module: `Effect4.Laws.Program.SketchWire`
 
 ### json-read-exact
 
-A canonical carrier read from JSON is the carrier whose canonical print that JSON is (Canonical.ofJson_exact): the reader takes only the canonical print, a number as the binary64 of a natural, hex exact, fields in the shape's order, a case's name checked against its tag; JSON whose objects come in any order, and whose lists may be arrays, reads once normalised by the shape (Canonical.ofJsonAnyOrder, Canonical.ofJsonAnyOrder_exact), the named normaliser, and the tools print each list as an array (Canonical.printArrays), the encoding ts/eff/eff.gen.ts types; nothing of the round trip, which needs every natural at most 2^53 and no option holding a shape that prints null (the agent's schema form; decisions row 334)
+A canonical carrier read from JSON is the carrier whose cases print (ShapeDoc.print) that JSON is (Canonical.ofJson_exact): the reader takes only the cases print, a number as the binary64 of a natural, hex exact, fields in the shape's order, a case's name checked against its tag; JSON whose objects come in any order, and whose lists may be arrays, reads once normalised by the shape (Canonical.ofJsonAnyOrder, Canonical.ofJsonAnyOrder_exact), the named normaliser, and the tools print each list as an array (Canonical.print, the public print; decisions row 418, D2), the encoding ts/eff/eff.gen.ts types; nothing of the round trip, which needs every natural at most 2^53 and no option holding a shape that prints null (the agent's schema form; decisions row 334)
 
-A carrier read from JSON is the carrier whose canonical print that JSON is. The pointer of `json-read-exact`.
+A carrier read from JSON is the carrier whose cases print that JSON is. The pointer of `json-read-exact`.
 
 Module: `Effect4.Laws.Store.ShapeRead`
 
 ```lean
 ∀ {α : Type} [inst : Effect4.Store.Canonical α] {j : Effect4.Json} {a : α},
-  Eq (Effect4.Store.Canonical.ofJson j) (Option.some a) → Eq (Effect4.Store.Canonical.print a) j
+  Eq (Effect4.Store.Canonical.ofJson j) (Option.some a) → Eq ((inst.shape α).print (inst.toVal a)) j
 ```
 
 ### typed-print-connector
@@ -2921,7 +2612,7 @@ Module: `Effect4.Laws.Codegen.PrintTyped`
 
 ### typed-print-erasure
 
-A successful typed print erases to the print: at a readable program and a lawful spelling, the named erasure of the inserted type arguments gives the print of the program, byte for byte; the erasure keeps an operation's own arguments and the stored type annotations; it does not say that tsgo accepts the typed print, or anything of its run (decisions row 325; slice P2b)
+At a readable program and a lawful spelling, erasing the inserted type arguments from a successful typed print gives the plain print byte for byte; not that tsgo accepts the typed print, nor anything of its run
 
 Every successful public typed print erases to the existing ordinary print. The exact old readable and spelling premises remain visible (exact-codecs, R8).
 
@@ -2941,7 +2632,7 @@ Module: `Effect4.Laws.Codegen.PrintTyped`
 
 ### typed-print-read
 
-The reader reads a successful typed print back to its program after the named erasure, at a readable program and a lawful spelling, by the existing read_print; what the typed reader accepts is the erasure of a print (readTyped_exact); the raw reader still refuses an inserted argument before the erasure, and no equality of raw foreign spellings follows (decisions row 325; slice P3)
+At a readable program and a lawful spelling, the typed reader reads a successful typed print back to its program after erasing inserted type arguments; the raw reader still refuses inserted arguments, and no equality of raw foreign spellings follows
 
 The existing reader reads every successful public typed print after named erasure. The theorem carries the existing read_print fragment (exact-codecs, R8).
 
@@ -2958,9 +2649,34 @@ Module: `Effect4.Laws.Codegen.PrintTyped`
             Eq (Effect4.Codegen.readTyped classes sig spell (List.length env0) x) (Except.ok e)
 ```
 
+### binder-names-read
+
+The reader takes any binder names: a text whose binders the renaming takes to the printer's names (Rename.expr), giving the print of a readable program, reads, to that program, or to the program it is the print of as it stands (read_renamed); each use resolves to its nearest binder, a layer clause closes the lexical scope, and a call's head is a name; law 11 keeps its statement, and law 12 holds under the renaming (read_exact); it says nothing of what tsgo accepts, and the TypeScript reader's agreement with this one is a finite check (decisions row 418; release item 3, part b)
+
+A text whose binders rename to a print reads. When the renaming of a text's binders to the printer's names (`Rename.expr`) writes the print of a readable program, the reader accepts the text: it reads to that program, or, when the text is itself the print of a program, to that program as the text stands. So an author names binders as they like.
+
+Reach: the reader's acceptance on target syntax, at a lawful spelling and a readable program. It does not say that the two programs of the second case differ, or that they agree, and it says nothing of what tsgo accepts.
+
+Module: `Effect4.Laws.Codegen.ReadPrint`
+
+```lean
+∀ {Op : Type} {classes : Effect4.Codegen.Classes.Classes} {sig : Effect4.Program.Signature Op}
+  {spell : String → List Effect4.Program.RowArg → Option Op},
+  Effect4.Program.LawfulSpelling sig spell →
+    ∀ {n : Nat} {e : Effect4.Program.Eff Op},
+      Eq (Effect4.Program.Readable classes sig n e) Bool.true →
+        ∀ {x y : TypeScript.Expr},
+          Eq (Effect4.Codegen.Rename.expr (Effect4.Codegen.Rename.mint n) x) (Except.ok y) →
+            Eq (Effect4.Program.print sig n e) (Except.ok y) →
+              Or (Eq (Effect4.Program.readEff classes sig spell n x) (Except.ok e))
+                (Exists fun q =>
+                  And (Eq (Effect4.Program.readEff classes sig spell n x) (Except.ok q))
+                    (Eq (Effect4.Program.print sig n q) (Except.ok x)))
+```
+
 ### module-defs-round-trip
 
-A module with a definition block reads back: the module printer prints each definition as a constant before the layers, an arrow from its request and its parameters, each a function named by its declaration (slice HO-3a), with its declared result type around a suspension of its body, an invocation as the definition's name applied to its request, and an invocation with programs as that name applied to the request and to each program as an arrow of the binder due at the call (slice HO-3b, read back under the block's invocation laws, LawfulInvokes); the block's module layers print after the services as constants named by their paths (printModuleLayers), and a reference to one prints as that name; when each declaration has columns readable under the module's payload classes (a column that names a class reads as the class's record), a canonical requirement row and a name with no layer path, each body and each of its own layers at the signature and spelling map its parameters extend (LawfulSpelling.withParams; a body's own hoisted layers print as constants at the top of its suspension, row 341, step 3b), the main program, each layer and each module layer read back at the block's signature through the block's spelling map, and each module layer's name decodes to its path, the module reads back to the program, its module layers rebuilt in order (readModule_printModule_defs), after its classes and the services of the rows it declares, which the file reader reads back exactly against the table (readRowServices_rowServiceDecls, readRowServices_exact; the file, ModuleEmission.readFile); the block's spelling map is lawful under the signature's invocation laws and readable names (LawfulSpelling.withDefs), which the native signature and the printer's name check give (nativeCalls, defsNamed_of_fault), so the program interface's module round trip holds for a program with a block (Api.printModule_roundTrip); the printer refuses an empty block and a reference out of its scope (Eff.inScope), and a header's requirement row reads back by the requirement reader (readKeys); the block's services, declared by its definitions' roles, print after the definitions as an Effect service's key and layer each (printServices) and give the roles back from the layers (roleOf), when serviceFault finds no fault (printServices_ok, restoreRoles); a method whose definition takes programs takes them after its arguments and passes them on, and the arity read back is the closure's parameters less those programs (slice HO-5, readServiceMethods_ok); it does not say that tsgo accepts the module or how rc.112 runs it (decisions rows 328, 338, 339 and 341, G6; slices PROC-3 and CO-6b)
+Under a lawful row table and readable classes, a printed module reads back to its program, definition block, layers and services included; empty blocks and out-of-scope references are refused at print; nothing of tsgo's acceptance or rc.112's run
 
 Through the application face: a program whose pieces are readable under a lawful table has a module whose reading is the program, with or without a definition block. The module is the one that ships, its pieces printed typed, and the face's reader reads it after the named erasure (`ModuleEmission.readModule`).
 
@@ -2986,29 +2702,29 @@ Module: `Effect4.Laws.Api.ModuleReadable`
 
 ### modeled-codec
 
-A modeled value survives JSON and back at the normal form of its type, under codec admission at the value (Ty.isCodecValue): decoding its encoding and reading the value back answers the value; admission stays a premise, since a natural above 2^53 inhabits nat and has no exact JSON image; no TypeScript codec and no target execution (decisions row 330, slice L1)
+Under codec admission at the value, a modeled value's JSON encoding decodes and reads back to that value; admission stays a premise, since naturals above 2^53 have no exact JSON image; no TypeScript codec or target execution
 
-The JSON round trip of a modeled value (claim `modeled-codec`), at the normal form of its type. Membership comes from `Modeled.member` and `hasTy_normalize`. Codec admission stays a premise: it is value-specific, and a natural above 2^53 has no exact JSON image.
+The JSON round trip of a modeled value (claim `modeled-codec`), at the normal form of its type, under any table of key names. Membership comes from `Modeled.member` and `hasTy_normalize`. Codec admission stays a premise: it is value-specific, and a natural above 2^53 has no exact JSON image.
 
 Module: `Effect4.Laws.Schema.Modeled`
 
 ```lean
-∀ (α : Type) [m : Effect4.Schema.Modeled α] (a : α),
+∀ (α : Type) [m : Effect4.Schema.Modeled α] (a : α) {names : Effect4.Program.KeyNames},
   Eq
-      ((Effect4.Program.CTy.ofRaw (m.ty α)).toRaw.isCodecValue
+      (Effect4.Program.Ty.isCodecValue names (Effect4.Program.CTy.ofRaw (m.ty α)).toRaw
         ((Effect4.Schema.Modeled.image α).toVal a))
       Bool.true →
     Eq
-      (((Effect4.Schema.encode (Effect4.Program.CTy.ofRaw (m.ty α)).toRaw
+      (((Effect4.Schema.encode names (Effect4.Program.CTy.ofRaw (m.ty α)).toRaw
                 ((Effect4.Schema.Modeled.image α).toVal a)).bind
-            (Effect4.Schema.decode (Effect4.Program.CTy.ofRaw (m.ty α)).toRaw)).bind
+            (Effect4.Schema.decode names (Effect4.Program.CTy.ofRaw (m.ty α)).toRaw)).bind
         (Effect4.Schema.Modeled.image α).ofVal)
       (Option.some a)
 ```
 
 ### record-field-laws
 
-A field reference is a lens on the record frame: for a record with ascending names, at every identity context, the machine's read at the reference's name reads the field's encoding, and its overwrite at that name writes the record the reference's write gives (FieldRef.frame_laws); on carriers the reference is a lawful lens whose writes at two positions commute; nothing of an optional field (decisions row 330, slice L2)
+For a record with ascending field names, a field reference is a lens on the machine's record frame: reading at its name gives the field's encoding, and setting there writes what the reference's write gives; nothing of optional fields
 
 The record frame's field laws (claim `record-field-laws`): for a record with ascending names, the machine's read at a reference's name reads the field's encoding, and its overwrite at that name writes the record that the reference's write gives.
 
@@ -3034,9 +2750,25 @@ Module: `Effect4.Laws.Schema.FieldRef`
             ((Effect4.Schema.Model.imageAt L (Effect4.Program.Ty.record fs)).toVal (f.set x v))))
 ```
 
+### workspace-entry-exact
+
+A workspace entry's reader answers only for its own value tree; no claim that the action is accepted or that its execution happened
+
+The entry codec is exact (`workspace-entry-exact`): a value tree that reads as an entry is that entry's own tree. Consumer: `Exchange.load`'s typed reads, through `Cas.get_exact`.
+
+Module: `Effect4.Tool.Workspace`
+
+```lean
+∀ {v : Effect4.Store.Val} {e : Effect4.Tool.WorkspaceEntry},
+  Eq (Effect4.Tool.WorkspaceEntry.instCanonical.ofVal v) (Option.some e) →
+    Eq v (Effect4.Tool.WorkspaceEntry.instCanonical.toVal e)
+```
+
 ### codec-profile-retains-value
 
-A successful guarded JSON write reads back as the original canonical value; no total writing, raw JSON text identity or native parser claim (seams S3b, R12)
+A successful guarded JSON write reads back as the original canonical value; writing need not succeed, and no raw JSON text identity or native parser claim
+
+A successful guarded write reads back as the original carrier. The pointer of `codec-profile-retains-value`.
 
 Module: `Effect4.Laws.Tool.CodecProfile`
 
@@ -3046,9 +2778,77 @@ Module: `Effect4.Laws.Tool.CodecProfile`
     Eq (Effect4.Tool.CodecProfile.read json) (Except.ok value)
 ```
 
+### json-read-located
+
+The profile's located JSON reader is exact: a tree it reads as a carrier is that carrier's canonical print up to shape order, with no budget, and dropping refusal locations gives the unlocated reader; nothing of JSON text
+
+Whatever the profile reads is the carrier whose cases print is the input's binary64 image, normalised. The pointer of `json-read-located`.
+
+Module: `Effect4.Laws.Tool.CodecProfile`
+
+```lean
+∀ {α : Type} [inst : Effect4.Store.Canonical α] {t : Effect4.NatJson} {a : α},
+  Eq (Effect4.Tool.CodecProfile.readLocated t) (Except.ok a) →
+    Eq ((inst.shape α).print (inst.toVal a)) ((inst.shape α).order t.toBinary64)
+```
+
+### json-refusal-placed
+
+Every refusal of the profile's located reader names a place the input or the shape has: a present value, a missing field under a present parent, or a place in the shape; nothing of which repair the place needs
+
+Every refusal of the profile names a site of its input: a value it holds, a field missing from an object it holds, the root where the carrier refuses, or the shape's root where the profile refuses the shape. The diagnostic property of `json-read-located`.
+
+Module: `Effect4.Laws.Tool.CodecProfile`
+
+```lean
+∀ {α : Type} [inst : Effect4.Store.Canonical α] {t : Effect4.NatJson}
+  {r : Effect4.Store.JsonRefusal},
+  Eq (Effect4.Tool.CodecProfile.readLocated t) (Except.error r) → Effect4.JsonSite.Valid t r.site
+```
+
+### json-trees-agree
+
+Within the profile's limit, a tree over naturals and its binary64 conversion read alike, refusals mapped; nothing above the limit, which both refuse
+
+Within the profile, the two faces read a tree alike: the binary64 face reads the tree's binary64 image as the native face reads the tree. A step of `json-read-located`; it replaces the comment-only caveat K1 of the deleted `kit_json.ml`.
+
+Module: `Effect4.Laws.Tool.CodecProfile`
+
+```lean
+∀ {α : Type} [inst : Effect4.Store.Canonical α] {t : Effect4.NatJson},
+  Eq t.within Bool.true →
+    Eq (Effect4.Tool.CodecProfile.read t.toBinary64)
+      (Except.mapError Effect4.Tool.CodecProfile.Refusal.unreadable
+        (Effect4.Tool.CodecProfile.readLocated t))
+```
+
+### json-text-round-trip
+
+Within the profile, the JSON text grammar parses back what its renderer writes; not the converse, that every text it parses is a rendering
+
+Within the profile, the text `render` writes reads back as the tree. The pointer of the proposed claim `json-text-round-trip`: the one grammar both session drivers read with retracts the printer both write with, on every tree within the profile.
+
+Module: `Effect4.Laws.Store.JsonText`
+
+```lean
+∀ {t : Effect4.NatJson}, Eq t.within Bool.true → Eq (Effect4.NatJson.parse t.render) (Except.ok t)
+```
+
+### tool-method-descriptor
+
+Each tool request's wire name is its key's descriptor name, so the method table has one owner; the hints destructive, idempotent and open-world are set by hand, with no law
+
+A request's wire name is its descriptor's (proposed claim `tool-method-descriptor`). Its consumers are the wire core's method check (`Wire.check`) and the MCP table (`Methods.entries`), which read the one descriptor.
+
+Module: `Effect4.Laws.Tool.Wire`
+
+```lean
+∀ (r : Effect4.Tool.Request), Eq (Effect4.Tool.methodDescriptor r.methodKey).name r.method
+```
+
 ### cas-node-read-exact
 
-Successful node byte reading returns its exact encoded node; no admission, hashing, capacity, or persistence claim (seams ST1a, R13)
+A successful node byte read returns the exact node those bytes encode, well formed and at version 0; no admission, hashing, capacity or persistence claim
 
 `cas-node-read-exact`, exact-codecs, R13: bytes, payload formation, and node version. This establishes neither graph admission nor disk integrity.
 
@@ -3062,7 +2862,7 @@ Module: `Effect4.Store.Domain.NodeRead`
 
 ### cas-get-exact
 
-A successful typed read names the carrier's exact resident node after version, kind, per-value specification, and canonical payload checks; replay stays explicit, with no atomicity or admission claim for an arbitrary interpreter (seams ST1a, R13)
+A successful typed read names the carrier's exact resident node, after version, kind, specification and canonical payload checks; replay stays explicit; no atomicity or admission claim for an arbitrary interpreter
 
 `cas-get-exact`: a successful read gives the resident carrier's exact node. The replay parameter remains explicit; this law assumes no hash injectivity or host persistence.
 
@@ -3079,7 +2879,7 @@ Module: `Effect4.Store.Domain.Cas`
 
 ### cas-admission-handles
 
-Every successful node insertion passes the kind's handle rule before edge and resident checks; no progress or host persistence claim (seams ST1a, R13)
+Every successfully inserted node holds no handle in its content, since the kind's handle rule runs before edge and resident checks; no progress or host persistence claim
 
 Every accepted node passes M2 before edge or resident checks. Placement: exact-codecs, stored node admission, preservation, R13. Consumers: `putNode_sound`, word admission, and replay.
 
@@ -3094,7 +2894,7 @@ Module: `Effect4.Store.Domain.Store`
 
 ### cas-advance-head
 
-Changed accepted root moves check the complete expected head and increase its generation exactly once; no host persistence, crash, or progress claim (seams ST1b, R13)
+An accepted move of a root to a changed target checks the whole expected head and raises its generation by exactly one; no host persistence, crash or progress claim
 
 advance_head: a changed accepted target raises exactly one generation.
 
@@ -3117,7 +2917,7 @@ Module: `Effect4.Store.Domain.Cas`
 
 ### cas-advance-stale
 
-A stale complete expected head refuses before every target or policy check; no host persistence, crash, or progress claim (seams ST1b, R13)
+A stale expected head refuses the move before any target or policy check; no host persistence, crash or progress claim
 
 advance_head: a stale full head refuses before every target check.
 
@@ -3135,7 +2935,7 @@ Module: `Effect4.Store.Domain.Cas`
 
 ### cas-advance-duplicate
 
-An identical complete target retains the exact store and generation; no host persistence, crash, or progress claim (seams ST1b, R13)
+Moving a root to its current target keeps the exact store and generation; no host persistence, crash or progress claim
 
 advance_head: an identical complete target retains the previous generation.
 
@@ -3152,7 +2952,7 @@ Module: `Effect4.Store.Domain.Cas`
 
 ### cas-journal-fast-forward
 
-A changed accepted journal target reaches the prior head through designated parent fields; no host persistence, crash, or progress claim (seams ST1b, R13)
+An accepted move of a journal root to a changed target reaches the prior head through designated parent fields; no host persistence, crash or progress claim
 
 journal_ff: a changed journal target reaches the previous head through designated parents.
 
@@ -3171,7 +2971,7 @@ Module: `Effect4.Store.Domain.Cas`
 
 ### cas-commit-grows
 
-Accepted transactions retain every earlier resident at its digest; no host persistence, crash, or progress claim (seams ST1b, R13)
+An accepted transaction keeps every earlier resident at its digest; no host persistence, crash or progress claim
 
 commit_grows: every accepted transaction retains every earlier resident.
 
@@ -3185,7 +2985,7 @@ Module: `Effect4.Store.Domain.Cas`
 
 ### cas-commit-bytes
 
-Reading an earlier resident after an accepted transaction returns the same node; no host persistence, crash, or progress claim (seams ST1b, R13)
+After an accepted transaction, reading an earlier resident returns the same node; no host persistence, crash or progress claim
 
 bytes_never_change: reading a resident after an accepted commit returns the same node.
 
@@ -3200,7 +3000,7 @@ Module: `Effect4.Store.Domain.Cas`
 
 ### cas-commit-reads
 
-Every submitted node reads back after an accepted transaction; conflicts refuse; no host persistence, crash, or progress claim (seams ST1b, R13)
+After an accepted transaction, every submitted node reads back at its digest, and conflicts refuse; no host persistence, crash or progress claim
 
 commit_reads: every submitted node reads back after an accepted atomic commit.
 
@@ -3217,7 +3017,7 @@ Module: `Effect4.Store.Domain.Cas`
 
 ### cas-interrupted-closed
 
-An accepted cut from a closed store retains node closure after complete transaction validation; no host persistence, crash, or progress claim (seams ST1b, R13)
+An accepted cut of a transaction from a closed store, after the whole transaction is validated, leaves the store closed; no host persistence, crash or progress claim
 
 interrupted_closed: every accepted cut of a closed store retains node closure.
 
@@ -3231,7 +3031,7 @@ Module: `Effect4.Store.Domain.Cas`
 
 ### cas-interrupted-roots
 
-An accepted cut retains the exact old root table or returns the exact committed store; no host persistence, crash, or progress claim (seams ST1b, R13)
+An accepted cut either keeps the exact old root table or returns exactly the committed store; no host persistence, crash or progress claim
 
 interrupted_roots: every cut has the exact old roots or the exact published store.
 
@@ -3245,9 +3045,42 @@ Module: `Effect4.Store.Domain.Cas`
         Eq (store.commit transaction) (Except.ok { fst := receipt, snd := next }))
 ```
 
+### cas-result-envelope
+
+A node answers a designated query exactly when it is a version-0 result envelope of that query at the common specification, by its query field, never a reference inside the output; no result truth, host determinism or hash injectivity claim
+
+The envelope reads exactly (`cas-result-envelope`). A node answers a designated query exactly when it is the node of a version-0 envelope of that query. Helper of `cas-result-once`: admission consumes it to name a result's query.
+
+Module: `Effect4.Store.Domain.Action`
+
+```lean
+∀ {node : Effect4.Store.Node} {query : Effect4.Store.Digest},
+  Iff (Eq node.resultQuery? (Option.some query))
+    (Exists fun output =>
+      Eq node
+        (Effect4.Store.nodeOf { version := 0, query := { digest := query }, output := output }))
+```
+
+### cas-result-once
+
+Two bindings of a reached store that answer one designated query hold the same node, through commits, interrupted prefixes and checked restoration; no result truth, host determinism, progress or hash injectivity claim
+
+At most one result per query (`cas-result-once`). Two bindings of a reached store that answer one designated query hold the same node.
+
+Module: `Effect4.Laws.Store.Results`
+
+```lean
+∀ (cas : Effect4.Store.Cas) {query : Effect4.Store.Digest}
+  {a b : Prod Effect4.Store.Digest Effect4.Store.Node},
+  List.instMembership.mem cas.store.nodes a →
+    List.instMembership.mem cas.store.nodes b →
+      Eq a.snd.resultQuery? (Option.some query) →
+        Eq b.snd.resultQuery? (Option.some query) → Eq a.snd b.snd
+```
+
 ### cas-resident-injective
 
-Two nodes resident at their own equal addresses in one store are equal; both lookup premises remain; no hash injectivity or host persistence claim (seams K0, R13)
+Two nodes resident in one store at equal addresses of their own encodings are equal, given both lookups; no hash injectivity or host persistence claim
 
 Resident node identity for `cas-resident-injective` (R13, decisions row 411 (1)). Both nodes reside at their own addresses in the same store. No hash injectivity premise is needed. `Test/Store/NodeContract.lean` consumes this law before the transaction slices.
 
@@ -3258,6 +3091,84 @@ Module: `Effect4.Store.Domain.Store`
   Eq (s.find (Effect4.Store.sha256 n.encode)) (Option.some n) →
     Eq (s.find (Effect4.Store.sha256 m.encode)) (Option.some m) →
       Eq (Effect4.Store.sha256 n.encode) (Effect4.Store.sha256 m.encode) → Eq n m
+```
+
+### object-exact
+
+Reopening a built program's object gives back that program; no host execution or persistence claim
+
+object-exact: every admitted program reopens to itself, including its certificate.
+
+Module: `Effect4.Laws.Api.Object`
+
+```lean
+∀ (b : Effect4.Api.Built), Eq (Effect4.Program.Object.ofBuilt b).open (Except.ok b)
+```
+
+### object-bytes-exact
+
+Accepted object bytes are exactly its store node bytes and have a well-formed value; R13; no migration claim
+
+object-bytes-exact: accepted bytes are exactly the returned object's node encoding.
+
+Module: `Effect4.Laws.Api.Object`
+
+```lean
+∀ {bs : Effect4.Store.Bytes} {o : Effect4.Program.Object},
+  Eq (Effect4.Program.Object.read bs) (Except.ok o) →
+    And (Eq bs o.bytes)
+      (Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_ObjectC.instCanonical.toVal
+          o).WF
+```
+
+### object-load-exact
+
+Saving and loading a built program recovers it when its encoded value is well formed; R13; no host persistence claim
+
+object-load-exact: the saved bytes recover the original admitted program. The composite's retraction, on the composite's domain: every built program, whose object is storable.
+
+Module: `Effect4.Laws.Api.Object`
+
+```lean
+∀ (b : Effect4.Api.Built),
+  (Effect4.Store.ObjectGen.T_95_root_95__46_Effect4_46_Program_46_ObjectC.instCanonical.toVal
+        (Effect4.Program.Object.ofBuilt b)).WF →
+    Eq (Effect4.Program.Object.load (Effect4.Program.Object.ofBuilt b).bytes) (Except.ok b)
+```
+
+### service-view-printed
+
+TypeScript service success is domain service formation and TypeScript's naming conditions; R8; no claim on the refusal reported, no target compiler or host observation claim
+
+The printer's check is formation and naming: the TypeScript profile's check succeeds exactly when the program domain's does and TypeScript's naming conditions hold (`tsNames`). The order the printer reports its refusals in is no part of the claim.
+
+Placement: concept `exact-codecs`, compatibility claim `service-view-printed`, requirement R8. The consumers are `Object.services`, through the printer's compatibility with domain role formation, and the controls of `Test/Codegen/ProgramServices.lean`. This establishes no target execution, method meaning or program admission.
+
+Module: `Effect4.Laws.Codegen.Services`
+
+```lean
+∀ (defs : List Effect4.Program.DefDecl),
+  Iff (Eq (Effect4.Program.serviceFaultIn Effect4.Program.tsProfile defs) Option.none)
+    (And (Eq (Effect4.Program.serviceFaultIn Effect4.Program.anyName defs) Option.none)
+      (Effect4.Program.tsNames defs))
+```
+
+### service-view
+
+When the domain services have no fault, every service has readable entries; no target compiler or host observation claim
+
+A formed block's methods all have their argument types: under the domain's check, the printer's entry reading (`entriesOf`, `src/Effect4/Codegen/Surface.lean`) answers every service.
+
+Placement: concept `exact-codecs`, adequacy claim `service-view`, requirement R8. The hypotheses are domain service-check success and membership in the block's service view. The consumers are service entry readers and the program-domain object view. This establishes no program admission, method meaning, target execution or host behavior.
+
+Module: `Effect4.Laws.Codegen.Services`
+
+```lean
+∀ {defs : List Effect4.Program.DefDecl},
+  Eq (Effect4.Program.serviceFaultIn Effect4.Program.anyName defs) Option.none →
+    ∀ {sv : Effect4.Program.Service},
+      List.instMembership.mem (Effect4.Program.servicesOf defs) sv →
+        Eq (Effect4.Codegen.entriesOf defs sv).isSome Bool.true
 ```
 
 ### program-digest-exact
@@ -3318,7 +3229,7 @@ Module: `Effect4.Program.Formation`
 
 ### subn-refl
 
-Reflexivity of normalized subtyping
+Normalized subtyping is reflexive: every type is below itself
 
 Module: `Effect4.Laws.Program.TypeAlgebra` · Literature: TAPL, §15.2, p. 182 (definitionUsed)
 
@@ -3328,7 +3239,7 @@ Module: `Effect4.Laws.Program.TypeAlgebra` · Literature: TAPL, §15.2, p. 182 (
 
 ### subn-trans
 
-Transitivity of normalized subtyping
+Normalized subtyping is transitive: a type below one below a third is below the third
 
 Module: `Effect4.Laws.Program.TypeAlgebra` · Literature: TAPL, §15.2, p. 182 (proofTechnique)
 
@@ -3352,7 +3263,7 @@ Module: `Effect4.Laws.Program.TypeAlgebra` · Literature: TAPL, §16.3, p. 218 (
 
 ### normalize-idem
 
-Normalization idempotence
+Normalization is idempotent: normalizing a normal type changes nothing
 
 Construction is total; no checked partial constructor is needed.
 
@@ -3364,7 +3275,7 @@ Module: `Effect4.Program.Ty`
 
 ### sub-antisymm-canonical
 
-Antisymmetry of subtyping on canonical representatives CTy
+Subtyping is antisymmetric on canonical types: two canonical types each below the other are equal
 
 Module: `Effect4.Laws.Program.TypeAlgebra` · Literature: Castagna2024, audit P6 (adaptedResult)
 
@@ -3375,7 +3286,7 @@ Module: `Effect4.Laws.Program.TypeAlgebra` · Literature: Castagna2024, audit P6
 
 ### template-match-complete
 
-The match of a template by bounds is complete: on a template that is its own normal form, is admissible and holds no nominal reference, a normal request below some instance has a match, from any seed that the instance agrees with; no premise asks where a parameter first occurs or where never stands; the match is sound by its guard (matchB_sound), its bindings are the least (matchB_least), an argument list is checked at one final list of bindings (matchArgsB_sound), and smaller arguments have a match with smaller bindings (matchArgsB_monotone); every template of the tree is in reach, as a finite check; the row check and a binder term read the match by bounds with no guard (slice UNGUARD); it does not match under a union head or a nominal reference, and it establishes nothing of tsgo's inference (decisions rows 299, 303)
+Matching a template by bounds is complete: for a normal, admissible template with no nominal reference, a normal request below some instance that agrees with the seed has a match; nothing under a union head or nominal reference, nor of tsgo's inference
 
 The match by bounds is complete: a normal request below some instance of the template has a match. The template is normal, admissible and holds no nominal reference. No premise asks where a parameter first occurs, and none asks where `never` stands: `Ty.anchored` and `Ty.bottomFree` (`src/Effect4/Laws/Program/Template.lean`) are not premises.
 
@@ -3396,7 +3307,7 @@ Module: `Effect4.Laws.Program.Bounds`
 
 ### slice-lattice-minimal
 
-For a monotone map from the type slices of one program to a preorder of types: a minimal valid slice exists below each valid slice, the one-pass descent ends at one below its start, a refined query has a minimal slice below a minimal slice of the wider query, and the join of two valid slices is valid for the join of their queries; no statement names Eff, Ty or the checker (decisions rows 282, 286)
+For a monotone map from type slices to a preorder, every valid slice has a minimal one below it, which one-pass descent reaches; refined queries get smaller minimal slices; joins of valid slices are valid for joined queries; nothing about Eff, Ty or the checker
 
 The claim `slice-lattice-minimal`, as one statement: its four parts, for one monotone view. A minimal valid type slice exists below each valid slice (Theorem 4.5). The descent ends at one, below its start. A refined query has a minimal slice below a minimal slice of the wider query (Theorem 4.6). The join of two valid slices is valid for the join of their queries (Theorem 4.7). It is the pointer that the claim's row needs, and it adds nothing to its four parts.
 
@@ -3466,7 +3377,7 @@ Module: `Effect4.Laws.Program.UnionRule`
 
 ### union-rule-extend
 
-A converted eliminator of the checker is the full fallback of its member rule: the member rule's own answer where the member rule answers at the raw target, and the lifted rule over every normalized union member elsewhere; for every UnionRule.Eliminator it agrees with the member rule, it is the lifted rule where the member rule refuses, and it keeps every answer of the earlier guarded rule (Eliminator.extendAll_laws); it answers a least answer at never; its answer a puts the target below C a in Ty.subN, and an answer b is above a exactly when the target is below C b; a retained member that the member rule refuses refuses the whole target; it is monotone at every smaller type (Eliminator.extendAll_mono), and its answer equals the lifted rule's up to the order (Eliminator.extendAll_lift); the fiber, list and exit rules are instances (fiberTy, Checker.listOf?, Checker.exitOf?); the cause rule reads two heads, so it is the full fallback of Member.cause with four member facts of an upper type (causeInputError_upper); the option rule reads the normal form alone, so it is the lifted rule of Member.option, and it is the earlier normalized-head rule where the normal form has at most one member and is not never (optionTy_eq_normal; decisions row 304); the guarded rule's laws stay for their earlier consumers (Eliminator.extend_laws); it does not establish checker-monotone or anything that tsgo accepts (decisions rows 292 to 294, 296, 298 and 304; slice P2b)
+A converted eliminator is the full fallback of its member rule: it gives the member rule's answer where that answers, the lifted rule over normalized union members elsewhere, and keeps the earlier guarded rule's answers; nothing of checker monotonicity or of what tsgo accepts
 
 The full-fallback contract, without a proper-union refusal. Consumer: the fiber classifier reader.
 
@@ -3503,7 +3414,7 @@ Module: `Effect4.Laws.Program.UnionRule`
 
 ### variance-semiring
 
-The variance semiring: Var4, the four parity sets of the signed paths that reach an occurrence (bi, co, contra, inv), with join and composition, is a commutative idempotent semiring with bi as zero and co as one, ordered by inclusion with join as least upper bound; on the declared alphabet's image the walk's composition (Bounds.comp) is its product and the reference's Boolean reading (Ty.Variance.select) is its select (Bounds.comp_toVar4, Ty.Variance.select_toVar4); the polarity of a template's parameter is one fold of the generated TyAlgebra at a reading of the heads (Ty.polarity, HeadReading.sub); it establishes no subtyping fact of Ty (the OpenAI math review, slice VAR-1)
+The four variances (bi, co, contra, inv) with join and composition form a commutative idempotent semiring with bi as zero and co as one, ordered by inclusion; the walk's composition and the Boolean select agree with it; no subtyping fact of Ty
 
 The variance semiring (claim `variance-semiring`): join and composition form a commutative idempotent semiring with `bi` as zero and `co` as one, composition distributes over join, and the order is a preorder whose join is `+`. A step of `instantiate-respects-polarity` (slice VAR-2) and of the row census (slice VAR-3).
 
@@ -3535,7 +3446,7 @@ And (∀ (a b : Effect4.Program.Var4), Eq (instHAdd.hAdd a b) (instHAdd.hAdd b a
 
 ### instantiate-respects-polarity
 
-Instantiation respects polarity: if every parameter's two bindings are related by raw Ty.sub at the parameter's polarity in a template (a bivariant parameter asks nothing, an invariant one both directions), the two instances are related; with matchArgsB_monotone it gives a smaller answer at a smaller request where the answer reads its parameters at co or bi; no semantic variance, nothing of tsgo's inference (slice VAR-2)
+Instantiation respects polarity: if each parameter's two bindings are related by raw Ty.sub at its polarity in the template (nothing for bivariant, both ways for invariant), the two instances are related; no semantic variance, nothing of tsgo's inference
 
 Instantiation respects polarity (claim `instantiate-respects-polarity`, slice VAR-2): if every parameter's two bindings are related by `Ty.sub` at the parameter's polarity in `t` (a bivariant parameter asks nothing, an invariant one both directions), the two instances are related. It is the probe's `eval_respects` at the model of `Ty` (raw `Ty.sub`, each head read at its variance, `HeadReading.sub`). Its consumers are `checker-monotone`'s share at a row (with `Bounds.matchArgsB_monotone`, at an answer that reads its parameters at co or bi) and HO-4's instantiated rows. It establishes no semantic variance and nothing of tsgo's inference.
 
@@ -3572,14 +3483,18 @@ Module: `Effect4.Laws.Program.Typing.Closed`
 
 ## Initial Algebras & Folds
 
-Free syntax objects, catamorphisms, and fold uniqueness. 58 claims: 39 proved, 1 modulo, 18 goal.
+Free syntax objects, catamorphisms, and fold uniqueness. 62 claims: 59 proved, 2 goal, 1 absent.
 
 | Claim | Role | Status | Evidence |
 | --- | --- | --- | --- |
-| `checker-combine-deps` | compatibility | goal | `Effect4.Program.Check.combine_deps` |
+| `checker-combine-deps` | compatibility | proved | `Effect4.Program.Check.combine_deps` |
 | `checker-placed-verdict` | compatibility | proved | `Effect4.Program.Check.run_placed` |
 | `checker-part-extension` | compatibility | proved | `Effect4.Program.Check.run_part_extends` |
 | `checker-explanation-replays` | compatibility | goal | `Effect4.Program.Check.explain_replays` |
+| `handler-fold-root` | fundamentalProperty | proved | `Effect4.Program.handlersOf_defs` |
+| `document-json-fold-retraction` | compatibility | absent | Tools.Document.Json.Document.ofJson_json proves the unrestricted equation. Its existing Lean.Json carrier reaches Classical.choice, so neither the semantic ceiling \[propext, Quot.sound\] nor the proof-plan gate admits it. The theorem remains in tools/Tools/Document/Json.lean; the trust policy is unchanged. |
+| `layer-graph-glue` | compatibility | proved | `Tools.View.LayerGraph.hypergraph_provide` |
+| `layer-graph-merge` | compatibility | proved | `Tools.View.LayerGraph.hypergraph_merge_comm` |
 | `hom-eq-cata-eff` | fundamentalProperty | proved | `Effect4.Program.hom_eq_cata_eff` |
 | `inhabited-iff-fits` | decidability | proved | `Effect4.Program.Typed.inhabited_iff_fits` |
 | `cata-eff-congr-on` | compatibility | proved | `Effect4.Program.cata_eff_congr_on` |
@@ -3615,29 +3530,31 @@ Free syntax objects, catamorphisms, and fold uniqueness. 58 claims: 39 proved, 1
 | `view-reachability-summary-exact` | decidability | proved | `Tools.View.Flow.checkReach_exact` |
 | `references-move` | preservation | proved | `Effect4.Program.references_move` |
 | `source-annotation-agrees` | compatibility | proved | `Effect4.Program.Sketch.sourceAnnotate_eq_sourceTable` |
-| `source-feed-coherent` | preservation | goal | `Effect4.Program.SourceSession.feed_coherent` |
-| `source-feed-edit` | compatibility | goal | `Effect4.Program.SourceSession.feed_keeps` |
-| `source-feed-draft` | compatibility | goal | `Effect4.Program.SourceSession.feed_draft` |
-| `source-feed-keep-exact` | compatibility | goal | `Effect4.Program.SourceSession.feed_keepExact` |
-| `source-feed-root` | compatibility | goal | `Effect4.Program.SourceSession.feed_root` |
-| `source-document-coherent` | preservation | goal | `Effect4.Program.Doc.coherent` |
-| `source-session-draft-transport` | compatibility | goal | `Effect4.Program.SourceSession.replay_drafts_view` |
+| `source-feed-coherent` | preservation | proved | `Effect4.Program.SourceSession.feed_coherent` |
+| `source-feed-edit` | compatibility | proved | `Effect4.Program.SourceSession.feed_keeps` |
+| `source-feed-draft` | compatibility | proved | `Effect4.Program.SourceSession.feed_draft` |
+| `source-feed-keep-exact` | compatibility | proved | `Effect4.Program.SourceSession.feed_keepExact` |
+| `source-feed-root` | compatibility | proved | `Effect4.Program.SourceSession.feed_root` |
+| `source-document-coherent` | preservation | proved | `Effect4.Program.Doc.coherent` |
+| `source-session-draft-transport` | compatibility | proved | `Effect4.Program.SourceSession.replay_drafts_view` |
 | `source-document-replay` | compatibility | proved | `Effect4.Program.Doc.step_replay` |
 | `source-document-atomic` | compatibility | proved | `Effect4.Program.Doc.step_refuses` |
-| `source-document-step` | preservation | goal | `Effect4.Program.Doc.step_coherent` |
-| `source-document-commit` | compatibility | goal | `Effect4.Program.Doc.commit_sound` |
-| `source-document-local-keep` | compatibility | goal | `Effect4.Program.Doc.commit_one_keepExact` |
-| `source-document-single-transport` | compatibility | goal | `Effect4.Program.Doc.commit_single_sound` |
+| `source-document-step` | preservation | proved | `Effect4.Program.Doc.step_coherent` |
+| `source-document-commit` | compatibility | proved | `Effect4.Program.Doc.commit_sound` |
+| `source-document-local-keep` | compatibility | proved | `Effect4.Program.Doc.commit_one_keepExact` |
+| `source-document-single-transport` | compatibility | proved | `Effect4.Program.Doc.commit_single_sound` |
 | `source-document-revert` | compatibility | goal | `Effect4.Program.Doc.revert_program` |
-| `kept-fill-reference` | compatibility | goal | `Effect4.Program.kept_eq_certified` |
-| `pending-fill-construction` | preservation | goal | `Effect4.Program.FillSet.add_wf` |
-| `pending-fill-publication` | compatibility | goal | `Effect4.Program.FillSet.publish_eq_materialize` |
-| `source-session-coherent` | preservation | modulo | `Effect4.Program.SourceSession.reached_view`, modulo `coherent` |
-| `source-session-undo` | compatibility | goal | `Effect4.Program.SourceSession.feed_undo` |
+| `kept-fill-reference` | compatibility | proved | `Effect4.Program.kept_eq_certified` |
+| `pending-fill-construction` | preservation | proved | `Effect4.Program.FillSet.add_wf` |
+| `pending-fill-publication` | compatibility | proved | `Effect4.Program.FillSet.publish_eq_materialize` |
+| `source-session-coherent` | preservation | proved | `Effect4.Program.SourceSession.reached_view` |
+| `source-session-undo` | compatibility | proved | `Effect4.Program.SourceSession.feed_undo` |
 
 ### checker-combine-deps
 
-The combined actual dependency answers equal the complete verdict. This includes source layer projection for every module and part key; no admission, native execution, or progress claim (seams V1, R14)
+Combining the checker's answers for a program's actual dependencies gives its whole verdict, layer projections for every module and part key included; no admission, native execution or progress claim
+
+A key's dependency answers, combined, are its uncached verdict: at a module key, the check through the references and the source table, part by part (`joinModule_deps`); a part key has no dependency and is its own run. So `Checked.ask` answers `run` at every key, and a memo or an oracle behind it changes cost, never an answer. The pointer of `checker-combine-deps`. Reach: every module and part key, refused ones and ill-formed references included. Not established: admission, native execution, progress, or the cost of the parts.
 
 Module: `Effect4.Laws.Program.CheckAgreement`
 
@@ -3652,7 +3569,7 @@ Module: `Effect4.Laws.Program.CheckAgreement`
 
 ### checker-placed-verdict
 
-A part verdict placed at a base equals checking that part at the base, including the complete annotation table; no admission, native execution, or progress claim (seams V1, R14)
+A part's verdict placed at a base equals checking that part at the base, annotation table included; no admission, native execution or progress claim
 
 Module: `Effect4.Laws.Program.CheckAgreement`
 
@@ -3668,7 +3585,7 @@ Module: `Effect4.Laws.Program.CheckAgreement`
 
 ### checker-part-extension
 
-A positive part verdict agrees at an extending signature, including the complete annotation table. Negative and module reuse are excluded; no admission, native execution, or progress claim (seams V1, R14)
+A part that types at signature a, where a extends b, gets the same verdict and annotation table at b; negative verdicts and module reuse are excluded; no admission, native execution or progress claim
 
 Module: `Effect4.Laws.Program.CheckAgreement`
 
@@ -3684,7 +3601,7 @@ Module: `Effect4.Laws.Program.CheckAgreement`
 
 ### checker-explanation-replays
 
-A selected local explanation names an actual dependency with its exact placed refusal. Aggregate failures need no invented part; no admission, native execution, or progress claim (seams V1, R14)
+A selected local explanation names an actual dependency with its exact placed refusal, and an aggregate failure needs no invented part; no admission, native execution or progress claim
 
 Module: `Effect4.Laws.Program.CheckAgreement`
 
@@ -3696,9 +3613,65 @@ Module: `Effect4.Laws.Program.CheckAgreement`
       Effect4.Program.Check.ExplanationReplays input key explanation.refusal
 ```
 
+### handler-fold-root
+
+The handler fold reads a definition block and joins all its children
+
+Concept 7, initial-algebras-folds. Claim handler-fold-root, role fundamental property, R14. Reach: every operation alphabet and root definition block, including all children. Consumer: the handlers relation. This states the fold equation, not clause meaning or host behaviour.
+
+Module: `Effect4.Laws.Program.Handler`
+
+```lean
+∀ {Op : Type} (ds : List Effect4.Program.DefDecl) (bodies : Effect4.Program.Effs Op)
+  (main : Effect4.Program.Eff Op) (layers : Effect4.Program.LayerTerms Op),
+  Eq (Effect4.Program.handlersOf (Effect4.Program.Eff.defs ds bodies main layers))
+    (instHAppendOfAppend.hAppend
+      (List.filterMap (Effect4.Program.Handler.ofService ds) (Effect4.Program.servicesOf ds))
+      (instHAppendOfAppend.hAppend
+        (instHAppendOfAppend.hAppend
+          (Effect4.Program.cata_effs Effect4.Program.handlerAlgebra bodies)
+          (Effect4.Program.handlersOf main))
+        (Effect4.Program.cata_layers Effect4.Program.handlerAlgebra layers)))
+```
+
+### document-json-fold-retraction
+
+The JSON fold's reader retracts its writer with no restriction, within the semantic axiom ceiling
+
+### layer-graph-glue
+
+The named incidence graph of provide is the overlay of its operands' graphs, for every layer and atom algebra; no boundary hiding or execution claim
+
+G1: providing overlays the incidence graphs, without an extra gluing traversal. Placement: `layer-graph-glue`, concept `initial-algebras-folds`, R14. The consumer is the view-graph battery's incidence reader.
+
+Module: `Tools.View.LayerGraph`
+
+```lean
+∀ {Op α : Type} (atoms : Effect4.Program.EffAlgebra Op fun x => Tools.View.AGraph α)
+  (self that : Effect4.Program.LayerTerm Op),
+  Eq (Tools.View.LayerGraph.hypergraph atoms (self.provide that))
+    ((Tools.View.LayerGraph.hypergraph atoms self).overlay
+      (Tools.View.LayerGraph.hypergraph atoms that))
+```
+
+### layer-graph-merge
+
+Swapping merge's operands keeps the named incidence graph's edge set, for every layer and atom algebra; nothing of positional syntax, construction order or last-wins evaluation
+
+G2: exchanging merged layers keeps the vertices and edges of this observation. Placement: `layer-graph-merge`, concept `initial-algebras-folds`, R14. The consumer is the view-graph battery's incidence reader. The statement does not identify ordered evaluation or address-keyed syntax.
+
+Module: `Tools.View.LayerGraph`
+
+```lean
+∀ {Op α : Type} (atoms : Effect4.Program.EffAlgebra Op fun x => Tools.View.AGraph α)
+  (left right : Effect4.Program.LayerTerm Op),
+  Eq (Tools.View.LayerGraph.hypergraph atoms (left.merge right)).denote
+    (Tools.View.LayerGraph.hypergraph atoms (right.merge left)).denote
+```
+
 ### hom-eq-cata-eff
 
-Pointwise equality of algebra homomorphisms with cata_eff
+Every algebra homomorphism out of Eff equals cata_eff at every node
 
 Module: `Effect4.Program.Fold` · Literature: MeijerFokkingaPaterson1991, audit P24 (definitionUsed) · Literature: Gibbons2002, audit P12 (proofTechnique)
 
@@ -3724,7 +3697,7 @@ Module: `Effect4.Laws.Program.Typed.Membership` · Literature: TAPL, §16.1, p. 
 
 ### cata-eff-congr-on
 
-Fold congruence along agreeing signature algebras
+Two signature algebras that agree on what a program reads give the same fold on that program
 
 Fold congruence at `Eff`.
 
@@ -3758,7 +3731,7 @@ Module: `Effect4.Laws.Program.References`
 
 ### address-composes
 
-An address is a composite of child lenses: the node and the environment at p ++ q are the ones at q inside the node at p (Node.at_append, Node.envAt_append), and an edit at p ++ q is the edit at q inside the node at p, put back at p (Node.replaceAt_append); below an edit the edited node reads the replacement; nothing of typing, of behaviour, or of a moved subtree's variable levels and layer-reference targets (seat ORG's theory map, section 3)
+An address composes from child lenses: the node, environment and edit at p ++ q are those at q inside the node at p; nothing of typing, behaviour, or a moved subtree's variable levels and layer-reference targets
 
 An edit at `p ++ q` is the edit at `q` inside the node at `p`, put back at `p`. The pointer of `address-composes`. No proof consumes it yet: the splice over a whole program's parts reads a block's two children directly (`Node.replaceAt_defs_main`, `Node.replaceAt_defs_body`). A move or a paste of a subtree is its first consumer.
 
@@ -3772,7 +3745,7 @@ Module: `Effect4.Laws.Program.Address`
 
 ### path-fold-natural
 
-A path fold is natural in its base: the fold from q ++ r is the fold from r with each yield read below q (foldMapAt_eff_base and six siblings), and a map that keeps the operation commutes with the fold (foldMapAt_eff_hom); the address list's shift is their instance; nothing of a judgment, a table, or a refusal's location, which the checker's base law owns (checker-base-natural; seat ORG's L5 and L6)
+A path fold is natural in its base: folding from q ++ r is folding from r with each yield read below q, and an operation-keeping map commutes with the fold; nothing of judgments, tables or refusal locations
 
 A path fold from `q ++ r` is the fold from `r`, each yield read below `q`. At a program. The pointer of `path-fold-natural`.
 
@@ -3798,7 +3771,7 @@ Module: `Effect4.Laws.Program.Address`
 
 ### checker-base-natural
 
-The checker is natural in its base path: checking at q ++ p is checking at p with each refusal moved below q (Checker.check_rebase and its six siblings), so a subtree's table at q ++ a is its table at a with each entry moved below q (tableAt_rebase); nothing of the verdict's correctness (check_sound), of a definition block's module check, or of cost (seat ORG's L7 and L8)
+The checker is natural in its base path: checking at q ++ p is checking at p with each refusal moved below q, so subtree tables shift the same way; nothing of the verdict's correctness, a definition block's module check, or cost
 
 The checker at `q ++ p` is the checker at `p`, its refusal moved below `q`. The pointer of `checker-base-natural`.
 
@@ -3830,7 +3803,7 @@ Module: `Effect4.Laws.Program.Authoring`
 
 ### reference-expansion-complete
 
-A program with well-formed layer references expands to a program with no reference site, at the bound of expandRefs
+A program with well-formed layer references expands, at the bound of expandRefs, to a program with no reference site
 
 A well-formed program expands to a program with no reference site, at the bound that `Eff.expandRefs` uses: one more round than the program has reference sites. The case of no reference site is the same statement, at one round.
 
@@ -4036,7 +4009,7 @@ Module: `Effect4.Laws.Program.Typing.Table`
 
 ### edit-splices-table
 
-An edit that keeps its focus's type splices the address table: in a program that the checker types, replace the sub-program at the address that focusAt answers by a program of the focus's type in the focus's environment; the edited program's table is the old table with the subtree's segment replaced by the new sub-program's table at the focus's environment and the subtree's own addresses (Table.splice), so nothing outside the subtree is checked again; nothing of an edit that changes the type, of layer references, of a refused program, or of a whole program with a block (cutover slice S1; Reps, Teitelbaum and Demers 1983; decisions rows 302 and 334)
+In a typed program, replacing the focus by a program of its type in its environment splices the address table: only the subtree's segment changes; nothing of type-changing edits, layer references, refused programs or programs with a block
 
 An edit that keeps its focus's type splices the address table (the claim `edit-splices-table`). In a program that the checker types, take the focus that `focusAt` answers at an address. Replace the sub-program there by a program of the focus's type in the focus's environment. The edited program's table is the old table with the subtree at the address replaced by the new sub-program's table, at the focus's environment and at the subtree's own addresses. Nothing outside the subtree is checked again.
 
@@ -4118,7 +4091,7 @@ Module: `Effect4.Laws.Program.Edit`
 
 ### module-address-table
 
-The address table of a sketch reads a whole program, definition block included: the root's entry holds the module check's answer, and every other address is read in the part that holds it, at the part's signature and environment, located at the whole program's address; the distinct refusals start with the sketch's check's refusal (Sketch.refusals_head), and the list is empty exactly when the sketch checks; every part of a typed module is typed (moduleHasTy_partAt_typed); no law orders the refusals after the head, and no law yet equates the table with the program's off a block (cutover slice S1; decisions rows 302, 328 and 333)
+A sketch's refusal list is empty exactly when the sketch checks, and its address table reads each address in its own part, block included; no order of refusals after the head, and no equation with the program's table off a block
 
 The list of refusals of a sketch is empty exactly when the sketch checks, block included: the proposed claim `module-address-table`. Its consumer is the edit session's view (`EditSession.view_refusals`).
 
@@ -4290,7 +4263,7 @@ Module: `Effect4.Laws.Program.Typing.Table`
 
 ### fold-cache-local-agreement
 
-Every answer that accepted entries of a type-fold cache hold is cata_ty of the same layer at its own source type: check accepts entries whose children stand in earlier entries and whose answers meet the layer's local equation over the generated view, so payloads, names, flags and child order are part of each equation; check accepts the entries that prepare builds at every type, so answer returns the fold at every type (answer_eq); nothing of speed, of reuse after an edit, of a typing judgment, or of an input the layer inherits (slice D6, serving R14)
+Every answer a checked type-fold cache holds is cata_ty of the same layer at its source type, and prepared caches check, so lookup gives the fold at every type; nothing of speed, reuse after an edit, typing, or inherited inputs
 
 Local agreement: every answer that accepted entries hold is `cata_ty` of the same layer at its own source. The pointer of the claim `fold-cache-local-agreement`. Its consumers are `CheckedCache.query_agrees`, `answer_agrees` and slice D6's memoized folds. It says nothing of a type that no entry holds, and nothing of speed.
 
@@ -4339,7 +4312,7 @@ Module: `Tools.View.FlowReach`
 
 ### references-move
 
-A subtree whose layer references stay inside it keeps every reference well formed when it is pasted with Node.rebaseRefs, at an address below the root, outside the module's layers and in one scope; nothing of typing, of references that leave the subtree, of variable levels or row positions, or of any run (decisions row 336 (6); seat ORG's L9)
+Pasting a subtree whose layer references stay inside it, with rebased references, below the root, outside the module's layers and within one scope, keeps every layer reference well formed; nothing of typing, escaping references, variable levels, row positions or runs
 
 A subtree whose references stay inside it, pasted with its references moved, keeps every reference well formed (the proposed claim `references-move`; seat ORG's L9; decisions row 336 (6)).
 
@@ -4392,7 +4365,9 @@ Module: `Effect4.Laws.Program.SourceTable`
 
 ### source-feed-coherent
 
-A successful feed preserves the source table under initial coherence and the selected policy; no admission, progress, or native execution claim (seams S1, R14)
+A successful feed under any policy keeps a coherent source table coherent; no admission, native execution or progress claim
+
+An accepted feed keeps a coherent session coherent. The pointer of `source-feed-coherent`. A recheck holds the module check's table, which is the candidate's source table (`recheck_coherent`). A splice stands where `canSplice` holds at a typed root, so the candidate holds no ill-formed reference and the expansion moved only at the address, and there the splice gives the candidate's source table (`splice_coherent`). Two earlier feeds refuted it: the splice of a candidate holding an ill-formed reference, and a kept-exact splice at a refused root that an omission's hole row makes typed (`git:d048b9a1b`, `feed_coherent_refuted`; `git:76a71a03e`, `keep_omit_refused`). Not established: the cost. Consumers: `Doc.coherent`, `feed_draft` and `feed_undo`.
 
 Module: `Effect4.Laws.Program.SourceTable`
 
@@ -4408,7 +4383,9 @@ Module: `Effect4.Laws.Program.SourceTable`
 
 ### source-feed-edit
 
-A successful feed retains the application and exact edit; an invalid edit retains the source, and a valid edit returns its candidate; no admission, progress, or native execution claim (seams S1, R14)
+A successful feed keeps the application and records the exact edit; an invalid edit keeps the source, and a valid edit gives its candidate; no admission, native execution or progress claim
+
+An accepted feed keeps the application and the edit, leaves the session where the edit does not apply, and holds the edited sketch where it does. Read off `feed_ok_cases`. The pointer of `source-feed-edit`.
 
 Module: `Effect4.Laws.Program.SourceTable`
 
@@ -4427,9 +4404,9 @@ Module: `Effect4.Laws.Program.SourceTable`
 
 ### source-feed-draft
 
-Every draft from a coherent source agrees with the existing expanded edit observation and exact source projection; no admission, progress, or native execution claim (seams S1, R14)
+From a coherent source with no reference fault, a draft feed of any edit whose candidate has none succeeds and agrees with the expanded edit's observation projected to the source; no admission, native execution or progress claim
 
-Exact old feedStep observations through the existing expansion edit engine. The expression uses EditSession.feed as its reference; it defines no second edit interpreter. Reach: coherent source sessions, every edit, and certified oracles. Consumer: replay_drafts_view and transport of source-session-coherent. R14.
+A draft from a coherent session whose sketch and candidate hold no ill-formed reference is the expansion's edit session, shown at the source's addresses. `EditSession.feed` is the reference, and no second edit interpreter is defined. The draft splices exactly where the reference splices (`draft_conditions_of_reference`, `draft_reference_spliced`), and both tables are coherent (`feed_coherent`, `reference_table`). The pointer of `source-feed-draft`. Reach: coherent sessions, every edit, certified oracles. The first form had no premise on ill-formed references and is false: on a sketch with one the draft refuses to splice, since its root is refused, while the expansion's edit session splices (`FeedCounterexample.feed_draft_refuted`). Not established: the cost. Consumers: `replay_drafts_view` and the transport of `source-session-coherent`.
 
 Module: `Effect4.Laws.Program.SourceTable`
 
@@ -4437,49 +4414,58 @@ Module: `Effect4.Laws.Program.SourceTable`
 ∀ (o : Effect4.Program.Check.Oracle) (s : Effect4.Program.SourceSession),
   s.Coherent →
     ∀ (e : Effect4.Program.Edit),
-      Exists fun next =>
-        Exists fun step =>
-          And
-            (Eq (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft s e).value
-              (Except.ok { fst := next, snd := step }))
-            (And (Eq step.edit e)
-              (And
-                (Eq step.replaced
-                  (Effect4.Program.SourceSession.feed_draft.match_1
-                    (fun x => Option Effect4.Program.NativeEff)
-                    ((Effect4.Program.Node.eff s.sketch.program).at_ e.path)
-                    (fun old => Option.some old) fun x => Option.none))
-                (Effect4.Program.SourceSession.feed_draft.match_5 (fun x => Prop)
-                  (s.sketch.edit s.app e)
-                  (fun _ => And (Eq next s) (Eq step.delta Effect4.Program.Edit.Delta.unchanged))
-                  fun candidate =>
-                  And (Eq next.app s.app)
-                    (And (Eq next.sketch candidate)
-                      (have expanded := Effect4.Program.EditSession.open s.app s.sketch.expand;
-                      have reference :=
-                        Effect4.Program.SourceSession.feed_draft.match_7
-                          (fun x => Prod Effect4.Program.EditSession Effect4.Program.Edit.Delta)
-                          (Effect4.Program.Edit.expanded candidate.expand e)
-                          (fun edit =>
-                            ite (Eq (s.expandedEditAgrees candidate e) Bool.true)
-                              (expanded.feed edit)
+      Eq (Effect4.Program.Eff.firstRefFault s.sketch.program) Option.none →
+        (∀ (c : Effect4.Program.Sketch),
+            Eq (s.sketch.edit s.app e) (Option.some c) →
+              Eq (Effect4.Program.Eff.firstRefFault c.program) Option.none) →
+          Exists fun next =>
+            Exists fun step =>
+              And
+                (Eq
+                  (Effect4.Program.SourceSession.feed o Effect4.Program.FeedPolicy.draft s e).value
+                  (Except.ok { fst := next, snd := step }))
+                (And (Eq step.edit e)
+                  (And
+                    (Eq step.replaced
+                      (Effect4.Program.SourceSession.feed_draft.match_1
+                        (fun x => Option Effect4.Program.NativeEff)
+                        ((Effect4.Program.Node.eff s.sketch.program).at_ e.path)
+                        (fun old => Option.some old) fun x => Option.none))
+                    (Effect4.Program.SourceSession.feed_draft.match_5 (fun x => Prop)
+                      (s.sketch.edit s.app e)
+                      (fun _ =>
+                        And (Eq next s) (Eq step.delta Effect4.Program.Edit.Delta.unchanged))
+                      fun candidate =>
+                      And (Eq next.app s.app)
+                        (And (Eq next.sketch candidate)
+                          (have expanded := Effect4.Program.EditSession.open s.app s.sketch.expand;
+                          have reference :=
+                            Effect4.Program.SourceSession.feed_draft.match_7
+                              (fun x => Prod Effect4.Program.EditSession Effect4.Program.Edit.Delta)
+                              (Effect4.Program.Edit.expanded candidate.expand e)
+                              (fun edit =>
+                                ite (Eq (s.expandedEditAgrees candidate e) Bool.true)
+                                  (expanded.feed edit)
+                                  { fst := Effect4.Program.EditSession.open s.app candidate.expand,
+                                    snd := Effect4.Program.Edit.Delta.rechecked })
+                              fun _ =>
                               { fst := Effect4.Program.EditSession.open s.app candidate.expand,
-                                snd := Effect4.Program.Edit.Delta.rechecked })
-                          fun _ =>
-                          { fst := Effect4.Program.EditSession.open s.app candidate.expand,
-                            snd := Effect4.Program.Edit.Delta.rechecked };
-                      And
-                        (Eq next.table
-                          (Effect4.Program.Table.atSource candidate.sites
-                            (Effect4.Program.Eff.firstRefFault candidate.program)
-                            reference.fst.table))
-                        (Eq step.delta
-                          (Effect4.Program.Edit.Delta.atSource candidate.sites reference.snd)))))))
+                                snd := Effect4.Program.Edit.Delta.rechecked };
+                          And
+                            (Eq next.table
+                              (Effect4.Program.Table.atSource candidate.sites
+                                (Effect4.Program.Eff.firstRefFault candidate.program)
+                                reference.fst.table))
+                            (Eq step.delta
+                              (Effect4.Program.Edit.Delta.atSource candidate.sites
+                                reference.snd)))))))
 ```
 
 ### source-feed-keep-exact
 
-A successful nonroot keepExact feed retains root and local types, using the exact whole-expansion guard for splice or recheck; no admission, progress, or native execution claim (seams S1, R14)
+A successful keepExact feed of a non-root edit from a coherent source keeps the root type and the type at the edited address, splicing where the whole-expansion guard allows and rechecking elsewhere; no admission, native execution or progress claim
+
+A kept-exact feed below the root keeps the root's and the address's types, and splices exactly where `canSplice` holds. The pointer of `source-feed-keep-exact`. A splice stands at a typed root: it keeps the root entry first, and its new segment starts with the part's own entry at the focus's type. A recheck is checked by `finish`, which refuses at a refused root. Two earlier forms were false: a splice shows every address of the new subtree, not `[e.path]` alone (`FeedCounterexample.feed_keepExact_delta_refuted`), and the splice of a candidate holding an ill-formed reference lost the edited address's entry (`git:d048b9a1b`, `feed_keepExact_refuted`). Which addresses a splice shows, the next source program's addresses below the path, is a finite evaluation (`Test/Program/SourceFeedControls.lean`), not part of this law. Consumers: the document's commit laws and fill certification.
 
 Module: `Effect4.Laws.Program.SourceTable`
 
@@ -4495,17 +4481,17 @@ Module: `Effect4.Laws.Program.SourceTable`
             (Eq (Effect4.Program.Table.typedAt next.table e.path)
               (Effect4.Program.Table.typedAt s.table e.path))
             (And
-              (Eq (s.expandedEditAgrees next.sketch e) Bool.true →
-                Eq step.delta (Effect4.Program.Edit.Delta.spliced (List.cons e.path List.nil)))
-              (Eq (s.expandedEditAgrees next.sketch e) Bool.false →
+              (Eq (s.canSplice next.sketch e) Bool.true →
+                Exists fun shown => Eq step.delta (Effect4.Program.Edit.Delta.spliced shown))
+              (Eq (s.canSplice next.sketch e) Bool.false →
                 Eq step.delta Effect4.Program.Edit.Delta.rechecked)))
 ```
 
 ### source-feed-root
 
-Every root edit with a candidate equals the entire checked module recheck, including actual dependency answers; no admission, progress, or native execution claim (seams S1, R14)
+Feeding a root edit that has a candidate is the full checked recheck of the module, actual dependency answers included; no admission, native execution or progress claim
 
-The root feed is exactly the module recheck route, including its actual part trace.
+The root feed is exactly the module recheck route, including its actual part trace: the root holds the whole program, and every policy asks the module key there. The pointer of `source-feed-root`.
 
 Module: `Effect4.Laws.Program.SourceTable`
 
@@ -4521,9 +4507,9 @@ Module: `Effect4.Laws.Program.SourceTable`
 
 ### source-document-coherent
 
-Every sealed document has its exact source table, without a separate coherence premise; no admission, progress, or native execution claim (seams S1, R14)
+Every sealed document's session is coherent with its exact source table, with no separate coherence premise; no admission, native execution or progress claim
 
-Placement: initial-algebras-folds; source-session-coherent's reachable-state obligation, R14. The sealed replay witnesses every accepted action history, including revert. Consumer: SourceSession.reached_view. This establishes no admission or progress claim.
+Every sealed document's session is coherent: its runtime state is a replay of its history (`Doc.replayedState`), and every replayed state is coherent. The pointer of `source-document-coherent`. It rests on `SourceSession.feed_coherent`. Placement: initial-algebras-folds; source-session-coherent's reachable-state obligation, R14. Consumer: `SourceSession.reached_view`. This establishes no admission or progress claim.
 
 Module: `Effect4.Laws.Program.SourceTable`
 
@@ -4533,9 +4519,9 @@ Module: `Effect4.Laws.Program.SourceTable`
 
 ### source-session-draft-transport
 
-Every old application, sketch, and edit list has canonical draft replay with the exact edited sketch, source table, refusals, and root observation; no admission, progress, or native execution claim (seams S1, R14)
+For every application, sketch and edit list, replaying the edits as drafts succeeds with the exactly edited sketch and its source table, refusals and root type; no admission, native execution or progress claim
 
-The old draft-list reach, stated through the sole document replay. Placement: source-session-coherent, initial-algebras-folds, R14. This retains every old application, initial sketch, and edit list without a coherence premise. Consumer: the draft case of Doc.coherent and transport of the old reached_view observation. It establishes no admission, progress, or native behavior.
+The old draft-list reach, stated through the sole document replay. Placement: source-session-coherent, initial-algebras-folds, R14. This retains every old application, initial sketch, and edit list without a coherence premise. Consumer: the draft case of Doc.coherent and transport of the old reached_view observation. It establishes no admission, progress, or native behavior. It rests on `feed_coherent`. Its counterexample at the earlier feed (`git:d048b9a1b`, `replay_drafts_view_refuted`) no longer holds: `canSplice` refuses that splice.
 
 Module: `Effect4.Laws.Program.SourceTable`
 
@@ -4557,7 +4543,7 @@ Module: `Effect4.Laws.Program.SourceTable`
 
 ### source-document-replay
 
-Appending an action replays through the same interpreter and exact history ledger; no admission, progress, or native execution claim (seams S1, R14)
+Replaying a history with one action appended runs that action through the same interpreter on the replayed history's state; no admission, native execution or progress claim
 
 Module: `Effect4.Laws.Program.SourceDocument`
 
@@ -4574,7 +4560,7 @@ Module: `Effect4.Laws.Program.SourceDocument`
 
 ### source-document-atomic
 
-A refused step offers no replacement document, so the caller retains the original document; no admission, progress, or native execution claim (seams S1, R14)
+A refused step offers no replacement document, so the caller keeps the original; no admission, native execution or progress claim
 
 Module: `Effect4.Laws.Program.SourceDocument`
 
@@ -4587,7 +4573,9 @@ Module: `Effect4.Laws.Program.SourceDocument`
 
 ### source-document-step
 
-A successful step from a coherent document retains its origin and application, appends one action, and remains coherent; no admission, progress, or native execution claim (seams S1, R14)
+A successful step from a coherent document keeps its origin and application, appends one action to its history, and stays coherent; no admission, native execution or progress claim
+
+A successful step from a coherent document keeps its origin and application, appends one action, and stays coherent. The pointer of `source-document-step`. It rests on `SourceSession.feed_coherent`.
 
 Module: `Effect4.Laws.Program.SourceDocument`
 
@@ -4605,9 +4593,9 @@ Module: `Effect4.Laws.Program.SourceDocument`
 
 ### source-document-commit
 
-A successful keepExact or recheck commit is positive, with initial positivity required for keepExact; no admission, progress, or native execution claim (seams S1, R14)
+A successful keepExact or recheck commit from a coherent document gives a positive root type, and keepExact needs and keeps an initially positive root; no admission, native execution or progress claim
 
-Corrected old commit observation: keepExact needs an initially positive root.
+A successful keepExact or recheck commit is positive, with initial positivity required for keepExact: a kept-exact batch keeps the root's type, and a recheck batch ends in a typed recheck. The pointer of `source-document-commit`. It rests on `SourceSession.feed_coherent`.
 
 Module: `Effect4.Laws.Program.SourceDocument`
 
@@ -4635,9 +4623,9 @@ Module: `Effect4.Laws.Program.SourceDocument`
 
 ### source-document-local-keep
 
-A successful single nonroot kept change retains the exact root and local observations, including an initially refused root; no admission, progress, or native execution claim (seams S1, R14)
+A successful keepExact commit of one change at a non-root place keeps the root type and the type at that place, even when the root was refused; no admission, native execution or progress claim
 
-A single kept edit retains both exact observations, including an initially refused root.
+A single kept edit retains both exact observations. The pointer of `source-document-local-keep`. It rests on `SourceSession.feed_keepExact`. A kept edit at a refused root is refused, so the root it keeps is typed.
 
 Module: `Effect4.Laws.Program.SourceDocument`
 
@@ -4662,9 +4650,9 @@ Module: `Effect4.Laws.Program.SourceDocument`
 
 ### source-document-single-transport
 
-The old single-edit observation holds under its exact replacement and initial positive-root premise for keepExact; no admission, progress, or native execution claim (seams S1, R14)
+A successful keepExact or recheck commit of one change at a path gives the old single-edit observation through its exact replacement edit, keepExact requiring an initially positive root; no admission, native execution or progress claim
 
-The old single-edit observations, with the required initial positive-root premise.
+The old single-edit observations, with the required initial positive-root premise. The pointer of `source-document-single-transport`. It rests on `SourceSession.feed_coherent` and `SourceSession.feed_keepExact`.
 
 Module: `Effect4.Laws.Program.SourceDocument`
 
@@ -4706,7 +4694,7 @@ Module: `Effect4.Laws.Program.SourceDocument`
 
 ### source-document-revert
 
-An accepted action and its immediate selected-entry revert restore the prior program and retain appended hole rows; no admission, progress, or native execution claim (seams S1, R14)
+An accepted action followed at once by a revert of its selected entry restores the prior program and keeps the appended hole rows; no admission, native execution or progress claim
 
 An entry's immediate revert restores its prior program and retains appended hole rows.
 
@@ -4729,24 +4717,29 @@ Module: `Effect4.Laws.Program.SourceDocument`
 
 ### kept-fill-reference
 
-For coherent sources at nonroot addresses, keepExact acceptance equals old certification when both base and filling have no references; no admission, progress, or native execution claim (seams S2, R14)
+For a coherent source with a typed root, at a non-root address, keepExact certification of a fill equals the old certification when neither base nor filling has references; no admission, native execution or progress claim
+
+On a coherent session with no layer reference, the kept-exact feed accepts a reference-free filling below the root exactly where the retired certification does. The feed reads the focus off the table, which is the sketch's (coherence), and checks the filling as a part, which is the check at the address moved to its own root (`Checker.check_rebase`); the expansion moves only at the address, so the feed splices. The pointer of `kept-fill-reference`. It needs a typed root: a kept-exact feed at a refused root refuses, while the retired certification reads only the focus. Not established: fillings or bases with layer references, omissions, or the root.
 
 Module: `Effect4.Laws.Program.FillSet`
 
 ```lean
 ∀ (s : Effect4.Program.SourceSession),
   s.Coherent →
-    ∀ (p : List Nat) (q : Effect4.Program.NativeEff),
-      Ne p List.nil →
-        Eq (Effect4.Program.Eff.refSites List.nil s.sketch.program) List.nil →
-          Eq (Effect4.Program.Eff.refSites List.nil q) List.nil →
-            Iff (Effect4.Program.FeedCertified s { fst := p, snd := q })
-              (Eq (Effect4.Program.FillReference.certifiedB s.sketch s.app p q) Bool.true)
+    Eq s.view.type.isSome Bool.true →
+      ∀ (p : List Nat) (q : Effect4.Program.NativeEff),
+        Ne p List.nil →
+          Eq (Effect4.Program.Eff.refSites List.nil s.sketch.program) List.nil →
+            Eq (Effect4.Program.Eff.refSites List.nil q) List.nil →
+              Iff (Effect4.Program.FeedCertified s { fst := p, snd := q })
+                (Eq (Effect4.Program.FillReference.certifiedB s.sketch s.app p q) Bool.true)
 ```
 
 ### pending-fill-construction
 
-Every sealed pending set has conflict-free, incomparable entries certified by the anchor's keepExact feed; no admission, progress, or native execution claim (seams S2, R14)
+Every sealed pending fill set has conflict-free, incomparable entries, each certified by the anchor's keepExact feed; no admission, native execution or progress claim
+
+Every set that `add` answers is well formed: conflict-free, its distinct addresses incomparable, each entry accepted by the anchor's kept-exact feed. The pointer of `pending-fill-construction`.
 
 Module: `Effect4.Laws.Program.FillSet`
 
@@ -4758,7 +4751,9 @@ Module: `Effect4.Laws.Program.FillSet`
 
 ### pending-fill-publication
 
-A successful publication agrees with old materialization at its exact coherent anchor, under positive-base and reference-free premises; no admission, progress, or native execution claim (seams S2, R14)
+A successful publication stepped at its coherent anchor, with a positive reference-free base and reference-free entries, gives the sketch the old materialization gives; no admission, native execution or progress claim
+
+A successful publication agrees with the retired materialization at its exact coherent anchor, under a positive base and no layer reference: every entry is certified against the base (`kept_eq_certified`), so the materializer accepts the set in the base's order (`materialize_refFree`, D9), and the publication's batch applies the same fills in the same order (`batch_keepExact_fills`). The pointer of `pending-fill-publication`. Not established: layer references, omissions, or a moved document, which the step refuses `stale`.
 
 Module: `Effect4.Laws.Program.FillSet`
 
@@ -4783,7 +4778,7 @@ Module: `Effect4.Laws.Program.FillSet`
 
 ### source-session-coherent
 
-Every sealed document shows its exact source table, refusals, and root type without a separate coherence premise; source-session-draft-transport retains the old application, sketch, and edit-list scope; no native execution, progress, or cost claim (seams S1, R14)
+Every sealed document shows its exact source table, refusals and root type, with no separate coherence premise; no native execution, progress or cost claim
 
 Every sealed document exposes the exact source table, refusals, and root observation.
 
@@ -4799,6 +4794,8 @@ Module: `Effect4.Laws.Program.SourceTable`
 ### source-session-undo
 
 An edit of a sketch as written, then the edit that puts back the old sub-program, restores a coherent source session exactly; nothing of undoing a run (decisions row 373 (7))
+
+Undo: an edit that applies, then the draft that puts back the old sub-program as written, restores a coherent session exactly. The path lens's get-put (`replaceAt_spec`) restores the sketch, a draft is never refused, and coherence fixes the table (`Coherent.ext`). The pointer of `source-session-undo`. It rests on `feed_coherent`. Its counterexample at the earlier feed, a candidate holding an ill-formed reference (`git:d048b9a1b`, `feed_undo_refuted`), no longer holds: `canSplice` refuses that splice.
 
 Module: `Effect4.Laws.Program.SourceTable`
 
@@ -4823,10 +4820,12 @@ Module: `Effect4.Laws.Program.SourceTable`
 
 ## Context Requirements
 
-Graded coeffects, requirement rows, and layer discharge. 8 claims: 8 proved.
+Graded coeffects, requirement rows, and layer discharge. 10 claims: 10 proved.
 
 | Claim | Role | Status | Evidence |
 | --- | --- | --- | --- |
+| `layer-provide-assoc-conditional` | compatibility | proved | `Effect4.Program.provide_assoc_conditional` |
+| `layer-provide-tensor-interchange` | compatibility | proved | `Effect4.Program.provide_tensor_interchange` |
 | `satisfies-empty` | compatibility | proved | `Effect4.Machine.Env.Context.satisfies_empty` |
 | `satisfies-single` | inversion | proved | `Effect4.Machine.Env.Context.satisfies_single` |
 | `satisfies-union` | compatibility | proved | `Effect4.Machine.Env.Context.satisfies_union` |
@@ -4835,6 +4834,39 @@ Graded coeffects, requirement rows, and layer discharge. 8 claims: 8 proved.
 | `provide-discharges` | preservation | proved | `Effect4.Program.Provision.LayerTy.provide_discharges` |
 | `provide-closed` | fundamentalProperty | proved | `Effect4.Program.Provision.LayerTy.provide_closed` |
 | `build-total` | progress | proved | `Effect4.Program.Provision.build_total` |
+
+### layer-provide-assoc-conditional
+
+Provide associates when keys read from the inner layer remain provided by the middle or required by the inner
+
+Concept 8, context-requirements. Claim layer-provide-assoc-conditional, role compatibility, R4. Reach: each key read by the outer layer and supplied by the inner layer remains visible through the middle layer or remains required by the inner layer. The owner approves this condition after the brief's condition fails on one key. Consumer: handler layer composition. This compares layer types. It states no build, sharing or host execution law.
+
+Module: `Effect4.Laws.Program.Handler`
+
+```lean
+∀ (a b c : Effect4.Program.LayerTy),
+  (∀ (k : Effect4.ServiceKey),
+      Effect4.Row.instMembership.mem a.requires k →
+        Effect4.Row.instMembership.mem c.out k →
+          Or (Effect4.Row.instMembership.mem b.out k)
+            (Effect4.Row.instMembership.mem c.requires k)) →
+    Eq ((a.provide b).provide c) (a.provide (b.provide c))
+```
+
+### layer-provide-tensor-interchange
+
+Provide interchanges with merge when each upper layer requires only keys its own lower layer gives: (a merge b) provide (c merge d) is (a provide c) merge (b provide d)
+
+Concept 8, context-requirements. Claim layer-provide-tensor-interchange, role compatibility, R4. Reach: each upper layer requires only keys provided by its own lower layer. Consumer: composition of handler layer types. This states no build or host execution law. The side conditions exclude requirements supplied only by the other lower layer.
+
+Module: `Effect4.Laws.Program.Handler`
+
+```lean
+∀ (a b c d : Effect4.Program.LayerTy),
+  Effect4.Row.Subset a.requires c.out →
+    Effect4.Row.Subset b.requires d.out →
+      Eq ((a.merge b).provide (c.merge d)) ((a.provide c).merge (b.provide d))
+```
 
 ### satisfies-empty
 
@@ -4865,7 +4897,7 @@ Module: `Effect4.Machine.Context`
 
 ### satisfies-union
 
-Union requirement satisfaction splits across components
+A context satisfies a union of requirements exactly when it satisfies each part
 
 Law 9 (satisfaction, union): iff both rows are satisfied.
 
@@ -4929,7 +4961,7 @@ Module: `Effect4.Laws.Codegen.Checked`
 
 ### provide-discharges
 
-Providing a layer discharges its output services from requirement rows
+Providing a layer removes from the requirement row every key the layer outputs and does not itself require
 
 A requirement of the dependent that the dependency provides is discharged.
 
@@ -4944,7 +4976,7 @@ Module: `Effect4.Program.Provision` · Literature: Leijen2014, audit P22 (adapte
 
 ### provide-closed
 
-A closed dependency layer that covers all requirements yields a closed program
+Providing a closed layer whose outputs cover every requirement gives a closed result
 
 The closure theorem. A dependency that is itself closed and provides everything the dependent needs closes the dependent: `Layer<ROut, E, never>`. This is the sentence `Effect.provide(program, layer)` type-checks by, and the sentence a deployment is checked by.
 
@@ -4977,12 +5009,15 @@ Module: `Effect4.Laws.Program.BuildTotal`
 
 ## Host Session Protocol
 
-Session automaton, external reply ingestion, and boundary capabilities. 24 claims: 22 proved, 1 modulo, 1 assumed.
+Session automaton, external reply ingestion, and boundary capabilities. 33 claims: 31 proved, 1 goal, 1 assumed.
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
-| `checker-ask-value` | compatibility | modulo | `Effect4.Program.Check.Checked.ask_value`, modulo `combine_deps` | — |
+| `checker-ask-value` | compatibility | proved | `Effect4.Program.Check.Checked.ask_value` | — |
 | `checker-oracle-agrees` | compatibility | proved | `Effect4.Program.Check.Oracle.eq_uncached` | — |
+| `handler-fit-protocol` | compatibility | proved | `Effect4.Program.Handler.rows_of_interface` | — |
+| `handler-fit-imposed` | compatibility | proved | `Effect4.Program.Handler.interface_imposed` | — |
+| `imposed-wrap-tensor` | compatibility | goal | `Effect4.Program.wrap_tensor` | — |
 | `run-admitted-history` | compatibility | proved | `Effect4.Run.reached_history` | — |
 | `keys-once` | preservation | proved | `Effect4.Run.session_keys_once` | — |
 | `allows-answer` | preservation | proved | `Effect4.Run.allows_answer` | — |
@@ -4995,7 +5030,13 @@ Session automaton, external reply ingestion, and boundary capabilities. 24 claim
 | `tool-serve-transparent` | compatibility | proved | `Effect4.Tool.serve_transparent` | — |
 | `tool-transcript-replays` | compatibility | proved | `Effect4.Tool.transcript_replays` | — |
 | `tool-serve-answers` | compatibility | proved | `Effect4.Tool.serve_answers` | — |
+| `workspace-load-own` | compatibility | proved | `Effect4.Tool.Exchange.load_own` | — |
+| `workspace-commits-once` | compatibility | proved | `Effect4.Tool.Exchange.apply_commits_once` | — |
+| `workspace-refuses` | preservation | proved | `Effect4.Tool.Exchange.apply_refuses` | — |
 | `built-admission-exact` | compatibility | proved | `Effect4.Api.Built.ofSketch_error_iff` | — |
+| `service-session-checked` | compatibility | proved | `Effect4.Api.Built.session_ok_iff` | — |
+| `service-session-retains` | compatibility | proved | `Effect4.Api.Built.session_retains` | — |
+| `queue-reactor` | compatibility | proved | `Effect4.Run.Reactor.queue_spec` | — |
 | `live-session-persists` | compatibility | proved | `Effect4.LiveRecord.restore_save` | — |
 | `block-call-instance` | preservation | proved | `Effect4.Program.checkModule_programCallAt` | — |
 | `session-failure-shape-free` | preservation | proved | `Effect4.Api.HostSession.preflight_failure_noShapeDefect` | `E4-HOST-CE-008` |
@@ -5008,9 +5049,9 @@ Session automaton, external reply ingestion, and boundary capabilities. 24 claim
 
 ### checker-ask-value
 
-Every certified oracle ask returns the exact uncached verdict. Semantic traces contain answers and exclude invocation counts; no admission, native execution, or progress claim (seams V1, R14)
+Every certified oracle's ask returns exactly the uncached checker's verdict, and semantic traces hold answers, not invocation counts; no admission, native execution or progress claim
 
-The unchanged exact observation of ask; module decomposition remains its stated premise.
+Every ask answers the uncached verdict. A part key asks the oracle once; a module key combines its dependencies' answers, which `combine_deps` proves exact. The pointer of `checker-ask-value`.
 
 Module: `Effect4.Laws.Program.CheckAgreement`
 
@@ -5021,7 +5062,7 @@ Module: `Effect4.Laws.Program.CheckAgreement`
 
 ### checker-oracle-agrees
 
-Every certified checker oracle equals the uncached checker on the complete verdict; no arbitrary native callback or forged package is admitted (seams S0, R6 and R14)
+Every certified checker oracle is the uncached checker, so no arbitrary native callback or forged package passes as an oracle
 
 The oracle has one value up to equality. So a memo or Incremental behind an oracle can change cost and never an answer, for every consumer at once.
 
@@ -5029,6 +5070,113 @@ Module: `Effect4.Program.Check`
 
 ```lean
 ∀ (o : Effect4.Program.Check.Oracle), Eq o Effect4.Program.Check.Oracle.uncached
+```
+
+### handler-fit-protocol
+
+Equal successful handler interfaces give equal session protocol rows
+
+Concept 9, host-session-protocol. Claim handler-fit-protocol, role compatibility, R6. Reach: two handlers of one service with the same successfully read interface. Consumer: service-session clients. Failed reads do not constitute fit. This compares protocol rows, not answers, termination or host behaviour.
+
+Module: `Effect4.Laws.Program.Handler`
+
+```lean
+∀ (decls decls' : List Effect4.Program.DefDecl) (h h' : Effect4.Program.Handler),
+  Eq h.service h'.service →
+    ∀ (cs : List Effect4.Program.Clause),
+      Eq (Effect4.Program.Handler.interface decls h) (Option.some cs) →
+        Eq (Effect4.Program.Handler.interface decls' h') (Option.some cs) →
+          Eq
+            (Effect4.Api.ServiceSession.rows decls
+              { name := h.service, init := h.init, methods := h.clauses } h.state)
+            (Effect4.Api.ServiceSession.rows decls'
+              { name := h'.service, init := h'.init, methods := h'.clauses } h'.state)
+```
+
+### handler-fit-imposed
+
+Imposed blocks keep the interface of every successfully constructed application service
+
+Concept 9, host-session-protocol. Claim handler-fit-imposed, role compatibility, R6. Reach: every application, imposed list and service name, when both serviceDefs constructions succeed. Consumer: rows_of_interface, hence clients of the service's session protocol. The handlers come from the generated declarations' init and method roles. This compares interfaces only. Clause answers, host behaviour and progress remain outside the claim.
+
+Module: `Effect4.Laws.Program.Handler`
+
+```lean
+∀ (app : Effect4.Program.Authoring.Application Effect4.Program.NativeOp)
+  (ms : List (Effect4.Program.Authoring.Application.Imposed Effect4.Program.NativeOp))
+  (service : String)
+  (defs defs' : List (Effect4.Program.Authoring.DefSrc Effect4.Program.NativeOp)),
+  Eq (app.serviceDefs service) (Except.ok defs) →
+    Eq
+        ({ name := app.name, rows := app.rows, services := app.services, layers := app.layers,
+              defs := app.defs, imposed := ms, protocols := app.protocols, types := app.types,
+              entries := app.entries }.serviceDefs
+          service)
+        (Except.ok defs') →
+      have ds := List.map Effect4.Program.Authoring.DefSrc.decl defs;
+      have ds' := List.map Effect4.Program.Authoring.DefSrc.decl defs';
+      Eq
+        ((Effect4.Program.Handler.ofService ds
+              { name := service, init := 0,
+                methods := Effect4.Program.serviceMethods service ds }).bind
+          (Effect4.Program.Handler.interface ds))
+        ((Effect4.Program.Handler.ofService ds'
+              { name := service, init := 0,
+                methods := Effect4.Program.serviceMethods service ds' }).bind
+          (Effect4.Program.Handler.interface ds'))
+```
+
+### imposed-wrap-tensor
+
+Wrapping only left entries keeps the combined interface equal to the two separate interfaces appended
+
+Concept 9, host-session-protocol. Claim imposed-wrap-tensor, role compatibility, R6. Reach: applications share declarations and have disjoint entry names. Wrappers name only left entries. All three serviceDefs constructions succeed. The combined service concatenates the entry lists. Consumer: handler interface composition. The owner chooses interface equality after removing state. This states no equality of clause behaviour, state translation, build or host execution.
+
+Module: `Effect4.Laws.Program.Handler`
+
+```lean
+∀ (a b : Effect4.Program.Authoring.Application Effect4.Program.NativeOp)
+  (ms : List (Effect4.Program.Authoring.Application.Imposed Effect4.Program.NativeOp))
+  (service : String)
+  (combined left right : List (Effect4.Program.Authoring.DefSrc Effect4.Program.NativeOp)),
+  Eq a.declarations b.declarations →
+    (∀ (e : Effect4.Program.Authoring.Application.Entry Effect4.Program.NativeOp),
+        List.instMembership.mem a.entries e →
+          ∀ (e' : Effect4.Program.Authoring.Application.Entry Effect4.Program.NativeOp),
+            List.instMembership.mem b.entries e' → Ne e.name e'.name) →
+      (∀ (m : Effect4.Program.Authoring.Application.Imposed Effect4.Program.NativeOp),
+          List.instMembership.mem ms m →
+            ∀
+              (around :
+                Prod String
+                  (Effect4.Program.Authoring.TermSrc →
+                    Effect4.Program.Authoring.Src Effect4.Program.NativeOp →
+                      Effect4.Program.Authoring.Src Effect4.Program.NativeOp)),
+              List.instMembership.mem m.around around →
+                List.instMembership.mem a.entryNames around.fst) →
+        Eq
+            ({ name := a.name, rows := a.rows, services := a.services, layers := a.layers,
+                  defs := a.defs, imposed := ms, protocols := a.protocols, types := a.types,
+                  entries := instHAppendOfAppend.hAppend a.entries b.entries }.serviceDefs
+              service)
+            (Except.ok combined) →
+          Eq
+              ({ name := a.name, rows := a.rows, services := a.services, layers := a.layers,
+                    defs := a.defs, imposed := ms, protocols := a.protocols, types := a.types,
+                    entries := a.entries }.serviceDefs
+                service)
+              (Except.ok left) →
+            Eq (b.serviceDefs service) (Except.ok right) →
+              have read := fun defs =>
+                have ds := List.map Effect4.Program.Authoring.DefSrc.decl defs;
+                (Effect4.Program.Handler.ofService ds
+                      { name := service, init := 0,
+                        methods := Effect4.Program.serviceMethods service ds }).bind
+                  (Effect4.Program.Handler.interface ds);
+              Eq (read combined) do
+                let cs ← read left
+                let cs' ← read right
+                instAlternativeOption.pure (instHAppendOfAppend.hAppend cs cs')
 ```
 
 ### run-admitted-history
@@ -5191,7 +5339,7 @@ Module: `Effect4.Laws.Program.Admit`
 
 ### tool-serve-appends
 
-An accepted tool action appends itself to the transcript; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)
+An accepted tool action appends itself to the transcript; no native execution, rollback of external effects or host progress claim
 
 An accepted action appends itself to the transcript (`tool-serve-appends`). Consumer: ST4's single commit of an accepted action.
 
@@ -5206,7 +5354,7 @@ Module: `Effect4.Laws.Tool.Serve`
 
 ### tool-serve-refuses
 
-A refused tool request leaves the whole state unchanged; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)
+A refused tool request leaves the whole state unchanged; no native execution, rollback of external effects or host progress claim
 
 A refused request leaves the state unchanged (`tool-serve-refuses`).
 
@@ -5220,7 +5368,7 @@ Module: `Effect4.Laws.Tool.Serve`
 
 ### tool-serve-query
 
-Every tool query, a dry run included, leaves the whole state unchanged; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)
+Every tool query, dry runs included, leaves the whole state unchanged; no native execution, rollback of external effects or host progress claim
 
 A query leaves the state unchanged (`tool-serve-query`), a `dry` run included.
 
@@ -5233,7 +5381,7 @@ Module: `Effect4.Laws.Tool.Serve`
 
 ### tool-serve-transparent
 
-Serving through any certified oracle equals serving uncached, the checked trace included; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)
+Serving through any certified oracle is serving uncached, checked trace included; no native execution, rollback of external effects or host progress claim
 
 The oracle changes nothing (`tool-serve-transparent`): the whole checked answer, its trace included, equals the uncached one. A memo changes cost, never an answer.
 
@@ -5246,9 +5394,9 @@ Module: `Effect4.Laws.Tool.Serve`
 
 ### tool-transcript-replays
 
-A tool state's transcript replays from the empty state to its raw state; no native execution, external-effect rollback or host progress claim (seams S3a, R6 and R13)
+A tool state's transcript replays from the empty state to its raw state; no native execution, rollback of external effects or host progress claim
 
-A state's transcript replays to it (`tool-transcript-replays`). Consumer: ST4's load.
+A state's transcript replays to it (`tool-transcript-replays`). It is the uncached fold `State.replayed` seals. `Exchange.load` replays through `serve` (`Exchange.stepped`) instead, and reaches the same raw state through `State.accept`'s proof field.
 
 Module: `Effect4.Laws.Tool.Serve`
 
@@ -5258,7 +5406,7 @@ Module: `Effect4.Laws.Tool.Serve`
 
 ### tool-serve-answers
 
-Every reply that serve gives pairs with its request (Wire.responds); no JSON decoding exactness, native driver or host progress claim (seams S3b, R6)
+Every reply that serve gives pairs with its request; no exact JSON decoding, native driver or host progress claim
 
 Every reply `serve` gives pairs with its request (`tool-serve-answers`). A refusal pairs with any request; an accepted action's answer pairs by `action_pairs`, and an answered query by `query_pairs`.
 
@@ -5269,9 +5417,86 @@ Module: `Effect4.Laws.Tool.Wire`
   Eq (Effect4.Tool.Wire.responds r (Effect4.Tool.serve o s r).value.snd) Bool.true
 ```
 
+### workspace-load-own
+
+After an exchange commits an accepted action, loading the reported head gives the state that serve reaches from the resolved base; no repeated host effect, host progress or hash injectivity claim
+
+Loading a workspace's own chain gives back its state (`workspace-load-own`). After an exchange commits an accepted action, loading the head it reports gives the state `serve` reached from the resolved base: replay re-establishes the history, with no host effect repeated.
+
+Module: `Effect4.Laws.Tool.Exchange`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {engine : Effect4.Store.Digest} {cas cas' : Effect4.Store.Cas}
+  {env : Effect4.Tool.Exchange.Envelope} {reply : Effect4.Tool.Reply}
+  {head : Effect4.Store.Head Effect4.Store.Digest} {a : Effect4.Tool.Action}
+  {answer : Effect4.Tool.Answer},
+  Eq (Effect4.Tool.Exchange.apply o engine cas env).value
+      (Except.ok { fst := reply, snd := { fst := Option.some head, snd := cas' } }) →
+    Eq env.request (Effect4.Tool.Request.act a) →
+      Eq reply.result (Except.ok answer) →
+        Exists fun resolved =>
+          And (Eq (Effect4.Tool.Exchange.resolve o cas env.base).value (Except.ok resolved))
+            (Eq (Effect4.Tool.Exchange.load o cas' { digest := head.digest }).value
+              (Except.ok
+                (Effect4.Tool.serve o resolved.state (Effect4.Tool.Request.act a)).value.fst))
+```
+
+### workspace-commits-once
+
+An accepted action commits one transaction whose last node is its workspace entry and whose one root move publishes that entry; no host acknowledgement or exactly-once host effect claim
+
+An accepted action commits once (`workspace-commits-once`): one transaction, whose last node is the action's entry and whose one move publishes that entry.
+
+Module: `Effect4.Laws.Tool.Exchange`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {engine : Effect4.Store.Digest} {cas cas' : Effect4.Store.Cas}
+  {env : Effect4.Tool.Exchange.Envelope} {reply : Effect4.Tool.Reply}
+  {head : Option (Effect4.Store.Head Effect4.Store.Digest)} {a : Effect4.Tool.Action}
+  {answer : Effect4.Tool.Answer},
+  Eq (Effect4.Tool.Exchange.apply o engine cas env).value
+      (Except.ok { fst := reply, snd := { fst := head, snd := cas' } }) →
+    Eq env.request (Effect4.Tool.Request.act a) →
+      Eq reply.result (Except.ok answer) →
+        Exists fun txn =>
+          Exists fun receipt =>
+            Exists fun entry =>
+              Exists fun move =>
+                And (Eq (cas.commit txn) (Except.ok { fst := receipt, snd := cas' }))
+                  (And (Eq txn.nodes.getLast? (Option.some (Effect4.Store.nodeOf entry)))
+                    (And (Eq txn.moves (List.cons move List.nil))
+                      (And
+                        (Eq (Effect4.Tool.Exchange.moveTarget move)
+                          { kind := Effect4.Store.Kind.entry,
+                            digest := (Effect4.Store.address entry).digest })
+                        (Exists fun parent =>
+                          Exists fun index =>
+                            Exists fun after =>
+                              Eq entry (Effect4.Tool.WorkspaceEntry.action parent index a after)))))
+```
+
+### workspace-refuses
+
+A query or a refused request leaves the store it was given unchanged; no IO rollback claim
+
+A query or a refused request publishes nothing (`workspace-refuses`): the exchange returns the store it was given.
+
+Module: `Effect4.Laws.Tool.Exchange`
+
+```lean
+∀ {o : Effect4.Program.Check.Oracle} {engine : Effect4.Store.Digest} {cas cas' : Effect4.Store.Cas}
+  {env : Effect4.Tool.Exchange.Envelope} {reply : Effect4.Tool.Reply}
+  {head : Option (Effect4.Store.Head Effect4.Store.Digest)},
+  Eq (Effect4.Tool.Exchange.apply o engine cas env).value
+      (Except.ok { fst := reply, snd := { fst := head, snd := cas' } }) →
+    Or (Exists fun q => Eq env.request (Effect4.Tool.Request.ask q))
+        (Exists fun why => Eq reply.result (Except.error why)) →
+      Eq cas' cas
+```
+
 ### built-admission-exact
 
-Built.ofSketch returns exactly the full program-admission refusal at the application extended by the sketch's hole rows, and Built.ofProgram at the recorded application exactly; no native forgery, host execution, or progress claim (seams S4, R6 and R13)
+Building from a sketch refuses exactly with the full program-admission refusal at the application extended by the sketch's hole rows, and building from a program exactly at the recorded application; no native forgery, host execution or progress claim
 
 Full admission at the application extended by the sketch's holes and `Built.ofSketch` return the same refusal.
 
@@ -5283,11 +5508,83 @@ Module: `Effect4.Laws.Api.Built`
     (Eq (Effect4.Program.admitProgram s.program (app.withHoles s.holes)) (Except.error why))
 ```
 
+### service-session-checked
+
+A service session succeeds exactly when construction and full admission succeed and the result has no service requirements; no host progress or transport support claim (R6 and R13)
+
+service-session-checked: construction succeeds exactly when the session object of the source opens as the result and every requirement left is a key the signature types.
+
+Module: `Effect4.Laws.Api.Session`
+
+```lean
+∀ (before : Effect4.Api.Built) (name : String) (after : Effect4.Api.Built),
+  Iff (Eq (before.session name) (Except.ok after))
+    (Exists fun object =>
+      And (Eq ((Effect4.Program.Object.ofBuilt before).session name) (Except.ok object))
+        (And (Eq object.open (Except.ok after))
+          (Eq (Effect4.Api.ServiceSession.foreign after) List.nil)))
+```
+
+### service-session-retains
+
+Successful service-session construction retains declarations, bodies, layers and signature declarations, appends rows, and replaces only the main program; no equality of old and new main behaviour (R6 and R13)
+
+service-session-retains: successful construction replaces the main program, retains the rest of its block and signature, and appends rows after all existing external positions.
+
+Module: `Effect4.Laws.Api.Session`
+
+```lean
+∀ {before after : Effect4.Api.Built} {name : String},
+  Eq (before.session name) (Except.ok after) →
+    Exists fun decls =>
+      Exists fun bodies =>
+        Exists fun oldMain =>
+          Exists fun newMain =>
+            Exists fun layers =>
+              Exists fun appended =>
+                And (Eq before.program (Effect4.Program.Eff.defs decls bodies oldMain layers))
+                  (And (Eq after.program (Effect4.Program.Eff.defs decls bodies newMain layers))
+                    (Eq after.app
+                      (have __src := before.app;
+                      { rows := instHAppendOfAppend.hAppend before.table appended,
+                        services := __src.services, types := __src.types })))
+```
+
+### queue-reactor
+
+The queue consumes the next request and acknowledges replies without changing state; tensor equations retain the other state component (R6 and R13). No general client agreement or host progress.
+
+queue-reactor: `next` answers the pending request and keeps it; a reply consumes it.
+
+Module: `Effect4.Laws.Run.Runner`
+
+```lean
+And
+  (∀ (row : Effect4.Program.Row) (sent : Effect4.Machine.Val) (pending : List Effect4.Machine.Val),
+    Eq row.spelling Effect4.Api.ServiceSession.nextName →
+      Eq (Effect4.Run.Reactor.queue row sent pending)
+        (Option.some
+          {
+            fst :=
+              Effect4.Machine.Completion.ofExit
+                (Effect4.Exit.success
+                  (pending.head?.elim Effect4.Store.Val.none fun value =>
+                    Effect4.Store.Val.some value)),
+            snd := pending }))
+  (∀ (row : Effect4.Program.Row) (sent request : Effect4.Machine.Val)
+    (rest : List Effect4.Machine.Val),
+    Eq (Effect4.Api.ServiceSession.isReplyRow row) Bool.true →
+      Eq (Effect4.Run.Reactor.queue row sent (List.cons request rest))
+        (Option.some
+          { fst := Effect4.Machine.Completion.ofExit (Effect4.Exit.success Effect4.Store.Val.unit),
+            snd := rest }))
+```
+
 ### live-session-persists
 
-Restoring a live session's own record returns its exact run after full admission and ordered journal replay, retaining recorded row spellings and empty session names; no repeated host effects or host reconnection claim (seams S4, R6 and R13)
+Restoring a live session's own saved record gives back its exact run, after full admission and ordered journal replay, keeping recorded row spellings and empty session names; no repeated host effects or host reconnection claim
 
-A saved live session restores to the same run (E1). Saving a `Live` session and restoring it through `LiveRecord.restore` succeeds and produces a `Live` whose `run` is `l.run`, including its journal, phases, waiting calls and row spellings.
+A saved live session restores to the same run (E1). Saving a `Live` session and restoring it through `LiveRecord.restore` succeeds and produces a `Live` whose `run` is `l.run`, including its journal, phases and waiting calls.
 
 Placement: 1. Concept: `host-session-protocol`, property `typed-replay-session`. 2. Question: proposed claim `live-session-persists` (role compatibility), extending `Live.journal_replays` at R13; consumer: the tool's `restore` action and its run record query (`Tool.Internal.action`, `Tool.Internal.query`). 3. Reach: every `Live`. Composes `admitProgram_eq_ok`, `Live.feedAll_wire` and `Live.journal_replays`. 4. What it does not establish: that another host's journal replays, host reconnection, external resources, or that side effects run at most once. 5. Unlocks: R13 and R6 for persistent authoring sessions.
 
@@ -5318,7 +5615,7 @@ Module: `Effect4.Laws.Program.Typing.Parts`
 
 ### session-failure-shape-free
 
-A session-accepted failing reply carries no reserved defect: the failure half of admit_sound (decisions row 191, E4-HOST-CE-008)
+A failing reply that the session accepts carries no reserved defect, at any type
 
 An accepted failing reply has no shape defect (decisions row 191, `E4-HOST-CE-008`): executable admission refuses the reserved defects (`admit_failure_reservedFree`), so a session-accepted failure satisfies `NoShapeDefect` at every type. This is the failure half of `admit_sound`, executable admission implying the ghost `AnswerOk`; the value half waits on row 97's handle declarations, and the cause's membership in the error column is `external_error_typed`.
 
@@ -5337,7 +5634,7 @@ Module: `Effect4.Laws.Api.HostSession`
 Register record `E4-HOST-CE-008` (REPAIRED)
 
 ```text
-| `E4-HOST-CE-008` | REPAIRED 2026-10-03 (decisions row 191: `admit` and `externalAdmits` refuse a host failure carrying `badName` or `notImplemented`, `Refusal.reservedDefect`; `preflight_failure_noShapeDefect`, `Laws/Api/HostSession.lean`, `[propext, Quot.sound]`); SEEDED 2026-10-03 (Codex, `docs/research/2026-10-03-session-work/t4-audit.lean`; registered by Claude) | Executable admission is at least as strict as the typed exit judgment on failures: `admit = none` on a failing reply gives `CompletionStrong`, the failure half of `admit_sound` (T4) | `Test/Counterexamples/Machine/Runtime/HostReservedDefect.lean`: the session accepted `die badName` (`preflight` returned the answer decision, `admit` no refusal, `externalAdmits` true) while `ExitOk` refuses it at every world (`NoShapeDefect`, row 152) | Admission refuses the two reserved defects before reading the error column, on the decision path and the oracle path; ordinary defects and interrupts stay admitted at every error column. The value half of admission (row 97) is unchanged. |
+| `E4-HOST-CE-008` | REPAIRED 2026-10-03 (decisions row 191: `admit` and `externalAdmits` refuse a host failure carrying `badName` or `notImplemented`, `Refusal.reservedDefect`; `preflight_failure_noShapeDefect`, `Laws/Api/HostSession.lean`, `[propext, Quot.sound]`); SEEDED 2026-10-03 (Codex, `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-03-session-work/t4-audit.lean`; registered by Claude) | Executable admission is at least as strict as the typed exit judgment on failures: `admit = none` on a failing reply gives `CompletionStrong`, the failure half of `admit_sound` (T4) | `Test/Counterexamples/Machine/Runtime/HostReservedDefect.lean`: the session accepted `die badName` (`preflight` returned the answer decision, `admit` no refusal, `externalAdmits` true) while `ExitOk` refuses it at every world (`NoShapeDefect`, row 152) | Admission refuses the two reserved defects before reading the error column, on the decision path and the oracle path; ordinary defects and interrupts stay admitted at every error column. The value half of admission (row 97) is unchanged. |
 ```
 
 ### frontier-awaithost
@@ -5362,7 +5659,7 @@ Reason: Host session progress is subject to external driver execution; outside c
 
 ### rows-loop-frontier
 
-H8's detailed frontier on loops: for a recorded run of a LoopedRows program the row fragment with loops admits, funded, at rest and driven by a host, every call the machine waits on is a host row, and past a budget bound the detailed observation of the budgeted meaning under the run's reply tape waits at that row and request, with the machine's stores and the tape read to its end (no progress claim: a wait is a frontier, never a failure; nothing of a fork, a scope or an interruption; the host-meaning widening, slice L4)
+In a funded, at-rest, host-driven recorded LoopedRows run, every waited call is a host row, and past a budget bound the meaning under the reply tape waits there with the stores; a wait is no failure; no progress claim; nothing of forks, scopes or interruptions
 
 H8's detailed frontier on loops (Q4): for a recorded run of a program of the row fragment with loops that is funded, at rest and driven by a host, every call the machine waits on is a host row, and past a budget bound the detailed observation of the budgeted meaning under the run's reply tape waits at that row and request, with the machine's stores and the tape read to its end. The session prefix (`session_settled`) leaves a root parked on that call, and the local wait is the meaning's (`localWaitC_to_rowsB`). Concept `host-session-protocol`, claim `rows-loop-frontier`, role simulation; requirement R12 (and R6). Consumers: the waiting driver and the resource prefix (slices S1 and S2). It establishes no progress: a wait is a frontier, never a failure, and nothing says the host answers; nothing of a fork, a scope or an interruption.
 
@@ -5374,7 +5671,7 @@ Effect4.Run.H8FrontierLoopedRows
 
 ### rows-loop-frontier-host
 
-H9's detailed frontier on loops: the same under any host whose answers are the run's and which leaves the waited call unanswered: past a budget bound the meaning under the host waits at that call, with the machine's stores and the host where the answers left it (the host's silence is a premise; the host-meaning widening, slice L4)
+Under any host whose answers are the run's and which leaves the waited call unanswered, past a budget bound the LoopedRows meaning waits at that call with the machine's stores and the host where the answers left it; the host's silence is a premise
 
 H9's detailed frontier on loops (Q4 under a host): as `rows_loop_frontier`, under any host whose answers are the run's (`HostAnswered`) and which does not answer the call the machine waits on: past a budget bound the meaning under the host waits at that call, with the machine's stores and the host where the answers left it. Concept `host-session-protocol`, claim `rows-loop-frontier-host`, role simulation; requirement R12 (and R6). It does not establish that the host leaves the call unanswered: that is the premise.
 
@@ -5432,7 +5729,7 @@ Module: `Effect4.Laws.Api.Live`
 
 ### run-conforms-postcondition
 
-A reached run that conforms to the declared row protocols meets every postcondition its call tree meets under them (Effects.Program.Sat), through denoteRows_eq_session_host and the checked host's soundness; nothing of a run that does not conform, or of the protocols' demands, which conforms checks and no theorem reads yet (the claims packet, slice PROTOCOL)
+A reached, funded, at-rest, host-driven StraightRows run that conforms to the declared row protocols meets every postcondition its call tree satisfies under them; nothing of non-conforming runs or of the protocols' demands
 
 A conforming run has every postcondition that its call tree meets under the declared protocols. For a recorded run of a `StraightRows` program that is funded, at rest, driven by a host and conforms, a postcondition that the call tree meets under the stores and the declared protocols (`Effects.Program.Sat`) holds of the root's exit.
 
@@ -5456,7 +5753,7 @@ Module: `Effect4.Laws.Program.Validated`
 
 ## Translation & Simulation
 
-Semantic preservation, replay relations, and capstone M7. 58 claims: 58 proved.
+Semantic preservation, replay relations, and capstone M7. 57 claims: 57 proved.
 
 | Claim | Role | Status | Evidence |
 | --- | --- | --- | --- |
@@ -5468,6 +5765,7 @@ Semantic preservation, replay relations, and capstone M7. 58 claims: 58 proved.
 | `run-eq-ref` | simulation | proved | `Effect4.Program.Sched.run_eq_ref` |
 | `profile-plus-exact` | compatibility | proved | `Effect4.Program.intAddIn_eq_some_iff` |
 | `profile-mul-exact` | compatibility | proved | `Effect4.Program.mulIn_eq_some_iff` |
+| `profile-support-located` | decidability | proved | `Effect4.Program.ProfileData.valueRefusal_eq_none_iff` |
 | `rows-denotation-straight` | compatibility | proved | `Effect4.Program.Denote.denoteRows_straight` |
 | `rows-denotation-append` | compatibility | proved | `Effect4.Program.Denote.meaningUnder_append` |
 | `rows-denotation-reference` | compatibility | proved | `Effect4.Program.Sched.denoteR_straightRows` |
@@ -5483,9 +5781,7 @@ Semantic preservation, replay relations, and capstone M7. 58 claims: 58 proved.
 | `rows-loop-looped` | compatibility | proved | `Effect4.Program.Denote.denoteRowsB_looped` |
 | `rows-denotation-driver` | simulation | proved | `Effect4.Run.runWith_denotes` |
 | `m7-route` | fundamentalProperty | proved | `Effect4.Program.Typed.m7_of_ledger` |
-| `m7-exits-typed` | adequacy | proved | `Effect4.Program.Typed.m7_proved` |
-| `m7-stores-typed` | adequacy | proved | `Effect4.Program.Typed.m7_proved` |
-| `m7-never-halts` | progress | proved | `Effect4.Program.Typed.m7_proved` |
+| `m7-proved` | adequacy | proved | `Effect4.Program.Typed.m7_proved` |
 | `m7-admitted` | fundamentalProperty | proved | `Effect4.Program.Typed.m7_admitted` |
 | `m7-exit-handles-valid` | preservation | proved | `Effect4.Program.Typed.exitHandles_valid` |
 | `obs-typed-admitted` | adequacy | proved | `Effect4.Program.Typed.obs_typed` |
@@ -5581,7 +5877,7 @@ Module: `Effect4.Laws.Program.Agreement.Segment` · Literature: Leroy2009, audit
 
 ### loop-agreement
 
-Loop agreement on the loop-bearing fragment (Looped)
+Every program in the loop-bearing fragment Looped satisfies loop agreement
 
 The loop agreement (O12, S8a-L). For every program of the loop-bearing fragment: when its budgeted meaning finishes at a budget `k`, the machine's ordinary run finishes with that exit and those stores at every fuel past a bound. The bound is the compile depth and twice the local step bound at `k`; by `meaningB_unique` the answer does not depend on the budget that found it.
 
@@ -5594,7 +5890,7 @@ Module: `Effect4.Laws.Program.Agreement.Loop`
 
 ### block-handler-monotone
 
-A block meaning refines when the call budget increases and the parameters approximate pointwise at every context and request (PROC-6)
+A block's meaning refines when the call budget grows by one and the parameters approximate pointwise at every context and request
 
 The monotonicity claim block-handler-monotone (R10), consumed by `hostRunBlockB_stable`. Parameters approximate pointwise at every context and request; a budget cut supplies no progress.
 
@@ -5615,7 +5911,7 @@ Module: `Effect4.Laws.Program.BlockMeaning`
 
 ### block-handler-unfolds
 
-An invocation converges exactly when its body finishes with argument trees at the caller's budget, at the fixed host, context, request and stores (PROC-6)
+At a fixed host, context, request and stores, an invocation converges to an exit exactly when its body, given the argument trees at the caller's budget, converges to that exit
 
 The invocation part of block-handler-unfolds (R10), consumed by the cached application claim. The existential budget keeps argument closures at the caller's budget, for any argument count.
 
@@ -5672,38 +5968,51 @@ Module: `Effect4.Laws.Program.RuntimeR` · Literature: LynchVaandrager1995, audi
 
 ### profile-plus-exact
 
-The checked integer addition answers exactly when the reference addition answers inside the profile, for two arguments inside it: a face equals the reference inside its profile and refuses outside it (DI-56), for the one operation that grows; nothing about the OCaml row or the TypeScript helper, each a trusted row run by a control (decisions rows 108 and 321)
+The checked integer addition answers exactly when the reference addition answers inside the profile, for two arguments inside it: a face equals the reference inside its profile and refuses outside it (DI-56), for the one operation that grows; the bound is the profile's (ProfileData.admitsNat), and a profile with none refuses no sum; nothing about the OCaml row or the TypeScript helper, each a trusted row run by a control (decisions rows 108 and 321)
 
 The checked row answers exactly when the reference row answers inside the profile. Premise: both arguments are inside it.
 
 Module: `Effect4.Laws.Machine.IntegerProfile`
 
 ```lean
-∀ (bound : Nat) (x y v : Effect4.Machine.Val),
-  Eq (Effect4.Program.Within bound x) Bool.true →
-    Eq (Effect4.Program.Within bound y) Bool.true →
-      Iff (Eq (Effect4.Program.intAddIn bound x y) (Option.some v))
+∀ (profile : Effect4.Program.ProfileData) (x y v : Effect4.Machine.Val),
+  Eq (Effect4.Program.Within profile x) Bool.true →
+    Eq (Effect4.Program.Within profile y) Bool.true →
+      Iff (Eq (Effect4.Program.intAddIn profile x y) (Option.some v))
         (And (Eq (Effect4.Program.intAdd x y) (Option.some v))
-          (Eq (Effect4.Program.Within bound v) Bool.true))
+          (Eq (Effect4.Program.Within profile v) Bool.true))
 ```
 
 ### profile-mul-exact
 
-The checked natural multiplication answers exactly for the represented atom product inside the supplied bound; target rows remain trusted implementations with finite controls (DI-56)
+The checked natural multiplication answers exactly for the represented atom product inside the profile's bound (ProfileData.admitsNat); target rows remain trusted implementations with finite controls (DI-56)
 
 The represented natural multiplication uses exactly the checked product judgment. Claim: profile-mul-exact, translation-simulation R8. Target execution remains a separate control.
 
 Module: `Effect4.Laws.Machine.IntegerProfile`
 
 ```lean
-∀ (bound a b n : Nat),
-  Iff (Eq (Effect4.Program.scaleIn bound a b) (Option.some n))
+∀ (profile : Effect4.Program.ProfileData) (a b n : Nat),
+  Iff (Eq (Effect4.Program.scaleIn profile a b) (Option.some n))
     (And
       (Eq
         (Effect4.Program.NativeAtom.mul.eval
           (List.cons (Effect4.Store.Val.nat a) (List.cons (Effect4.Store.Val.nat b) List.nil)))
         (Option.some (Effect4.Store.Val.nat n)))
-      (Eq (Effect4.Program.Within bound (Effect4.Store.Val.nat n)) Bool.true))
+      (Eq (Effect4.Program.Within profile (Effect4.Store.Val.nat n)) Bool.true))
+```
+
+### profile-support-located
+
+Profile support's located refusal is complete against its judgment: a value's refusal is absent exactly when every number of its tree is inside the profile's bound (ProfileData.supports), and a program's exactly when every literal of the literal fold is (literalRefusal_eq_none_iff, beside it); one Lean judgment, its bound ProfileData's, lowered at the engine's and the kit's ingress; nothing of which face reads a supported value, nor of arithmetic inside a run, which the OCaml face computes exactly since M4 (DI-56; decisions rows 108 and 417 (1); M2)
+
+The profile's refusal of a value is absent exactly when the profile supports it. The pointer of `profile-support-located`.
+
+Module: `Effect4.Laws.Program.ProfileSupport`
+
+```lean
+∀ (profile : Effect4.Program.ProfileData) (v : Effect4.Store.Val),
+  Iff (Eq (profile.valueRefusal v) Option.none) (Eq (profile.supports v) Bool.true)
 ```
 
 ### rows-denotation-straight
@@ -5800,7 +6109,7 @@ Effect4.Run.DenoteRowsEqSession Effect4.Program.Denote.StraightRows
 
 ### rows-denotation-host
 
-H9, the host as a handler: for a recorded StraightRows run that is funded, at rest, driven by a host and finished, under any host (a comodel of the row signature) whose answers are the run's, the host's run of the call tree is the root's exit with the stores and the host ends where the answers left it (one fiber; no progress claim; nothing about a run stopped at a call, an interruption, a clock step or a handle row; decisions row 310; the coalgebra note, slice CO-5)
+For a funded, at-rest, host-driven, finished StraightRows run, any host answering as the run did runs the call tree to the root's exit and stores, ending where the answers left it; one fiber; no progress claim; nothing of pending calls, interruptions, clock steps or handle rows
 
 H9: the host as a handler. For a recorded run of a program of the fragment that is funded, at rest, driven by a host, and whose root exited: under any host whose answers are the run's (`HostAnswered`), the run of the program's call tree under that host is the root's exit with the stores, and the host ends at the state the run's answers left it in. The reply host is one host: H8. Reach: `StraightRows`, one fiber, every compile budget, finished runs. It does not establish that a host's drive finishes (progress), nor anything of a run that stopped at a call, an interruption, a clock step or a handle row. Concept `translation-simulation`, role simulation; requirement R6. Consumer: host utilities composed with `Effects.Comodel`'s constructions (`git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-host-coalgebra.md`, slice CO-5).
 
@@ -5812,7 +6121,7 @@ Effect4.Run.DenoteRowsEqSessionHost Effect4.Program.Denote.StraightRows
 
 ### rows-loop-session
 
-H8 on loops: for a recorded run of a LoopedRows program the row fragment with loops admits (LoopedDataRows), funded, at rest and driven by a host, past a budget bound the coarse observation of the budgeted meaning under the run's reply tape is the root's exit with the stores, or none (one fiber; no global compile-depth premise; a budget cut is no failure and no divergence; nothing of a waiting position's stores or request, a scope, a handle allocation, a fork or an interruption; the host-meaning widening, slice L1)
+For a funded, at-rest, host-driven recorded LoopedRows run, past a budget bound the budgeted meaning under the run's reply tape gives the root's exit with the stores, or none; one fiber; a budget cut is no failure; nothing of waits, scopes, handles, forks or interruptions
 
 H8 on loops (Q7): for a recorded run of a program of the row fragment with loops that is funded, at rest and driven by a host, past a budget bound the coarse observation of the budgeted meaning under the run's reply tape is the root's exit with the stores, the tape read to its end; where the root has no exit it is `none`. Concept `translation-simulation`, claim `rows-loop-session`, role simulation; requirement R6. Consumers: the paged data-row client and the driver theorem on loops. It establishes no scope, external handle allocation, interruption, fork, progress or target claim, and no waiting position's stores or request.
 
@@ -5824,7 +6133,7 @@ Effect4.Run.H8LoopedRows
 
 ### rows-loop-host
 
-H9 on loops: for a finished recorded run of the same fragment, under any host whose answers are the run's, past a budget bound the budgeted meaning under the host is the root's exit with the stores and the host ends where the answers left it (no progress claim; nothing of a run stopped at a call; the host-meaning widening, slice L1)
+For a finished recorded LoopedRows run, any host whose answers are the run's gives, past a budget bound, the root's exit with the stores and ends where the answers left it; no progress claim; nothing of a run stopped at a call
 
 H9 on loops (Q8): for a finished recorded run of the same fragment, under any host whose answers are the run's (`HostAnswered`), past a budget bound the budgeted meaning under the host is the root's exit with the stores, and the host ends where the answers left it. H8 on loops at a finished run is its instance at the reply host. Concept `translation-simulation`, claim `rows-loop-host`, role simulation; requirement R6. Consumer: the driver theorem on loops (Q9). It does not establish that a host's drive finishes, nor anything of a run that stopped at a call.
 
@@ -5925,7 +6234,7 @@ Module: `Effect4.Laws.Program.DenoteRowsB`
 
 ### rows-denotation-driver
 
-H9 at the driver: open a StraightRows program, evaluate its root and drive it with a reactor inside the envelope that answers with exits (Run.runWith); when the run is funded, at rest and its root exited, the reactor read as a host runs the call tree to the root's exit with the stores and ends at the drive's state (one fiber; no progress claim: nothing shows that the drive finishes, that its rounds suffice or that the run is funded; the coalgebra note, slice CO-6)
+If an enveloping, exits-only reactor drives a StraightRows program to a funded, at-rest exit, the reactor read as a host runs the call tree to that exit and stores, ending at the drive's state; one fiber; no claim that the drive finishes, suffices or is funded
 
 H9 at the driver: the reactor's run of the call tree is the driver's. Open a program of the fragment, evaluate its root and drive it with a reactor inside the envelope that answers with exits. When the run is funded, at rest and its root exited, the reactor read as a host runs the program's call tree to the root's exit with the run's stores, and ends at the drive's state. Reach: `StraightRows`, one fiber, a reactor inside the envelope that answers with exits. It does not establish that the drive finishes, that its rounds suffice, or that the run is funded. Concept `translation-simulation`, role simulation; requirement R6. Consumer: the run interface's hosts, composed by `Effects.Comodel` (slice CO-6).
 
@@ -5964,7 +6273,7 @@ Module: `Effect4.Laws.Api.HostDrive`
 
 ### m7-route
 
-M7 conditional route: typed exits and stores from ledger hypotheses M5 and M6
+From the hypotheses M5 (the typed load) and M6 (every decision keeps typing), runs have typed exits and typed stores and never halt
 
 M7 from the ledger (decisions row 138's route): `loadsTyped` and `decision_preserves` at one source and budget give M7a–c at every answer-free tape.
 
@@ -5980,45 +6289,13 @@ Module: `Effect4.Laws.Program.Typed.Assembly` · Literature: WrightFelleisen1994
           (Effect4.Program.Typed.M7NoHalt root rootTy fuel tape))
 ```
 
-### m7-exits-typed
+### m7-proved
 
-M7a: every exit the observation records fits its fiber's declared type on M7Fragment
+On M7Fragment, every exit the observation records fits its fiber's declared type, the observed stores fit a world that describes them, and the frame machine never halts
 
 M7a–c (decisions row 138): on the M7 fragment (the empty host table, a checked closed source, answer-free tapes), the frame machine's observation is typed and its run never halts: `m7_of_ledger` at the proved load (`loadsTyped`) and decisions (`decision_preserves`). The frame machine only: not the OCaml engine, not a TypeScript run.
 
 Module: `Effect4.Laws.Program.Typed.Commands.Clauses.All` · Literature: WrightFelleisen1994, audit P36 (analogy)
-
-```lean
-∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel : Nat)
-  (tape : List Effect4.Api.Decision),
-  And (Effect4.Program.Typed.M7Exits root rootTy fuel tape)
-    (And (Effect4.Program.Typed.M7Stores root rootTy fuel tape)
-      (Effect4.Program.Typed.M7NoHalt root rootTy fuel tape))
-```
-
-### m7-stores-typed
-
-M7b: the observed stores fit at a world that describes them on M7Fragment
-
-M7a–c (decisions row 138): on the M7 fragment (the empty host table, a checked closed source, answer-free tapes), the frame machine's observation is typed and its run never halts: `m7_of_ledger` at the proved load (`loadsTyped`) and decisions (`decision_preserves`). The frame machine only: not the OCaml engine, not a TypeScript run.
-
-Module: `Effect4.Laws.Program.Typed.Commands.Clauses.All`
-
-```lean
-∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel : Nat)
-  (tape : List Effect4.Api.Decision),
-  And (Effect4.Program.Typed.M7Exits root rootTy fuel tape)
-    (And (Effect4.Program.Typed.M7Stores root rootTy fuel tape)
-      (Effect4.Program.Typed.M7NoHalt root rootTy fuel tape))
-```
-
-### m7-never-halts
-
-M7c: the frame machine never halts on M7Fragment (row 139's stuck = none in J)
-
-M7a–c (decisions row 138): on the M7 fragment (the empty host table, a checked closed source, answer-free tapes), the frame machine's observation is typed and its run never halts: `m7_of_ledger` at the proved load (`loadsTyped`) and decisions (`decision_preserves`). The frame machine only: not the OCaml engine, not a TypeScript run.
-
-Module: `Effect4.Laws.Program.Typed.Commands.Clauses.All`
 
 ```lean
 ∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel : Nat)
@@ -6153,7 +6430,7 @@ Module: `Effect4.Laws.Program.RuntimeR`
 
 ### run-controls-replay
 
-Journaled control rows leave the raw replay's machine whenever every added phase progressed
+When every added phase progressed, playing journaled control rows gives the raw replay's machine
 
 Journaled control execution agrees with raw frame replay at the same machine, table and command budget when every added row progressed. The initial machine already fixes the compile budget. Earlier phases may include host answers, refusals or fuel frontiers.
 
@@ -6322,7 +6599,7 @@ Module: `Effect4.Laws.Step`
 
 ### step-frame
 
-On an update spine of an input, a field that no overwrite of the step names keeps its value: on carriers with no premise on the record's names (Step.frame), and on the machine's record frame for ascending names (Step.frame_read); nothing of a step that is no spine (decisions row 330, slice L2)
+On an update spine of an input, a field that no overwrite of the step names keeps its value, on carriers for any record and on the machine's record frame for ascending names; nothing of a step that is not a spine
 
 Module: `Effect4.Laws.Step`
 
@@ -6338,7 +6615,7 @@ Module: `Effect4.Laws.Step`
 
 ### latch-steps-agree
 
-Each of the Latch's four steps, written natively in the step language, agrees with the model of rc.112's class Latch: isOpen, open and release with scheduleUnsafe's one flush per batch, flushScheduled and closeUnsafe; the reply and the next state through the table, the cell's value being the carrier's image; each by the step language's reading law and one equation of Lean values; nothing of await, interruption, the posted flush's fiber or liveness (decisions row 330, slice L3)
+Each of the Latch's four steps, written in the step language, agrees in reply and next state with the model of rc.112's Latch class (isOpen, open and release, flushScheduled, closeUnsafe); nothing of await, interruption, the posted flush's fiber or liveness
 
 The Latch's steps agree with its model (claim `latch-steps-agree`).
 
@@ -6350,7 +6627,7 @@ Effect4.Latch.Model.StepsAgree
 
 ### latch-registration-agrees
 
-Latch initial construction, await registration and first-match withdrawal read the independent model's reply and next cell; registration uses the table's identity and hint, withdrawal assumes an injective table and aligned value and source scope lengths; cleanup searches waiters before the attached scheduled batch and keeps the scheduled flag, including duplicate registrations; no interruption delivery, posted-flush execution, liveness or host behavior follows (decisions row 330)
+The Latch's construction, await registration and first-match withdrawal give the independent model's reply and next cell, withdrawal assuming an injective table and aligned scope lengths; no interruption delivery, posted-flush execution, liveness or host behaviour follows
 
 Claim latch-registration-agrees: initial construction, registration, and first-match cleanup.
 
@@ -6818,7 +7095,7 @@ Effect4.Ref.StepsAgree
 
 ### run-agrees-model
 
-A reached run that a reference model validates is the model's run of its call tree: its exit and stores are the ones the model's host gives the tree; nothing of a run the model does not validate, or of termination (the claims packet, slice MODEL)
+A reached, funded, at-rest, host-driven StraightRows run that a reference model validates has the exit and stores that the model's host gives its call tree; nothing of runs the model does not validate, or of termination
 
 A run that agrees with a model is a run of its call tree under the model. For a recorded run of a `StraightRows` program that is funded, at rest, driven by a host, and whose root exited, where the model gave the run's answers from `start` to `finish`, the model's run of the call tree is the root's exit with the run's stores, and the model ends at `finish`.
 
@@ -6860,7 +7137,7 @@ Module: `Effect4.Laws.Program.Validated`
 
 ### cas-restore-roots
 
-Checked empty-store restoration retains the exact root table, including legacy generations; no historical ancestry, generation provenance, hash injectivity, filesystem correctness, or host progress claim (seams ST2, R13)
+Checked restoration into the empty store keeps the exact root table, legacy generations included; no ancestry, generation provenance, hash injectivity, filesystem correctness or host progress claim
 
 Checked image admission retains each root record and generation exactly.
 
@@ -6873,7 +7150,7 @@ Module: `Effect4.Laws.Store.Recovery`
 
 ### cas-restore-closed
 
-Checked empty-store restoration establishes node closure through shared admission; no historical ancestry, generation provenance, hash injectivity, filesystem correctness, or host progress claim (seams ST2, R13)
+Checked restoration into the empty store, through shared admission, gives a store closed under node references; no ancestry, generation provenance, hash injectivity, filesystem correctness or host progress claim
 
 Checked image admission establishes node closure through the shared admission.
 
@@ -6886,7 +7163,7 @@ Module: `Effect4.Laws.Store.Recovery`
 
 ### cas-restore-targets
 
-Every restored root resolves to a durable resident of its fixed kind; no historical ancestry, generation provenance, hash injectivity, filesystem correctness, or host progress claim (seams ST2, R13)
+After checked restoration, every root resolves to a durable resident of its fixed kind; no ancestry, generation provenance, hash injectivity, filesystem correctness or host progress claim
 
 Every checked root targets a durable admitted resident at its fixed kind.
 
@@ -6992,7 +7269,7 @@ Module: `Effect4.Laws.Library.Ref.Cache`
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 361; inherited (provisional): 2561; unplaced: 0.
+Tagged: 372; inherited (provisional): 2573; unplaced: 0.
 
 ## Plan
 
@@ -7005,19 +7282,19 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | `R1` | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | `checkModule_complete` (proved), `checkModule_sound` (proved), `invoke_hasTy` (proved) | — |
 | `R2` | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved), `meaningUnder_append` (proved) | `denoteBlockB_straight` (proved), `denoteRowsB_looped` (proved), `denoteRowsB_straight` (proved), `checkModule_conservative` (proved), `checkModule_eq_check` (proved), `defs_conservative` (proved), `moduleHasTy_ext` (proved), `typeOfProgram_ext` (proved) | — |
 | `R3` | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `closed_armsIn` (proved), `closed_checkIn` (proved), `closed_fieldTypeIn` (proved), `closed_membersIn` (proved), `closed_setTypeIn` (proved), `closed_tagArmsIn` (proved), `fieldAdmitsIn_sound` (proved), `liftIn_closed` (proved), `tagArmsIn_partition` (proved), `fits_iff_membersIn` (proved), `fits_memberIn` (proved), `fits_unfold` (proved), `liftIn_transfer` (proved), `cata_declAlg_normalize` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `exists_memberIn_fresh` (proved), `exists_memberIn_of_inhabited` (proved), `fixedPoint_agree` (proved), `guarded_fixedPoint_unique` (proved), `hasTyIn_iff` (proved), `inhabited_iff_memberIn` (proved), `isPayload_of_hasTy_record` (proved), `memberIn_iff_expand` (proved), `memberIn_iff_expansions` (proved), `memberIn_iff_membersIn` (proved), `memberIn_mono` (proved), `memberIn_normalize` (proved), `memberIn_sub` (proved), `memberIn_unfold_iff` (proved), `tyDecls_conservative` (proved), `wiring_readers_conservative` (proved), `ofJson_complete` (modulo), `ofJson_image` (goal), `frame_laws` (proved), `member` (proved), `codec_roundtrip` (proved), `memberIn_ref` (proved) | `ofJson_image` |
-| `R4` | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `awaitStep_types` (proved), `Latch.Model.closeStep_types` (proved), `flushStep_types` (proved), `initialStep_types` (proved), `isOpenStep_types` (proved), `wakeStep_types` (proved), `Latch.Model.withdrawStep_types` (proved), `image_agrees` (proved), `afterExit_first` (proved), `typed` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `available_types` (proved), `PartitionedSemaphore.initial_types` (proved), `reserve_types` (proved), `tryTake_types` (proved), `Pool.Model.closeStep_types` (proved), `drainStep_types` (proved), `Model.initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `args` (proved), `head` (proved), `above_args` (proved), `above_prod` (proved), `admits_normalize` (proved), `below_args` (proved), `candsFields_eq` (proved), `candsItems_eq` (proved), `candsList_below` (proved), `candsList_cons` (proved), `candsList_nil` (proved), `cands_args` (proved), `cands_below` (proved), `cands_mem_members` (proved), `cands_union_right` (proved), `cands_var` (proved), `comp_co` (proved), `comp_inv` (proved), `comp_ne_contra` (proved), `covers` (proved), `instance_shape` (proved), `instantiate_solve` (proved), `joinCands_least` (proved), `joinCands_upper` (proved), `join_eq_left_of_subN` (proved), `join_eq_right_of_subN` (proved), `lookup_added` (proved), `lowers_cons` (proved), `matchArgsB_append` (proved), `matchArgsB_complete` (proved), `matchArgsB_cons_nil` (proved), `matchArgsB_ite` (proved), `matchArgsB_least` (proved), `matchArgsB_list_var_nat` (proved), `matchArgsB_one_var` (proved), `matchArgsB_sound` (proved), `matchArgsB_two_vars` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_least` (proved), `matchB_modify_use` (proved), `matchB_one_var` (proved), `matchB_refOf_var` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `mem_lowers` (proved), `mem_varsOf_args` (proved), `mem_zip_map_right` (proved), `mem_zip_self_map` (proved), `noAppFields_eq_all` (proved), `noAppItems_eq_all` (proved), `noApp_args` (proved), `prod_left_cands` (proved), `prod_member_left` (proved), `prod_member_right` (proved), `prod_or_not` (proved), `prod_right_cands` (proved), `recovers` (proved), `solve_between` (proved), `solve_lookup_of_mem` (proved), `subN_join_least` (proved), `subN_never` (proved), `templateOK_of` (proved), `loop_sync_op` (proved), `native_sync_answer` (proved), `native_sync_op` (proved), `perform_scoped_iff` (proved), `heap_sites_keep` (proved), `withParams_defOf` (proved), `withParams_of_none` (proved), `withParams_param` (proved), `withParams_serviceTy` (proved), `admitted_heap_history` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `invoke_arm` (proved), `param_arm` (proved), `saved_mask_image_membership` (proved), `scopeParams_ref` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `scopeParams_below` (proved), `scopeParams_body` (proved), `scopeParams_child` (proved), `scopeParams_decl` (proved), `scopeParams_layer_below` (proved), `PubSub.initial_types` (proved), `PubSub.poll_types` (proved), `slide_types` (proved), `subscribe_types` (proved), `tryPublish_types` (proved), `unsubscribe_types` (proved), `ascribe_formed_for_steps` (proved), `empty_typed` (proved), `message_nodes_for_steps` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `offer_nodes_for_steps` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `Queue.poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `modify_callback_answers` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `fromDefinitions_declarations` (proved), `arrayBatch_answers` (proved), `raceCompleteFirst_accepts` (proved), `raceCompleteFirst_keeps` (proved), `get_answers` (proved), `make_answers` (proved), `modify_answers` (proved) | — |
+| `R4` | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `awaitStep_types` (proved), `Latch.Model.closeStep_types` (proved), `flushStep_types` (proved), `initialStep_types` (proved), `isOpenStep_types` (proved), `wakeStep_types` (proved), `Latch.Model.withdrawStep_types` (proved), `image_agrees` (proved), `afterExit_first` (proved), `typed` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `available_types` (proved), `PartitionedSemaphore.initial_types` (proved), `reserve_types` (proved), `tryTake_types` (proved), `Pool.Model.closeStep_types` (proved), `drainStep_types` (proved), `Model.initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `args` (proved), `head` (proved), `above_args` (proved), `above_prod` (proved), `admits_normalize` (proved), `below_args` (proved), `candsFields_eq` (proved), `candsItems_eq` (proved), `candsList_below` (proved), `candsList_cons` (proved), `candsList_nil` (proved), `cands_args` (proved), `cands_below` (proved), `cands_mem_members` (proved), `cands_union_right` (proved), `cands_var` (proved), `comp_co` (proved), `comp_inv` (proved), `comp_ne_contra` (proved), `covers` (proved), `instance_shape` (proved), `instantiate_solve` (proved), `joinCands_least` (proved), `joinCands_upper` (proved), `join_eq_left_of_subN` (proved), `join_eq_right_of_subN` (proved), `lookup_added` (proved), `lowers_cons` (proved), `matchArgsB_append` (proved), `matchArgsB_complete` (proved), `matchArgsB_cons_nil` (proved), `matchArgsB_ite` (proved), `matchArgsB_least` (proved), `matchArgsB_list_var_nat` (proved), `matchArgsB_one_var` (proved), `matchArgsB_sound` (proved), `matchArgsB_two_vars` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_least` (proved), `matchB_modify_use` (proved), `matchB_one_var` (proved), `matchB_refOf_var` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `mem_lowers` (proved), `mem_varsOf_args` (proved), `mem_zip_map_right` (proved), `mem_zip_self_map` (proved), `noAppFields_eq_all` (proved), `noAppItems_eq_all` (proved), `noApp_args` (proved), `prod_left_cands` (proved), `prod_member_left` (proved), `prod_member_right` (proved), `prod_or_not` (proved), `prod_right_cands` (proved), `recovers` (proved), `solve_between` (proved), `solve_lookup_of_mem` (proved), `subN_join_least` (proved), `subN_never` (proved), `templateOK_of` (proved), `loop_sync_op` (proved), `native_sync_answer` (proved), `native_sync_op` (proved), `perform_scoped_iff` (proved), `heap_sites_keep` (proved), `withParams_defOf` (proved), `withParams_of_none` (proved), `withParams_param` (proved), `withParams_serviceTy` (proved), `admitted_heap_history` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `invoke_arm` (proved), `param_arm` (proved), `saved_mask_image_membership` (proved), `scopeParams_ref` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `provide_assoc_conditional` (proved), `provide_tensor_interchange` (proved), `scopeParams_below` (proved), `scopeParams_body` (proved), `scopeParams_child` (proved), `scopeParams_decl` (proved), `scopeParams_layer_below` (proved), `PubSub.initial_types` (proved), `PubSub.poll_types` (proved), `slide_types` (proved), `subscribe_types` (proved), `tryPublish_types` (proved), `unsubscribe_types` (proved), `ascribe_formed_for_steps` (proved), `empty_typed` (proved), `message_nodes_for_steps` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `offer_nodes_for_steps` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `Queue.poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `modify_callback_answers` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `fromDefinitions_declarations` (proved), `arrayBatch_answers` (proved), `raceCompleteFirst_accepts` (proved), `raceCompleteFirst_keeps` (proved), `get_answers` (proved), `make_answers` (proved), `modify_answers` (proved) | — |
 | `R5` | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved) | — |
-| `R6` | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `instance_prepared_success` (proved), `origin_addresses_call` (proved), `reached_callInstance` (proved), `Run.session_eq_ref` (proved), `denoteRows_eq_session_host` (proved), `runWith_denotes` (proved), `h8_loopedRows` (proved), `denoteRowsB_eq_session_host` (proved), `runWith_denotesB` (proved), `replay_at_call_instance` (proved) | `ofSketch_error_iff` (proved), `replay_at_call_instance` (proved), `Live.session_eq_ref` (proved), `view_funded` (proved), `not_withFiber` (proved), `ContextFreeCode.toPlain` (proved), `ContextFreeFrame.toPlain` (proved), `ContextFreeHooks.of_loopedRows` (proved), `ContextFreeHooks.toPlain` (proved), `prepend` (proved), `Leads.refl` (proved), `Leads.trans` (proved), `of_blockRows` (proved), `PlainHooks.of_loopedRows` (proved), `answer` (proved), `contextSame` (proved), `ReachesC.contextStep` (proved), `join` (proved), `ReachesC.refl` (proved), `same` (proved), `ReachesC.step` (proved), `ReachesC.trans` (proved), `ReachesQ.contextStep` (proved), `ReachesQ.refl` (proved), `ReachesQ.step` (proved), `ReachesQ.trans` (proved), `RunJoinC.refl` (proved), `terminal` (proved), `RunJoinC.trans` (proved), `argSitesAt_body` (proved), `block_context_action` (proved), `block_context_noScoped` (proved), `compilesBO_bind` (proved), `compilesBO_catchCause` (proved), `compilesBO_catchIf` (proved), `compilesBO_exit` (proved), `compilesBO_iterate` (proved), `compilesBO_matchCause` (proved), `compilesBO_onExit` (proved), `compilesBO_select` (proved), `compilesBO_suspend` (proved), `compilesBlk` (proved), `compilesBlk_context` (proved), `compilesBlk_provideContext` (proved), `compilesBlk_provideService` (proved), `compilesBlk_root` (proved), `compilesBlk_service` (proved), `contextBracket_enter` (proved), `contextBracket_leave` (proved), `contextStep_fallback` (proved), `contextStep_finished_stores` (proved), `contextStep_plain` (proved), `contextStep_quiet` (proved), `contextStep_stores` (proved), `contextStep_yieldWrapper` (proved), `context_receipt_finish` (proved), `context_run_finish` (proved), `defBodyPath_body` (proved), `drive_deliver_finish_context` (proved), `drive_deliver_running_context` (proved), `drive_finish_M_context` (proved), `drive_loop_call_context` (proved), `drive_loop_finish_context` (proved), `drive_loop_running_context` (proved), `drive_loop_sync_op_context` (proved), `drive_loop_sync_op_none_context` (proved), `drive_loop_sync_pure_context` (proved), `drive_loop_yield_context` (proved), `drive_receipt_prefix` (proved), `drive_receipt_result` (proved), `drive_receipt_stable` (proved), `drive_seg_receipt` (proved), `evaluateNative_plain_context` (proved), `evaluatePrim_contextStep` (proved), `fire_Myield_answer_context` (proved), `flushAll_Mexit_context` (proved), `flush_Myield_receipt` (proved), `hostRunBlockB_exits` (proved), `iteration_M_context` (proved), `load_evaluate_receipt` (proved), `localRunC_agree` (proved), `localRunC_compileB` (proved), `localRunC_compileBO` (proved), `localRunC_mono` (proved), `localRunC_to_blockB` (proved), `localRunC_to_rowsB` (proved), `localRunC_waits` (proved), `localWaitC_to_rowsB` (proved), `seg_settles_receipt` (proved), `bodyAt` (proved), `bodiesOf_blockRows` (proved), `cata_blockAlgB_loopedDataRows` (proved), `denoteBlockB_context` (proved), `denoteBlockB_exit` (proved), `denoteBlockB_loopedDataRows` (proved), `denoteBlockB_of_asExit` (proved), `denoteBlockB_param` (proved), `denoteBlockB_provideContext` (proved), `denoteBlockB_provideService` (proved), `denoteBlockB_service` (proved), `hostRunB_stable` (proved), `observeRows_project` (proved), `partAt_at` (proved), `partAt_of_hasTy` (proved), `hostRunB_iff` (proved), `bodyAt_at` (proved), `run_eq_ref_table` (proved), `checkModule_programCallAt` (proved), `effChain_bind_succeed` (proved), `external_error_members` (proved), `handles_of_payloadFieldTy` (proved), `hasTy_callAt` (proved), `lookup_programCalls` (proved), `moduleHasTy_programCallAt` (proved), `programCallAt_rowTy` (proved), `noWithFiber` (proved), `bound_in_tree` (proved), `request_leads` (proved), `ofProgram_eq_denoteRowsB` (goal), `agrees_hostRun` (proved), `agrees_hostRun_blocks` (proved), `applied_selects` (proved), `conforms_sat` (proved), `conforms_sat_blocks` (proved), `control_retires` (proved), `denoteRowsB_eq_session_host` (proved), `denoteRows_eq_session` (proved), `denoteRows_eq_session_host` (proved), `effEquiv_runWith` (proved), `ending_of_tape` (proved), `h8_loopedRows` (proved), `h9_blocks` (proved), `request_performed` (proved), `runWith_denotes` (proved), `runWith_denotesB` (proved), `runWith_finishes` (proved), `runWith_guarded_denotes` (proved), `runWith_guarded_denotesB` (proved), `runWith_host_denotes` (proved), `runWith_host_denotesB` (proved), `runWith_layer_denotes` (proved), `sessionSystem_finished` (proved), `sessionSystem_finishes` (proved), `Run.session_eq_ref` (proved), `session_keys_once` (proved), `serve_answers` (proved), `serve_appends` (proved), `serve_query` (proved), `serve_refuses` (proved), `serve_transparent` (proved), `receipt_inert` (proved) | `ofProgram_eq_denoteRowsB` |
+| `R6` | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `instance_prepared_success` (proved), `origin_addresses_call` (proved), `reached_callInstance` (proved), `Run.session_eq_ref` (proved), `denoteRows_eq_session_host` (proved), `runWith_denotes` (proved), `h8_loopedRows` (proved), `denoteRowsB_eq_session_host` (proved), `runWith_denotesB` (proved), `replay_at_call_instance` (proved) | `ofSketch_error_iff` (proved), `session_ok_iff` (proved), `session_retains` (proved), `replay_at_call_instance` (proved), `Live.session_eq_ref` (proved), `view_funded` (proved), `not_withFiber` (proved), `ContextFreeCode.toPlain` (proved), `ContextFreeFrame.toPlain` (proved), `ContextFreeHooks.of_loopedRows` (proved), `ContextFreeHooks.toPlain` (proved), `prepend` (proved), `Leads.refl` (proved), `Leads.trans` (proved), `of_blockRows` (proved), `PlainHooks.of_loopedRows` (proved), `answer` (proved), `contextSame` (proved), `ReachesC.contextStep` (proved), `join` (proved), `ReachesC.refl` (proved), `same` (proved), `ReachesC.step` (proved), `ReachesC.trans` (proved), `ReachesQ.contextStep` (proved), `ReachesQ.refl` (proved), `ReachesQ.step` (proved), `ReachesQ.trans` (proved), `RunJoinC.refl` (proved), `terminal` (proved), `RunJoinC.trans` (proved), `argSitesAt_body` (proved), `block_context_action` (proved), `block_context_noScoped` (proved), `compilesBO_bind` (proved), `compilesBO_catchCause` (proved), `compilesBO_catchIf` (proved), `compilesBO_exit` (proved), `compilesBO_iterate` (proved), `compilesBO_matchCause` (proved), `compilesBO_onExit` (proved), `compilesBO_select` (proved), `compilesBO_suspend` (proved), `compilesBlk` (proved), `compilesBlk_context` (proved), `compilesBlk_provideContext` (proved), `compilesBlk_provideService` (proved), `compilesBlk_root` (proved), `compilesBlk_service` (proved), `contextBracket_enter` (proved), `contextBracket_leave` (proved), `contextStep_fallback` (proved), `contextStep_finished_stores` (proved), `contextStep_plain` (proved), `contextStep_quiet` (proved), `contextStep_stores` (proved), `contextStep_yieldWrapper` (proved), `context_receipt_finish` (proved), `context_run_finish` (proved), `defBodyPath_body` (proved), `drive_deliver_finish_context` (proved), `drive_deliver_running_context` (proved), `drive_finish_M_context` (proved), `drive_loop_call_context` (proved), `drive_loop_finish_context` (proved), `drive_loop_running_context` (proved), `drive_loop_sync_op_context` (proved), `drive_loop_sync_op_none_context` (proved), `drive_loop_sync_pure_context` (proved), `drive_loop_yield_context` (proved), `drive_receipt_prefix` (proved), `drive_receipt_result` (proved), `drive_receipt_stable` (proved), `drive_seg_receipt` (proved), `evaluateNative_plain_context` (proved), `evaluatePrim_contextStep` (proved), `fire_Myield_answer_context` (proved), `flushAll_Mexit_context` (proved), `flush_Myield_receipt` (proved), `hostRunBlockB_exits` (proved), `iteration_M_context` (proved), `load_evaluate_receipt` (proved), `localRunC_agree` (proved), `localRunC_compileB` (proved), `localRunC_compileBO` (proved), `localRunC_mono` (proved), `localRunC_to_blockB` (proved), `localRunC_to_rowsB` (proved), `localRunC_waits` (proved), `localWaitC_to_rowsB` (proved), `seg_settles_receipt` (proved), `bodyAt` (proved), `bodiesOf_blockRows` (proved), `cata_blockAlgB_loopedDataRows` (proved), `denoteBlockB_context` (proved), `denoteBlockB_exit` (proved), `denoteBlockB_loopedDataRows` (proved), `denoteBlockB_of_asExit` (proved), `denoteBlockB_param` (proved), `denoteBlockB_provideContext` (proved), `denoteBlockB_provideService` (proved), `denoteBlockB_service` (proved), `hostRunB_stable` (proved), `observeRows_project` (proved), `partAt_at` (proved), `partAt_of_hasTy` (proved), `hostRunB_iff` (proved), `interface_imposed` (proved), `rows_of_interface` (proved), `bodyAt_at` (proved), `run_eq_ref_table` (proved), `checkModule_programCallAt` (proved), `effChain_bind_succeed` (proved), `external_error_members` (proved), `handles_of_payloadFieldTy` (proved), `hasTy_callAt` (proved), `lookup_programCalls` (proved), `moduleHasTy_programCallAt` (proved), `programCallAt_rowTy` (proved), `wrap_tensor` (goal), `noWithFiber` (proved), `bound_in_tree` (proved), `request_leads` (proved), `queue_spec` (proved), `ofProgram_eq_denoteRowsB` (goal), `agrees_hostRun` (proved), `agrees_hostRun_blocks` (proved), `applied_selects` (proved), `conforms_sat` (proved), `conforms_sat_blocks` (proved), `control_retires` (proved), `denoteRowsB_eq_session_host` (proved), `denoteRows_eq_session` (proved), `denoteRows_eq_session_host` (proved), `effEquiv_runWith` (proved), `ending_of_tape` (proved), `h8_loopedRows` (proved), `h9_blocks` (proved), `request_performed` (proved), `runWith_denotes` (proved), `runWith_denotesB` (proved), `runWith_finishes` (proved), `runWith_guarded_denotes` (proved), `runWith_guarded_denotesB` (proved), `runWith_host_denotes` (proved), `runWith_host_denotesB` (proved), `runWith_layer_denotes` (proved), `sessionSystem_finished` (proved), `sessionSystem_finishes` (proved), `Run.session_eq_ref` (proved), `session_keys_once` (proved), `apply_commits_once` (proved), `apply_refuses` (proved), `load_own` (proved), `hinted_readOnly` (proved), `query_hint` (proved), `serve_answers` (proved), `serve_appends` (proved), `serve_query` (proved), `serve_refuses` (proved), `serve_transparent` (proved), `receipt_inert` (proved) | `wrap_tensor`, `ofProgram_eq_denoteRowsB` |
 | `R7` | open | — | — | — |
-| `R8` | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved) | `printTypedAt_none` (proved), `eraseJoinArgs_printTyped` (proved), `eraseJoinArgs_printTypedAt` (proved), `eraseJoinArgs_printTypedSitesAt` (proved), `readTyped_exact` (proved), `readTyped_printTyped` (proved), `readTyped_printTypedAt` (proved), `localRunC_of_localRun` (proved), `focusAtTable_annotate` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved), `readModule_printModule_defs` (proved), `funded_replays` (proved), `tape_replays` (proved) | — |
+| `R8` | open | `read_print` (proved), `Program.read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved) | `printTypedAt_none` (proved), `eraseJoinArgs_printTyped` (proved), `eraseJoinArgs_printTypedAt` (proved), `eraseJoinArgs_printTypedSitesAt` (proved), `readTyped_exact` (proved), `readTyped_printTyped` (proved), `readTyped_printTypedAt` (proved), `parse_render` (proved), `localRunC_of_localRun` (proved), `firstUnder_isNone` (proved), `literalRefusal_eq_none_iff` (proved), `literalRefusal_isNone` (proved), `literalsRefusal_isNone` (proved), `natRefusal_isNone` (proved), `orElse_isNone` (proved), `valueRefusal_eq_none_iff` (proved), `valueRefusal_isNone` (proved), `focusAtTable_annotate` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved), `readModule_printModule_defs` (proved), `serviceFaultIn_tsProfile_iff` (proved), `funded_replays` (proved), `tape_replays` (proved), `ofJsonAnyOrder_exact` (proved), `ofJson_exact` (proved), `Canonical.readLocated_exact` (proved), `Canonical.readLocated_site` (proved), `readLocated_erases` (proved), `ShapeDoc.readLocated_exact` (proved), `readLocated_exact_of` (proved), `ShapeDoc.readLocated_site` (proved), `ShapeDoc.read_exact` (proved), `canonicalHex?_exact` (proved), `natOfBinary64_binary64OfNat` (proved), `natOfBinary64_exact` (proved), `natOfBinary64_finite` (proved), `ofBinary64_toBinary64` (proved), `readAt_exact` (proved), `readAt_exact._mutual` (proved), `readAt_site` (proved), `readAt_site._mutual` (proved), `readFields_exact` (proved), `readIn_exact` (proved), `readIn_exact._mutual` (proved), `readList_exact` (proved), `tagOfName_exact` (proved), `profileLocated_erases` (proved), `profileLocated_exact` (proved), `profileLocated_site` (proved), `read_toBinary64` (proved), `write_read` (proved), `write_readLocated` (proved), `describe_result` (proved), `listing_outputSchema` (proved), `method_name_agrees` (proved), `supportedMethods_descriptors` (proved) | — |
 | `R9` | open | `m7_proved` (proved), `m7_admitted` (proved) | `countdown_parks_positional` (proved), `evalTerm_progress` (proved), `_mutual` (proved) | — |
 | `R10` | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `build_retains` (proved), `elaborateModule_no_declarations` (proved), `elaboration_eq_getD` (proved), `finishBuild_retains` (proved), `mapDoneEffectOf_protocol` (proved), `mapEffectOf_protocol` (proved), `awaitStep_agrees` (proved), `Latch.Model.closeStep_agrees` (proved), `flushStep_agrees` (proved), `initialStep_agrees` (proved), `isOpenStep_agrees` (proved), `latch_registration_agrees` (proved), `latch_steps_agree` (proved), `wakeStep_agrees` (proved), `Latch.Model.withdrawStep_agrees` (proved), `frame` (proved), `sound` (proved), `cell_read` (proved), `reads_ascribe` (proved), `step_updates` (proved), `available_eval` (proved), `available_reads` (proved), `bookkeeping_agrees` (proved), `PartitionedSemaphore.Model.initial_eval` (proved), `PartitionedSemaphore.Model.initial_reads` (proved), `reserve_eval` (proved), `reserve_reads` (proved), `tryTake_eval` (proved), `tryTake_reads` (proved), `Pool.Model.closeStep_agrees` (proved), `drainStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `close_attempt` (proved), `drain_attempt` (proved), `drain_attempt_minted` (proved), `lease_attempt` (proved), `lease_attempt_minted` (proved), `Pool.make_makes` (proved), `return_attempt` (proved), `return_attempt_minted` (proved), `select_attempt` (proved), `withdraw_attempt` (proved), `withdraw_attempt_minted` (proved), `hostRunBlockB_stable` (proved), `call_unfolds_at_limitB` (proved), `cata_blockAlgB_approx` (proved), `cata_blockAlgB_effs` (proved), `cata_blockAlgB_effs_approx` (proved), `denoteBlockB_approx` (proved), `denoteBlockB_bind` (proved), `denoteBlockB_call` (proved), `denoteBlockB_invoke` (proved), `hostRunBlockB_bind` (proved), `invoke_unfolds_at_limitB` (proved), `params_approx_lookup` (proved), `runRowsH_map_some` (proved), `tagHit_record` (proved), `modify_loop` (proved), `sub_instantiate_polarity` (proved), `semiring_laws` (proved), `mask_printed_form_profile` (proved), `PubSub.Model.initial_eval` (proved), `PubSub.Model.initial_reads` (proved), `poll_eval` (proved), `poll_reads` (proved), `single_steps_agree` (proved), `slide_eval` (proved), `slide_reads` (proved), `subscribe_eval` (proved), `subscribe_reads` (proved), `tryPublish_eval` (proved), `tryPublish_reads` (proved), `unsubscribe_eval` (proved), `unsubscribe_reads` (proved), `catchDone_meaning` (proved), `matchAnswer_meaning` (proved), `matchEffect_meaning` (proved), `matchEffect_protocol` (proved), `offer_loop` (proved), `take_loop` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `flatMap_split` (proved), `offerStep_agrees` (proved), `offer_jobs` (proved), `pollStep_agrees` (proved), `poll_jobs` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `stateJobs_afterAccept` (proved), `Queue.Model.takeStep_agrees` (proved), `take_jobs` (proved), `withdrawOffer_agrees` (proved), `withdrawOffer_jobs` (proved), `withdrawTake_agrees` (proved), `withdrawTake_jobs` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `Queue.take_attempt` (proved), `Queue.take_attempt_minted` (proved), `Queue.take_withdrawal` (proved), `Queue.take_withdrawal_minted` (proved), `cache_agrees` (proved), `denoteBlockB_getBody` (proved), `Cache.get_agrees` (proved), `get_hit` (proved), `get_miss` (proved), `get_session` (proved), `holding_self` (proved), `hostRunBlockB_call_invalidate` (proved), `hostRunBlockB_invoke_get` (proved), `hostRun_bind_call` (proved), `hostRun_bind_straight` (proved), `invalidate_agrees` (proved), `invalidate_get` (proved), `invalidate_run` (proved), `Cache.make_agrees` (proved), `refPoke_peek` (proved), `decode_modifySome` (proved), `decode_option` (proved), `encode_getD` (proved), `getAndSet_agrees` (proved), `getAndUpdateSome_agrees` (proved), `getAndUpdate_agrees` (proved), `Ref.get_agrees` (proved), `kernel_agrees` (proved), `Ref.make_agrees` (proved), `modifySome_agrees` (proved), `modify_agrees` (proved), `modify_callback_agrees` (proved), `ref_steps_agree` (proved), `setAndGet_agrees` (proved), `set_agrees` (proved), `updateAndGet_agrees` (proved), `updateSomeAndGet_agrees` (proved), `updateSome_agrees` (proved), `update_agrees` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `Semaphore.make_makes` (proved), `release_attempt` (proved), `takeIfAvailable_attempt` (proved), `Semaphore.take_attempt` (proved), `Semaphore.take_attempt_minted` (proved), `Semaphore.take_withdrawal` (proved), `Semaphore.take_withdrawal_minted` (proved), `visit_attempt` (proved), `visit_attempt_minted` (proved), `arrayStep_agrees` (proved) | — |
-| `R11` | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `replace_sum` (proved), `replace_sum_le_omitted` (proved), `finalizerOr_debit` (proved), `getCont_le` (proved), `step_debit` (proved), `getCont_spec` (proved), `StackLedger.funded_reachable` (proved), `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `census_pushes_once` (proved), `FinalizerRun.funded_reachable` (proved), `once_placed_direct_pushes_once` (proved), `once_placed_outside_census` (goal), `once_placed_pushes_once` (modulo), `starts_le_pushes` (proved), `evaluateNative_maskChain` (proved), `evaluateNative_under` (proved), `evaluatePrim_producer` (proved), `evaluatePrim_under` (proved), `iteration_currentOpCount` (proved), `iteration_under` (proved), `Local.history_funded` (proved), `LocalOn.history_funded` (proved), `AdministrativeKept.non_evaluator` (proved), `AdministrativeQueue.non_evaluator` (proved), `armE` (proved), `failure_stack_eq` (proved), `getCont_cause` (proved), `popFrom_cause` (proved), `resumeCause` (proved), `CommandClosure.command` (proved), `joined` (proved), `read` (proved), `after_add_code_credits` (proved), `async_route_credits` (proved), `close_program_credits` (proved), `compile_credits` (proved), `emit_credits` (proved), `fin_program_credits` (proved), `load_credits` (proved), `load_funded` (proved), `prog_of_credits` (proved), `registration_template` (proved), `response_credits_bounded` (proved), `source_op_credits` (proved), `stack_before_action` (proved), `stack_before_iterator` (proved), `stack_before_push` (proved), `stack_before_suspend` (proved), `stack_credits_bounded` (proved), `update_credits` (proved), `add_memo_credits` (proved), `bind_service_credits` (proved), `build_scope_credits` (proved), `combine_credits` (proved), `constant_push_credits` (proved), `constant_stack_credits` (proved), `constant_start` (proved), `contA_credits` (proved), `contE_credits` (proved), `context_credits` (proved), `exit_credits` (proved), `failure_fiber_le` (proved), `failure_stack_le` (proved), `forced_yield_iteration` (proved), `forced_yield_loop_funded` (proved), `layer_compile_credits` (proved), `layer_construction_credits` (proved), `layer_inner_credits` (proved), `layer_resolve_credits` (proved), `layer_with_credits` (proved), `layer_zero_credits` (proved), `loop_top_credits` (proved), `merge_context_credits` (proved), `provide_body_credits` (proved), `provide_layer_credits` (proved), `provide_then_credits` (proved), `region_credits` (proved), `resolve_credits` (proved), `service_lookup_credits` (proved), `store_contA_credits` (proved), `store_contE_credits` (proved), `store_exit_credits` (proved), `suspend_credits` (proved), `update_body_credits` (proved), `yield_wrapper_credits` (proved), `history` (proved), `Execution.load` (proved), `outer_custody` (proved), `ready_emit` (proved), `ready_update` (proved), `armA_counts` (proved), `armE_counts` (proved), `finalizerEvents_no_push` (proved), `frame_failure_le` (proved), `getCont_no_push` (proved), `interp_loopEnter` (proved), `interp_suspend` (proved), `joinPushed_no_push` (proved), `noPush_append` (proved), `noPush_counts` (proved), `passEvents_no_push` (proved), `passPushed_no_push` (proved), `popFrom_no_push` (proved), `push_onSuccess` (proved), `registrations_append` (proved), `resumeCause_counts` (proved), `resumeValue_counts` (proved), `stack_full` (proved), `starts_append` (proved), `FrameDebit.step` (proved), `sync_stack_le` (proved), `withFiber_suspend_le` (proved), `FrameSequencing.step` (proved), `decision` (proved), `fold_lift` (proved), `deliver` (proved), `loop` (proved), `sync_op` (proved), `NativeIterationDebit.iteration` (proved), `NativeMachineShape.iteration` (proved), `NativeMachineShape.native` (proved), `primitive` (proved), `NativeScopeDebit.native` (proved), `action_noAdd` (proved), `action_not_finished` (proved), `action_returned` (proved), `countdown_noAdd` (proved), `exit_pop_noAdd` (proved), `finalizer_returned_template` (proved), `frame_step_template` (proved), `iteration_returned_template` (proved), `loop_top` (proved), `loop_top_source` (proved), `native_returned_template` (proved), `primitive_returned_template` (proved), `returned_clean` (proved), `scoped_exit_returned` (proved), `step_frame_template` (proved), `armA` (proved), `getCont_value` (proved), `resumeValue` (proved), `value_cap` (proved), `answerOf_clean` (proved), `armA_noAdd` (proved), `armE_noAdd` (proved), `constant_push_kept` (proved), `ensure_noAdd` (proved), `forced_unwrap` (proved), `getCont_cause_kept` (proved), `getCont_noAdd` (proved), `getCont_value_finalizer` (proved), `noAdd_append` (proved), `noAdd_cons` (proved), `noAdd_tail` (proved), `passPushed_noAdd` (proved), `popFrom_cause_kept` (proved), `popFrom_noAdd` (proved), `popFrom_value_finalizer` (proved), `resumeCause_clean` (proved), `resumeCause_kept` (proved), `resumeValue_clean` (proved), `resumeValue_kept` (proved), `resumeValue_kept_clear` (proved), `cancel` (proved), `closeSeq_credits` (proved), `interp_contA` (proved), `interp_contE` (proved), `interp_iter` (proved), `interp_loopResume` (proved), `iterator_future` (proved), `loopFinish_credits` (proved), `loopNext_credits` (proved), `loopResume_credits` (proved), `runStmts_credits` (proved), `store_cancel` (proved), `yieldOf_credits` (proved), `terminal` (proved), `RuntimeShape.load` (proved), `close` (proved), `link` (proved), `syncOp` (proved), `acquired_registration` (proved), `async_noAdd` (proved), `async_producer` (proved), `forced_push` (proved), `forced_wrapper` (proved), `interrupt` (proved), `Sequencing.load` (proved), `noAdd_asyncFinalizer` (proved), `noAdd_empty` (proved), `noAdd_full` (proved), `noAdd_mask` (proved), `opaque_noAdd` (proved), `raw_yield_excluded` (proved), `registration_step` (proved), `resume_command` (proved), `resume_frame_debit` (proved), `saved_resume` (proved), `stable_cause` (proved), `stable_full` (proved), `stable_refGet` (proved), `stable_value` (proved), `value_response` (proved), `yield_producer` (proved), `yield_response_full` (proved), `yield_stable` (proved), `add_open` (proved), `after_add_exit` (proved), `after_add_exit_credit` (proved), `after_add_unit` (proved), `after_add_unit_credit` (proved), `close_chain_transfer` (proved), `close_scope` (proved), `close_seq_command` (proved), `close_seq_start` (proved), `foreign_suspension` (proved), `release_loop_debit` (proved), `release_start` (proved), `release_start_count` (proved), `release_start_debit` (proved), `release_start_registered` (proved), `scope_add_closed` (proved), `scope_add_open` (proved), `StackRegion.command` (proved), `compiled_region_bracket_of_prefix` (proved), `drive` (proved), `settle_callback` (proved), `clause_closeScope` (proved), `clause_scoped` (proved), `foreignFinalizer_ambient` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `guarded_driveStep_liveTransports` (proved), `stepped_live` (proved) | `once_placed_outside_census` |
-| `R12` | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved) | `driveState_loop` (proved), `iteration_below_budget` (proved), `loop_of_iteration` (proved), `bounded` (proved), `complete_unique` (proved), `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `ofProgram_approx` (goal), `frontier_of_diverges` (proved), `frontier_waits` (proved), `rows_divergence_adequate` (goal), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved), `runWith_exit_of_diverges` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `write_read` (proved) | `ofProgram_approx`, `rows_divergence_adequate` |
-| `R13` | open | `Run.journal_replays` (proved) | `Live.journal_replays` (proved), `restore_save` (proved), `reached` (proved), `reached_history` (proved), `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `restore_closed` (proved), `restore_roots` (proved), `restore_targets` (proved), `transcript_replays` (proved), `replays` (proved) | — |
-| `R14` | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `check_closed` (proved), `Program.refusals_nil_iff` (proved), `hasTy_extSlotEnv` (proved), `callAt_rowTy` (proved), `Program.annotate_eq_table` (proved), `Sketch.annotate_eq_table` (proved), `table_fill` (proved), `EditSession.reached_view` (proved), `check_filled_module` (proved) | `max_assoc` (proved), `max_comm` (proved), `max_idem` (proved), `max_le` (proved), `max_mono` (proved), `closed` (proved), `checkAction_eq` (proved), `checkEffs_eq` (proved), `checkLayer_eq` (proved), `checkLayers_eq` (proved), `checkStmt_eq` (proved), `checkStmts_eq` (proved), `check_alg_agreeOn` (proved), `check_eq` (proved), `Annotate.check_restrict` (proved), `bodyAt_typed` (proved), `BodiesHasTy.replace` (proved), `matchArgsB_monotone` (proved), `ask_value` (modulo), `combine_deps` (goal), `explain_replays` (goal), `run_module` (proved), `run_part` (proved), `checkAction_rebase` (proved), `checkEffs_rebase` (proved), `checkLayer_rebase` (proved), `checkLayers_rebase` (proved), `checkStmt_rebase` (proved), `checkStmt_step_binds` (proved), `checkStmts_rebase` (proved), `check_rebase` (proved), `append` (proved), `nil` (proved), `push` (proved), `closed_arms` (proved), `coherent` (goal), `commit_one_keepExact` (goal), `commit_single_sound` (goal), `commit_sound` (goal), `revert_program` (goal), `step_coherent` (goal), `step_refuses` (proved), `step_replay` (proved), `EditSession.Coherent.ext` (proved), `EditSession.feed_coherent` (proved), `feed_edit` (proved), `EditSession.feed_keeps` (proved), `feed_omit_sketch` (proved), `feed_repaint` (proved), `feed_shown` (proved), `feed_spliced` (proved), `EditSession.feed_undo` (proved), `EditSession.open_coherent` (proved), `reached_coherent` (proved), `EditSession.reached_view` (proved), `run_coherent` (proved), `run_keeps` (proved), `EditSession.view_refusals` (proved), `EditSession.view_type` (proved), `addresses_expandRefs` (proved), `addresses_rounds_filter` (proved), `eq_defs_of_isBlock` (proved), `mem_addresses_expandRefs` (proved), `ne_defs_of_isBlock` (proved), `partAt_plain` (proved), `partAt_resig` (proved), `scopeOf_append` (proved), `add_wf` (goal), `publish_eq_materialize` (goal), `actionAll_onRef` (proved), `allTypes_append` (proved), `allTypes_nil` (proved), `allTypes_singleton` (proved), `allTypes_zipIdx_map` (proved), `annotationsAll_expandRefs` (proved), `annotationsClosed_of_formed` (proved), `annotations_closed` (proved), `argsAnnotations_all` (proved), `argumentAnnotations_all` (proved), `causeAnnotations_all` (proved), `closed_of_formed` (proved), `closed_of_nodes` (proved), `declAnnotations_all` (proved), `effAll_onRef` (proved), `effsAll_onRef` (proved), `forall_mem_none` (proved), `forall_mem_some` (proved), `formed_sites_iff` (proved), `inputFormed_program` (proved), `inputFormed_services` (proved), `layerAll_of_layerAt` (proved), `layerAll_onRef` (proved), `layersAll_onRef` (proved), `mem_nodes_field` (proved), `mem_nodes_item` (proved), `nodeAnnotations_all` (proved), `optionTerm_all` (proved), `programAnnotations_all` (proved), `services_closed` (proved), `stmtAll_onRef` (proved), `stmtsAll_onRef` (proved), `termAnnotations_all` (proved), `closed_genAnswer` (proved), `closed_joinAnswerT` (proved), `closed_merge` (proved), `closed_seq` (proved), `isBlock` (proved), `all_of_dropWhile_nil` (proved), `all_of_takeWhile_length` (proved), `dropWhile_eq_nil_of_all` (proved), `filter_eq_nil_of_all_false` (proved), `cause_cases_of_below` (proved), `cause_closed` (proved), `cause_least` (proved), `cause_monotone` (proved), `cause_reads` (proved), `cause_upper` (proved), `exit_closed` (proved), `exit_eliminator` (proved), `exit_one` (proved), `fiber_closed` (proved), `fiber_eliminator` (proved), `fiber_one` (proved), `list_closed` (proved), `list_eliminator` (proved), `list_one` (proved), `option_closed` (proved), `option_eliminator` (proved), `CustomScheme.closed_apply` (proved), `Scheme.closed_apply` (proved), `closed_monoApply` (proved), `closed_projectProduct` (proved), `closed_typeOf` (proved), `spec_answersClosed` (proved), `addresses_eq_cons` (proved), `addresses_expandRound_filter` (proved), `addresses_root` (proved), `at_append` (proved), `at_child` (proved), `at_layers_nil` (proved), `at_mapRefs` (proved), `at_replaceAt_above` (proved), `at_replaceAt_below` (proved), `at_snoc` (proved), `at_stmts_nil` (proved), `belowRef_cons` (proved), `belowRef_of_expandRound` (proved), `belowRef_ref` (proved), `childEnv_replace_kept` (proved), `child_add_three` (proved), `child_expandRound` (proved), `child_mapRefs` (proved), `child_ref` (proved), `envAt_append` (proved), `envAt_child` (proved), `eq_of_refTarget?` (proved), `exists_at_of_mem_foldList` (proved), `foldList_cases` (proved), `layerAt_mapRefs` (proved), `mem_childAddresses` (proved), `mem_foldList_iff` (proved), `ne_ref_of_refTarget?` (proved), `not_belowRef_nil` (proved), `not_belowRef_of_mem` (proved), `refTarget?_expandRound` (proved), `ref_expandRound` (proved), `replaceAt_append` (proved), `replaceAt_cons_isBlock` (proved), `replaceAt_defs_body` (proved), `replaceAt_defs_main` (proved), `replaceAt_eff` (proved), `replaceAt_effs_head` (proved), `replaceAt_effs_tail` (proved), `setChild_isBlock` (proved), `sizeOf_child_lt` (proved), `stmtsHead_replace_kept` (proved), `child_step` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `bodyAt_resig` (proved), `bodyAt_sig` (proved), `lt_append_left` (proved), `prefix_cases` (proved), `properPrefix_append_left` (proved), `properPrefix_eq_true_iff` (proved), `rebase_append` (proved), `closed_check` (proved), `closed_fieldOf` (proved), `closed_fieldType` (proved), `closed_setOf` (proved), `closed_setType` (proved), `closed_tagArms` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `extends_withDefs` (proved), `Sketch.annotate_eq_table` (proved), `check_fill` (proved), `check_fill_focusAt` (proved), `check_fill_kept` (proved), `check_filled` (proved), `check_filled_module` (proved), `Sketch.check_focusAt` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_omit_focusAt` (proved), `check_program` (proved), `decode_encode` (proved), `decode_exact` (proved), `expand_table_filter` (proved), `fillAt_of_replaceAt` (proved), `fillAt_some` (proved), `focusAt_at` (proved), `focusAt_more_holes` (proved), `Sketch.focusAt_nil` (proved), `hole_hasTy` (proved), `hole_hasTy_focus` (proved), `mem_sourceTable` (proved), `Sketch.refusals_head` (proved), `Sketch.refusals_nil_iff` (proved), `refusals_of_check` (proved), `sigAt_extends` (proved), `sigAt_nil` (proved), `sigAt_part` (proved), `sourceAnnotate_eq_sourceTable` (proved), `sourceCheck_ok` (proved), `sourceCheck_toOption` (proved), `sourceEntry_path` (proved), `sourceRefusals_head` (proved), `sourceRefusals_nil_iff` (proved), `sourceRefusals_of_ok` (proved), `sourceTable_find` (proved), `sourceTable_focus` (proved), `sourceTable_head` (proved), `sourceTable_result_refusal_none` (proved), `sourceTable_typedAt` (proved), `tableEntry_path` (proved), `table_fill` (proved), `Sketch.table_head` (proved), `table_more_holes` (proved), `table_omit` (proved), `table_result_refusal_none` (proved), `SourceSession.Coherent.ext` (proved), `SourceSession.feed_coherent` (goal), `feed_draft` (goal), `feed_keepExact` (goal), `SourceSession.feed_keeps` (goal), `feed_root` (goal), `SourceSession.feed_undo` (goal), `SourceSession.focusAt_typed` (proved), `SourceSession.open_coherent` (modulo), `SourceSession.reached_view` (modulo), `replay_drafts_view` (goal), `table_eq` (proved), `view_eq` (proved), `SourceSession.view_refusals` (proved), `SourceSession.view_type` (proved), `bodies_eq` (proved), `bodies_mem_under` (proved), `bodies_restrict` (proved), `bodies_splice` (proved), `bodies_under` (proved), `bodyEntry_head` (proved), `bodyEntry_nil` (proved), `bodyEntry_nodecl` (proved), `bodyEntry_tail` (proved), `find?_map_at` (proved), `mem_splice` (proved), `moduleLayers_restrict` (proved), `splice_all_under` (proved), `splice_append_out_left` (proved), `splice_append_out_right` (proved), `splice_three` (proved), `typedAt_table` (proved), `typedAt_table_nil` (proved), `typedAt_table_of_focusAt` (proved), `under_append` (proved), `under_prefix_false` (proved), `under_self` (proved), `under_sibling_false` (proved), `closed_project` (proved), `closed_typeAt` (proved), `closedSubst_matchArgsB` (proved), `closed_cands` (proved), `closed_diffTag` (proved), `closed_instantiate` (proved), `closed_joinCands` (proved), `closed_payloadOf` (proved), `closed_payloadTy` (proved), `mem_of_lookup` (proved), `subN_causeOf_iff` (proved), `subN_exitOf_iff` (proved), `subN_fiberOf_iff` (proved), `subN_list_iff` (proved), `subN_option_iff` (proved), `adjoint` (proved), `adjoint_le` (proved), `extendAll_adjoint` (proved), `extendAll_bot` (proved), `extendAll_isSome_iff` (proved), `extendAll_laws` (proved), `extendAll_least` (proved), `extendAll_lift` (proved), `extendAll_mono` (proved), `extendAll_upper` (proved), `extend_adjoint` (proved), `extend_bot` (proved), `extend_isSome_iff` (proved), `extend_laws` (proved), `extend_least` (proved), `extend_liftOne` (proved), `extend_mono` (proved), `extend_upper` (proved), `liftOne_answers` (proved), `liftOne_isSome_iff` (proved), `liftOne_mono` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `extendAll_agrees` (proved), `extendAll_closed` (proved), `extendAll_closed_pair` (proved), `extendAll_eq_some_iff` (proved), `extendAll_never` (proved), `extendAll_of_extend` (proved), `extendAll_refused` (proved), `extend_agrees` (proved), `extend_closed` (proved), `extend_closed_pair` (proved), `extend_eq_some_iff` (proved), `extend_never` (proved), `extend_refused` (proved), `extend_two` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_pair` (proved), `foldl_join_pair_start` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `liftOne_congr` (proved), `liftOne_eq` (proved), `liftOne_eq_some_iff` (proved), `liftOne_member` (proved), `liftOne_never` (proved), `liftOne_some` (proved), `liftOne_two` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_union_eq_of` (proved), `lift_union_eq_of_antisymm` (proved), `lift_union_eq_pair` (proved), `lift_unique` (proved), `lift_unique_pair` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `prod_antisymm` (proved), `subN_iff_le` (proved), `actionHasTy_closed` (proved), `actionHasTy_replace` (proved), `actionHasTy_sigProgram` (proved), `addresses_eff_head` (proved), `addresses_eq_foldList` (proved), `annotateModule_fill` (proved), `annotateModule_fill_body` (proved), `annotateModule_fill_layers` (proved), `annotateModule_fill_main` (proved), `annotateModule_fill_plain` (proved), `annotateModule_plain` (proved), `annotateModule_restrict` (proved), `Program.annotate_eq_table` (proved), `argTy_closed` (proved), `argsTy_closed` (proved), `at_of_mem_refSites` (proved), `belowSite_refSites_iff` (proved), `bodiesHasTy_sigProgram` (proved), `callAt_rowTy` (proved), `causeInputError_causeOf` (proved), `causeInputError_exitOf` (proved), `causeInputError_upper` (proved), `causeTy_closed` (proved), `cause_mono` (proved), `checkBodies_restrict` (proved), `checkModule_ext` (proved), `checkModule_programFocusAt` (proved), `checkModule_replace_programFocusAt` (proved), `checkModule_restrict` (proved), `checkRow_rowBindings` (proved), `check_closed` (proved), `Program.check_focusAt` (proved), `check_replace` (proved), `check_replace_focusAt` (proved), `childAddresses_map_tableEntryAt` (proved), `closedSig_app` (proved), `closedSig_native` (proved), `closed_catchIfError` (proved), `closed_causeInputError` (proved), `closed_exitOf` (proved), `closed_fiberTy` (proved), `closed_getD` (proved), `closed_joinAnswer` (proved), `closed_listOf` (proved), `closed_litArgTy` (proved), `closed_nativeAtomTy` (proved), `closed_nativeServiceTy` (proved), `closed_optionTy` (proved), `closed_rowTy` (proved), `closed_serviceTy` (proved), `effTy_map_of_hasTy` (proved), `effTy_of_check` (proved), `effsHasTy_closed` (proved), `effsHasTy_replace` (proved), `effsHasTy_sigProgram` (proved), `exitOf_exitOf` (proved), `exitOf_upper` (proved), `fiberTy_fiberOf` (proved), `fiberTy_upper` (proved), `focusAt_eq_some` (proved), `Program.focusAt_nil` (proved), `Program.focusAt_typed` (proved), `foldMapAt_action_base` (proved), `foldMapAt_action_fuse` (proved), `foldMapAt_action_hom` (proved), `foldMapAt_action_paths_cons` (proved), `foldMapAt_action_paths_shift` (proved), `foldMapAt_eff_base` (proved), `foldMapAt_eff_fuse` (proved), `foldMapAt_eff_hom` (proved), `foldMapAt_eff_paths_cons` (proved), `foldMapAt_eff_paths_shift` (proved), `foldMapAt_effs_base` (proved), `foldMapAt_effs_fuse` (proved), `foldMapAt_effs_hom` (proved), `foldMapAt_effs_paths_cons` (proved), `foldMapAt_effs_paths_shift` (proved), `foldMapAt_layer_base` (proved), `foldMapAt_layer_fuse` (proved), `foldMapAt_layer_hom` (proved), `foldMapAt_layer_paths_cons` (proved), `foldMapAt_layer_paths_shift` (proved), `foldMapAt_layers_base` (proved), `foldMapAt_layers_fuse` (proved), `foldMapAt_layers_hom` (proved), `foldMapAt_layers_paths_cons` (proved), `foldMapAt_layers_paths_shift` (proved), `foldMapAt_stmt_base` (proved), `foldMapAt_stmt_fuse` (proved), `foldMapAt_stmt_hom` (proved), `foldMapAt_stmt_paths_cons` (proved), `foldMapAt_stmt_paths_shift` (proved), `foldMapAt_stmts_base` (proved), `foldMapAt_stmts_fuse` (proved), `foldMapAt_stmts_hom` (proved), `foldMapAt_stmts_paths_cons` (proved), `foldMapAt_stmts_paths_shift` (proved), `foldMapAt_term_fuse` (proved), `foldMapAt_terms_fuse` (proved), `hasTy_closed` (proved), `hasTy_extSlotEnv` (proved), `hasTy_focusAt` (proved), `hasTy_replace` (proved), `hasTy_replace_focusAt` (proved), `hasTy_sigProgram` (proved), `holes_conservative` (proved), `kept_eq_certified` (goal), `layerHasTy_closed` (proved), `layerHasTy_replace` (proved), `layerHasTy_sigProgram` (proved), `layersHasTy_closed` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `layersHasTy_sigProgram` (proved), `listOf_list` (proved), `listOf_upper` (proved), `mem_addresses_iff` (proved), `moduleHasTy_partAt_typed` (proved), `moduleHasTy_programFocusAt` (proved), `moduleHasTy_replace_programFocusAt` (proved), `moduleHasTy_sigProgram` (proved), `nodeAnswer_replace_kept` (proved), `optionTy_eq_normal` (proved), `optionTy_option` (proved), `optionTy_upper` (proved), `references_move` (proved), `Program.refusals_head` (proved), `Program.refusals_nil_iff` (proved), `refusals_of_hasTy` (proved), `sigOkKey_of_serviceTy` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_closed` (proved), `stmtsHasTy_replace` (proved), `stmtsHasTy_sigProgram` (proved), `subN_causeOf_causeUpper` (proved), `subN_exitOf_causeUpper` (proved), `tableAt_eq_cons` (proved), `tableAt_mem_path` (proved), `tableAt_none` (proved), `tableAt_path` (proved), `tableAt_perform` (proved), `tableAt_rebase` (proved), `tableAt_splice` (proved), `tableEntryAt_nil` (proved), `table_eq_tableAt` (proved), `Program.table_head` (proved), `table_result_refusal_none_of_hasTy` (proved), `table_splice` (proved), `termTy_closed` (proved), `termTy_of_term?` (proved), `typeOfProgram_closed` (proved), `typeOfProgram_closed_app` (proved), `yieldAt_addressYield` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved), `ofJsonAnyOrder_exact` (proved), `ofJson_exact` (proved), `read_exact` (proved), `canonicalHex?_exact` (proved), `natOfBinary64_exact` (proved), `natOfBinary64_finite` (proved), `readFields_exact` (proved), `readIn_exact` (proved), `readList_exact` (proved), `tagOfName_exact` (proved), `except_error_bind` (proved), `except_ok_bind` (proved), `except_pure` (proved) | `combine_deps`, `explain_replays`, `coherent`, `commit_one_keepExact`, `commit_single_sound`, `commit_sound`, `revert_program`, `step_coherent`, `add_wf`, `publish_eq_materialize`, `SourceSession.feed_coherent`, `feed_draft`, `feed_keepExact`, `SourceSession.feed_keeps`, `feed_root`, `SourceSession.feed_undo`, `replay_drafts_view`, `kept_eq_certified` |
+| `R11` | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `replace_sum` (proved), `replace_sum_le_omitted` (proved), `finalizerOr_debit` (proved), `getCont_le` (proved), `step_debit` (proved), `getCont_spec` (proved), `StackLedger.funded_reachable` (proved), `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `census_pushes_once` (proved), `FinalizerRun.funded_reachable` (proved), `once_placed_direct_pushes_once` (proved), `once_placed_outside_census` (goal), `once_placed_pushes_once` (modulo), `starts_le_pushes` (proved), `evaluateNative_maskChain` (proved), `evaluateNative_under` (proved), `evaluatePrim_producer` (proved), `evaluatePrim_under` (proved), `iteration_currentOpCount` (proved), `iteration_under` (proved), `Local.history_funded` (proved), `LocalOn.history_funded` (proved), `AdministrativeKept.non_evaluator` (proved), `AdministrativeQueue.non_evaluator` (proved), `armE` (proved), `failure_stack_eq` (proved), `getCont_cause` (proved), `popFrom_cause` (proved), `resumeCause` (proved), `CommandClosure.command` (proved), `joined` (proved), `read` (proved), `after_add_code_credits` (proved), `async_route_credits` (proved), `close_program_credits` (proved), `compile_credits` (proved), `emit_credits` (proved), `fin_program_credits` (proved), `load_credits` (proved), `load_funded` (proved), `prog_of_credits` (proved), `registration_template` (proved), `response_credits_bounded` (proved), `source_op_credits` (proved), `stack_before_action` (proved), `stack_before_iterator` (proved), `stack_before_push` (proved), `stack_before_suspend` (proved), `stack_credits_bounded` (proved), `update_credits` (proved), `add_memo_credits` (proved), `bind_service_credits` (proved), `build_scope_credits` (proved), `combine_credits` (proved), `constant_push_credits` (proved), `constant_stack_credits` (proved), `constant_start` (proved), `contA_credits` (proved), `contE_credits` (proved), `context_credits` (proved), `exit_credits` (proved), `failure_fiber_le` (proved), `failure_stack_le` (proved), `forced_yield_iteration` (proved), `forced_yield_loop_funded` (proved), `layer_compile_credits` (proved), `layer_construction_credits` (proved), `layer_inner_credits` (proved), `layer_resolve_credits` (proved), `layer_with_credits` (proved), `layer_zero_credits` (proved), `loop_top_credits` (proved), `merge_context_credits` (proved), `provide_body_credits` (proved), `provide_layer_credits` (proved), `provide_then_credits` (proved), `region_credits` (proved), `resolve_credits` (proved), `service_lookup_credits` (proved), `store_contA_credits` (proved), `store_contE_credits` (proved), `store_exit_credits` (proved), `suspend_credits` (proved), `update_body_credits` (proved), `yield_wrapper_credits` (proved), `history` (proved), `Execution.load` (proved), `outer_custody` (proved), `ready_emit` (proved), `ready_update` (proved), `armA_counts` (proved), `armE_counts` (proved), `finalizerEvents_no_push` (proved), `frame_failure_le` (proved), `getCont_no_push` (proved), `interp_loopEnter` (proved), `interp_suspend` (proved), `joinPushed_no_push` (proved), `noPush_append` (proved), `noPush_counts` (proved), `passEvents_no_push` (proved), `passPushed_no_push` (proved), `popFrom_no_push` (proved), `push_onSuccess` (proved), `registrations_append` (proved), `resumeCause_counts` (proved), `resumeValue_counts` (proved), `stack_full` (proved), `starts_append` (proved), `FrameDebit.step` (proved), `sync_stack_le` (proved), `withFiber_suspend_le` (proved), `FrameSequencing.step` (proved), `decision` (proved), `fold_lift` (proved), `deliver` (proved), `loop` (proved), `sync_op` (proved), `NativeIterationDebit.iteration` (proved), `NativeMachineShape.iteration` (proved), `NativeMachineShape.native` (proved), `primitive` (proved), `NativeScopeDebit.native` (proved), `action_noAdd` (proved), `action_not_finished` (proved), `action_returned` (proved), `countdown_noAdd` (proved), `exit_pop_noAdd` (proved), `finalizer_returned_template` (proved), `frame_step_template` (proved), `iteration_returned_template` (proved), `loop_top` (proved), `loop_top_source` (proved), `native_returned_template` (proved), `primitive_returned_template` (proved), `returned_clean` (proved), `scoped_exit_returned` (proved), `step_frame_template` (proved), `armA` (proved), `getCont_value` (proved), `resumeValue` (proved), `value_cap` (proved), `answerOf_clean` (proved), `armA_noAdd` (proved), `armE_noAdd` (proved), `constant_push_kept` (proved), `ensure_noAdd` (proved), `forced_unwrap` (proved), `getCont_cause_kept` (proved), `getCont_noAdd` (proved), `getCont_value_finalizer` (proved), `noAdd_append` (proved), `noAdd_cons` (proved), `noAdd_tail` (proved), `passPushed_noAdd` (proved), `popFrom_cause_kept` (proved), `popFrom_noAdd` (proved), `popFrom_value_finalizer` (proved), `resumeCause_clean` (proved), `resumeCause_kept` (proved), `resumeValue_clean` (proved), `resumeValue_kept` (proved), `resumeValue_kept_clear` (proved), `cancel` (proved), `closeSeq_credits` (proved), `interp_contA` (proved), `interp_contE` (proved), `interp_iter` (proved), `interp_loopResume` (proved), `iterator_future` (proved), `loopFinish_credits` (proved), `loopNext_credits` (proved), `loopResume_credits` (proved), `runStmts_credits` (proved), `store_cancel` (proved), `yieldOf_credits` (proved), `terminal` (proved), `RuntimeShape.load` (proved), `close` (proved), `link` (proved), `syncOp` (proved), `async_noAdd` (proved), `async_producer` (proved), `forced_push` (proved), `forced_wrapper` (proved), `interrupt` (proved), `Sequencing.load` (proved), `noAdd_asyncFinalizer` (proved), `noAdd_empty` (proved), `noAdd_full` (proved), `noAdd_mask` (proved), `opaque_noAdd` (proved), `raw_yield_excluded` (proved), `registration_step` (proved), `resume_command` (proved), `resume_frame_debit` (proved), `saved_resume` (proved), `stable_cause` (proved), `stable_full` (proved), `stable_refGet` (proved), `stable_value` (proved), `value_response` (proved), `yield_producer` (proved), `yield_response_full` (proved), `yield_stable` (proved), `add_open` (proved), `after_add_exit` (proved), `after_add_exit_credit` (proved), `after_add_unit` (proved), `after_add_unit_credit` (proved), `close_chain_transfer` (proved), `close_scope` (proved), `close_seq_command` (proved), `close_seq_start` (proved), `foreign_suspension` (proved), `release_loop_debit` (proved), `release_start` (proved), `release_start_count` (proved), `release_start_debit` (proved), `release_start_registered` (proved), `scope_add_closed` (proved), `scope_add_open` (proved), `StackRegion.command` (proved), `compiled_region_bracket_of_prefix` (proved), `drive` (proved), `settle_callback` (proved), `clause_closeScope` (proved), `clause_scoped` (proved), `foreignFinalizer_ambient` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `guarded_driveStep_liveTransports` (proved), `stepped_live` (proved) | `once_placed_outside_census` |
+| `R12` | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved) | `driveState_loop` (proved), `iteration_below_budget` (proved), `loop_of_iteration` (proved), `bounded` (proved), `complete_unique` (proved), `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `ofProgram_approx` (goal), `frontier_of_diverges` (proved), `frontier_waits` (proved), `rows_divergence_adequate` (goal), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved), `runWith_exit_of_diverges` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | `ofProgram_approx`, `rows_divergence_adequate` |
+| `R13` | open | `Run.journal_replays` (proved) | `Live.journal_replays` (proved), `restore_save` (proved), `load_bytes` (proved), `open_ofBuilt` (proved), `Object.read_exact` (proved), `reached` (proved), `tensor_left` (proved), `tensor_right` (proved), `reached_history` (proved), `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `result_once` (proved), `restore_closed` (proved), `restore_roots` (proved), `restore_targets` (proved), `transcript_replays` (proved), `replays` (proved) | — |
+| `R14` | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `check_closed` (proved), `Program.refusals_nil_iff` (proved), `hasTy_extSlotEnv` (proved), `callAt_rowTy` (proved), `Program.annotate_eq_table` (proved), `Sketch.annotate_eq_table` (proved), `table_fill` (proved), `EditSession.reached_view` (proved), `check_filled_module` (proved) | `max_assoc` (proved), `max_comm` (proved), `max_idem` (proved), `max_le` (proved), `max_mono` (proved), `closed` (proved), `checkAction_eq` (proved), `checkEffs_eq` (proved), `checkLayer_eq` (proved), `checkLayers_eq` (proved), `checkStmt_eq` (proved), `checkStmts_eq` (proved), `check_alg_agreeOn` (proved), `check_eq` (proved), `Annotate.check_restrict` (proved), `bodyAt_typed` (proved), `BodiesHasTy.replace` (proved), `matchArgsB_monotone` (proved), `ask_value` (proved), `bind_value` (proved), `pure_value` (proved), `checkLayers_cons_ok` (proved), `checkModule_plain` (proved), `combine_deps` (proved), `explain_replays` (goal), `filterMap_eq_map_of` (proved), `joinBodies_deps` (proved), `joinModule_deps` (proved), `layerEntry_rebase` (proved), `layers_join` (proved), `mapError_layer_rebase` (proved), `map_unit_bind` (proved), `mergeNonempty_cons_isSome` (proved), `ok_bind` (proved), `placed_paths` (proved), `run_module` (proved), `run_part` (proved), `run_part_result` (proved), `checkAction_rebase` (proved), `checkEffs_rebase` (proved), `checkLayer_rebase` (proved), `checkLayers_rebase` (proved), `checkStmt_rebase` (proved), `checkStmt_step_binds` (proved), `checkStmts_rebase` (proved), `check_rebase` (proved), `append` (proved), `nil` (proved), `push` (proved), `closed_arms` (proved), `check_ok` (proved), `coherent` (proved), `commit_one_keepExact` (proved), `commit_single_sound` (proved), `commit_sound` (proved), `revert_program` (goal), `step_coherent` (proved), `step_ok` (proved), `step_refuses` (proved), `step_replay` (proved), `apply_app` (proved), `apply_coherent` (proved), `batch_app` (proved), `batch_coherent` (proved), `batch_keepExact_viewType` (proved), `batch_recheck_final` (proved), `batch_single` (proved), `editOf_path` (proved), `foldl_replayStep_coherent` (proved), `replayState_coherent` (proved), `replayStep_coherent` (proved), `replay_drafts_fold` (proved), `undoItems_app` (proved), `undoItems_coherent` (proved), `EditSession.Coherent.ext` (proved), `EditSession.feed_coherent` (proved), `feed_edit` (proved), `EditSession.feed_keeps` (proved), `feed_omit_sketch` (proved), `feed_repaint` (proved), `feed_shown` (proved), `feed_spliced` (proved), `EditSession.feed_undo` (proved), `EditSession.open_coherent` (proved), `reached_coherent` (proved), `EditSession.reached_view` (proved), `run_coherent` (proved), `run_keeps` (proved), `EditSession.view_refusals` (proved), `EditSession.view_type` (proved), `addresses_expandRefs` (proved), `addresses_rounds_filter` (proved), `eq_defs_of_isBlock` (proved), `mem_addresses_expandRefs` (proved), `ne_defs_of_isBlock` (proved), `partAt_plain` (proved), `partAt_resig` (proved), `scopeOf_append` (proved), `add_wf` (proved), `batch_keepExact_fills` (proved), `filterMap_eq_self_of` (proved), `materialize_ok_apply` (proved), `publication_ok` (proved), `publish_eq_materialize` (proved), `wellFormed` (proved), `addEntry_cases` (proved), `addEntry_inv` (proved), `addRaw_inv` (proved), `actionAll_onRef` (proved), `allTypes_append` (proved), `allTypes_nil` (proved), `allTypes_singleton` (proved), `allTypes_zipIdx_map` (proved), `annotationsAll_expandRefs` (proved), `annotationsClosed_of_formed` (proved), `annotations_closed` (proved), `argsAnnotations_all` (proved), `argumentAnnotations_all` (proved), `causeAnnotations_all` (proved), `closed_of_formed` (proved), `closed_of_nodes` (proved), `declAnnotations_all` (proved), `effAll_onRef` (proved), `effsAll_onRef` (proved), `forall_mem_none` (proved), `forall_mem_some` (proved), `formed_sites_iff` (proved), `inputFormed_program` (proved), `inputFormed_services` (proved), `layerAll_of_layerAt` (proved), `layerAll_onRef` (proved), `layersAll_onRef` (proved), `mem_nodes_field` (proved), `mem_nodes_item` (proved), `nodeAnnotations_all` (proved), `optionTerm_all` (proved), `programAnnotations_all` (proved), `services_closed` (proved), `stmtAll_onRef` (proved), `stmtsAll_onRef` (proved), `termAnnotations_all` (proved), `closed_genAnswer` (proved), `closed_joinAnswerT` (proved), `closed_merge` (proved), `closed_seq` (proved), `isBlock` (proved), `all_of_dropWhile_nil` (proved), `all_of_takeWhile_length` (proved), `dropWhile_eq_nil_of_all` (proved), `filter_eq_nil_of_all_false` (proved), `cause_cases_of_below` (proved), `cause_closed` (proved), `cause_least` (proved), `cause_monotone` (proved), `cause_reads` (proved), `cause_upper` (proved), `exit_closed` (proved), `exit_eliminator` (proved), `exit_one` (proved), `fiber_closed` (proved), `fiber_eliminator` (proved), `fiber_one` (proved), `list_closed` (proved), `list_eliminator` (proved), `list_one` (proved), `option_closed` (proved), `option_eliminator` (proved), `CustomScheme.closed_apply` (proved), `Scheme.closed_apply` (proved), `closed_monoApply` (proved), `closed_projectProduct` (proved), `closed_typeOf` (proved), `spec_answersClosed` (proved), `addresses_eq_cons` (proved), `addresses_expandRound_filter` (proved), `addresses_root` (proved), `addresses_split` (proved), `at_append` (proved), `at_child` (proved), `at_layers_nil` (proved), `at_mapRefs` (proved), `at_of_replaceAt_eff` (proved), `at_replaceAt_above` (proved), `at_replaceAt_below` (proved), `at_snoc` (proved), `at_stmts_nil` (proved), `belowRef_cons` (proved), `belowRef_of_expandRound` (proved), `belowRef_ref` (proved), `childEnv_replace_kept` (proved), `child_add_three` (proved), `child_expandRound` (proved), `child_mapRefs` (proved), `child_ref` (proved), `envAt_append` (proved), `envAt_child` (proved), `eq_of_refTarget?` (proved), `exists_at_of_mem_foldList` (proved), `foldList_cases` (proved), `layerAt_mapRefs` (proved), `mem_childAddresses` (proved), `mem_foldList_iff` (proved), `ne_ref_of_refTarget?` (proved), `not_belowRef_nil` (proved), `not_belowRef_of_mem` (proved), `refTarget?_expandRound` (proved), `ref_expandRound` (proved), `replaceAt_append` (proved), `replaceAt_cons_isBlock` (proved), `replaceAt_defs_body` (proved), `replaceAt_defs_main` (proved), `replaceAt_eff` (proved), `replaceAt_effs_head` (proved), `replaceAt_effs_tail` (proved), `setChild_isBlock` (proved), `sizeOf_child_lt` (proved), `stmtsHead_replace_kept` (proved), `child_step` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `table_root_of_open` (proved), `bodyAt_resig` (proved), `bodyAt_sig` (proved), `lt_append_left` (proved), `prefix_cases` (proved), `properPrefix_append_left` (proved), `properPrefix_eq_true_iff` (proved), `rebase_append` (proved), `closed_check` (proved), `closed_fieldOf` (proved), `closed_fieldType` (proved), `closed_setOf` (proved), `closed_setType` (proved), `closed_tagArms` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `extends_withDefs` (proved), `Sketch.annotate_eq_table` (proved), `check_fill` (proved), `check_fill_focusAt` (proved), `check_fill_kept` (proved), `check_filled` (proved), `check_filled_module` (proved), `Sketch.check_focusAt` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_omit_focusAt` (proved), `check_program` (proved), `decode_encode` (proved), `decode_exact` (proved), `edit_at` (proved), `edit_of_at` (proved), `edit_replaceAt` (proved), `expand_of_refSites_nil` (proved), `expand_table_filter` (proved), `fillAt_of_replaceAt` (proved), `fillAt_some` (proved), `focusAt_at` (proved), `focusAt_more_holes` (proved), `Sketch.focusAt_nil` (proved), `hole_hasTy` (proved), `hole_hasTy_focus` (proved), `mem_sourceTable` (proved), `Sketch.refusals_head` (proved), `Sketch.refusals_nil_iff` (proved), `refusals_of_check` (proved), `sigAt_extends` (proved), `sigAt_nil` (proved), `sigAt_part` (proved), `sigData_fillAt` (proved), `sourceAnnotate_eq_sourceTable` (proved), `sourceCheck_ok` (proved), `sourceCheck_toOption` (proved), `sourceEntry_path` (proved), `sourceRefusals_head` (proved), `sourceRefusals_nil_iff` (proved), `sourceRefusals_of_ok` (proved), `sourceTable_eq_filter` (proved), `sourceTable_find` (proved), `sourceTable_focus` (proved), `sourceTable_head` (proved), `sourceTable_result_refusal_none` (proved), `sourceTable_typedAt` (proved), `tableEntry_path` (proved), `table_fill` (proved), `Sketch.table_head` (proved), `table_more_holes` (proved), `table_omit` (proved), `table_result_refusal_none` (proved), `SourceSession.Coherent.ext` (proved), `canSplice_agrees` (proved), `canSplice_candidate` (proved), `canSplice_of_faultFree` (proved), `canSplice_refFree` (proved), `candidatePartKey_some` (proved), `draft_conditions_of_reference` (proved), `draft_reference_spliced` (proved), `expandedEditAgrees_refFree` (proved), `expandedEditAgrees_some` (proved), `SourceSession.feed_coherent` (proved), `feed_draft` (proved), `feed_draft_of` (proved), `feed_draft_ok` (proved), `feed_keepExact` (proved), `feed_keepExact_of` (proved), `feed_keepExact_ok` (proved), `feed_keepExact_sketch` (proved), `feed_keepExact_viewType` (proved), `SourceSession.feed_keeps` (proved), `feed_ok_cases` (proved), `feed_recheck_ok` (proved), `feed_recheck_typed` (proved), `feed_root` (proved), `SourceSession.feed_undo` (proved), `finish_keepExact_ok` (proved), `finish_ok` (proved), `focusAt_of_expand` (proved), `SourceSession.focusAt_typed` (proved), `SourceSession.open_coherent` (proved), `partKey_refFree` (proved), `SourceSession.reached_view` (proved), `recheck_coherent` (proved), `recheck_draft_ok` (proved), `recheck_keepExact_ok` (proved), `recheck_ok` (proved), `reference_table` (proved), `replay_drafts_view` (proved), `source_splice_filter` (proved), `splice_base` (proved), `splice_coherent` (proved), `table_eq` (proved), `typedAt_expand` (proved), `typedAt_root` (proved), `typedAt_root_expand` (proved), `view_eq` (proved), `SourceSession.view_refusals` (proved), `SourceSession.view_type` (proved), `bodies_eq` (proved), `bodies_mem_under` (proved), `bodies_restrict` (proved), `bodies_splice` (proved), `bodies_under` (proved), `bodyEntry_head` (proved), `bodyEntry_nil` (proved), `bodyEntry_nodecl` (proved), `bodyEntry_tail` (proved), `find?_map_at` (proved), `mem_splice` (proved), `moduleLayers_restrict` (proved), `splice_all_under` (proved), `splice_append_out_left` (proved), `splice_append_out_right` (proved), `splice_filter` (proved), `splice_three` (proved), `typedAt_splice_at` (proved), `typedAt_splice_root` (proved), `typedAt_table` (proved), `typedAt_table_nil` (proved), `typedAt_table_of_focusAt` (proved), `under_append` (proved), `under_cons_cons` (proved), `under_cons_ne` (proved), `under_prefix_false` (proved), `under_self` (proved), `under_sibling_false` (proved), `closed_project` (proved), `closed_typeAt` (proved), `closedSubst_matchArgsB` (proved), `closed_cands` (proved), `closed_diffTag` (proved), `closed_instantiate` (proved), `closed_joinCands` (proved), `closed_payloadOf` (proved), `closed_payloadTy` (proved), `mem_of_lookup` (proved), `subN_causeOf_iff` (proved), `subN_exitOf_iff` (proved), `subN_fiberOf_iff` (proved), `subN_list_iff` (proved), `subN_option_iff` (proved), `adjoint` (proved), `adjoint_le` (proved), `extendAll_adjoint` (proved), `extendAll_bot` (proved), `extendAll_isSome_iff` (proved), `extendAll_laws` (proved), `extendAll_least` (proved), `extendAll_lift` (proved), `extendAll_mono` (proved), `extendAll_upper` (proved), `extend_adjoint` (proved), `extend_bot` (proved), `extend_isSome_iff` (proved), `extend_laws` (proved), `extend_least` (proved), `extend_liftOne` (proved), `extend_mono` (proved), `extend_upper` (proved), `liftOne_answers` (proved), `liftOne_isSome_iff` (proved), `liftOne_mono` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `extendAll_agrees` (proved), `extendAll_closed` (proved), `extendAll_closed_pair` (proved), `extendAll_eq_some_iff` (proved), `extendAll_never` (proved), `extendAll_of_extend` (proved), `extendAll_refused` (proved), `extend_agrees` (proved), `extend_closed` (proved), `extend_closed_pair` (proved), `extend_eq_some_iff` (proved), `extend_never` (proved), `extend_refused` (proved), `extend_two` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_pair` (proved), `foldl_join_pair_start` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `liftOne_congr` (proved), `liftOne_eq` (proved), `liftOne_eq_some_iff` (proved), `liftOne_member` (proved), `liftOne_never` (proved), `liftOne_some` (proved), `liftOne_two` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_union_eq_of` (proved), `lift_union_eq_of_antisymm` (proved), `lift_union_eq_pair` (proved), `lift_unique` (proved), `lift_unique_pair` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `prod_antisymm` (proved), `subN_iff_le` (proved), `actionHasTy_closed` (proved), `actionHasTy_replace` (proved), `actionHasTy_sigProgram` (proved), `addresses_eff_head` (proved), `addresses_eq_foldList` (proved), `annotateModule_fill` (proved), `annotateModule_fill_body` (proved), `annotateModule_fill_layers` (proved), `annotateModule_fill_main` (proved), `annotateModule_fill_plain` (proved), `annotateModule_plain` (proved), `annotateModule_restrict` (proved), `Program.annotate_eq_table` (proved), `argTy_closed` (proved), `argsTy_closed` (proved), `at_below_ref_none` (proved), `at_of_mem_refSites` (proved), `at_site_replaceAt` (proved), `belowSite_at_eff` (proved), `belowSite_refSites_iff` (proved), `belowSite_replaceAt` (proved), `bodiesHasTy_sigProgram` (proved), `callAt_rowTy` (proved), `causeInputError_causeOf` (proved), `causeInputError_exitOf` (proved), `causeInputError_upper` (proved), `causeTy_closed` (proved), `cause_mono` (proved), `checkBodies_restrict` (proved), `checkModule_ext` (proved), `checkModule_programFocusAt` (proved), `checkModule_replace_programFocusAt` (proved), `checkModule_restrict` (proved), `checkRow_rowBindings` (proved), `check_closed` (proved), `Program.check_focusAt` (proved), `check_ok_path` (proved), `check_replace` (proved), `check_replace_focusAt` (proved), `childAddresses_map_tableEntryAt` (proved), `closedSig_app` (proved), `closedSig_native` (proved), `closed_catchIfError` (proved), `closed_causeInputError` (proved), `closed_exitOf` (proved), `closed_fiberTy` (proved), `closed_getD` (proved), `closed_joinAnswer` (proved), `closed_listOf` (proved), `closed_litArgTy` (proved), `closed_nativeAtomTy` (proved), `closed_nativeServiceTy` (proved), `closed_optionTy` (proved), `closed_rowTy` (proved), `closed_serviceTy` (proved), `effTy_map_of_hasTy` (proved), `effTy_of_check` (proved), `effsHasTy_closed` (proved), `effsHasTy_replace` (proved), `effsHasTy_sigProgram` (proved), `exitOf_exitOf` (proved), `exitOf_upper` (proved), `fiberTy_fiberOf` (proved), `fiberTy_upper` (proved), `firstRefFault_of_refSites_nil` (proved), `focusAt_eq_some` (proved), `Program.focusAt_nil` (proved), `Program.focusAt_typed` (proved), `foldMapAt_action_base` (proved), `foldMapAt_action_fuse` (proved), `foldMapAt_action_hom` (proved), `foldMapAt_action_paths_cons` (proved), `foldMapAt_action_paths_shift` (proved), `foldMapAt_eff_base` (proved), `foldMapAt_eff_fuse` (proved), `foldMapAt_eff_hom` (proved), `foldMapAt_eff_paths_cons` (proved), `foldMapAt_eff_paths_shift` (proved), `foldMapAt_effs_base` (proved), `foldMapAt_effs_fuse` (proved), `foldMapAt_effs_hom` (proved), `foldMapAt_effs_paths_cons` (proved), `foldMapAt_effs_paths_shift` (proved), `foldMapAt_layer_base` (proved), `foldMapAt_layer_fuse` (proved), `foldMapAt_layer_hom` (proved), `foldMapAt_layer_paths_cons` (proved), `foldMapAt_layer_paths_shift` (proved), `foldMapAt_layers_base` (proved), `foldMapAt_layers_fuse` (proved), `foldMapAt_layers_hom` (proved), `foldMapAt_layers_paths_cons` (proved), `foldMapAt_layers_paths_shift` (proved), `foldMapAt_stmt_base` (proved), `foldMapAt_stmt_fuse` (proved), `foldMapAt_stmt_hom` (proved), `foldMapAt_stmt_paths_cons` (proved), `foldMapAt_stmt_paths_shift` (proved), `foldMapAt_stmts_base` (proved), `foldMapAt_stmts_fuse` (proved), `foldMapAt_stmts_hom` (proved), `foldMapAt_stmts_paths_cons` (proved), `foldMapAt_stmts_paths_shift` (proved), `foldMapAt_term_fuse` (proved), `foldMapAt_terms_fuse` (proved), `handlersOf_defs` (proved), `hasTy_closed` (proved), `hasTy_extSlotEnv` (proved), `hasTy_focusAt` (proved), `hasTy_replace` (proved), `hasTy_replace_focusAt` (proved), `hasTy_sigProgram` (proved), `holes_conservative` (proved), `kept_eq_certified` (proved), `layerHasTy_closed` (proved), `layerHasTy_replace` (proved), `layerHasTy_sigProgram` (proved), `layersHasTy_closed` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `layersHasTy_sigProgram` (proved), `listOf_list` (proved), `listOf_upper` (proved), `mem_addresses_iff` (proved), `moduleHasTy_partAt_typed` (proved), `moduleHasTy_programFocusAt` (proved), `moduleHasTy_replace_programFocusAt` (proved), `moduleHasTy_sigProgram` (proved), `nodeAnswer_replace_kept` (proved), `optionTy_eq_normal` (proved), `optionTy_option` (proved), `optionTy_upper` (proved), `references_move` (proved), `Program.refusals_head` (proved), `Program.refusals_nil_iff` (proved), `refusals_of_hasTy` (proved), `sigOkKey_of_serviceTy` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_closed` (proved), `stmtsHasTy_replace` (proved), `stmtsHasTy_sigProgram` (proved), `subN_causeOf_causeUpper` (proved), `subN_exitOf_causeUpper` (proved), `tableAt_eq_cons` (proved), `tableAt_mem_path` (proved), `tableAt_none` (proved), `tableAt_path` (proved), `tableAt_paths` (proved), `tableAt_perform` (proved), `tableAt_rebase` (proved), `tableAt_splice` (proved), `tableEntryAt_nil` (proved), `table_eq_tableAt` (proved), `Program.table_head` (proved), `table_result_refusal_none_of_hasTy` (proved), `table_splice` (proved), `termTy_closed` (proved), `termTy_of_term?` (proved), `typeOfProgram_closed` (proved), `typeOfProgram_closed_app` (proved), `yieldAt_addressYield` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved), `except_error_bind` (proved), `except_ok_bind` (proved), `except_pure` (proved) | `explain_replays`, `revert_program` |
 
-Next goals (23): `ofJson_image`, `ofProgram_eq_denoteRowsB`, `once_placed_outside_census`, `ofProgram_approx`, `rows_divergence_adequate`, `combine_deps`, `explain_replays`, `coherent`, `commit_one_keepExact`, `commit_single_sound`, `commit_sound`, `revert_program`, `step_coherent`, `add_wf`, `publish_eq_materialize`, `feed_coherent`, `feed_draft`, `feed_keepExact`, `feed_keeps`, `feed_root`, `feed_undo`, `replay_drafts_view`, `kept_eq_certified`
+Next goals (8): `ofJson_image`, `wrap_tensor`, `ofProgram_eq_denoteRowsB`, `once_placed_outside_census`, `ofProgram_approx`, `rows_divergence_adequate`, `explain_replays`, `revert_program`
 
 Open parts, with no planned goal (87), by state:
 
@@ -7384,28 +7661,30 @@ R4 by concept: each concept its nodes are placed at, by tag or by module. An arr
 ```mermaid
 flowchart TB
   n0["Translation & Simulation<br/>proved · 1 nodes"]
-  n1["Store Typing<br/>proved · 98 nodes"]
-  n2["Residual Program Typing<br/>proved · 15 nodes"]
-  n3["Reactive Scheduling<br/>proved · 7 nodes"]
-  n4["Initial Algebras & Folds<br/>proved · 12 nodes"]
-  n5["Subtyping Algebra<br/>proved · 106 nodes"]
-  n6["No concept<br/>proved · 11 nodes"]
-  n7["Exact Codecs<br/>proved · 1 nodes"]
-  n1 --> n6
-  n1 --> n5
-  n2 --> n6
-  n2 --> n4
-  n2 --> n1
-  n5 --> n6
-  n1 --> n3
-  n1 --> n4
-  n2 --> n5
+  n1["Context Requirements<br/>proved · 2 nodes"]
+  n2["Store Typing<br/>proved · 98 nodes"]
+  n3["Residual Program Typing<br/>proved · 15 nodes"]
+  n4["Reactive Scheduling<br/>proved · 7 nodes"]
+  n5["Initial Algebras & Folds<br/>proved · 12 nodes"]
+  n6["Subtyping Algebra<br/>proved · 106 nodes"]
+  n7["No concept<br/>proved · 11 nodes"]
+  n8["Exact Codecs<br/>proved · 1 nodes"]
   n2 --> n7
-  n6 --> n4
-  n6 --> n5
-  n6 --> n1
-  n6 --> n2
+  n2 --> n6
+  n3 --> n7
+  n3 --> n5
+  n3 --> n2
   n6 --> n7
+  n2 --> n4
+  n2 --> n5
+  n3 --> n6
+  n3 --> n8
+  n1 --> n7
+  n7 --> n5
+  n7 --> n6
+  n7 --> n2
+  n7 --> n3
+  n7 --> n8
 ```
 
 | Node | Status | Rests on | Nearest nodes |
@@ -7530,6 +7809,8 @@ flowchart TB
 | `scopeParams_ref` | proved | — | — |
 | `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `solve_lookup_of_mem`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` |
 | `termMaps_of_typed` | proved | — | `evalTerm_progress`, `fits_mono` |
+| `provide_assoc_conditional` | proved | — | `normalize_idem` |
+| `provide_tensor_interchange` | proved | — | `normalize_idem` |
 | `scopeParams_below` | proved | — | — |
 | `scopeParams_body` | proved | — | — |
 | `scopeParams_child` | proved | — | — |
@@ -7698,15 +7979,16 @@ The open part of R6: its planned goals and the theorems proved modulo them. An a
 
 ```mermaid
 flowchart TB
-  n0["ofProgram_eq_denoteRowsB<br/>goal"]
+  n0["wrap_tensor<br/>goal"]
+  n1["ofProgram_eq_denoteRowsB<br/>goal"]
 ```
 
 R6 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
-  n0["No concept<br/>proved · 30 nodes"]
-  n1["Host Session Protocol<br/>proved · 33 nodes"]
+  n0["No concept<br/>proved · 35 nodes"]
+  n1["Host Session Protocol<br/>open · 44 nodes, 1 open"]
   n2["Translation & Simulation<br/>open · 134 nodes, 1 open"]
   n3["Store Typing<br/>proved · 19 nodes"]
   n4["Initial Algebras & Folds<br/>proved · 24 nodes"]
@@ -7768,7 +8050,9 @@ flowchart TB
 | `denoteRowsB_eq_session_host` | proved | — | `hostRunB_stable`, `localRunC_to_rowsB`, `PlainHooks.of_loopedRows`, `answer`, `join`, `Leads.trans`, `seg_settles_receipt`, `Leads.refl`, `load_evaluate_receipt`, `flush_Myield_receipt`, `funded_replays` |
 | `runWith_denotesB` | proved | — | `denoteRowsB_eq_session_host`, `allows_answer`, `observe_awaitingAsync_iff`, `tapeFrom_append` |
 | `replay_at_call_instance` | proved | — | `preflight_failure_noShapeDefect`, `preflight_success_prepared_fits`, `reached_callInstance`, `reached`, `Live.journal_replays` |
-| `ofSketch_error_iff` | proved | — | `checkInput_eq_none_iff` |
+| `ofSketch_error_iff` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff` |
+| `session_ok_iff` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff` |
+| `session_retains` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff`, `session_ok_iff` |
 | `Live.session_eq_ref` | proved | — | `Run.session_eq_ref` |
 | `view_funded` | proved | — | `Live.journal_replays` |
 | `not_withFiber` | proved | — | — |
@@ -7872,6 +8156,8 @@ flowchart TB
 | `partAt_at` | proved | — | `bodyAt_at` |
 | `partAt_of_hasTy` | proved | — | — |
 | `hostRunB_iff` | proved | — | — |
+| `interface_imposed` | proved | — | — |
+| `rows_of_interface` | proved | — | — |
 | `bodyAt_at` | proved | — | — |
 | `run_eq_ref_table` | proved | — | `at_snoc` |
 | `checkModule_programCallAt` | proved | — | `checkModule_sound`, `moduleHasTy_programCallAt` |
@@ -7882,9 +8168,11 @@ flowchart TB
 | `lookup_programCalls` | proved | — | `mem_addresses_iff`, `programCallAt_rowTy` |
 | `moduleHasTy_programCallAt` | proved | — | `partAt_of_hasTy`, `hasTy_callAt`, `bodyAt` |
 | `programCallAt_rowTy` | proved | — | `partAt_at`, `callAt_rowTy` |
+| `wrap_tensor` | goal | `wrap_tensor` | — |
 | `noWithFiber` | proved | — | — |
 | `bound_in_tree` | proved | — | `denoteRowsB_straight`, `localWaitC_to_rowsB`, `request_leads`, `driveState_lift`, `evaluatePrim_producer`, `reached` |
 | `request_leads` | proved | — | `join`, `reached_history`, `normalize_idem`, `checkRow_rowBindings`, `bodyAt_sig`, `programCallAt_rowTy`, `lookup_programCalls`, `answer`, `ReachesC.trans`, `noWithFiber`, `ReachesC.step`, `driveState_lift`, `ReachesC.refl`, `mem_addresses_iff` |
+| `queue_spec` | proved | — | — |
 | `ofProgram_eq_denoteRowsB` | goal | `ofProgram_eq_denoteRowsB` | — |
 | `agrees_hostRun` | proved | — | `denoteRows_eq_session_host` |
 | `agrees_hostRun_blocks` | proved | — | `h9_blocks` |
@@ -7906,11 +8194,16 @@ flowchart TB
 | `sessionSystem_finished` | proved | — | `denoteRows_eq_session_host` |
 | `sessionSystem_finishes` | proved | — | `denoteRows_eq_session_host` |
 | `session_keys_once` | proved | — | `driveState_lift`, `evaluatePrim_producer`, `reached` |
-| `serve_answers` | proved | — | `checkInput_eq_none_iff`, `eq_uncached` |
-| `serve_appends` | proved | — | `eq_uncached`, `checkInput_eq_none_iff` |
-| `serve_query` | proved | — | `checkInput_eq_none_iff`, `eq_uncached` |
-| `serve_refuses` | proved | — | `eq_uncached`, `checkInput_eq_none_iff` |
-| `serve_transparent` | proved | — | `checkInput_eq_none_iff`, `eq_uncached` |
+| `apply_commits_once` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff`, `eq_uncached` |
+| `apply_refuses` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff`, `eq_uncached` |
+| `load_own` | proved | — | `get_exact`, `bytes_never_change`, `checkInput_eq_none_iff`, `programRefusal_none_iff`, `eq_uncached`, `serve_appends`, `commit_reads` |
+| `hinted_readOnly` | proved | — | `serve_query`, `checkInput_eq_none_iff`, `programRefusal_none_iff`, `eq_uncached` |
+| `query_hint` | proved | — | — |
+| `serve_answers` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff`, `eq_uncached` |
+| `serve_appends` | proved | — | `eq_uncached`, `checkInput_eq_none_iff`, `programRefusal_none_iff` |
+| `serve_query` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff`, `eq_uncached` |
+| `serve_refuses` | proved | — | `eq_uncached`, `checkInput_eq_none_iff`, `programRefusal_none_iff` |
+| `serve_transparent` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff`, `eq_uncached` |
 | `receipt_inert` | proved | — | — |
 | `decision_preserves` | proved | — | `fits_subN`, `satisfies_empty`, `order_refl`, `fits_mono`, `order_trans`, `mono`, `subN_trans`, `configTyped_frame`, `memberIn_mono`, `hasTyIn_iff`, `hom_eq_cata_ty`, `wake_preserves`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
 | `load_typed` | proved | — | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound`, `satisfies_empty` |
@@ -7928,6 +8221,7 @@ flowchart TB
 | `reached` | proved | — | — |
 | `Live.journal_replays` | proved | — | `Run.journal_replays` |
 | `checkInput_eq_none_iff` | proved | — | — |
+| `programRefusal_none_iff` | proved | — | — |
 | `at_append` | proved | — | — |
 | `denoteBlockB_invoke` | proved | — | `cata_blockAlgB_effs` |
 | `denoteBlockB_call` | proved | — | — |
@@ -7946,6 +8240,9 @@ flowchart TB
 | `bodyAt_sig` | proved | — | — |
 | `memberIn_mono` | proved | — | `hom_eq_cata_ty` |
 | `eq_uncached` | proved | — | — |
+| `get_exact` | proved | — | — |
+| `bytes_never_change` | proved | — | `commit_grows` |
+| `commit_reads` | proved | — | — |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` |
 | `satisfies_empty` | proved | — | — |
 | `fits_mono` | proved | — | — |
@@ -7973,6 +8270,7 @@ flowchart TB
 | `yieldAt_addressYield` | proved | — | — |
 | `mem_foldList_iff` | proved | — | `exists_at_of_mem_foldList` |
 | `addresses_eq_foldList` | proved | — | — |
+| `commit_grows` | proved | — | — |
 | `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` |
 | `completionStrong_await` | proved | — | `subN_trans` |
 | `subN_refl` | proved | — | — |
@@ -8083,9 +8381,9 @@ R8 by concept: each concept its nodes are placed at, by tag or by module. An arr
 
 ```mermaid
 flowchart TB
-  n0["Exact Codecs<br/>proved · 13 nodes"]
-  n1["Translation & Simulation<br/>proved · 19 nodes"]
-  n2["Initial Algebras & Folds<br/>proved · 51 nodes"]
+  n0["Exact Codecs<br/>proved · 48 nodes"]
+  n1["Translation & Simulation<br/>proved · 27 nodes"]
+  n2["Initial Algebras & Folds<br/>proved · 52 nodes"]
   n3["No concept<br/>proved · 6 nodes"]
   n0 --> n3
   n1 --> n2
@@ -8097,24 +8395,67 @@ flowchart TB
 | Node | Status | Rests on | Nearest nodes |
 | --- | --- | --- | --- |
 | `read_print` | proved | — | `readTerm_printTerm` |
-| `read_exact` | proved | — | — |
+| `Program.read_exact` | proved | — | — |
 | `run_eq_meaning` | proved | — | `at_snoc`, `localRunC_mono`, `localRunC_waits`, `localRunC_agree`, `ReachesQ.refl`, `contextStep_fallback`, `ReachesQ.trans`, `not_withFiber`, `ReachesQ.step`, `localRunC_of_localRun`, `of_loopedRows` |
 | `loopAgreement` | proved | — | `localRunC_mono`, `localRunC_waits`, `localRunC_agree`, `ReachesQ.refl`, `contextStep_fallback`, `ReachesQ.trans`, `not_withFiber`, `ReachesQ.step`, `localRunC_of_localRun`, `of_loopedRows`, `at_snoc` |
 | `run_eq_ref` | proved | — | `at_snoc` |
-| `mask_rows_table_premises` | proved | — | `read_exact`, `read_print` |
+| `mask_rows_table_premises` | proved | — | `Program.read_exact`, `read_print` |
 | `printTyped_eq_print` | proved | — | `printTypedAt_none`, `focusAtTable_annotate` |
 | `printTypedAt_none` | proved | — | `hom_eq_cata_eff` |
 | `eraseJoinArgs_printTyped` | proved | — | `eraseJoinArgs_printTypedSitesAt`, `eraseJoinArgs_printTypedAt` |
 | `eraseJoinArgs_printTypedAt` | proved | — | `readTerm_printTerm` |
 | `eraseJoinArgs_printTypedSitesAt` | proved | — | `envAt_append`, `annotate_eq_table`, `at_child`, `readTerm_printTerm`, `envAt_child` |
-| `readTyped_exact` | proved | — | `read_exact` |
+| `readTyped_exact` | proved | — | `Program.read_exact` |
 | `readTyped_printTyped` | proved | — | `eraseJoinArgs_printTyped`, `read_print` |
 | `readTyped_printTypedAt` | proved | — | `eraseJoinArgs_printTypedAt`, `read_print` |
+| `parse_render` | proved | — | — |
 | `localRunC_of_localRun` | proved | — | `contextStep_fallback`, `not_withFiber` |
+| `firstUnder_isNone` | proved | — | `orElse_isNone` |
+| `literalRefusal_eq_none_iff` | proved | — | `literalRefusal_isNone` |
+| `literalRefusal_isNone` | proved | — | `literalsRefusal_isNone`, `orElse_isNone`, `foldMapAt_eff_fuse` |
+| `literalsRefusal_isNone` | proved | — | — |
+| `natRefusal_isNone` | proved | — | — |
+| `orElse_isNone` | proved | — | — |
+| `valueRefusal_eq_none_iff` | proved | — | `valueRefusal_isNone` |
+| `valueRefusal_isNone` | proved | — | `firstUnder_isNone`, `natRefusal_isNone`, `orElse_isNone` |
 | `focusAtTable_annotate` | proved | — | `check_sound`, `check_complete`, `mem_addresses_iff`, `annotate_eq_table` |
 | `readModule_printModule_defs` | proved | — | `replaceAt_spec` |
+| `serviceFaultIn_tsProfile_iff` | proved | — | — |
 | `funded_replays` | proved | — | `journal_replays`, `tape_replays` |
 | `tape_replays` | proved | — | — |
+| `ofJsonAnyOrder_exact` | proved | — | `readLocated_exact_of` |
+| `ofJson_exact` | proved | — | `ShapeDoc.read_exact` |
+| `Canonical.readLocated_exact` | proved | — | `ShapeDoc.readLocated_exact` |
+| `Canonical.readLocated_site` | proved | — | `ShapeDoc.readLocated_site` |
+| `readLocated_erases` | proved | — | — |
+| `ShapeDoc.readLocated_exact` | proved | — | `readLocated_exact_of` |
+| `readLocated_exact_of` | proved | — | `readAt_exact` |
+| `ShapeDoc.readLocated_site` | proved | — | `readAt_site` |
+| `ShapeDoc.read_exact` | proved | — | `readIn_exact` |
+| `canonicalHex?_exact` | proved | — | — |
+| `natOfBinary64_binary64OfNat` | proved | — | — |
+| `natOfBinary64_exact` | proved | — | — |
+| `natOfBinary64_finite` | proved | — | — |
+| `ofBinary64_toBinary64` | proved | — | `natOfBinary64_binary64OfNat` |
+| `readAt_exact` | proved | — | `readAt_exact._mutual` |
+| `readAt_exact._mutual` | proved | — | `canonicalHex?_exact`, `tagOfName_exact` |
+| `readAt_site` | proved | — | `readAt_site._mutual` |
+| `readAt_site._mutual` | proved | — | — |
+| `readFields_exact` | proved | — | `readIn_exact._mutual` |
+| `readIn_exact` | proved | — | `readIn_exact._mutual` |
+| `readIn_exact._mutual` | proved | — | `tagOfName_exact`, `canonicalHex?_exact`, `natOfBinary64_exact` |
+| `readList_exact` | proved | — | `readIn_exact._mutual` |
+| `tagOfName_exact` | proved | — | — |
+| `profileLocated_erases` | proved | — | — |
+| `profileLocated_exact` | proved | — | `Canonical.readLocated_exact` |
+| `profileLocated_site` | proved | — | `Canonical.readLocated_site` |
+| `read_toBinary64` | proved | — | `ofBinary64_toBinary64` |
+| `write_read` | proved | — | — |
+| `write_readLocated` | proved | — | `write_read` |
+| `describe_result` | proved | — | — |
+| `listing_outputSchema` | proved | — | — |
+| `method_name_agrees` | proved | — | — |
+| `supportedMethods_descriptors` | proved | — | — |
 | `readTerm_printTerm` | proved | — | — |
 | `at_snoc` | proved | — | `at_append` |
 | `localRunC_mono` | proved | — | — |
@@ -8131,6 +8472,7 @@ flowchart TB
 | `annotate_eq_table` | proved | — | `check_eq`, `table_eq_tableAt` |
 | `at_child` | proved | — | `at_snoc` |
 | `envAt_child` | proved | — | `envAt_append` |
+| `foldMapAt_eff_fuse` | proved | — | — |
 | `check_sound` | proved | — | — |
 | `check_complete` | proved | — | — |
 | `mem_addresses_iff` | proved | — | `yieldAt_addressYield`, `mem_foldList_iff`, `addresses_eq_foldList` |
@@ -8377,7 +8719,7 @@ flowchart TB
   n3["Exact Codecs<br/>proved · 1 nodes"]
   n4["Store Typing<br/>proved · 33 nodes"]
   n5["Subtyping Algebra<br/>proved · 45 nodes"]
-  n6["No concept<br/>proved · 26 nodes"]
+  n6["No concept<br/>proved · 27 nodes"]
   n7["Reactive Scheduling<br/>proved · 5 nodes"]
   n8["Initial Algebras & Folds<br/>proved · 2 nodes"]
   n0 --> n2
@@ -8416,10 +8758,10 @@ flowchart TB
 | `forkScopedDefault_typed` | proved | — | `check_sound`, `check_complete` |
 | `releaseOne_typed` | proved | — | `check_sound`, `check_complete` |
 | `mask_printed_form_profile` | proved | — | `saved_mask_restoration`, `read_print`, `check_sound`, `check_complete` |
-| `build_retains` | proved | — | `finishBuild_retains`, `checkInput_eq_none_iff` |
+| `build_retains` | proved | — | `finishBuild_retains`, `checkInput_eq_none_iff`, `programRefusal_none_iff` |
 | `elaborateModule_no_declarations` | proved | — | — |
 | `elaboration_eq_getD` | proved | — | — |
-| `finishBuild_retains` | proved | — | `checkInput_eq_none_iff` |
+| `finishBuild_retains` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff` |
 | `mapDoneEffectOf_protocol` | proved | — | `matchAnswer_meaning` |
 | `mapEffectOf_protocol` | proved | — | `matchAnswer_meaning` |
 | `awaitStep_agrees` | proved | — | `sound` |
@@ -8584,6 +8926,7 @@ flowchart TB
 | `saved_mask_restoration` | proved | — | `at_snoc` |
 | `read_print` | proved | — | `readTerm_printTerm` |
 | `checkInput_eq_none_iff` | proved | — | — |
+| `programRefusal_none_iff` | proved | — | — |
 | `step_keeps_cell` | proved | — | `order_refl`, `termMaps_of_typed` |
 | `closeStep_types` | proved | — | `typed` |
 | `drainStep_types` | proved | — | `typed` |
@@ -8763,7 +9106,7 @@ R11 by concept: each concept its nodes are placed at, by tag or by module. An ar
 
 ```mermaid
 flowchart TB
-  n0["Scope Lifetime & Finalization<br/>open · 242 nodes, 2 open"]
+  n0["Scope Lifetime & Finalization<br/>open · 241 nodes, 2 open"]
   n1["Reactive Scheduling<br/>proved · 5 nodes"]
   n2["No concept<br/>proved · 12 nodes"]
   n3["Initial Algebras & Folds<br/>proved · 10 nodes"]
@@ -8988,7 +9331,6 @@ flowchart TB
 | `close` | proved | — | `close_program_credits`, `close_scope`, `replace_sum` |
 | `link` | proved | — | `replace_sum`, `add_open` |
 | `syncOp` | proved | — | `replace_sum`, `after_add_exit_credit`, `add_open`, `after_add_unit_credit` |
-| `acquired_registration` | proved | — | — |
 | `async_noAdd` | proved | — | `opaque_noAdd` |
 | `async_producer` | proved | — | `noAdd_asyncFinalizer`, `async_noAdd` |
 | `forced_push` | proved | — | — |
@@ -9162,15 +9504,14 @@ R12 by concept: each concept its nodes are placed at, by tag or by module. An ar
 ```mermaid
 flowchart TB
   n0["Reactive Scheduling<br/>proved · 16 nodes"]
-  n1["Exact Codecs<br/>proved · 1 nodes"]
-  n2["Host Session Protocol<br/>open · 9 nodes, 1 open"]
-  n3["Translation & Simulation<br/>open · 74 nodes, 1 open"]
-  n4["No concept<br/>proved · 3 nodes"]
-  n5["Initial Algebras & Folds<br/>proved · 2 nodes"]
+  n1["Host Session Protocol<br/>open · 9 nodes, 1 open"]
+  n2["Translation & Simulation<br/>open · 74 nodes, 1 open"]
+  n3["No concept<br/>proved · 3 nodes"]
+  n4["Initial Algebras & Folds<br/>proved · 2 nodes"]
+  n1 --> n2
   n2 --> n3
-  n3 --> n4
-  n3 --> n2
-  n3 --> n5
+  n2 --> n1
+  n2 --> n4
 ```
 
 | Node | Status | Rests on | Nearest nodes |
@@ -9195,7 +9536,6 @@ flowchart TB
 | `runWith_exit_of_diverges` | proved | — | `runWith_finishes` |
 | `visit_selects_earliest` | proved | — | — |
 | `visit_stops_iff` | proved | — | — |
-| `write_read` | proved | — | — |
 | `localWaitC_to_rowsB` | proved | — | `localRunC_agree`, `contextStep_fallback`, `localRunC_mono`, `localRunC_compileBO`, `localRunC_waits`, `terminal` |
 | `PlainHooks.of_loopedRows` | proved | — | `ContextFreeHooks.of_loopedRows`, `ContextFreeHooks.toPlain` |
 | `answer` | proved | — | — |
@@ -9292,30 +9632,42 @@ R13 by concept: each concept its nodes are placed at, by tag or by module. An ar
 
 ```mermaid
 flowchart TB
-  n0["Host Session Protocol<br/>proved · 6 nodes"]
-  n1["No concept<br/>proved · 3 nodes"]
-  n2["Translation & Simulation<br/>proved · 8 nodes"]
-  n0 --> n1
+  n0["Host Session Protocol<br/>proved · 8 nodes"]
+  n1["Exact Codecs<br/>proved · 4 nodes"]
+  n2["No concept<br/>proved · 7 nodes"]
+  n3["Translation & Simulation<br/>proved · 8 nodes"]
+  n0 --> n2
+  n1 --> n2
 ```
 
 | Node | Status | Rests on | Nearest nodes |
 | --- | --- | --- | --- |
 | `Run.journal_replays` | proved | — | — |
 | `Live.journal_replays` | proved | — | `Run.journal_replays` |
-| `restore_save` | proved | — | `Live.journal_replays`, `checkInput_eq_none_iff` |
+| `restore_save` | proved | — | `Live.journal_replays`, `programRefusal_none_iff`, `checkInput_eq_none_iff` |
+| `load_bytes` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff`, `Object.read_exact`, `open_ofBuilt` |
+| `open_ofBuilt` | proved | — | `programRefusal_none_iff`, `checkInput_eq_none_iff` |
+| `Object.read_exact` | proved | — | `Node.read_exact` |
 | `reached` | proved | — | — |
+| `tensor_left` | proved | — | — |
+| `tensor_right` | proved | — | — |
 | `reached_history` | proved | — | — |
 | `tapeFrom_append` | proved | — | — |
 | `tapeFrom_cut` | proved | — | — |
 | `tapeFrom_cut_replays` | proved | — | `tape_replays`, `tapeFrom_cut` |
 | `tapeFrom_position_replays` | proved | — | `tape_replays` |
+| `result_once` | proved | — | `resultQuery?_eq_some_iff`, `putNode_ok_handleFree` |
 | `restore_closed` | proved | — | — |
 | `restore_roots` | proved | — | — |
 | `restore_targets` | proved | — | — |
-| `transcript_replays` | proved | — | `checkInput_eq_none_iff`, `eq_uncached` |
+| `transcript_replays` | proved | — | `checkInput_eq_none_iff`, `programRefusal_none_iff`, `eq_uncached` |
 | `replays` | proved | — | `Run.journal_replays` |
+| `programRefusal_none_iff` | proved | — | — |
 | `checkInput_eq_none_iff` | proved | — | — |
+| `Node.read_exact` | proved | — | — |
 | `tape_replays` | proved | — | — |
+| `resultQuery?_eq_some_iff` | proved | — | — |
+| `putNode_ok_handleFree` | proved | — | — |
 | `eq_uncached` | proved | — | — |
 
 ### R14: A sketch checks and explains its types: holes and the gap, graduality, the focus, minimal type slices and total marking
@@ -9334,29 +9686,7 @@ The open part of R14: its planned goals and the theorems proved modulo them. An 
 ```mermaid
 flowchart TB
   n0["explain_replays<br/>goal"]
-  n1["commit_one_keepExact<br/>goal"]
-  n2["commit_single_sound<br/>goal"]
-  n3["commit_sound<br/>goal"]
-  n4["revert_program<br/>goal"]
-  n5["step_coherent<br/>goal"]
-  n6["add_wf<br/>goal"]
-  n7["publish_eq_materialize<br/>goal"]
-  n8["SourceSession.feed_coherent<br/>goal"]
-  n9["feed_draft<br/>goal"]
-  n10["feed_keepExact<br/>goal"]
-  n11["SourceSession.feed_keeps<br/>goal"]
-  n12["feed_root<br/>goal"]
-  n13["SourceSession.feed_undo<br/>goal"]
-  n14["SourceSession.open_coherent<br/>modulo"]
-  n15["ask_value<br/>modulo"]
-  n16["combine_deps<br/>goal"]
-  n17["SourceSession.reached_view<br/>modulo"]
-  n18["coherent<br/>goal"]
-  n19["replay_drafts_view<br/>goal"]
-  n20["kept_eq_certified<br/>goal"]
-  n14 --> n15
-  n15 --> n16
-  n17 --> n18
+  n1["revert_program<br/>goal"]
 ```
 
 R14 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
@@ -9364,16 +9694,17 @@ R14 by concept: each concept its nodes are placed at, by tag or by module. An ar
 ```mermaid
 flowchart TB
   n0["Subtyping Algebra<br/>proved · 334 nodes"]
-  n1["Exact Codecs<br/>proved · 12 nodes"]
-  n2["Initial Algebras & Folds<br/>open · 320 nodes, 20 open"]
-  n3["Host Session Protocol<br/>open · 5 nodes, 1 open"]
-  n4["No concept<br/>proved · 10 nodes"]
+  n1["Exact Codecs<br/>proved · 2 nodes"]
+  n2["Initial Algebras & Folds<br/>open · 412 nodes, 2 open"]
+  n3["Host Session Protocol<br/>proved · 7 nodes"]
+  n4["No concept<br/>proved · 13 nodes"]
   n2 --> n4
   n0 --> n4
   n3 --> n2
   n3 --> n4
-  n0 --> n2
   n2 --> n3
+  n0 --> n2
+  n4 --> n2
 ```
 
 | Node | Status | Rests on | Nearest nodes |
@@ -9411,11 +9742,26 @@ flowchart TB
 | `bodyAt_typed` | proved | — | — |
 | `BodiesHasTy.replace` | proved | — | `hasTy_replace_focusAt`, `Program.focusAt_typed`, `replaceAt_eff` |
 | `matchArgsB_monotone` | proved | — | `matchArgsB_least`, `matchArgsB_complete`, `matchArgsB_sound` |
-| `ask_value` | modulo | `combine_deps` | `combine_deps`, `eq_uncached` |
-| `combine_deps` | goal | `combine_deps` | — |
+| `ask_value` | proved | — | `combine_deps`, `eq_uncached` |
+| `bind_value` | proved | — | — |
+| `pure_value` | proved | — | — |
+| `checkLayers_cons_ok` | proved | — | — |
+| `checkModule_plain` | proved | — | — |
+| `combine_deps` | proved | — | `joinModule_deps` |
 | `explain_replays` | goal | `explain_replays` | — |
+| `filterMap_eq_map_of` | proved | — | — |
+| `joinBodies_deps` | proved | — | `run_placed`, `check_eq` |
+| `joinModule_deps` | proved | — | `map_unit_bind`, `layers_join`, `joinBodies_deps`, `run_placed`, `eq_defs_of_isBlock`, `annotateModule_plain`, `checkModule_plain`, `check_eq` |
+| `layerEntry_rebase` | proved | — | `mapError_layer_rebase` |
+| `layers_join` | proved | — | `layerEntry_rebase`, `filterMap_eq_map_of`, `tableAt_eq_cons`, `tableAt_rebase`, `checkLayers_eq`, `mergeNonempty_cons_isSome`, `checkLayers_cons_ok`, `checkLayers_rebase`, `check_eq` |
+| `mapError_layer_rebase` | proved | — | — |
+| `map_unit_bind` | proved | — | — |
+| `mergeNonempty_cons_isSome` | proved | — | — |
+| `ok_bind` | proved | — | — |
+| `placed_paths` | proved | — | `tableAt_paths`, `check_eq`, `run_placed` |
 | `run_module` | proved | — | — |
 | `run_part` | proved | — | — |
+| `run_part_result` | proved | — | `check_eq` |
 | `checkAction_rebase` | proved | — | — |
 | `checkEffs_rebase` | proved | — | — |
 | `checkLayer_rebase` | proved | — | — |
@@ -9428,14 +9774,30 @@ flowchart TB
 | `nil` | proved | — | — |
 | `push` | proved | — | `append` |
 | `closed_arms` | proved | — | `closed_tagArms`, `closed_diffTag`, `closed_payloadTy`, `closed_optionTy` |
-| `coherent` | goal | `coherent` | — |
-| `commit_one_keepExact` | goal | `commit_one_keepExact` | `eq_uncached` |
-| `commit_single_sound` | goal | `commit_single_sound` | `eq_uncached` |
-| `commit_sound` | goal | `commit_sound` | `eq_uncached` |
+| `check_ok` | proved | — | — |
+| `coherent` | proved | — | `replayState_coherent` |
+| `commit_one_keepExact` | proved | — | `feed_keepExact`, `editOf_path`, `batch_single`, `step_ok`, `eq_uncached` |
+| `commit_single_sound` | proved | — | `feed_keepExact`, `editOf_path`, `typedAt_root`, `feed_ok_cases`, `batch_single`, `step_ok`, `commit_sound`, `eq_uncached` |
+| `commit_sound` | proved | — | `batch_recheck_final`, `SourceSession.view_type`, `SourceSession.feed_coherent`, `batch_keepExact_viewType`, `step_ok`, `step_coherent`, `eq_uncached` |
 | `revert_program` | goal | `revert_program` | `eq_uncached` |
-| `step_coherent` | goal | `step_coherent` | `eq_uncached` |
+| `step_coherent` | proved | — | `apply_app`, `apply_coherent`, `check_ok`, `step_ok`, `eq_uncached` |
+| `step_ok` | proved | — | `eq_uncached` |
 | `step_refuses` | proved | — | `eq_uncached` |
 | `step_replay` | proved | — | — |
+| `apply_app` | proved | — | `undoItems_app`, `bind_value`, `SourceSession.feed_keeps`, `pure_value`, `batch_app` |
+| `apply_coherent` | proved | — | `undoItems_coherent`, `bind_value`, `pure_value`, `SourceSession.feed_coherent`, `batch_coherent` |
+| `batch_app` | proved | — | `bind_value`, `SourceSession.feed_keeps`, `pure_value` |
+| `batch_coherent` | proved | — | `bind_value`, `pure_value` |
+| `batch_keepExact_viewType` | proved | — | `bind_value`, `feed_keepExact_viewType`, `pure_value` |
+| `batch_recheck_final` | proved | — | `bind_value`, `feed_recheck_typed`, `pure_value` |
+| `batch_single` | proved | — | `bind_value` |
+| `editOf_path` | proved | — | — |
+| `foldl_replayStep_coherent` | proved | — | `replayStep_coherent` |
+| `replayState_coherent` | proved | — | `SourceSession.open_coherent`, `foldl_replayStep_coherent` |
+| `replayStep_coherent` | proved | — | `apply_coherent` |
+| `replay_drafts_fold` | proved | — | `SourceSession.feed_coherent`, `SourceSession.feed_keeps`, `feed_draft_ok` |
+| `undoItems_app` | proved | — | `bind_value`, `SourceSession.feed_keeps`, `pure_value` |
+| `undoItems_coherent` | proved | — | `bind_value`, `pure_value` |
 | `EditSession.Coherent.ext` | proved | — | — |
 | `EditSession.feed_coherent` | proved | — | `table_omit`, `table_fill`, `effTy_of_check`, `check_sound`, `check_eq`, `typedAt_table`, `typedAt_table_nil`, `Sketch.annotate_eq_table` |
 | `feed_edit` | proved | — | `feed_omit_sketch`, `EditSession.feed_keeps` |
@@ -9459,8 +9821,16 @@ flowchart TB
 | `partAt_plain` | proved | — | — |
 | `partAt_resig` | proved | — | `bodyAt_resig` |
 | `scopeOf_append` | proved | — | — |
-| `add_wf` | goal | `add_wf` | `eq_uncached` |
-| `publish_eq_materialize` | goal | `publish_eq_materialize` | `eq_uncached` |
+| `add_wf` | proved | — | `eq_uncached`, `wellFormed` |
+| `batch_keepExact_fills` | proved | — | `bind_value`, `feed_keepExact_sketch`, `pure_value` |
+| `filterMap_eq_self_of` | proved | — | — |
+| `materialize_ok_apply` | proved | — | — |
+| `publication_ok` | proved | — | `filterMap_eq_self_of` |
+| `publish_eq_materialize` | proved | — | `batch_keepExact_fills`, `publication_ok`, `step_ok`, `materialize_ok_apply`, `focusAt_at`, `at_append`, `at_replaceAt_below`, `prefix_cases`, `at_of_mem_refSites`, `fillAt_some`, `replaceAt_defs_main`, `replaceAt_effs_tail`, `replaceAt_effs_head`, `replaceAt_defs_body`, `eq_defs_of_isBlock`, `partAt_plain`, `replaceAt_cons_isBlock`, `under_append`, `typedAt_table`, `typedAt_table_of_focusAt`, `tableAt_path`, `table_fill`, `check_fill_kept`, `fillAt_of_replaceAt`, `replaceAt_eff`, `expand_of_refSites_nil`, `kept_eq_certified`, `effTy_of_check`, `check_sound`, `SourceSession.view_type`, `wellFormed`, `eq_uncached` |
+| `wellFormed` | proved | — | `addRaw_inv` |
+| `addEntry_cases` | proved | — | `bind_value` |
+| `addEntry_inv` | proved | — | `addEntry_cases` |
+| `addRaw_inv` | proved | — | `addEntry_inv` |
 | `actionAll_onRef` | proved | — | — |
 | `allTypes_append` | proved | — | — |
 | `allTypes_nil` | proved | — | — |
@@ -9529,10 +9899,12 @@ flowchart TB
 | `addresses_eq_cons` | proved | — | `foldMapAt_stmt_paths_cons`, `foldMapAt_layers_paths_cons`, `foldMapAt_effs_paths_cons`, `foldMapAt_layer_paths_cons`, `foldMapAt_action_paths_cons`, `foldMapAt_stmts_paths_cons`, `foldMapAt_eff_paths_cons` |
 | `addresses_expandRound_filter` | proved | — | `eq_of_refTarget?`, `child_ref`, `belowRef_ref`, `mem_childAddresses`, `filter_eq_nil_of_all_false`, `belowRef_cons`, `sizeOf_child_lt`, `child_expandRound`, `addresses_eq_cons`, `ne_ref_of_refTarget?` |
 | `addresses_root` | proved | — | `mem_childAddresses`, `addresses_eq_cons` |
+| `addresses_split` | proved | — | `child_add_three`, `addresses_eq_cons`, `under_cons_ne`, `under_cons_cons` |
 | `at_append` | proved | — | — |
 | `at_child` | proved | — | `at_snoc` |
 | `at_layers_nil` | proved | — | — |
 | `at_mapRefs` | proved | — | `child_mapRefs` |
+| `at_of_replaceAt_eff` | proved | — | `replaceAt_append` |
 | `at_replaceAt_above` | proved | — | `replaceAt_spec`, `replaceAt_append` |
 | `at_replaceAt_below` | proved | — | `replaceAt_spec`, `at_append` |
 | `at_snoc` | proved | — | `at_append` |
@@ -9569,6 +9941,7 @@ flowchart TB
 | `sizeOf_child_lt` | proved | — | — |
 | `stmtsHead_replace_kept` | proved | — | `check_complete`, `check_sound`, `replace_envAt`, `child_step` |
 | `child_step` | proved | — | `layersHasTy_cons`, `at_layers_nil`, `at_stmts_nil`, `effTy_map_of_hasTy` |
+| `table_root_of_open` | proved | — | `withHoles_nil`, `sourceCheck_toOption`, `checkInput_eq_none_iff`, `programRefusal_none_iff` |
 | `bodyAt_resig` | proved | — | — |
 | `bodyAt_sig` | proved | — | — |
 | `lt_append_left` | proved | — | — |
@@ -9598,6 +9971,10 @@ flowchart TB
 | `check_program` | proved | — | `withHoles_nil` |
 | `decode_encode` | proved | — | — |
 | `decode_exact` | proved | — | — |
+| `edit_at` | proved | — | `at_of_replaceAt_eff`, `fillAt_some` |
+| `edit_of_at` | proved | — | `fillAt_of_replaceAt`, `replaceAt_eff` |
+| `edit_replaceAt` | proved | — | `fillAt_some` |
+| `expand_of_refSites_nil` | proved | — | — |
 | `expand_table_filter` | proved | — | `addresses_expandRefs`, `tableEntry_path` |
 | `fillAt_of_replaceAt` | proved | — | — |
 | `fillAt_some` | proved | — | — |
@@ -9612,6 +9989,7 @@ flowchart TB
 | `sigAt_extends` | proved | — | `extends_withDefs`, `bodyAt_sig` |
 | `sigAt_nil` | proved | — | — |
 | `sigAt_part` | proved | — | — |
+| `sigData_fillAt` | proved | — | `replaceAt_defs_main`, `replaceAt_effs_tail`, `replaceAt_effs_head`, `replaceAt_defs_body`, `eq_defs_of_isBlock`, `partAt_plain`, `replaceAt_cons_isBlock`, `fillAt_some` |
 | `sourceAnnotate_eq_sourceTable` | proved | — | `addresses_root`, `expand_table_filter`, `Sketch.annotate_eq_table` |
 | `sourceCheck_ok` | proved | — | — |
 | `sourceCheck_toOption` | proved | — | — |
@@ -9619,6 +9997,7 @@ flowchart TB
 | `sourceRefusals_head` | proved | — | `sourceRefusals_of_ok`, `sourceTable_head` |
 | `sourceRefusals_nil_iff` | proved | — | `sourceRefusals_of_ok`, `sourceRefusals_head` |
 | `sourceRefusals_of_ok` | proved | — | `sourceTable_result_refusal_none` |
+| `sourceTable_eq_filter` | proved | — | `Sketch.annotate_eq_table`, `sourceAnnotate_eq_sourceTable` |
 | `sourceTable_find` | proved | — | `mem_addresses_expandRefs`, `tableEntry_path`, `sourceEntry_path`, `find?_map_at` |
 | `sourceTable_focus` | proved | — | `sourceTable_typedAt`, `typedAt_table`, `mem_sourceTable` |
 | `sourceTable_head` | proved | — | `addresses_eff_head` |
@@ -9630,17 +10009,50 @@ flowchart TB
 | `table_omit` | proved | — | `tableAt_perform`, `check_complete`, `table_more_holes`, `table_fill`, `hole_hasTy_focus`, `focusAt_more_holes`, `check_more_holes` |
 | `table_result_refusal_none` | proved | — | `check_sound`, `check_complete`, `focusAt_eq_some`, `hasTy_focusAt`, `checkModule_sound`, `moduleHasTy_partAt_typed` |
 | `SourceSession.Coherent.ext` | proved | — | — |
-| `SourceSession.feed_coherent` | goal | `SourceSession.feed_coherent` | — |
-| `feed_draft` | goal | `feed_draft` | — |
-| `feed_keepExact` | goal | `feed_keepExact` | — |
-| `SourceSession.feed_keeps` | goal | `SourceSession.feed_keeps` | — |
-| `feed_root` | goal | `feed_root` | — |
-| `SourceSession.feed_undo` | goal | `SourceSession.feed_undo` | — |
+| `canSplice_agrees` | proved | — | — |
+| `canSplice_candidate` | proved | — | — |
+| `canSplice_of_faultFree` | proved | — | — |
+| `canSplice_refFree` | proved | — | `expandedEditAgrees_refFree`, `firstRefFault_of_refSites_nil`, `canSplice_of_faultFree` |
+| `candidatePartKey_some` | proved | — | — |
+| `draft_conditions_of_reference` | proved | — | `check_complete`, `hole_hasTy_focus`, `focusAt_more_holes`, `replaceAt_spec`, `fillAt_some`, `Sketch.annotate_eq_table`, `check_ok_path`, `run_part_result`, `check_eq`, `sigData_fillAt`, `typedAt_table`, `focusAt_of_expand` |
+| `draft_reference_spliced` | proved | — | `tableAt_perform`, `run_placed`, `replaceAt_spec`, `fillAt_some`, `tableAt_paths`, `check_eq`, `Sketch.annotate_eq_table`, `run_part_result`, `check_ok_path`, `sigData_fillAt`, `placed_paths`, `typedAt_table_of_focusAt`, `Sketch.table_head`, `candidatePartKey_some`, `SourceSession.focusAt_typed`, `sourceCheck_ok`, `SourceSession.view_type` |
+| `expandedEditAgrees_refFree` | proved | — | `fillAt_of_replaceAt`, `replaceAt_spec`, `expand_of_refSites_nil` |
+| `expandedEditAgrees_some` | proved | — | — |
+| `SourceSession.feed_coherent` | proved | — | `canSplice_agrees`, `canSplice_candidate`, `splice_coherent`, `SourceSession.view_type`, `recheck_coherent`, `feed_ok_cases` |
+| `feed_draft` | proved | — | `draft_reference_spliced`, `canSplice_agrees`, `canSplice_of_faultFree`, `feed_draft_of`, `draft_conditions_of_reference`, `reference_table`, `expandedEditAgrees_some`, `Sketch.annotate_eq_table`, `sourceTable_eq_filter`, `recheck_coherent`, `edit_of_at`, `feed_ok_cases`, `SourceSession.feed_coherent`, `feed_draft_ok` |
+| `feed_draft_of` | proved | — | `ask_value` |
+| `feed_draft_ok` | proved | — | `bind_value`, `recheck_draft_ok` |
+| `feed_keepExact` | proved | — | `typedAt_splice_at`, `canSplice_candidate`, `replaceAt_spec`, `belowSite_at_eff`, `edit_replaceAt`, `tableAt_eq_cons`, `check_eq`, `run_placed`, `check_rebase`, `run_part_result`, `typedAt_splice_root`, `table_eq`, `sourceTable_head`, `candidatePartKey_some`, `recheck_coherent`, `SourceSession.view_type`, `recheck_keepExact_ok`, `SourceSession.feed_keeps`, `feed_keepExact_ok` |
+| `feed_keepExact_of` | proved | — | `ask_value` |
+| `feed_keepExact_ok` | proved | — | `bind_value`, `ask_value`, `pure_value` |
+| `feed_keepExact_sketch` | proved | — | `feed_ok_cases` |
+| `feed_keepExact_viewType` | proved | — | `typedAt_splice_root`, `table_eq`, `sourceTable_head`, `feed_keepExact_ok`, `recheck_coherent`, `SourceSession.view_type`, `feed_root`, `recheck_keepExact_ok`, `feed_ok_cases` |
+| `SourceSession.feed_keeps` | proved | — | `feed_ok_cases` |
+| `feed_ok_cases` | proved | — | `edit_at`, `bind_value`, `ask_value`, `pure_value`, `recheck_ok` |
+| `feed_recheck_ok` | proved | — | — |
+| `feed_recheck_typed` | proved | — | `bind_value`, `pure_value`, `ask_value`, `recheck_coherent`, `recheck_ok`, `feed_recheck_ok` |
+| `feed_root` | proved | — | — |
+| `SourceSession.feed_undo` | proved | — | `SourceSession.Coherent.ext`, `replaceAt_spec`, `fillAt_of_replaceAt`, `fillAt_some`, `feed_draft_ok`, `SourceSession.feed_keeps`, `SourceSession.feed_coherent` |
+| `finish_keepExact_ok` | proved | — | — |
+| `finish_ok` | proved | — | — |
+| `focusAt_of_expand` | proved | — | `typedAt_root_expand`, `typedAt_expand`, `typedAt_table_nil` |
 | `SourceSession.focusAt_typed` | proved | — | `table_eq`, `sourceTable_focus` |
-| `SourceSession.open_coherent` | modulo | `combine_deps` | `sourceAnnotate_eq_sourceTable`, `ask_value` |
-| `SourceSession.reached_view` | modulo | `coherent` | `coherent`, `view_eq` |
-| `replay_drafts_view` | goal | `replay_drafts_view` | — |
+| `SourceSession.open_coherent` | proved | — | `sourceAnnotate_eq_sourceTable`, `ask_value` |
+| `partKey_refFree` | proved | — | `replaceAt_spec`, `expand_of_refSites_nil` |
+| `SourceSession.reached_view` | proved | — | `coherent`, `view_eq` |
+| `recheck_coherent` | proved | — | `sourceAnnotate_eq_sourceTable` |
+| `recheck_draft_ok` | proved | — | `pure_value`, `bind_value` |
+| `recheck_keepExact_ok` | proved | — | `bind_value`, `pure_value`, `ask_value`, `finish_keepExact_ok`, `recheck_ok` |
+| `recheck_ok` | proved | — | `bind_value`, `pure_value`, `ask_value`, `finish_ok` |
+| `reference_table` | proved | — | `EditSession.feed_keeps`, `feed_edit`, `EditSession.open_coherent`, `EditSession.feed_coherent` |
+| `replay_drafts_view` | proved | — | `view_eq`, `SourceSession.open_coherent`, `replay_drafts_fold` |
+| `source_splice_filter` | proved | — | `splice_filter`, `splice_all_under`, `splice_three`, `belowSite_replaceAt`, `edit_replaceAt`, `belowSite_at_eff`, `under_append`, `tableEntry_path`, `addresses_eff_head`, `addresses_split`, `sourceTable_eq_filter`, `table_eq` |
+| `splice_base` | proved | — | `table_more_holes`, `focusAt_more_holes`, `check_more_holes`, `replaceAt_spec`, `fillAt_some` |
+| `splice_coherent` | proved | — | `focusAt_at`, `source_splice_filter`, `sourceTable_eq_filter`, `check_eq`, `run_placed`, `table_fill`, `effTy_of_check`, `check_sound`, `run_part_result`, `sigData_fillAt`, `splice_base`, `SourceSession.focusAt_typed`, `expandedEditAgrees_some`, `candidatePartKey_some`, `sourceCheck_ok` |
 | `table_eq` | proved | — | — |
+| `typedAt_expand` | proved | — | `mem_addresses_iff`, `sourceTable_typedAt`, `table_eq` |
+| `typedAt_root` | proved | — | `table_eq`, `sourceTable_head` |
+| `typedAt_root_expand` | proved | — | `table_eq`, `Sketch.table_head`, `sourceTable_head` |
 | `view_eq` | proved | — | `SourceSession.view_type`, `SourceSession.view_refusals`, `table_eq` |
 | `SourceSession.view_refusals` | proved | — | `table_eq` |
 | `SourceSession.view_type` | proved | — | `sourceTable_head`, `table_eq` |
@@ -9659,11 +10071,16 @@ flowchart TB
 | `splice_all_under` | proved | — | `dropWhile_eq_nil_of_all` |
 | `splice_append_out_left` | proved | — | — |
 | `splice_append_out_right` | proved | — | `all_of_dropWhile_nil`, `all_of_takeWhile_length` |
+| `splice_filter` | proved | — | `splice_all_under`, `splice_three` |
 | `splice_three` | proved | — | `splice_append_out_right`, `splice_append_out_left` |
+| `typedAt_splice_at` | proved | — | `under_self` |
+| `typedAt_splice_root` | proved | — | `splice_append_out_left` |
 | `typedAt_table` | proved | — | `effTy_of_check`, `focusAt_eq_some` |
 | `typedAt_table_nil` | proved | — | `Sketch.table_head` |
 | `typedAt_table_of_focusAt` | proved | — | `check_sound`, `check_complete`, `focusAt_eq_some`, `tableEntry_path`, `mem_addresses_iff`, `focusAt_at` |
 | `under_append` | proved | — | — |
+| `under_cons_cons` | proved | — | — |
+| `under_cons_ne` | proved | — | `under_sibling_false` |
 | `under_prefix_false` | proved | — | — |
 | `under_self` | proved | — | `under_append` |
 | `under_sibling_false` | proved | — | — |
@@ -9783,8 +10200,12 @@ flowchart TB
 | `annotateModule_restrict` | proved | — | `moduleLayers_restrict`, `bodies_restrict`, `Annotate.check_restrict` |
 | `argTy_closed` | proved | — | `closed_typeAt`, `closed_setTypeIn`, `closed_fieldTypeIn`, `closed_of_formed`, `closed_checkIn`, `closed_litArgTy` |
 | `argsTy_closed` | proved | — | `closed_typeAt`, `closed_setTypeIn`, `closed_fieldTypeIn`, `closed_of_formed`, `closed_checkIn`, `closed_litArgTy` |
+| `at_below_ref_none` | proved | — | `at_append`, `properPrefix_eq_true_iff` |
 | `at_of_mem_refSites` | proved | — | `exists_at_of_mem_foldList` |
+| `at_site_replaceAt` | proved | — | `at_below_ref_none`, `under_append`, `properPrefix_eq_true_iff`, `prefix_cases` |
+| `belowSite_at_eff` | proved | — | `at_of_mem_refSites`, `at_below_ref_none` |
 | `belowSite_refSites_iff` | proved | — | `at_of_mem_refSites` |
+| `belowSite_replaceAt` | proved | — | `at_of_mem_refSites`, `at_site_replaceAt`, `replaceAt_spec` |
 | `bodiesHasTy_sigProgram` | proved | — | `hasTy_sigProgram` |
 | `causeInputError_causeOf` | proved | — | `extendAll_agrees` |
 | `causeInputError_exitOf` | proved | — | `extendAll_agrees` |
@@ -9798,6 +10219,7 @@ flowchart TB
 | `checkModule_restrict` | proved | — | `checkBodies_restrict`, `Program.check_restrict` |
 | `checkRow_rowBindings` | proved | — | — |
 | `Program.check_focusAt` | proved | — | `check_sound`, `hasTy_focusAt` |
+| `check_ok_path` | proved | — | `effTy_of_check`, `check_sound`, `check_complete` |
 | `check_replace` | proved | — | `replaceAt_eff`, `check_complete`, `check_sound`, `hasTy_replace` |
 | `check_replace_focusAt` | proved | — | `check_sound`, `hasTy_replace_focusAt`, `check_complete`, `Program.focusAt_typed`, `replaceAt_eff` |
 | `childAddresses_map_tableEntryAt` | proved | — | — |
@@ -9825,6 +10247,7 @@ flowchart TB
 | `exitOf_upper` | proved | — | `exit_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
 | `fiberTy_fiberOf` | proved | — | `extendAll_agrees` |
 | `fiberTy_upper` | proved | — | `fiber_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
+| `firstRefFault_of_refSites_nil` | proved | — | — |
 | `focusAt_eq_some` | proved | — | — |
 | `Program.focusAt_nil` | proved | — | — |
 | `Program.focusAt_typed` | proved | — | `check_sound`, `focusAt_eq_some` |
@@ -9865,12 +10288,13 @@ flowchart TB
 | `foldMapAt_stmts_paths_shift` | proved | — | `foldMapAt_stmts_hom`, `foldMapAt_stmts_base` |
 | `foldMapAt_term_fuse` | proved | — | — |
 | `foldMapAt_terms_fuse` | proved | — | — |
+| `handlersOf_defs` | proved | — | — |
 | `hasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_armsIn`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
 | `hasTy_focusAt` | proved | — | `check_complete`, `check_sound`, `focusAt_eq_some`, `replace_envAt` |
 | `hasTy_replace` | proved | — | `NodeHasTy.replace` |
 | `hasTy_replace_focusAt` | proved | — | `check_complete`, `check_sound`, `replace_envAt`, `focusAt_eq_some` |
 | `hasTy_sigProgram` | proved | — | `sigOkKey_of_serviceTy` |
-| `kept_eq_certified` | goal | `kept_eq_certified` | — |
+| `kept_eq_certified` | proved | — | `canSplice_refFree`, `feed_keepExact_of`, `typedAt_table_of_focusAt`, `sourceTable_typedAt`, `table_eq`, `mem_addresses_iff`, `replaceAt_eff`, `focusAt_at`, `partKey_refFree`, `check_rebase`, `check_eq`, `expand_of_refSites_nil`, `at_append`, `at_replaceAt_below`, `prefix_cases`, `at_of_mem_refSites`, `fillAt_some`, `SourceSession.focusAt_typed`, `feed_keepExact_ok`, `fillAt_of_replaceAt`, `replaceAt_defs_main`, `replaceAt_effs_tail`, `replaceAt_effs_head`, `replaceAt_defs_body`, `eq_defs_of_isBlock`, `partAt_plain`, `replaceAt_cons_isBlock` |
 | `layerHasTy_closed` | proved | — | `closed_join`, `nil`, `closed_fiberTy`, `closed_listOf`, `termTy_closed`, `closed_joinAnswer`, `closed_merge`, `closed_seq`, `push`, `closed_getD`, `append`, `closed_armsIn`, `closed_catchIfError`, `closed_genAnswer`, `closed_rowTy`, `causeTy_closed` |
 | `layerHasTy_replace` | proved | — | `NodeHasTy.replace` |
 | `layerHasTy_sigProgram` | proved | — | `sigOkKey_of_serviceTy` |
@@ -9904,6 +10328,7 @@ flowchart TB
 | `tableAt_mem_path` | proved | — | `mem_addresses_iff` |
 | `tableAt_none` | proved | — | — |
 | `tableAt_path` | proved | — | — |
+| `tableAt_paths` | proved | — | — |
 | `tableAt_perform` | proved | — | `tableAt_eq_cons` |
 | `tableAt_rebase` | proved | — | `check_rebase` |
 | `tableAt_splice` | proved | — | `child_add_three`, `splice_three`, `tableAt_eq_cons`, `under_prefix_false`, `tableAt_mem_path`, `under_sibling_false`, `nodeAnswer_replace_kept`, `childEnv_replace_kept`, `child_step`, `under_append`, `tableAt_path`, `splice_all_under` |
@@ -9974,16 +10399,6 @@ flowchart TB
 | `valid_max` | proved | — | `instLawfulOrderSup`, `instIsPreorder`, `valid_up` |
 | `valid_refine` | proved | — | — |
 | `valid_up` | proved | — | — |
-| `ofJsonAnyOrder_exact` | proved | — | `ofJson_exact` |
-| `ofJson_exact` | proved | — | `read_exact` |
-| `read_exact` | proved | — | `readIn_exact` |
-| `canonicalHex?_exact` | proved | — | — |
-| `natOfBinary64_exact` | proved | — | — |
-| `natOfBinary64_finite` | proved | — | — |
-| `readFields_exact` | proved | — | `tagOfName_exact`, `canonicalHex?_exact`, `natOfBinary64_exact` |
-| `readIn_exact` | proved | — | `tagOfName_exact`, `canonicalHex?_exact`, `natOfBinary64_exact` |
-| `readList_exact` | proved | — | `tagOfName_exact`, `canonicalHex?_exact`, `natOfBinary64_exact` |
-| `tagOfName_exact` | proved | — | — |
 | `except_error_bind` | proved | — | — |
 | `except_ok_bind` | proved | — | — |
 | `except_pure` | proved | — | — |
@@ -9999,9 +10414,12 @@ flowchart TB
 | `matchArgsB_complete` | proved | — | `covers`, `candsList_below`, `solve_between` |
 | `matchArgsB_sound` | proved | — | — |
 | `eq_uncached` | proved | — | — |
+| `run_placed` | proved | — | `check_rebase`, `tableAt_rebase`, `check_eq` |
 | `replaceAt_spec` | proved | — | — |
 | `subN_trans` | proved | — | — |
 | `subN_refl` | proved | — | — |
+| `checkInput_eq_none_iff` | proved | — | — |
+| `programRefusal_none_iff` | proved | — | — |
 | `partAt_at` | proved | — | `bodyAt_at` |
 | `checkModule_sound` | proved | — | `check_sound` |
 | `bodyAt_at` | proved | — | — |
@@ -10067,7 +10485,7 @@ The rc.112 probe programs as acceptance tests (decisions row 206; `Test/Dogfood/
 | Program | Admitted | Answer | Printed | Read back | Refused parts | Waits on |
 | --- | --- | --- | --- | --- | --- | --- |
 | `P1HttpCache` | yes | differs | yes | yes | a Quote record in the key-value cache (typing: requestNotSubtype) | `R3`, `R6`, `R7`, `R10` |
-| `P2HandlerLayers` | yes | rc112 | yes | yes | AppConfig as a string service (serviceCarrier: signature none); CurrentUser as a record service (serviceCarrier: signature none); a number in a template string (typing: term) | `R3`, `R5`, `R7`, `R10`, `R13` |
+| `P2HandlerLayers` | yes | rc112 | yes | yes | AppConfig as a string service (serviceCarrier: signature none); CurrentUser as a record service (serviceCarrier: signature none); a number in a template string (typing: refusedArguments) | `R3`, `R5`, `R7`, `R10`, `R13` |
 | `P3WorkerQueue` | yes | differs | yes | yes | the log's append at Ref\<never\[\]\> (typing: resultNotSubtype) | `R3`, `R4`, `R10`, `R11` |
 | `P4RateLimiter` | yes | rc112 | yes | yes | — | `R10` |
 | `P5LedgerService` | no | notRun | no | no | — | `R3`, `R4`, `R6`, `R7`, `R10` |
