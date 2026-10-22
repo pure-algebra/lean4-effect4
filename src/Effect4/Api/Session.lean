@@ -1,4 +1,5 @@
 import Effect4.Api.Object
+import Effect4.Program.Handler
 import Effect4.Program.Authoring.Named
 
 /-!
@@ -59,11 +60,11 @@ def sumTy : List Ty → Ty
 type, read off its declaration at the recorded position. A view, never stored. -/
 def methodPort (decls : List DefDecl) (service : Service) (state : Ty)
     (method : String × Nat × Nat) : Except PrintRefusal (Ty × Program.Row) := do
-  let (name, position, arity) := method
-  let some d := decls[position]? | throw (.serviceMethod service.name name)
-  let some args := methodArgs state d arity | throw (.serviceMethod service.name name)
+  let h : Handler := ⟨service.name, state, service.init, [method], [], []⟩
+  let some [(name, args, answer, error)] := h.interface decls
+    | throw (.serviceMethod service.name method.1)
   return (.prod (.lit name) (requestTy args),
-    (Row.host (replyPrefix ++ name) (.exitOf d.answer d.error) .unit).row)
+    (Row.host (replyPrefix ++ name) (.exitOf answer error) .unit).row)
 
 /-- The protocol rows: `Session.next`, whose answer is the next tagged request or none, then
 one reply row a method, in the service's method order. -/

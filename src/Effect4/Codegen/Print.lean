@@ -1,3 +1,4 @@
+import Effect4.Program.Handler
 import Effect4.Codegen.Templates
 import Effect4.Codegen.ClassTable
 import Effect4.Program.Definitions
@@ -338,7 +339,8 @@ its declaration and typed by `paramType` (slice HO-5). Refused by the service an
 `service.method`, where its request is not the state and its arguments. -/
 def methodType (sig : Signature Op) (service method : String) (state : Ty) (d : DefDecl)
     (arity : Nat) : Except PrintRefusal TypeScript.TypeRef := do
-  let some tys := methodArgs state d arity | .error (.serviceMethod service method)
+  let h : Handler := ⟨service, state, 0, [(method, 0, arity)], [], []⟩
+  let some [(_, tys, _, _)] := h.interface [d] | .error (.serviceMethod service method)
   let params ← (argNames arity).zip tys |>.mapM fun (a, t) => do
     let r ← typeRefOf t sig.keyNames
     .ok (a, r)

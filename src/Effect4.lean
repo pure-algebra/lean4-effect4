@@ -265,6 +265,8 @@ import Effect4.Program.Typing.Source
 import Effect4.Program.Typing.SourceSession
 -- An application as one Effect service: its block of definitions (decisions row 378 (20)).
 import Effect4.Program.Authoring.ApplicationService
+import Effect4.Program.Services
+import Effect4.Program.Handler
 -- A row namespace as an Effect service: its key and its accessors (decisions row 378 (19),
 -- slice E3).
 import Effect4.Codegen.RowServices
