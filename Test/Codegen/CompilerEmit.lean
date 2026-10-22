@@ -418,7 +418,7 @@ def folderBefore : List (String × ByteArray) :=
 -- example of `Examples.all` under its application's name; only the to-do lowers native roots.
 #guard Groups.all.map Source.name == ["corpus", "sql"] ++ Examples.all.map (·.name) &&
   Examples.all.map (·.name) ==
-    ["todo", "cachedTodo", "boundedBuffer"] &&
+    ["todo", "cachedTodo", "boundedBuffer", "bankAccount"] &&
   (Groups.all.filterMap fun
     | .application app lowered => if lowered.roots.isEmpty then none else some app.name
     | .programs .. => none) == ["todo"]
