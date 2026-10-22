@@ -352,8 +352,151 @@ Proposals that need a ruling are in §8.
 
 ## 7. Receipt
 
-RECEIPT
+**The one thing to know before merging.** The law graph loses 145 modules (16,797 lines): the
+premises of the scenario proofs that row 410 retired. The register's rows 443 to 445 have three
+cells instead of six, so `make gen-semantics` refuses until the coordinator repairs them. The
+committed `generated/semantics.md` was written from a scratch copy with those three rows repaired.
+
+Base `afe86b819`, head: the commit that adds this section. Branch
+`claude/proof-graph-cleanup-183b12`.
+
+### 7.1 The commits
+
+| Commit | What | Files | Lines added, removed |
+| --- | --- | --- | --- |
+| `377093d2d` | this note, §1 to §6 | 1 | +359 |
+| `d7322e5b1` | cut of the scenario residue: 145 modules | 146 | −16,827 |
+| `b7ce5d824` | eleven duplicate theorems merged | 14 | +18, −102 |
+| `cecaae3ee` | the semantics registry: one claim per theorem, 141 titles, concept order | 4 | +343, −373 |
+| `174d6e617` | the root: 112 tops under the ten concepts | 1 | +116, −401 |
+| `75d3cd5d8` | `make statement-census`, read by `make status` | 2 | +34, −1 |
+| `968b22974` | `generated/semantics.md` regenerated | 1 | +1,201, −783 |
+
+`git diff --shortstat afe86b819 HEAD -- src/Effect4/Laws src/Effect4/Laws.lean` gives 161
+files, +135, −17,331. The law graph now has 735 modules and 278,525 lines (from 880 and
+295,406).
+
+The eleven merged copies, each with its uses rerouted:
+
+| Removed | Kept |
+| --- | --- |
+| `Effect4.Program.effTy_scoped` | `Conform.Effect4.Typing.effTy_scoped` |
+| `Effect4.Api.race?_updateRace_same` | `RunMachine.race?_updateRace_same`, its bank entry kept |
+| `Sched.listRel_mem_left` | `Effect4.ListRel.mem_right` |
+| `Guard.OuterDriver.timer_clockStep_keys` | `Guard.timer_clockStep_keys`, its bank entry kept |
+| `Effect4.Run.modify_nextToken` | `Guard.nextToken_modify` |
+| `CommandDebit.update_race_ids` | `RunMachine.race_ids_update` |
+| `StackRegion.other_edit_stack`, `other_edits_stack` | `Moves.OtherEdit.stack`, `Moves.OtherEdits.stack` |
+| `PlaceFunding.zero_allowance` | `PlaceFunding.commandAllowance_zero` |
+| `OuterFrames.fields`, no use | `AdministrativeKept.same_fibers` |
+| `Sequencing.acquired_registration`, no use | `Agreement.contAOf_acquired` |
+
+One merge was not forced. `Check.ok_bind` is a `simp` lemma of `CheckAgreement`, and the census
+counts no `simp` use, so its removal broke the build; it stays.
+
+### 7.2 Commands and results
+
+| Command | Result |
+| --- | --- |
+| `LEAN_NUM_THREADS=3 lake build Effect4Laws` after each Lean commit | 1,279 jobs, success |
+| `python3 scripts/wire-roots.py --check` after the cut and the root | `PASS roots: every module is reached by its root` |
+| `lake build ProofGraph.Registry semantics-report Effect4.Laws.Author.Explain Effect4.Laws.Schema.Codec` | 348 jobs, success |
+| `lake exe semantics-report` (scratch register) | 317 claims: 306 proved, 2 modulo, 3 goal, 1 refuted, 4 absent, 1 assumed; 18 s |
+| `make statement-census` | 15 groups in 15,338 theorems of 735 modules; 34 s |
+| `make batteries-touched BASE=afe86b819` | 2 batteries (`Test.Program.StackRegion`, `Test.Codegen.DataCodec`), 1,048 jobs, success |
+| `make status` | the lines below |
+
+```text
+claims    306 proved · 2 modulo · 3 goal · 4 absent · 1 refuted · 1 assumed  (generated/semantics.md)
+goals     7 open planned goal(s) (proof_goal)
+plan      requirements 14 open; 8 next goal(s): ofJson_image wrap_tensor ofProgram_eq_denoteRowsB …
+duplicate 15 group(s) of theorems with one statement, in 15338 theorems of 735 law modules; fresh
+```
+
+### 7.3 The axiom output
+
+`#axiom_audit` over the sixteen touched law modules (`lake env lean`, 8.5 s):
+
+```text
+#axiom_audit: 1301 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The modules are `ScopedTyping`, `Api.Supervision`, `Table.Agreement`, `Guard.OuterDriver`,
+`Run.Journal`, `ReleaseCustody.CommandRaceDebit`, `StackRegion`, `StackRegionCommands`,
+`ReleaseCustody.NativeStacks`, `ReleaseCustody.CommandSequencing`, `PlaceFunding.Run`,
+`PlaceFunding.Flow`, `ReleaseCustody.OuterFrames`, `ReleaseCustody.Sequencing`, `Schema.Codec` and
+the root. The axiom gate's file is untouched, so the whole-tree gate did not run.
+
+### 7.4 What stays open
+
+- No behaviour gate runs: the change reaches no generated file, no TypeScript and no OCaml.
+- Fifteen duplicate groups remain. Each is an instance beside a lemma, a structure's hook, a helper
+  and its wrapper, or a copy that its users cannot replace.
+- No `simp_all`, `first |` or `try` was in a touched proof, so the counts of §2.5 stand.
+- The research-note citations of §2.6 are unrepaired (§8, item 6).
+- The evidence is all local: Lean builds, the report and the census. Nothing is bounded or host-only.
 
 ## 8. Proposals that need a ruling
 
-PHASE3
+Each item changes meaning or moves more than one folder. None is landed.
+
+1. **A concept for typed editing, and the handler's home.** `docs/core/semantics.md` §2.11 defines
+   an eleventh concept, `typed-editing` (row 414 (5)). The semantics registry lacks it,
+   since row 418 (6) paused the report. The report now runs in 18 s, so the pause has no cause. Proposal: add the
+   concept and move the editing claims to it (`source-document-*`, `checker-*`,
+   `sketch-*`). The handler claims stay under `host-session-protocol`. A handler is a service
+   block read by a fold, and its laws are session and provision laws, so no new concept is needed.
+2. **`generated/semantics.md` lives.** It is the input of `make status`, and a run costs 18 s
+   after the roots build. Proposal: end the pause of rows 418 (6) and 2026-10-18. The coordinator
+   repairs rows 443, 444 and 445 to six cells, and `make gen-semantics` runs at each landing that
+   touches the registry or the law graph.
+3. **Place or cut the 21 proved modules that no claim reaches** (§2.2, group 4, 2,137 lines).
+   - Place with a claim: `Api.Supervision` (796 lines, the fork table agrees with the run's
+     ledger), `Program.DenoteCtl` (285, row 344's control algebra), `Program.LayerSharing` (291,
+     DI-71).
+   - Keep as the traversal census's evidence: the fold connectors under `Program/Folds`,
+     `Typing.FoldAgreement`, `Store.Folds.Val` and `Machine.Folds`.
+   - Cut, 480 lines: `Typed.ForkSource` (75), `Store.CanonicalSpec` (29), `Api.Fuel` (28),
+     `Library.Stream.{Ops,Steps,Typing}` (155), `Data.ListRelConnectors` (51),
+     `Program.FiberSumConnect` (70), `Program.LedgerFinalizer` (72). Their docstrings name
+     consumers that are gone or never landed.
+4. **Split the two largest modules by namespace.** `Codegen/PrintTyped` (8,233 lines) holds four
+   namespaces: `Templates`, `EraseTermTypes`, `PrintEliminators` and the printer's own lemmas.
+   `Machine/Handles` (6,785 lines) holds the handle sets, the stores, the evaluator transport and
+   the stores' instance. Each split moves declarations without a change of name or statement, by
+   a new module beside the old with the callers moved. The cost is one rebuild of each module's
+   dependents (9 and 413 modules, the batteries included).
+5. **The Rocq lane.** Thirty-one proofs exceed 200 lines (§2.5), and every one is proved in Lean.
+   Row 411 sends hard proofs to Rocq, but moving a proved Lean proof drops the kernel's check for
+   a citation. Proposal: no proved theorem moves. The candidates are the open goals over Lean's
+   code: `ofProgram_eq_denoteRowsB`, beside the declared `ofProgram_approx`, and
+   `rows_divergence_adequate`.
+6. **Repair the 157 research-note citations in law docstrings** (§2.6). Eighty-six notes have a
+   last revision in Git, so the repair writes `git:<rev>:<path>`. Nine were never tracked, so their
+   citations go. The edit is to docstrings only. Its cost is one rebuild of most of the law graph,
+   so it belongs with the next change that rebuilds it, such as item 4.
+7. **Defaults by folder.** The report places theorems in 69 of the 735 law modules. A concept's
+   `defaultModules` names modules one by one. Proposal: let a default name a module prefix, so
+   each folder of the law graph has one concept and the report places every theorem. This changes
+   `tools/ProofGraph/Registry.lean` and `tools/Tools/Semantics.lean`, the second seat's file.
+
+**Proposed decisions row 446**, the proof graph cleanup of 2026-10-22. Parts (1) to (4) are
+landed, and parts (5) to (9) wait for the owner.
+
+1. The scenario residue is cut: 145 modules, 16,797 lines. Row 410 (3) retired its consumers.
+2. One claim stands per theorem, and a claim's title states its fact.
+3. The law root names the tops under the concepts.
+4. `make statement-census` measures duplicate statements, and `make status` reads it.
+5. `gen-semantics` is unpaused (item 2), and rows 443 to 445 get their six cells.
+6. `typed-editing` enters the semantics registry (item 1).
+7. The 480 lines of item 3 are cut, and three modules gain a claim.
+8. The module splits and the citation repair land together (items 4 and 6).
+9. No proved Lean theorem moves to Rocq (item 5).
+
+**Message to the coordinator.**
+
+- The law graph lost 145 modules and 16,797 lines: the premises of row 410's retired scenarios.
+- Repair rows 443 to 445 of the register (three cells each are missing), or `make gen-semantics` refuses.
+- The registry has 317 claims, one per theorem, with titles that state their facts.
+- `make status` reads the truth again: 306 proved, 3 goals, 15 duplicate groups.
+- Owner rulings: unpause the report, a `typed-editing` concept, the 480-line cut, the module splits.
