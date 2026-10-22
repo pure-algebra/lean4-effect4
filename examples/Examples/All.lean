@@ -3,6 +3,7 @@ import Examples.CachedTodo
 import Examples.BoundedBuffer
 import Examples.BankAccount
 import Examples.KeyValueStore
+import Examples.RateLimiter
 
 /-!
 # The examples, as one list
@@ -19,6 +20,6 @@ open Effect4.Program Effect4.Program.Authoring
 /-- **The examples**, in the order the index lists them. -/
 def all : List (Application NativeOp) :=
   [Todo.application, CachedTodo.application, BoundedBuffer.application, BankAccount.application,
-   KeyValueStore.application]
+   KeyValueStore.application, RateLimiter.application]
 
 end Examples
