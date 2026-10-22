@@ -38,11 +38,6 @@ structure Local (L : Ledger) (Free : NCode → Prop) (root : NativeEff) (table :
   prepare : ∀ (m : NativeMachine) id token answer,
     L.state (prepareAsyncAnswer (interpOf root table) m id token answer).1 ≤ L.state m.state
 
-/-- The zero charge allows nothing at any command. -/
-theorem zero_allowance (m : NativeMachine) (command : Native.NCmd) :
-    commandAllowance (fun _ _ _ => 0) m command = 0 := by
-  fun_cases commandAllowance (fun _ _ _ => 0) m command <;> rfl
-
 /-- One source-owned native command keeps the ledger funded at its cap.
 Consumer: `Local.decision_lift`. -/
 theorem Local.command {L : Ledger} {Free : NCode → Prop} {root : NativeEff} {table : RowTable}
@@ -55,7 +50,7 @@ theorem Local.command {L : Ledger} {Free : NCode → Prop} {root : NativeEff} {t
   have after := command_funded root table facts.control facts.quiet facts.events facts.stores
     facts.admin (ConfigurationAt root) (fun _ _ _ => 0) facts.evaluation m command rest ledger owned
     (facts.inputs m command owned head) funded
-  rw [zero_allowance, Nat.add_zero] at after
+  rw [commandAllowance_zero, Nat.add_zero] at after
   exact after
 
 /-- Every decision keeps source ownership and the funded ledger, replies included.

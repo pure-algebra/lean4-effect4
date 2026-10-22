@@ -67,12 +67,6 @@ theorem reservedKeys_interruptBeforeLoop (p : NativeEff) (table : RowTable) (m :
         requestOf_interruptRecord_subset p table (m := m.emit _) lookup who extra
           fiber token request h)
 
-/-- `RunMachine.modify` keeps the token counter. -/
-theorem modify_nextToken (m : NativeMachine) (id : FiberId) (k : NFiber → NFiber) :
-    (m.modify id k).nextToken = m.nextToken := by
-  unfold RunMachine.modify
-  split <;> rfl
-
 /-- **A guard key that holds no request keeps holding none through every decision.** Over a
 machine that the guard's invariant holds of (every reachable machine, `guardState_reachable`),
 a list of keys below the token counter with no request at any of them stays so after any raw
@@ -99,7 +93,7 @@ theorem reservedKeys_steppedBy (p : NativeEff) (table : RowTable) (fuel : Nat)
       ⟨True.intro, True.intro, True.intro⟩ reserved
   | yieldVerdict target verdict =>
     exact reservedKeys_of_same_requests reserved
-      (Nat.le_of_eq (modify_nextToken m target _).symm)
+      (Nat.le_of_eq (Effect4.Program.Guard.nextToken_modify m target _).symm)
       (fun fiber token => requestOf_yieldVerdict p fuel table m fiber target token verdict)
   | answerAsync target offered answer =>
     cases fuel with

@@ -257,7 +257,7 @@ theorem settle_queue (root : NativeEff) (table : RowTable) (id : FiberId) (rest 
       (Moves.InterferesWithLookup.fiberEdits (message :: messagesTail) (it.machine.update it.fiber)).lookup
         it.fiber.id it.fiber installed
     have same := word.id
-    have stack := StackRegion.other_edits_stack word
+    have stack := Moves.OtherEdits.stack word
     let next : RuntimeShape.Iteration := {it with
       machine := changed.1
       fiber := owner

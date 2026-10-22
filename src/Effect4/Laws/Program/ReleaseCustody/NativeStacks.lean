@@ -23,7 +23,7 @@ theorem lookup_links {before after : NativeMachine} (held : Moves.LookupEdits be
     StackLinks before after := by
   intro id fiber found
   obtain ⟨next, seen, edits⟩ := held id fiber found
-  exact ⟨next, seen, StackRegion.other_edits_stack edits⟩
+  exact ⟨next, seen, Moves.OtherEdits.stack edits⟩
 
 /-- Metadata edits retain every old stored stack; consumer: native observer cancellation. -/
 theorem map_links (m : NativeMachine) (edit : Fiber → Fiber)

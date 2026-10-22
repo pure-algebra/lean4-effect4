@@ -56,25 +56,6 @@ theorem iteration_inside (root : NativeEff) (table : RowTable) (interp : NInterp
   rw [same]
   exact under_inside below _
 
-/-- Interference only changes metadata and current interruption answers, never the saved stack. -/
-theorem other_edit_stack {first last : NFiber} (edit : OtherEdit first last) :
-    last.frame.stack = first.frame.stack := by
-  cases edit with
-  | observe => rfl
-  | filterObservers => rfl
-  | interruptCause cause =>
-    unfold interruptWithCause
-    dsimp only
-    repeat' split
-    all_goals rfl
-
-/-- A word of actual other-fiber edits retains the exact saved list. -/
-theorem other_edits_stack {first last : NFiber} (edits : OtherEdits first last) :
-    last.frame.stack = first.frame.stack := by
-  induction edits with
-  | refl => rfl
-  | tail _ edit ih => exact (other_edit_stack edit).trans ih
-
 /-- The watched existing identity retains its entry suffix while it remains live. -/
 def Held (id : FiberId) (below : List NCode) (machine : NativeMachine) : Prop :=
   id.value < machine.nextId ∧
@@ -96,7 +77,7 @@ theorem interferes {id : FiberId} {below : List NCode} {first last : NativeMachi
   · have oldSelected : old.id = id := edits.id.symm.trans selected
     have oldLive : old.exit = none := edits.exit.symm.trans live
     obtain ⟨above, shape⟩ := held.frames old present oldSelected oldLive
-    exact ⟨above, (other_edits_stack edits).trans shape⟩
+    exact ⟨above, (OtherEdits.stack edits).trans shape⟩
   · have fresh := born.1
     rw [selected] at fresh
     exact False.elim (Nat.not_le_of_lt held.allocated fresh)

@@ -114,10 +114,8 @@ theorem dispatcher_sites {m : NativeMachine} (state : GuardState m) (f : NFiber)
   obtain ⟨tasks, ⟨bucket, hb, rfl⟩, ht⟩ := ht
   exact state.internalCodes.1 f member bucket hb task ht
 
-@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
-theorem timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMillis) (answer : κ) :
-    wakeKeys (timers.clockStep millis answer).2.wake ⊆ wakeKeys timers.wake :=
-  Effect4.Program.Guard.timer_clockStep_keys timers millis answer
+attribute [aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+  Effect4.Program.Guard.timer_clockStep_keys
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem clockStep_preserved (p : NativeEff) (table : RowTable)

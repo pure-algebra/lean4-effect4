@@ -597,13 +597,6 @@ theorem launchEntrant_origins (interp : RunInterp ν σ β ε δ ι α χ St κ)
       originEntries m ++ [(⟨m.nextId⟩, .forked host.id true site)] := by
   aesop (add norm simp [launchEntrant, spawn, RunMachine.emit, originEntries])
 
-omit [FiberCore ν β ε δ ι α κ φ] in
-/-- Updating the race found under an id leaves that id finding the update. -/
-theorem race?_updateRace_same (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-    (race r : Race ν σ β ε δ ι α κ) (h : m.race? race.id = some race) (hid : r.id = race.id) :
-    (m.updateRace r).race? race.id = some r :=
-  RunMachine.race?_updateRace_same m race r h hid
-
 end OriginFacts
 
 section PrimForks
@@ -785,14 +778,14 @@ theorem race_launch_origins_holds
       unfold RunMachine.race?
       rw [hraces]
       exact hrace
-    rw [race?_updateRace_same m' race
+    rw [RunMachine.race?_updateRace_same m' race
       { race with programs := remaining, nextSite := race.nextSite.map (fun site => site ++ [1]) }
       found rfl]
     rfl
 
 attribute [aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
   originEntries_emit originEntries_updateRace spawn_origins start_origins launchEntrant_origins
-  race?_updateRace_same fork_origins forkIn_origins forkScoped_origins forkScoped_none_origins
+  RunMachine.race?_updateRace_same fork_origins forkIn_origins forkScoped_origins forkScoped_none_origins
 
 attribute [aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
   supervision_static_origins source_fork_holds source_forkIn_holds source_forkScoped_holds

@@ -54,7 +54,7 @@ theorem interrupt {id : FiberId} {below : List NCode} (interp : NInterp)
     Held id below (machine.update (interruptRecord interp who extra fiber).1) :=
   update_from fiber _ member held (OtherEdit.id (.interrupted interp fiber who extra))
     (OtherEdit.exit (.interrupted interp fiber who extra))
-    (fun inside => fiber_fields inside (other_edit_stack (.interrupted interp fiber who extra)))
+    (fun inside => fiber_fields inside (OtherEdit.stack (.interrupted interp fiber who extra)))
 
 /-- Nested observer interrupts retain the region before their evaluation commands execute. -/
 theorem interrupt_each {id : FiberId} {below : List NCode} (interp : NInterp) (who : FiberId)

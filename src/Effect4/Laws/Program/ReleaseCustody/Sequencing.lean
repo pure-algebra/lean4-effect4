@@ -303,14 +303,6 @@ theorem resume_command (root : NativeEff) (table : RowTable) (q : List Nat) (m :
   simp only [List.map_cons, List.sum_cons, commandCredits, Nat.zero_add] at funded ⊢
   omega
 
-/-- The native acquired callback creates exactly the correlated registration template.
-Consumer: registration_step; no lexical or value-typing premise is assumed here. -/
-@[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem acquired_registration (root : NativeEff) (point : Point) (ctx : Ctx) (scope : Nat) (a : Val) :
-    contAOf root (.acquired point ctx scope) a =
-      .onSuccess (.sync (.op (.scopeAdd scope (.foreign (point.capture a ctx)))))
-        (.afterScopeAdd a (.foreign (point.capture a ctx))) := rfl
-
 /-- An async cancel frame is not a scope-add callback.
 Consumer: the actual async park's stable-stack producer. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]

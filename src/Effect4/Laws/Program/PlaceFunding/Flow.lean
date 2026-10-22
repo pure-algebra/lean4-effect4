@@ -166,7 +166,7 @@ theorem LocalOn.command {L : Ledger} {Free : NCode → Prop} {root : NativeEff} 
   have after := command_funded root table facts.control facts.quiet facts.events facts.stores
     facts.admin (fun m => ConfigurationAt root m ∧ Q m) (fun _ _ _ => 0) facts.evaluation m command rest
     ledger ⟨owned, carried⟩ (facts.inputs m command owned carried head) funded
-  rw [zero_allowance, Nat.add_zero] at after
+  rw [commandAllowance_zero, Nat.add_zero] at after
   exact after
 
 /-- The writer ledger uses the carried driver's queue, including its overwrite demands.

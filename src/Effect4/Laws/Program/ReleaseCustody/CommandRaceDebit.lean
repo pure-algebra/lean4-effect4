@@ -41,18 +41,6 @@ theorem update_race (q : List Nat) (m : NativeMachine) (old next : NRace)
   rw [equal]
   exact held
 
-/-- Replacing a race by an equal identity retains the list of race identities. -/
-theorem update_race_ids (m : NativeMachine) (next : NRace) :
-    (m.updateRace next).races.map Race.id = m.races.map Race.id := by
-  simp only [RunMachine.updateRace, List.map_map]
-  apply List.map_congr_left
-  intro race _
-  dsimp only [Function.comp_def]
-  split
-  · rename_i equal
-    exact equal.symm
-  · rfl
-
 /-- A new child owns exactly its initial program credit. -/
 theorem spawn_credits (root : NativeEff) (table : RowTable) (q : List Nat)
     (m : NativeMachine) (host : Fiber) (code : NCode) (options : Supervision.ForkOptions)
@@ -191,7 +179,7 @@ theorem race_observer (root : NativeEff) (table : RowTable) (q : List Nat) (m : 
       simp only [race_lookup_updateRace, show next.id = race.id from rfl, own,
         Option.map_some, if_true]
     have nextUnique : ((base.updateRace next).races.map Race.id).Nodup := by
-      rw [update_race_ids]
+      rw [RunMachine.race_ids_update]
       exact unique
     simp only [fireObserver, show m.emit _ = base from rfl, found]
     split
@@ -227,7 +215,7 @@ theorem enroll (root : NativeEff) (table : RowTable) (q : List Nat) (m : NativeM
     cases exited : fiber.exit with
     | some exit =>
       exact race_observer root table q (m.updateRace next) child exit raceId [] rest
-        (by rw [update_race_ids]; exact races) before
+        (by rw [RunMachine.race_ids_update]; exact races) before
     | none =>
       exact modify q (m.updateRace next) child
         (fun f => {f with observers := f.observers ++ [.raceCallback raceId]}) rest before fibers

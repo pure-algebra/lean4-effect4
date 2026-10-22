@@ -46,18 +46,6 @@ theorem run_eq_ref_table : RunEqRefTable := by
   exact replayRel_classify_obs (replay_rel (table := table) e compileFuel fuel tape)
 
 
-/-- An element of the left list of a related pair has a related partner in the right list. A
-step of `replay_origin`. -/
-theorem listRel_mem_left {α β : Type _} {R : α → β → Prop} {l₁ : List α} {l₂ : List β}
-    (h : ListRel R l₁ l₂) {a : α} (ha : a ∈ l₁) : ∃ b ∈ l₂, R a b := by
-  induction h with
-  | nil => cases ha
-  | cons hab _ ih =>
-    rcases List.mem_cons.mp ha with rfl | ha'
-    · exact ⟨_, List.mem_cons_self, hab⟩
-    · obtain ⟨b, hb, hr⟩ := ih ha'
-      exact ⟨b, List.mem_cons_of_mem _ hb, hr⟩
-
 /-- **A parked call's address names its call** (decisions row 323). In every machine that the
 frame machine replays from a program's load, at any row table and any tape, a fiber whose
 current code is an external registration keeps the address of a call of that operation in the
@@ -75,7 +63,7 @@ theorem replay_origin (e : NativeEff) (table : RowTable) (cfuel fuel : Nat)
   letI := evaluatorFor e table
   letI := termEvaluatorFor e table
   obtain ⟨f₂, _, hfm⟩ :=
-    listRel_mem_left (replay_rel (table := table) e cfuel fuel tape).machine.1 hf
+    Effect4.ListRel.mem_right (replay_rel (table := table) e cfuel fuel tape).machine.1 _ hf
   obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, -, hcode, -⟩ := hfm
   rw [hc] at hcode
   generalize f₂.frame.current = c₂ at hcode

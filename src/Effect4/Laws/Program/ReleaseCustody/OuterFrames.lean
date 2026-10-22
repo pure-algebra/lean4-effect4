@@ -14,13 +14,6 @@ namespace Effect4.Program.ReleaseCustody.OuterFrames
 open Effect4 Effect4.Machine Effect4.Program
 open Effect4.Program.ReleaseCustody.RuntimeShape
 
-/-- A machine edit retaining the fiber list retains its saved-frame assertion.
-Consumer: state, middleware, emit and disarm clauses of the history lift. -/
-theorem fields {before after : NativeMachine} (held : ConfigurationKept before)
-    (same : after.fibers = before.fibers) : ConfigurationKept after := by
-  intro fiber member
-  exact held fiber (same ▸ member)
-
 /-- A keyed metadata edit retains saved frames when its changed fiber does.
 Consumer: scheduler verdict and dispatcher updates. -/
 theorem modify (m : NativeMachine) (id : FiberId) (edit : Control.Fiber → Control.Fiber)
