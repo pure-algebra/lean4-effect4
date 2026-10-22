@@ -801,3 +801,15 @@ gen-reference-semantics: $(GEN)/semantics ## the reference set with its semantic
 	$(LAKE) build Drivers.Reference
 	rm -rf $(GEN)/reference
 	$(LAKE) env lean -M4096 --run tools/Drivers/Reference.lean $(GEN)/reference $(GEN)/semantics-report
+# examples
+# The examples' folders (`generated/examples/`, `scripts/generate.py`'s `examples` family): each
+# example of `examples/Examples/All.lean` emitted and inspected through `lake exe effect4`, and
+# the index. Outside `GEN_GROUPS` and `HERMETIC_GROUPS`, which the coordinator owns; run by name.
+EXAMPLES_SOURCES := $(shell $(PY) scripts/lean-imports.py --closure tools/Compiler/Exe.lean) \
+  $(wildcard examples/Examples/*.lean)
+$(GEN)/examples: $(GEN)/derived $(EXAMPLES_SOURCES) scripts/generate.py lean-toolchain lake-manifest.json
+	$(PY) scripts/generate.py --only examples
+	@mkdir -p $(GEN) && touch $@
+.PHONY: gen-examples
+gen-examples: $(GEN)/examples ## the examples' folders and index, generated/examples/
+GENERATED_PATHS += generated/examples

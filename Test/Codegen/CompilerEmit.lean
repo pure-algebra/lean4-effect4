@@ -3,13 +3,12 @@ import Effect4.Author
 import Test.Api.PackagesContract
 
 /-!
-# The compiler's emission, readings and run, read: corpus programs' folders, the dogfood to-do, and their controls
+# The compiler's emission and readings, read: corpus programs' folders, the dogfood to-do, and their controls
 
 Readers and controls over `Compiler.emitProgram`, `Compiler.emitTs`, `Compiler.emitGroup`,
-`Compiler.check`, `Compiler.reading` and `Compiler.runFrom` (`tools/Compiler/`; the entry point's
-slices, `docs/research/2026-10-20-compiler-entry/README.md` §5, E3 and E6). A battery reads no file,
-so the prelude's folder, the inputs and a script's text are data here; the IO that reads them is
-`Compiler.Main`'s.
+`Compiler.check` and `Compiler.reading` (`tools/Compiler/`; the entry point's slices,
+`docs/research/2026-10-20-compiler-entry/README.md` §5, E3 and E6). A battery reads no file, so the
+prelude's folder and the inputs are data here; the IO that reads them is `Compiler.Main`'s.
 
 - **The folder of the wire corpus's first program**, `p42`, admitted at the empty application:
   its files and their kinds, the manifest read back from its own bytes, the address, the
@@ -27,6 +26,8 @@ so the prelude's folder, the inputs and a script's text are data here; the IO th
   imports. So the wire corpus's folder names `effect` alone. The red control: a folder whose root
   reaches the adapter, as the root imported the package before 2026-10-20, names
   `@effect/sql-sqlite-bun`.
+- **The tree's groups** (`Compiler.Groups.all`): the wire corpus, the SQLite package's programs and
+  each example of `Examples.all`, and the to-do alone lowers native roots.
 - **A program with a SQL row** (`Test.Api.PackagesContract.pSqlite`, at `Packages.sqliteBun`): its
   module imports `Sql` from the copied adapter (`Compiler.hostImports`), the reading boundary
   admits it, and its folder holds the adapter and names the SQL package. The red control: the file
@@ -50,17 +51,6 @@ so the prelude's folder, the inputs and a script's text are data here; the IO th
   wraps, with no services, the reading boundary refuses it at its first row service. With the
   table's row services read first, as `Api.readFile` reads them, it admits the file, and the
   to-do emits.
-- **The run** (`Compiler.Run`): the dogfood to-do over its reference repository, from no to-do, on
-  the host lane's script (`Test.Dogfood.Scenario.Todo.HostLane.script`), as the group `todo` of
-  `lake exe effect4` runs it (`Compiler.Groups`). Each request gives one
-  line in each of the three modes, the host's state threads from request to request, and a title
-  outside ASCII passes through as UTF-8. The controls: a request that the build refuses is the
-  build's located refusal under its entry, and leaves the state as it was; a request that names no
-  entry, or gives other than one argument a parameter, has no module, though the module at an
-  extra argument builds; at fuel 0 no request reaches an exit, a frontier and no refusal; and an
-  application with no host, or the group `corpus`, refuses `run` (`Source.hosted?`), saying why.
-  Then the script's reader, the inverse of a line's print of a literal, and the options' reader,
-  readable lines by default, with their refusals.
 
 Every check is a `#guard`, so the rendered bytes stay inside them.
 -/
@@ -394,7 +384,7 @@ def folderBefore : List (String × ByteArray) :=
 
 -- red: read as the envelope that a host wraps, with no services, the reading boundary refuses the
 -- file at its first row service, which names no layer path.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match b.typed.emit declaration with
     | .ok e =>
@@ -409,7 +399,7 @@ def folderBefore : List (String × ByteArray) :=
 
 -- green: with the table's row services read first, as `Api.readFile` reads them, it admits the
 -- file, to exactly the built program; and the to-do emits.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match b.typed.emit declaration with
     | .ok e =>
@@ -422,125 +412,16 @@ def folderBefore : List (String × ByteArray) :=
     | .error _ => false
   | .error _ => false
 
-/-! ## The run: the dogfood to-do on the Lean machine
+/-! ## The tree's groups -/
 
-Every rendered line stays inside a `#guard`. -/
-
-open Compiler.Groups (todoHosted todoScript)
-
-/-- Each request of the group's script with its module (`Request.moduleOf?`). -/
-def todoRequests : List (Request × Module NativeOp) :=
-  todoScript.filterMap fun r => (r.moduleOf? Test.Dogfood.Scenario.Todo.application).map (r, ·)
-
--- The tree's groups (`lake exe effect4`): `run --group todo` runs the dogfood to-do over its
--- reference repository on the host lane's seven requests; `run --group corpus` refuses, saying why.
-#guard Groups.all.map Source.name == ["corpus", "sql", "todo"] &&
-  (match (Groups.all.find? (·.name == "todo")).map Source.hosted? with
-    | some (.ok (app, _, script)) => app.name == "todo" && script == todoScript
-    | _ => false) &&
-  (match (Groups.all.find? (·.name == "corpus")).map Source.hosted? with
-    | some (.error why) => why == "the group corpus is programs with no host to answer a row; " ++
-        "run takes an application and its host"
-    | _ => false)
-
--- finite evaluation: the script is the host lane's seven requests, and each has its module, the
--- same that the command's check of the script gives.
-#guard todoScript.length == 7 && todoRequests.length == 7 &&
-  (match modulesOf Test.Dogfood.Scenario.Todo.application todoScript with
-    | .ok requests => requests.map (·.1) == todoScript
-    | .error _ => false)
-
--- finite evaluation: the value-tree mode gives one line a request and refuses none. Each line is
--- the result's value tree: the request, its exit's image and the repository after it. The second title passes
--- through as UTF-8, and the last line holds the reference model's state after the script.
-#guard match (runFrom todoHosted .json {} todoRequests todoHosted.initial).map (·.toOption) with
-  | [some first, some second, _, _, _, _, some last] =>
-    first == "[\"add\",[\"milk\"],{\"_ctor\":0,\"args\":[{\"_ctor\":0,\"args\":[[\"done\",\"id\",\"title\"]," ++
-        "[false,1,\"milk\"]]}]},[2,[[1,\"milk\",false]]]]" &&
-      second == "[\"add\",[\"café 日本 🙂\"],{\"_ctor\":0,\"args\":[{\"_ctor\":0,\"args\":[[\"done\",\"id\"," ++
-        "\"title\"],[false,2,\"café 日本 🙂\"]]}]},[3,[[1,\"milk\",false],[2,\"café 日本 🙂\",false]]]]" &&
-      last == "[\"list\",[],{\"_ctor\":0,\"args\":[[{\"_ctor\":0,\"args\":[[\"done\",\"id\",\"title\"]," ++
-        "[false,2,\"café 日本 🙂\"]]}]]},[3,[[2,\"café 日本 🙂\",false]]]]"
-  | _ => false
-
--- finite evaluation: `--typed` writes each exit at its own type, Effect's `Schema.Exit` encoding;
--- `--text` writes that exit and the repository after it.
-#guard match (runFrom todoHosted .typed {} todoRequests todoHosted.initial).map (·.toOption),
-    (runFrom todoHosted .text {} todoRequests todoHosted.initial).map (·.toOption) with
-  | some typed :: _, [_, _, _, _, _, some removed, _] =>
-    typed == "add(\"milk\") {\"_tag\":\"Success\",\"value\":{\"done\":false,\"id\":1,\"title\":\"milk\"}}" &&
-      removed == "remove(1) -> {\"_tag\":\"Success\",\"value\":null} | [3,[[2,\"café 日本 🙂\",false]]]"
-  | _, _ => false
-
--- control: the build refuses `complete` at a string, a located refusal of the checker under the
--- entry's name; the request after it runs from the state before it, so `tea` is the first to-do.
-#guard match modulesOf Test.Dogfood.Scenario.Todo.application
-    [⟨"complete", [.str "one"]⟩, ⟨"add", [.str "tea"]⟩] with
-  | .ok requests =>
-    match runFrom todoHosted .json {} requests todoHosted.initial with
-    | [.error ⟨some "complete", .typing _⟩, .ok line] =>
-      line == "[\"add\",[\"tea\"],{\"_ctor\":0,\"args\":[{\"_ctor\":0,\"args\":[[\"done\",\"id\",\"title\"]," ++
-        "[false,1,\"tea\"]]}]},[2,[[1,\"tea\",false]]]]"
-    | _ => false
-  | .error _ => false
-
--- control: a request that names no entry, or gives other than one argument a parameter, has no
--- module, and the command's check names it by its place. Why the count is checked: the module of
--- `add` at an extra argument builds, the argument dropped (`Application.Entry.applied`).
-#guard (Request.moduleOf? Test.Dogfood.Scenario.Todo.application ⟨"delete", [.nat 1]⟩).isNone &&
-  (Request.moduleOf? Test.Dogfood.Scenario.Todo.application ⟨"add", [.str "a", .str "b"]⟩).isNone &&
-  (Request.moduleOf? Test.Dogfood.Scenario.Todo.application ⟨"add", []⟩).isNone &&
-  (match modulesOf Test.Dogfood.Scenario.Todo.application [⟨"list", []⟩, ⟨"delete", [.nat 1]⟩] with
-    | .error why => why == "the request 1, delete(1): no entry is named delete; the entries are " ++
-        "add, list, complete, remove"
-    | .ok _ => false) &&
-  ((Test.Dogfood.Scenario.Todo.application.entry? "add").map fun e =>
-    (Api.Author.build (Test.Dogfood.Scenario.Todo.application.moduleOf e [str "a", str "b"])).toBool) ==
-    some true
-
--- red: at fuel 0 no request reaches an exit. A frontier is no refusal: the line holds no exit, and
--- the repository is as it was.
-#guard match (runFrom todoHosted .json { fuel := 0 } todoRequests todoHosted.initial).map (·.toOption),
-    (runFrom todoHosted .typed { fuel := 0 } todoRequests todoHosted.initial).map (·.toOption) with
-  | some json :: _, some typed :: _ =>
-    json == "[\"add\",[\"milk\"],null,[1,[]]]" && typed == "add(\"milk\") no exit"
-  | _, _ => false
-
--- red: an application with no host refuses `run`, and names how a project passes one.
-#guard match (Source.application (offset 1)).hosted? with
-  | .error why => why == "the application offset has no host; a project passes one to Compiler.main (hosted := …)"
-  | .ok _ => false
-
--- The script's reader is the inverse of a line's print of a literal: each literal printed in a
--- result's value tree reads back to itself.
-#guard [Lit.unit, .nat 7, .bool false, .str "café"].all fun l =>
-  litOfJson (Run.Kit.valShape.printTree (litVal l)) == some l
-
--- A script's text reads to its requests: `args` may be left out, and `null` is the unit.
-#guard match NatJson.parse (("[{\"entry\":\"add\",\"args\":[\"milk\"]},{\"entry\":\"complete\",\"args\":[1]}," ++
-    "{\"entry\":\"list\"},{\"entry\":\"x\",\"args\":[true,null]}]").toUTF8.data.toList.map UInt8.toNat) with
-  | .ok t => (scriptOf t).toOption ==
-      some [⟨"add", [.str "milk"]⟩, ⟨"complete", [.nat 1]⟩, ⟨"list", []⟩, ⟨"x", [.bool true, .unit]⟩]
-  | .error _ => false
-
--- red: the reader refuses a negative number, a key it does not know, a repeated key, a request with
--- no entry, `args` that is no array, and a script that is no array.
-#guard ["[{\"entry\":\"complete\",\"args\":[-1]}]", "[{\"entry\":\"add\",\"arg\":[\"x\"]}]",
-    "[{\"entry\":\"list\",\"entry\":\"list\"}]", "[{\"args\":[]}]",
-    "[{\"entry\":\"add\",\"args\":\"x\"}]", "{\"entry\":\"list\"}"].all fun text =>
-  match NatJson.parse (text.toUTF8.data.toList.map UInt8.toNat) with
-  | .ok t => (scriptOf t).toOption.isNone
-  | .error _ => false
-
--- The options of `run`: the mode, the script's file and the fuel; the readable line, `--text`, is
--- the default. Each value is read, and an option with no value, a budget that is no natural, or an
--- unknown option refuses.
-#guard (match RunOptions.read ["--typed", "--budget", "5", "--script", "s.json"] {} with
-    | .ok o => o.mode == .typed && o.budget.fuel == 5 && o.script == some "s.json"
-    | .error _ => false) &&
-  (RunOptions.read [] {}).toOption.map (·.mode) == some .text &&
-  [["--budget", "x"], ["--budget"], ["--script"], ["--bogus"]].all fun args =>
-    (RunOptions.read args {}).toOption.isNone
+-- The groups of `lake exe effect4`: the wire corpus, the SQLite package's programs, then each
+-- example of `Examples.all` under its application's name; only the to-do lowers native roots.
+#guard Groups.all.map Source.name == ["corpus", "sql"] ++ Examples.all.map (·.name) &&
+  Examples.all.map (·.name) ==
+    ["todo", "cachedTodo", "boundedBuffer", "bankAccount", "keyValueStore", "rateLimiter", "vendingMachine"] &&
+  (Groups.all.filterMap fun
+    | .application app lowered => if lowered.roots.isEmpty then none else some app.name
+    | .programs .. => none) == ["todo"]
 
 /-! ## A program with a SQL row: the adapter, imported and copied -/
 
@@ -634,12 +515,12 @@ def here : Elaborated := elaborated%
 -- The declared names of the closure's literal keys: the dogfood to-do's repository key and the SQL
 -- layer's. `check` names a key's declaration beside its spelling, and a key no declaration states
 -- prints alone.
-#guard here.namesOf ⟨⟨30⟩, ⟨6⟩⟩ == ["Test.Dogfood.Scenario.Todo.todoRepoKey"] &&
+#guard here.namesOf ⟨⟨30⟩, ⟨6⟩⟩ == ["Examples.Todo.todoRepoKey"] &&
   here.namesOf ⟨⟨8⟩, ⟨4⟩⟩ == ["Test.Api.PackagesContract.kSql"] &&
   keyLine ⟨⟨1⟩, ⟨9⟩⟩ (here.namesOf ⟨⟨1⟩, ⟨9⟩⟩) == "k1_9" &&
-  (match check Test.Dogfood.Scenario.Todo.application with
+  (match check Examples.Todo.application with
     | .ok b => (certificateLines "todo" b here.namesOf).contains
-        "services  TodoRepo k30_6 (Test.Dogfood.Scenario.Todo.todoRepoKey)"
+        "services  TodoRepo k30_6 (Examples.Todo.todoRepoKey)"
     | .error _ => false)
 
 /-! ## The readings: one query of the tool protocol each -/
@@ -649,7 +530,7 @@ def here : Elaborated := elaborated%
 
 -- `rows` is the certificate's rows: the inspection at the root holds the application's table in
 -- its signature context, one line a row.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match reading b .rows with
     | .ok r => jsonText r.json == jsonText (tree b.table) && (r.text.splitOn "\n").length == 4
@@ -657,7 +538,7 @@ def here : Elaborated := elaborated%
   | .error _ => false
 
 -- `types` is the address table: its first line is the root, at the program's type.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match reading b .types with
     | .ok r => (r.text.splitOn "\n").head? == some ("[] " ++ Tools.Code.effTyText b.ty)
@@ -666,7 +547,7 @@ def here : Elaborated := elaborated%
 
 -- `graph` is the program's public JSON, the bytes of `<name>.eff.json` without their newline, and
 -- its indented text reads back to the same tree.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match reading b .graph with
     | .ok r => (jsonText r.json).toUTF8.data.toList ++ [10] == (programJson b.program).data.toList &&
@@ -677,7 +558,7 @@ def here : Elaborated := elaborated%
   | .error _ => false
 
 -- `surface` is the service's four methods, as its Schemas state them.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b =>
     match reading b .surface with
     | .ok r => (r.text.splitOn "\n").map (fun l => (l.splitOn "(").headD "") ==
@@ -722,7 +603,7 @@ def here : Elaborated := elaborated%
   (InspectOptions.read ["--out", "--form", "json"] {}).toOption.isNone
 
 -- reader: the session adapter uses the same checked constructor as direct library use.
-#guard match check Test.Dogfood.Scenario.Todo.application with
+#guard match check Examples.Todo.application with
   | .ok b => (inspectBuilt b (some "TodoApp")).toOption.isSome &&
       (inspectBuilt b (some "unknown-service")).toOption.isNone
   | .error _ => false

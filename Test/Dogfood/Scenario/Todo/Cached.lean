@@ -10,7 +10,7 @@ import Effect4.Emit
 # The to-do with the banked Ref cache imposed on its service
 
 Decisions row 378 (8), (4) and (23). The to-do's service holds the banked cache
-(`Test.Dogfood.Scenario.Todo.listCache`; `Application.Imposed`,
+(`Examples.CachedTodo.listCache`; `Application.Imposed`,
 `src/Effect4/Program/Authoring/Application.lean`): the cell is the service's state beside the
 context, made once by the cache's `make`. The method `list` reads through the cache with the entry
 `list`, `TodoRepo.all()`, as its loader, and `add`, `complete` and `remove` invalidate the cell after
@@ -52,8 +52,9 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring Effect4.P
 open Effect4.Store (Image)
 open Effect4.Run (reactorHost)
 open Effect4.Ref.Cache (invalidateBody getBody invalidate_get)
-open Test.Dogfood.Scenario.Todo (application listCache readingThrough repository Repo todo todoOf
-  addAt listAt)
+open Test.Dogfood.Scenario.Todo (repository Repo todo todoOf addAt listAt)
+open Examples.Todo (application)
+open Examples.CachedTodo (listCache readingThrough)
 open Test.Dogfood.Bank (refCache milk observe)
 open Test.Dogfood.ApplicationDefs (prefixBlock)
 
@@ -79,7 +80,7 @@ open Test.Dogfood.ApplicationDefs (prefixBlock)
 -- finite evaluation: the state is the context beside the cache's cell, and each method declares
 -- its entry's open type, as without the cache
 #guard cached.stateTy =
-  .prod (.contextOf cached.contextKeys) (Effect4.Ref.Cache.cellTy Test.Dogfood.Scenario.Todo.Todo.ty)
+  .prod (.contextOf cached.contextKeys) (Effect4.Ref.Cache.cellTy Examples.Todo.Todo.ty)
 #guard (built? cached).map (fun b => (b.program.defsOf.drop 4).map fun d => (d.answer, d.error)) =
   (built? application).map (fun b => (b.program.defsOf.drop 1).map fun d => (d.answer, d.error))
 -- control: with nothing imposed the service is E1's: no kept block, the context alone

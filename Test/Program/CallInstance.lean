@@ -12,6 +12,7 @@ namespace Test.Program.CallInstance
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Test.Dogfood.P2HandlerLayers (built?)
 open Test.Dogfood.Scenario.Todo
+open Examples.Todo
 
 /-- The calls of a built program: address, position, request type, answer and error. -/
 def callsOf (m : Module NativeOp) : Option (List (List Nat × Option Nat × Ty × Ty × Ty)) :=

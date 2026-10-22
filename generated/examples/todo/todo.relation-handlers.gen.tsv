@@ -1,0 +1,2 @@
+service	state	init	clauses	requires	forwards	rows
+TodoApp	Context.Context<"k30_6">	0	add@1/1, list@2/0, complete@3/1, remove@4/1	k30_6		TodoRepo.insert, TodoRepo.all, TodoRepo.setDone, TodoRepo.delete

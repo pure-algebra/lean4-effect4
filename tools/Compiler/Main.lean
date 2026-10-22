@@ -1,5 +1,5 @@
 import Compiler.Native
-import Compiler.Run
+import Compiler.Check
 import Compiler.Inspect
 import Compiler.InspectDocument
 import Compiler.Report
@@ -20,7 +20,6 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
     describe [--target ts|ocaml] [--out DIR] [--emit=…] [--pretty]
     inspect --what types|rows|surface|graph|manifest [the options of describe]
     inspect --what relations|boundary|calls|layers|handlers [--form md|json|svg|tsv] [--session SERVICE] [--out DIR]
-    run [--text | --typed] [--script FILE] [--budget N]
 
 **Every command returns a report** (`Compiler.Report`, the report note
 `docs/research/2026-10-21-cli-report/README.md`) and prints nothing itself: the folds it ran, its
@@ -61,12 +60,6 @@ keeps the format and the quiet read before it.
   an artifact of the report. `--session SERVICE` reads the session object made by `Built.session`.
   A multi-program JSON reading requires `--out DIR`, with one document per file.
   SVG and TSV replace the selected programs' files of that form in the output folder.
-- `run` runs each request of a script on the Lean machine over the application's host, and gives
-  one reading a request (`Compiler.Run`): a readable line (`--text`, the default) or the exit
-  encoded at its own type (`--typed`), with the result's value tree as JSON beside it. The host
-  and the default script are what the project passes to `Compiler.main`; `--script FILE` reads a
-  JSON array of requests instead. `--budget N` plays every row at `N` steps of fuel. An application
-  with no host refuses `run`, as a usage error.
 
 `Compiler.mainOver groups args` is the same command line over named sources, one chosen by
 `--group NAME` (`lake exe effect4`, `Compiler.Exe`, C2 slice 2). A source is one application, or a
@@ -80,8 +73,7 @@ closure is data it was built with (`Compiler.Elaborated`, the default of `main`'
 each module's source is read where `lake exe` puts it, on `LEAN_SRC_PATH` (`sourceOf`). So the
 command runs from the project's root through `lake exe`. The exit code is the report's
 (`Report.exit`): `0` on success, `1` on a refusal, and `2` on a usage error, which names the
-command and its options (`usageOf`). A `run` whose request the build refuses gives the located
-refusal as `check` does, runs the rest, and exits with `1`.
+command and its options (`usageOf`).
 -/
 
 namespace Compiler
@@ -98,7 +90,6 @@ def usageOf : String → String
   | "inspect" => "inspect --what " ++ "|".intercalate (What.all.map What.name) ++
       " [--form md|json|svg|tsv] [--session SERVICE] [--out DIR]" ++
       " [--target ts|ocaml] [--emit=KIND,…]"
-  | "run" => "run [--text | --typed] [--script FILE] [--budget N]"
   | _ => ""
 
 /-- The kinds that `--emit` names and the available targets, in words. -/
@@ -111,7 +102,7 @@ def flagsText : String := "[--format tty|plain|json|md] [--quiet] [--json] [--he
 
 /-- The command line, in words. -/
 def usage : String :=
-  "usage: " ++ " | ".intercalate (["check", "open", "emit", "describe", "inspect", "run"].map usageOf) ++
+  "usage: " ++ " | ".intercalate (["check", "open", "emit", "describe", "inspect"].map usageOf) ++
     "; each with " ++ flagsText ++ "; " ++ kindsText
 
 /-! ## The report's flags -/
@@ -244,38 +235,28 @@ def Options.read : List String → Options → Except String Options
       | none => .error s!"{a} names no kind"
     else .error s!"{a} is no option"
 
-/-- **What a command runs over**: one application, with the host and the script that `run` takes
-when the project passes them; or a named group of programs, each admitted at the group's
-application (`checkProgram`), the empty one by default, as the wire corpus is. -/
+/-- **What a command runs over**: one application, with the roots it lowers for `--target ocaml`;
+or a named group of programs, each admitted at the group's application (`checkProgram`), the
+empty one by default, as the wire corpus is. -/
 inductive Source where
-  | application (app : Application NativeOp) (hosted : Option Hosted := none)
-      (script : List Request := []) (lowered : Lowered := {})
+  | application (app : Application NativeOp) (lowered : Lowered := {})
   | programs (name : String) (programs : List (String × NativeEff)) (app : SigApp := {})
 
 /-- A source's name: the application's, or the group's. It names the default output folder. -/
 def Source.name : Source → String
-  | .application app _ _ _ => app.name
+  | .application app _ => app.name
   | .programs name _ _ => name
 
 /-- The words of the fold that builds a source: the program's name, or the group's. -/
 def Source.folding : Source → String
-  | .application app _ _ _ => s!"folding the program {app.name}"
+  | .application app _ => s!"folding the program {app.name}"
   | .programs name _ _ => s!"folding the group {name}"
-
-/-- **What `run` runs over**: an application with its host and the script the project passes; or,
-in words, why the source has no host. -/
-def Source.hosted? : Source → Except String (Application NativeOp × Hosted × List Request)
-  | .application app (some h) script _ => .ok (app, h, script)
-  | .application app none _ _ =>
-    .error s!"the application {app.name} has no host; a project passes one to Compiler.main (hosted := …)"
-  | .programs name _ _ =>
-    .error s!"the group {name} is programs with no host to answer a row; run takes an application and its host"
 
 /-- **The source's programs, built**: the application's service module under its name
 (`check`), or each program of the group under its own, at the group's application
 (`checkProgram`); each built, or the build's refusal. -/
 def builtOf : Source → List (String × Except CheckRefusal Api.Built)
-  | .application app _ _ _ => [(app.name, check app)]
+  | .application app _ => [(app.name, check app)]
   | .programs _ programs app => programs.map fun (name, program) => (name, checkProgram program app)
 
 /-- A build's refusal in words, as the report records it: a group's program by its name. -/
@@ -323,7 +304,7 @@ def checkCommand (log : Log) (source : Source) (elaborated : Elaborated) (out : 
   for (name, result) in built do
     match result, source with
     | .error _, _ => pure ()
-    | .ok b, .application app _ _ _ =>
+    | .ok b, .application app _ =>
       let title := s!"{app.name}: checked; the service {serviceName app}"
       log.event (.reading "certificate" ("\n".intercalate (certificateLines title b elaborated.namesOf))
         (some (jsonText (certificate b))))
@@ -348,7 +329,7 @@ def emissionOf (source : Source) (command : List String) (kinds : List Kind)
     (elaborated : Elaborated) : IO (Except String Emission) := do
   try
     match source with
-    | .application app _ _ _ =>
+    | .application app _ =>
       match check app with
       | .error why => return .error why.text
       | .ok b => return (emitTs (← readSpec app.name command kinds elaborated) b).mapError (·.text)
@@ -395,7 +376,7 @@ def emitCommand (log : Log) (source : Source) (elaborated : Elaborated) (output 
     match source with
     | .programs .. =>
       return (← usageError log name "the native target needs an application with named lowered roots")
-    | .application _ _ _ lowered =>
+    | .application _ lowered =>
       match lowered.validate with
       | .error why => return (← usageError log name why)
       | .ok () => pure ()
@@ -405,7 +386,7 @@ def emitCommand (log : Log) (source : Source) (elaborated : Elaborated) (output 
   if anyRefused built then return
   let result ← log.folding (if target == "ocaml" then "lowering for ocaml" else s!"printing for {target}") do
     let result ← match target, source with
-      | "ocaml", .application app _ _ lowered =>
+      | "ocaml", .application app lowered =>
         match check app with
         | .error why => pure (.error why.text)
         | .ok b =>
@@ -428,46 +409,6 @@ def emitCommand (log : Log) (source : Source) (elaborated : Elaborated) (output 
     log.event (.reading "manifest" (if o.pretty then prettyText e.manifest else jsonText e.manifest)
       (some (jsonText e.manifest)))
   | .inspect => log.event (.reading "manifest" (prettyText e.manifest) (some (jsonText e.manifest)))
-
-/-- **`run` over a host**: the script, the project's or the one that `--script FILE` names, each
-request with its module (`modulesOf`); then each request on the Lean machine (`served`), one
-reading each, its line in the mode and the result's value tree as JSON. A refused build is the
-build's located refusal, as `check` gives it, recorded inside the running step, so the step stands
-hollow when any request was refused; the later requests still run. A usage error runs nothing. -/
-def runHosted (log : Log) (app : Application NativeOp) (h : Hosted) (passed : List Request)
-    (o : RunOptions) : IO Unit := do
-  let script ← match o.script with
-    | none => pure passed
-    | some file =>
-      unless ← System.FilePath.pathExists file do
-        return (← log.event (.usage "run" s!"--script {file}: no such file"))
-      match ← EIO.toBaseIO (readJson file) with
-      | .error e => return (← log.event (.usage "run" (toString e)))
-      | .ok t =>
-        match scriptOf t with
-        | .ok requests => pure requests
-        | .error why => return (← log.event (.usage "run" s!"{file}: {why}"))
-  let requests ← match modulesOf app script with
-    | .ok requests => pure requests
-    | .error why => return (← log.event (.usage "run" why))
-  let outcomes ← log.folding "running on the Lean machine" do
-    log.event (.measure "requests" requests.length)
-    let outcomes := served h o.budget requests h.initial
-    for outcome in outcomes do
-      if let .error why := outcome then log.event (.refusal "run" why.text)
-    pure outcomes
-  for outcome in outcomes do
-    if let .ok served := outcome then
-      log.event (.reading (requestText served.request) (served.line h o.mode)
-        (some (served.line h .json)))
-
-/-- **`run`**: the options read (`RunOptions.read`), then the source's host (`Source.hosted?`); a
-source with no host refuses, as a usage error. -/
-def runCommand (log : Log) (source : Source) (rest : List String) : IO Unit := do
-  match RunOptions.read rest {}, source.hosted? with
-  | .error why, _ => usageError log "run" why
-  | .ok _, .error why => log.event (.usage "run" why)
-  | .ok o, .ok (app, h, passed) => runHosted log app h passed o
 
 /-- The arguments of the `emit` that a `describe` describes: its first `describe` read as `emit`,
 and no `--pretty`, which changes only how the manifest is printed. -/
@@ -641,8 +582,8 @@ def inspectCommand (log : Log) (source : Source) (elaborated : Elaborated) (args
           log.event (.reading s!"{what.name} of {name}" r.text
             (some (jsonText (.obj [("program", .str name), (what.name, r.json)]))))
 
-/-- **The command over a source, into its log**: `check`, `open`, `emit`, `describe`, `inspect` or
-`run`. `given` are the arguments without the report's flags, which a header and the manifest
+/-- **The command over a source, into its log**: `check`, `open`, `emit`, `describe` or `inspect`.
+`given` are the arguments without the report's flags, which a header and the manifest
 record; `rest` are the ones the command reads. -/
 def dispatch (log : Log) (source : Source) (elaborated : Elaborated) (given rest : List String) :
     IO Unit :=
@@ -655,7 +596,6 @@ def dispatch (log : Log) (source : Source) (elaborated : Elaborated) (given rest
   | "emit" :: options => emitCommand log source elaborated .write given options
   | "describe" :: options => emitCommand log source elaborated .describe (asEmit given) options
   | "inspect" :: options => inspectCommand log source elaborated given options
-  | "run" :: options => runCommand log source options
   | [] => log.event (.usage "" usage)
   | c :: _ => log.event (.usage "" s!"{c} is no command; {usage}")
 
@@ -696,14 +636,12 @@ def run (source : Source) (elaborated : Elaborated) (args rest : List String) : 
     let rest := ((takeFlags rest {}).2.toOption).getD rest
     dispatch log source elaborated given rest
 
-/-- **The compiler's entry point** over one application: `check`, `emit`, `describe`, `inspect` or
-`run`. `run` takes the application's host and the script of requests that the project passes.
-`elaborated` is what the calling module's elaboration knows of the executable (`elaborated%`, the
+/-- **The compiler's entry point** over one application: `check`, `emit`, `describe` or `inspect`.
+`lowered` names the roots that `--target ocaml` lowers. `elaborated` is what the calling module's elaboration knows of the executable (`elaborated%`, the
 default): its Lean module closure and the declared names of its keys. -/
-def main (app : Application NativeOp) (args : List String) (hosted : Option Hosted := none)
-    (script : List Request := []) (lowered : Lowered := {})
+def main (app : Application NativeOp) (args : List String) (lowered : Lowered := {})
     (elaborated : Elaborated := by exact elaborated%) : IO UInt32 :=
-  run (.application app hosted script lowered) elaborated args args
+  run (.application app lowered) elaborated args args
 
 /-- **The compiler over named sources** (`lake exe effect4`): `main`'s command line.
 `open` needs no source; other commands use the source that `--group NAME` chooses. -/

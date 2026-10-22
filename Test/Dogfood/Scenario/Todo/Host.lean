@@ -1,7 +1,7 @@
 import Test.Dogfood.Scenario.Todo.HostRun
 import Test.Dogfood.Scenario.Todo.Scenario
 import Test.Dogfood.Scenario.Todo.Cached
-import Tools.RunChecks
+import Tools.RunRecord
 
 /-!
 # The to-do application's host run, from an entry (LC-6)

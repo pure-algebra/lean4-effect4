@@ -39,6 +39,7 @@ def green : Bool × Bool × Bool × Bool := (true, true, true, true)
 
 section todo
 open Test.Dogfood.Scenario.Todo
+open Examples.Todo
 
 def onTodo (main : Src NativeOp) (moves : List Move) : Option (Bool × Bool × Bool × Bool) :=
   (built? (request main)).map fun b => premises (play (Run.open b "todo") moves)
@@ -178,6 +179,7 @@ def clocked : NativeEff := .bind (call (num 1)) (.perform .clockNow (.lit .unit)
 
 section repository
 open Test.Dogfood.Scenario.Todo
+open Examples.Todo
 
 /-! The repository's reference model, `repository` over the state `Repo`, is the to-do
 application's (`Test/Dogfood/Scenario/Todo.lean`, section 7). A host function becomes a handler

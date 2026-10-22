@@ -1,0 +1,2 @@
+service	state	init	clauses	requires	forwards	rows
+VendingMachineApp	Context.Context<"k34_6">	0	sell@1/2	k34_6		Machine.coin, Machine.vend, Machine.change

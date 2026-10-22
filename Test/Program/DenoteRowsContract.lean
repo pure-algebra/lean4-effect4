@@ -15,6 +15,7 @@ namespace Test.Program.DenoteRowsContract
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring Effect4.Program.Denote
 open Effect4.Program.Sched
 open Test.Dogfood.Scenario.Todo
+open Examples.Todo
 open Test.Dogfood.P2HandlerLayers (built?)
 
 /-- One host row: a number in, a number out, a tagged failure. -/

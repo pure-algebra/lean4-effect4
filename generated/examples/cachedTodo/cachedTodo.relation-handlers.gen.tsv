@@ -1,0 +1,3 @@
+service	state	init	clauses	requires	forwards	rows
+ListCache	Ref.Ref<Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>>>	0	get@1/0, invalidate@2/0			
+CachedTodoApp	readonly [Context.Context<"k30_6">, Ref.Ref<Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>>>]	3	add@4/1, list@5/0, complete@6/1, remove@7/1	k30_6		TodoRepo.insert, TodoRepo.all, TodoRepo.setDone, TodoRepo.delete

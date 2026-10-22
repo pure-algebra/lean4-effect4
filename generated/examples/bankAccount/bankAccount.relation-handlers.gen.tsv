@@ -1,0 +1,2 @@
+service	state	init	clauses	requires	forwards	rows
+BankAccountApp	Context.Context<"k31_6">	0	deposit@1/2, withdraw@2/2, transfer@3/3, balance@4/1	k31_6		Ledger.balance, Ledger.write

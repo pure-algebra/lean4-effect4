@@ -10,9 +10,10 @@ import Effect4.Library.Ref.Cache
 # The to-do application: its programs build and run under a scripted host
 
 The owner named the application on 2026-10-07: a to-do list over SQL with an API that updates
-it, as the one program that exercises the whole loop. This file holds the data, the repository's
-four rows, the API's four programs, the application that holds them, and finite runs under a
-scripted host.
+it, as the one program that exercises the whole loop. The program is the example
+`Examples.Todo` (`examples/Examples/Todo.lean`): the data, the repository's four rows, the API's
+four programs and the application that holds them. This battery holds their builds and finite
+runs under a scripted host.
 
 * **Data.** `Todo = { id, title, done }`. A missing to-do is a tagged record, `NotFound { id }`.
   An empty title and a failure of the repository are pairs of a tag and a message: a class
@@ -40,6 +41,7 @@ set_option maxRecDepth 8192
 
 namespace Test.Dogfood.Scenario.Todo
 
+open Examples.Todo
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Authoring.Atom (eq pair)
 open Test.Dogfood.P2HandlerLayers (recordVal built?)
