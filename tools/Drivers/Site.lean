@@ -113,8 +113,7 @@ where run (args : List String) : IO UInt32 := do
   let pages := [({ path := [], doc := { landing with producer := landing.producer ++ ["make site"] }, space := "landing" } : Page)] ++
     (if guides.isEmpty then [] else guidesPage guides :: guides) ++ semanticsPages ++
     [{ path := ["specimen"], doc := Specimen.specimen, space := "specimen" }]
-  let fonts := ["source-serif-4/source-serif-4-latin-opsz-normal.woff2", "source-serif-4/source-serif-4-latin-opsz-italic.woff2",
-    "source-serif-4/LICENSE", "jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2", "jetbrains-mono/LICENSE", "README.md"]
+  let fonts := ["jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2", "jetbrains-mono/LICENSE", "README.md"]
   let files := ["page.css", "looks.css", "site.json", "_headers", "404.html", "semantics/report.json"] ++
     fonts.map ("fonts/" ++ ·)
   let draft : Site := { pages, files }

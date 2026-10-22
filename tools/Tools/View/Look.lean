@@ -21,8 +21,9 @@ own (`Tools.View.Tokens` writes and reads them):
 
 The defaults are the dark look: the palette of `paint.h`'s round-3 probe, whose hues passed the
 palette validator on their ground (hues-run.txt of the round-3 probe), with the ink and the rules
-warmed to the ground's material (decisions row 366, point 2), and the two open faces of
-`vendor/fonts/` (row 366, point 1), each family before the system faces it falls back to. Every other look is a token file that changes some of them
+warmed to the ground's material (decisions row 366, point 2). Its faces are two: JetBrains Mono
+(`vendor/fonts/`) for data, before the system's monospace faces, and the system's sans for names,
+labels and titles, upright, at weights 400 and 500. Every other look is a token file that changes some of them
 (`tools/view/looks/`), read at each run (`Tokens.lookFile`): its file is its one source. The paper
 look, which a document takes for a light scheme, is one of them.
 -/
@@ -372,9 +373,9 @@ structure Look where
   band : Nat := 500
   faces : Faces := {
     data := { family := ["JetBrains Mono", "Menlo", "DejaVu Sans Mono", "monospace"], size := 13288 }
-    name := { family := ["Source Serif 4", "Georgia", "serif"], size := 15000 }
-    label := { family := ["Source Serif 4", "Georgia", "serif"], size := 13500, italic := true }
-    title := { family := ["Source Serif 4", "Georgia", "serif"], size := 20000 } }
+    name := { family := ["system-ui", "Helvetica Neue", "Arial", "sans-serif"], size := 15000 }
+    label := { family := ["system-ui", "Helvetica Neue", "Arial", "sans-serif"], size := 13500 }
+    title := { family := ["system-ui", "Helvetica Neue", "Arial", "sans-serif"], size := 20000, weight := 500 } }
   strokes : Strokes := {}
   /-- the form of an edge between ranks -/
   curve : Curve := .bumpY
