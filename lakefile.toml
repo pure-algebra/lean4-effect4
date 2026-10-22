@@ -126,6 +126,15 @@ srcDir = "tools"
 globs = ["Compiler.+"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
+# The examples: programs an author writes in Lean, each a folder under `examples/` with everything
+# the compiler generates from it (the owner, 2026-10-22: the examples leave the tests; the kinds of
+# programs people verify). A library root like `Tools`, outside the axiom gate's audit.
+[[lean_lib]]
+name = "Examples"
+srcDir = "examples"
+globs = ["Examples.+"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
 # The report drivers, compiled (`lake exe <name> …`): the semantics report and its refusal controls
 # (`make gen-semantics`, `make check-semantics`) and the architecture map (`make gen-architecture`).
 # Each loads the environment it reports on at run time, so its own imports are Lean and tool modules.
