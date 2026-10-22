@@ -55,19 +55,23 @@ open Whatwg.Html.Content (Ctx Refusal)
 /-! ## The value -/
 
 /-- One page: its folder under the site's root (`[]` for the root, `["semantics"]`), its document,
-its space, the document it was split from, where its references resolve, and the key of the part
-it was split from, if any. -/
+its space, the document it was split from, where its references resolve, the key of the part
+it was split from, if any, and whether it writes its Markdown twin (a page whose Markdown is
+written elsewhere does not: the reference set's semantics page, whose twin is
+`generated/semantics.md`). -/
 structure Page where
   path : List String
   doc : Document
   space : String := ""
   key : Option String := none
+  markdown : Bool := true
 
-/-- A site: its pages in reading order, the root first, and the other files it writes, by their
-paths from the root. -/
+/-- A site: its pages in reading order, the root first, the other files it writes, by their
+paths from the root, and the folder of the page that lists every page. -/
 structure Site where
   pages : List Page
   files : List String := []
+  contents : List String := ["contents"]
 
 /-- A path as the folders of a link, with a slash after each. -/
 def folders (path : List String) : String := String.join (path.map (· ++ "/"))
@@ -329,7 +333,7 @@ def Site.shell (s : Site) (p : Page) : Shell :=
       (next.map fun q => pagerLink "next" (href q.path) q.doc.title).toList
     footer := p.doc.producer.map footerLine ++
       [footerLink "document.json" "This page as data (effect4-document/1)",
-       footerLink (href ["contents"]) "Every page of the site"] }
+       footerLink (href s.contents) "Every page of the site"] }
 
 /-- A page of the site as the tree a browser gets, with the site's key index (`keyIndex`, computed
 once). -/
@@ -344,7 +348,8 @@ def Site.content (s : Site) : Except String Content.Site := do
   let pages ← s.pages.mapM fun p => do
     let tree ← (s.tree ix p).mapError (s!"/{folders p.path}: " ++ ·)
     return ({ path := p.path, tree } : Content.Site.Page)
-  let twins := s.pages.flatMap fun p => [p.path ++ ["index.md"], p.path ++ ["document.json"]]
+  let twins := s.pages.flatMap fun p =>
+    (if p.markdown then [p.path ++ ["index.md"]] else []) ++ [p.path ++ ["document.json"]]
   return { pages, files := s.files.map (·.splitOn "/") ++ twins }
 
 /-- **Every check of the site**: the documents' (`Site.check`), then the package's over the rendered
@@ -387,10 +392,18 @@ def Site.json (s : Site) : Lean.Json :=
       ("parts", .arr ((parts p.doc).map fun (k, t, _) =>
         Lean.Json.mkObj [("key", k), ("title", t)]).toArray)]).toArray)]
 
-/-- The looks of every page: the dark base, the paper look (`paper`, read from its token file) for
-a light preference and print, and the rules that draw a picture's marks in them
-(`Tools.View.Tokens.rules`). -/
-def looksCss (paper : Look) : String := Html.looks {} paper ++ Tokens.rules
+/-- The data face, the first family of the base look's data face, served from the folder `fonts`
+(a path from the looks file, ending in `/`), which holds the face as `vendor/fonts/` does. -/
+def fontFace (fonts : String) : String :=
+  let family := (({} : Look).faces.data.family.headD "").quote
+  "@font-face { font-family: " ++ family ++ "; src: url(\"" ++ fonts ++
+    "jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2\") format(\"woff2\"); font-weight: 100 800; " ++
+    "font-style: normal; font-display: swap; }\n"
+
+/-- The looks of every page: the data face from `fonts` (`fontFace`), the dark base, the paper
+look (`paper`, read from its token file) for a light preference and print, and the rules that draw
+a picture's marks in them (`Tools.View.Tokens.rules`). -/
+def looksCss (paper : Look) (fonts : String) : String := fontFace fonts ++ Html.looks {} paper ++ Tokens.rules
 
 /-- Write every page of the site into `dir` once it passes every check (`Site.checked`): its HTML,
 its Markdown twin and its document as JSON; or return the refusals and write no page. -/
@@ -402,7 +415,7 @@ def Site.write (s : Site) (dir : System.FilePath) : IO (List String) := do
     let folder := p.path.foldl (· / ·) dir
     IO.FS.createDirAll folder
     IO.FS.writeFile (folder / "index.html") (Print.renderDoc page.tree)
-    IO.FS.writeFile (folder / "index.md") p.doc.markdown
+    if p.markdown then IO.FS.writeFile (folder / "index.md") p.doc.markdown
     IO.FS.writeFile (folder / "document.json") ((Json.Document.json p.doc).pretty ++ "\n")
   IO.FS.writeFile (dir / "site.json") ((s.json).pretty ++ "\n")
   return []

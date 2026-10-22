@@ -361,6 +361,7 @@ import Test.Program.PubSubSingle
 import Test.Program.TyCacheControls
 import Test.Audit.SummaryControls
 import Test.Audit.SiteControls
+import Test.Audit.ReferencePages
 import Test.Audit.GlyphControls
 import Test.Audit.GraphControls
 

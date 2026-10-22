@@ -1,0 +1,38 @@
+{"pages":
+ [{"title": "reference", "path": "", "parts": []},
+  {"title": "forms",
+   "path": "forms/",
+   "parts":
+   [{"title": "Eff", "key": "eff"},
+    {"title": "LayerTerm", "key": "layer-term"},
+    {"title": "Forms.all", "key": "derived"}]},
+  {"title": "native", "path": "native/", "parts": []},
+  {"title": "marks",
+   "path": "marks/",
+   "parts":
+   [{"title": "Shape", "key": "shapes"},
+    {"title": "Kind", "key": "kinds"},
+    {"title": "Glyph.table", "key": "rows"},
+    {"title": "Form", "key": "node-forms"}]},
+  {"title": "refusals",
+   "path": "refusals/",
+   "parts":
+   [{"title": "Ingest.Code", "key": "ingest"},
+    {"title": "ReadRefusal", "key": "read"},
+    {"title": "PrintRefusal", "key": "print"},
+    {"title": "ClassRefusal", "key": "class"}]},
+  {"title": "dictionary",
+   "path": "dictionary/",
+   "parts":
+   [{"title": "3.1 Compilers and intermediate representations",
+     "key": "section-1"},
+    {"title": "3.2 Programming languages and type theory", "key": "section-2"},
+    {"title": "3.3 Lean metaprogramming", "key": "section-3"},
+    {"title": "3.4 Proofs, the proof graph and the work", "key": "section-4"},
+    {"title": "3.5 Algebra and category theory", "key": "section-5"},
+    {"title": "3.6 Effects and runtime", "key": "section-6"},
+    {"title": "3.7 The host boundary", "key": "section-7"},
+    {"title": "3.8 Evidence and status words", "key": "section-8"},
+    {"title": "3.9 The tree's names in the literature's terms",
+     "key": "section-9"}]}],
+ "format": "effect4-site/1"}

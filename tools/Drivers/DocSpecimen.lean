@@ -35,7 +35,8 @@ def main (args : List String) : IO UInt32 := do
     let shell : Tools.Site.Shell := {
       tabTitle := specimen.title
       home := "../index.html"
-      styles := .inlineLooks (Tools.Document.Html.looks base light ++ Tokens.rules)
+      styles := .inlineLooks (Tools.Site.fontFace "../../../../vendor/fonts/" ++
+        Tools.Document.Html.looks base light ++ Tokens.rules)
         "../../../Tools/Document/page.css" }
     match Tools.Site.blocks Tools.Document.Html.fragment specimen with
     | .ok blocks => IO.FS.writeFile (out / name) (Tools.Site.text (Tools.Site.render shell specimen.title blocks)); return true

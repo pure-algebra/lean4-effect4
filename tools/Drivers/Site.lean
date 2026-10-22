@@ -127,7 +127,7 @@ where run (args : List String) : IO UInt32 := do
     for e in errors do IO.eprintln e
     return 1
   IO.FS.writeFile (dir / "page.css") css
-  IO.FS.writeFile (dir / "looks.css") (looksCss (← Tokens.lookFile "paper"))
+  IO.FS.writeFile (dir / "looks.css") (looksCss (← Tokens.lookFile "paper") "fonts/")
   IO.FS.writeFile (dir / "_headers") headers
   for f in fonts do
     let target := dir / "fonts" / f

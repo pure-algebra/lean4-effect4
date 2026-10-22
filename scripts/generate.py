@@ -311,6 +311,30 @@ def graphs(out, checking):
             (temp / name).write_bytes(source.read_bytes())
 
 
+def reference(out, checking):
+    """Write the reference pages from the tree's data, then compare or install them.
+
+    The driver writes every file of the committed set into a fresh folder; the semantics page is
+    not one of them (`make gen-reference-semantics` builds it under .lake/gen). Install mode removes a committed file the run did not write; check
+    mode refuses it, as it refuses a file whose bytes differ.
+    """
+    target = ROOT / 'generated/reference'
+    temp = out / 'generated/reference'
+    if checking and temp.resolve() == target.resolve():
+        raise ValueError('generated/reference: check output aliases repository destination')
+    temp.mkdir(parents=True, exist_ok=True)
+    run(['lake', 'build', 'Drivers.Reference'])
+    run(['lake', 'env', 'lean', '-M4096', '--run', 'tools/Drivers/Reference.lean', str(temp)])
+    written = {p.relative_to(temp) for p in temp.rglob('*') if p.is_file()}
+    for name in sorted(written):
+        install(temp / name, target / name, checking)
+    committed = {p.relative_to(target) for p in target.rglob('*') if p.is_file()} if target.is_dir() else set()
+    for name in sorted(committed - written):
+        if checking:
+            raise ValueError(f'generated/reference/{name} is not what Lean emits')
+        (target / name).unlink()
+
+
 def generate(families, output):
     checking = output is not None
     with tempfile.TemporaryDirectory(prefix='effect4-generate-') as scratch:
@@ -365,6 +389,8 @@ def generate(families, output):
             fixtures(out, checking)
         if 'graphs' in families:
             graphs(out, checking)
+        if 'reference' in families:
+            reference(out, checking)
         if 'readme' in families:
             # A host producer, not a Lean one: it reads profile/forms/taxonomy `.gen.ts` and
             # writes `ts/eff/ingest/README.md` in place. Its own `--check` is the drift form,
@@ -377,7 +403,7 @@ def generate(families, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--only', choices=ALL + ['lcnf', 'fixtures', 'store-rocq', 'graphs'])
+    parser.add_argument('--only', choices=ALL + ['lcnf', 'fixtures', 'store-rocq', 'graphs', 'reference'])
     parser.add_argument('--all', action='store_true',
                         help='every family of the named order: ' + ', '.join(ALL))
     parser.add_argument('--output-dir')
