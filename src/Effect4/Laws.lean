@@ -1,429 +1,144 @@
-import Effect4.Laws.Machine.Clauses
-import Effect4.Laws.Machine.Approximation
-import Effect4.Laws.Machine.RefKernel
-import Effect4.Laws.Machine.StoresLaws
-import Effect4.Laws.Machine.Integers
-import Effect4.Laws.Machine.IntegerProfile
-import Effect4.Laws.Machine.Clock
-import Effect4.Laws.Machine.Behaviour
-import Effect4.Laws.Machine.Book
+-- 1. `store-typing`: Store Typing
+import Effect4.Laws.Library.Stream.Definitions
+import Effect4.Laws.Library.Stream.Ops
+import Effect4.Laws.Library.Stream.Typing
+import Effect4.Laws.Library.SynchronizedRef.Ops
+import Effect4.Laws.Machine.AnswerFlowActions
+import Effect4.Laws.Machine.AnswerFlowCausePop
 import Effect4.Laws.Machine.ContextValue
-import Effect4.Laws.Machine.Descent
-import Effect4.Laws.Machine.Handles
-import Effect4.Laws.Machine.LiveStack
-import Effect4.Laws.Machine.MaskDiscipline
-import Effect4.Laws.Machine.MaskRuns
-import Effect4.Laws.Program.MaskRuns
-import Effect4.Laws.Api.MaskRuns
-import Effect4.Laws.Machine.MaskBracket
-import Effect4.Laws.Program.MaskBracket
-import Effect4.Laws.Machine.Scheduling
-import Effect4.Laws.Machine.ScopeMachine
-import Effect4.Laws.Machine.ScopeRestoration
 import Effect4.Laws.Machine.StoresValue
-import Effect4.Laws.Machine.Witnesses
-import Effect4.Laws.Program.Denote
-import Effect4.Laws.Program.Iter
-import Effect4.Laws.Program.DenoteB
-import Effect4.Laws.Program.IterLimit
-import Effect4.Laws.Program.StoreComodel
-import Effect4.Laws.Program.Folds.Looped
-import Effect4.Laws.Program.Folds.Denote
-import Effect4.Laws.Program.DenoteRows
-import Effect4.Laws.Program.Folds.DenoteRows
-import Effect4.Laws.Program.Folds.DenoteRowsB
-import Effect4.Laws.Program.DenoteCtl
-import Effect4.Laws.Program.DenoteRowsB
-import Effect4.Laws.Program.DenoteRowsAppend
-import Effect4.Laws.Program.Block
-import Effect4.Laws.Machine.Folds.Val
-import Effect4.Laws.Program.LoopAgreement
-import Effect4.Laws.Program.MeaningSound
-import Effect4.Laws.Program.LoopSound
-import Effect4.Laws.Program.TypedRun
-import Effect4.Laws.Program.Agreement.Loop
-import Effect4.Laws.Program.Agreement
-import Effect4.Laws.Program.Agreement.Machine
-import Effect4.Laws.Program.Agreement.Segment
-import Effect4.Laws.Program.Agreement.Calls
-import Effect4.Laws.Program.Agreement.Hosted
-import Effect4.Laws.Program.Agreement.HostedLoop
-import Effect4.Laws.Program.HostRuns
-import Effect4.Laws.Program.RowProtocol
-import Effect4.Laws.Api.HostDrive
-import Effect4.Laws.Program.MeaningEq
-import Effect4.Laws.Program.Sched
-import Effect4.Laws.Program.DenoteR
-import Effect4.Laws.Program.DenoteRowsR
-import Effect4.Laws.Program.InterpR
-import Effect4.Laws.Program.EvaluateR
-import Effect4.Laws.Program.ScopeMarkers
-import Effect4.Laws.Program.Typed
-import Effect4.Laws.Program.TyDecls
-import Effect4.Laws.Program.TyExpand
-import Effect4.Laws.Program.TyHead
-import Effect4.Laws.Program.Typed.Declared
-import Effect4.Laws.Program.TyDeclsInhabited
-import Effect4.Laws.Program.CallChain
-import Effect4.Laws.Program.Typed.RecordValues
-import Effect4.Laws.Program.Typed.RecordOperations
-import Effect4.Laws.Program.ScopedTyping
-import Effect4.Laws.Program.Order
-import Effect4.Laws.Program.UnionRule
-import Effect4.Laws.Program.Eliminators
-import Effect4.Laws.Program.TypeAlgebra
-import Effect4.Laws.Program.Provision
-import Effect4.Laws.Program.BuildTotal
-import Effect4.Laws.Program.Template
-import Effect4.Laws.Program.Bounds
-import Effect4.Laws.Program.Polarity
-import Effect4.Laws.Program.Residual
-import Effect4.Laws.Program.Decision
-import Effect4.Laws.Program.HostBoundary
-import Effect4.Laws.Api.HostSession
-import Effect4.Laws.Api.Built
-import Effect4.Laws.Api.Object
-import Effect4.Laws.Api.Session
-import Effect4.Laws.Tool.Serve
-import Effect4.Laws.Tool.CodecProfile
-import Effect4.Laws.Tool.Wire
-import Effect4.Laws.Tool.Exchange
-import Effect4.Laws.Api.Runner
-import Effect4.Laws.Api.RunnerBytes
-import Effect4.Laws.Api.Frontier
-import Effect4.Laws.Api.Fuel
-import Effect4.Laws.Api.Guard
-import Effect4.Laws.Api.Supervision
-import Effect4.Laws.Api.Codegen
-import Effect4.Laws.Api.Formation
-import Effect4.Laws.Program.Typing.Closed
-import Effect4.Laws.Run
-import Effect4.Laws.Run.Rows
-import Effect4.Laws.Run.Tape
-import Effect4.Laws.Run.Runner
-import Effect4.Laws.Program.Handles
-import Effect4.Laws.Program.Means
-import Effect4.Laws.Program.Intro
-import Effect4.Laws.Program.Progress
-import Effect4.Laws.Program.Simulation.Hooks
-import Effect4.Laws.Program.Simulation.Walk
-import Effect4.Laws.Program.Simulation.Fibers
-import Effect4.Laws.Program.Simulation.Deliver
-import Effect4.Laws.Program.Simulation.Actions
-import Effect4.Laws.Program.Simulation.Evaluate
-import Effect4.Laws.Program.Simulation.Pending
-import Effect4.Laws.Program.Simulation.Drive
-import Effect4.Laws.Program.RuntimeR
-import Effect4.Laws.Program.Table.Hooks
-import Effect4.Laws.Program.Table.Agreement
-import Effect4.Laws.Api.SessionRef
-import Effect4.Laws.Api.SessionMeaning
-import Effect4.Laws.Api.SessionMeaningLoop
-import Effect4.Laws.Program.ReasonsR
-import Effect4.Laws.Program.Guard
-import Effect4.Laws.Program.LayerSharing
-import Effect4.Laws.Program.ReferenceTyping
-import Effect4.Laws.Program.PathFold
-import Effect4.Laws.Program.ProfileSupport
-import Effect4.Laws.Program.ReferenceExpansion
-import Effect4.Laws.Program.ExpandFix
-import Effect4.Laws.Program.Hoisting
-import Effect4.Laws.Program.HoistingTotal
-import Effect4.Laws.Program.Invocation
-import Effect4.Laws.Program.ValueModel
-import Effect4.Laws.Program.LinkedRows
-import Effect4.Laws.Program.Typing.Sound
-import Effect4.Laws.Program.Typing.Check
-import Effect4.Laws.Program.Typing.Focus
-import Effect4.Laws.Program.Typing.Table
-import Effect4.Laws.Program.Typing.Call
-import Effect4.Laws.Program.Typing.Annotate
-import Effect4.Laws.Program.Typing.CheckInversion
-import Effect4.Laws.Program.Typing.CheckSound
-import Effect4.Laws.Codegen.Forms
-import Effect4.Laws.Codegen.Module
-import Effect4.Laws.Auto.RuleSets
 import Effect4.Laws.Program.AtomRules
-import Effect4.Laws.Program.TyView
-import Effect4.Laws.Program.Admits
-import Effect4.Laws.Auto.Inversion
-import Effect4.Laws.Auto.Census
-import Effect4.Laws.Auto.Traversals
-import Effect4.Laws.Auto.Exhaustive
-import Effect4.Laws.Auto.Positions
-import Effect4.Laws.Program.Typed.PositionGate
-import Effect4.Laws.Program.Typed.TypedStateDecl
-import Effect4.Laws.Auto.Frames
-import Effect4.Laws.Auto.Obligations
-import Effect4.Laws.Auto.BankCensus
-import Effect4.Laws.Auto.Semantics
-import Effect4.Laws.Effects.Protocol
-import Effect4.Laws.Effects.Sum
-import Effect4.Laws.Program.Typed.ProtocolObligations
-import Effect4.Laws.Program.Typed.Vocabulary
-import Effect4.Laws.Program.Typed.TypedSources
-import Effect4.Laws.Program.Typed.Sources
-import Effect4.Laws.Program.Typed.State
-import Effect4.Laws.Program.Typed.Frames
-import Effect4.Laws.Codegen.Template
-import Effect4.Laws.Codegen.Read
-import Effect4.Laws.Codegen.Metadata
-import Effect4.Laws.Codegen.Record
-import Effect4.Laws.Codegen.ReadPrint
-import Effect4.Laws.Codegen.PrintReadable
-import Effect4.Laws.Codegen.PrintTyped
-import Effect4.Laws.Api.ModuleReadable
-import Effect4.Laws.Store.CanonicalSpec
-import Effect4.Laws.Store.Recovery
-import Effect4.Laws.Store.Results
-import Effect4.Laws.Schema.Codec
-import Effect4.Laws.Schema.Modeled
-import Effect4.Laws.Program.TyNormal
-import Effect4.Laws.Schema.FieldRef
-import Effect4.Laws.Step
-import Effect4.Laws.Step.Scope
-import Effect4.Laws.Step.Lists
-import Effect4.Laws.Step.ErasedCompiler
-import Effect4.Laws.Step.Construction
-import Effect4.Laws.Schema.Identity
-import Effect4.Laws.Library.Semaphore.Data
-import Effect4.Laws.Library.Pool.Data
-import Effect4.Laws.Library.Queue.Data
-import Effect4.Library.Latch.Model
-import Effect4.Laws.Library.Latch.Steps
-import Effect4.Laws.Library.Latch.Registration
-import Effect4.Laws.Program.Authoring
-import Effect4.Laws.Program.Authoring.Records
-import Effect4.Laws.Program.Authoring.Tuples
-import Effect4.Laws.Program.Authoring.Folds
-import Effect4.Laws.Program.Typed.ListFold
-import Effect4.Laws.Program.Authoring.Lifts
-import Effect4.Laws.Program.Authoring.Rows
-import Effect4.Laws.Program.Authoring.Atoms
-import Effect4.Laws.Program.Authoring.Forms
-import Effect4.Laws.Program.Authoring.Sugar
-import Effect4.Laws.Program.Authoring.Loops
-import Effect4.Laws.Program.Authoring.Mask
-import Effect4.Laws.Program.Authoring.Ascribe
-import Effect4.Laws.Program.Typed.Mask
-import Effect4.Laws.Codegen.Mask
-import Effect4.Laws.Program.Author
-import Effect4.Laws.Machine.Refinement
-import Effect4.Laws.Program.Typed.World
-import Effect4.Laws.Program.Typed.Contracts
-import Effect4.Laws.Program.Typed.Validity
+import Effect4.Laws.Program.Handles
+import Effect4.Laws.Program.PlaceFunding.Flow
+import Effect4.Laws.Program.TyDeclsInhabited
 import Effect4.Laws.Program.Typed.ForkSource
-import Effect4.Laws.Program.Typed.Scope
-import Effect4.Laws.Program.Typed.Admission
-import Effect4.Laws.Program.Typed.ExitConnector
-import Effect4.Laws.Program.Typed.Residual
-import Effect4.Laws.Program.Typed.MaskEntry
-import Effect4.Laws.Program.Typed.Seq
-import Effect4.Laws.Program.Typed.Commands.Bookkeeping
-import Effect4.Laws.Program.Typed.Commands.Finish
-import Effect4.Laws.Program.Typed.Commands.Race
-import Effect4.Laws.Program.Typed.Commands.Registration
-import Effect4.Laws.Program.Typed.Commands.Launch
-import Effect4.Laws.Program.Typed.Commands.Observe
-import Effect4.Laws.Program.Typed.Commands.Evaluate
-import Effect4.Laws.Program.Typed.Commands.Clauses.Answer
-import Effect4.Laws.Program.Typed.Commands.Clauses.Park
-import Effect4.Laws.Program.Typed.Commands.Clauses.Spawn
-import Effect4.Laws.Program.Typed.Commands.Clauses.Command
-import Effect4.Laws.Program.Typed.Commands.Clauses.Loop
-import Effect4.Laws.Program.Typed.Commands.Clauses.Store
-import Effect4.Laws.Program.Typed.Commands.Clauses.All
-import Effect4.Laws.Program.Typed.Results
-import Effect4.Laws.Program.Typed.Edits
-import Effect4.Laws.Program.Typed.AnswerSchema
-import Effect4.Laws.Program.Typed.Stack
-import Effect4.Laws.Program.Typed.Assembly
-import Effect4.Laws.Program.Typed.HostWalk
-import Effect4.Laws.Program.Typed.LayerArm
-import Effect4.Laws.Program.Typed.Body
-import Effect4.Laws.Program.Signature
-import Effect4.Laws.Program.Definitions
-import Effect4.Laws.Program.Sketch
-import Effect4.Laws.Program.Typing.Replace
+import Effect4.Laws.Program.Typed.Frames
+import Effect4.Laws.Program.Typed.ListFold
+import Effect4.Laws.Schema.Modeled
+
+-- 2. `residual-program-typing`: Residual Program Typing
+import Effect4.Laws.Codegen.Forms
 import Effect4.Laws.Program.SoundAnySignature
 import Effect4.Laws.Program.Typed.AdmittedSource
-import Effect4.Laws.Auto.AnswerGate
-import Effect4.Laws.Machine.Handshake
-import Effect4.Laws.Machine.Keeps
-import Effect4.Laws.Program.Guard.Handshake
-import Effect4.Laws.Program.Moves
-import Effect4.Laws.Program.MovesConnect
-import Effect4.Laws.Program.Footprint
-import Effect4.Laws.Program.Interference
-import Effect4.Laws.Machine.StackLocal
-import Effect4.Laws.Machine.AnswerFlow
-import Effect4.Laws.Machine.PrimWeights
-import Effect4.Laws.Machine.AnswerFlowFrames
-import Effect4.Laws.Machine.AnswerFlowHooks
-import Effect4.Laws.Machine.AnswerFlowPop
-import Effect4.Laws.Machine.AnswerFlowCausePop
-import Effect4.Laws.Machine.AnswerFlowActions
-import Effect4.Laws.Program.StackLocal
-import Effect4.Laws.Program.StackRegionRun
-import Effect4.Laws.Program.CommandFrames
+import Effect4.Laws.Program.Typing.Check
 
-import Effect4.Laws.Program.Folds.Checker
+-- 3. `scope-lifetime-finalization`: Scope Lifetime & Finalization
+import Effect4.Laws.Api.MaskRuns
+import Effect4.Laws.Machine.ScopeRestoration
+import Effect4.Laws.Program.FinalizerSourceHistory
+import Effect4.Laws.Program.LedgerFinalizer
+import Effect4.Laws.Program.ReleaseCustody.Execution
+import Effect4.Laws.Program.StackRegionRun
+
+-- 4. `reactive-scheduling`: Reactive Scheduling
+import Effect4.Laws.Api.Supervision
+import Effect4.Laws.Library.Queue.Invariant
+import Effect4.Laws.Machine.Descent
+import Effect4.Laws.Machine.LiveStack
+import Effect4.Laws.Machine.RaceFirst
+import Effect4.Laws.Machine.Scheduling
+import Effect4.Laws.Machine.Witnesses
+import Effect4.Laws.Program.Guard.Handshake
+
+-- 5. `exact-codecs`: Exact Codecs
+import Effect4.Laws.Api.ModuleReadable
+import Effect4.Laws.Codegen.Mask
+import Effect4.Laws.Program.ValueModel
+import Effect4.Laws.Schema.DocumentJson
+import Effect4.Laws.Store.CanonicalSpec
+import Effect4.Laws.Store.Results
+import Effect4.Laws.Tool.CodecProfile
+import Effect4.Laws.Tool.Wire
+
+-- 6. `subtyping-algebra`: Subtyping Algebra
+import Effect4.Laws.Api.Formation
+import Effect4.Laws.Codegen.TargetOrder
+import Effect4.Laws.Program.Polarity
+import Effect4.Laws.Program.Typing.Closed
+import Effect4.Laws.Slice.Lattice
+
+-- 7. `initial-algebras-folds`: Initial Algebras & Folds
+import Effect4.Laws.Data.ListRelConnectors
+import Effect4.Laws.Effects.Sum
+import Effect4.Laws.Machine.Folds.Stores
+import Effect4.Laws.Machine.Folds.Val
+import Effect4.Laws.Program.Authoring.Atoms
+import Effect4.Laws.Program.Authoring.Forms
+import Effect4.Laws.Program.FiberSumConnect
+import Effect4.Laws.Program.FillSet
+import Effect4.Laws.Program.Folds.Looped
 import Effect4.Laws.Program.Folds.Projections
 import Effect4.Laws.Program.Folds.Provision
 import Effect4.Laws.Program.Folds.Representation
-import Effect4.Laws.Program.Folds.Straight
 import Effect4.Laws.Program.Folds.Term
-import Effect4.Laws.Program.Folds.Ty
-import Effect4.Laws.Machine.Folds.Stores
-import Effect4.Laws.Store.Folds.Val
-import Effect4.Laws.Store.Names
-import Effect4.Laws.Data.ListRelConnectors
-import Effect4.Laws.Codegen.TargetOrder
-import Effect4.Laws.Program.Typing.FoldAgreement
-import Effect4.Laws.Step.Table
-import Effect4.Laws.Step.Reading
-import Effect4.Laws.Step.Checking
-import Effect4.Laws.Step.Ascribe
-import Effect4.Laws.Step.Store
-import Effect4.Laws.Library.Queue.Capacity
-import Effect4.Laws.Library.Queue.Profile
-import Effect4.Laws.Library.Queue.Typing
-import Effect4.Laws.Library.Queue.Relation
-import Effect4.Laws.Library.Queue.Reading
-import Effect4.Laws.Library.Queue.Steps
-import Effect4.Laws.Step.Waiting
-import Effect4.Laws.Library.Queue.Ops
-import Effect4.Laws.Library.Queue.Invariant
-import Effect4.Library.Semaphore.Model
-import Effect4.Laws.Library.Semaphore.Profile
-import Effect4.Laws.Library.Semaphore.Typing
-import Effect4.Laws.Library.Semaphore.Relation
-import Effect4.Laws.Library.Semaphore.Reading
-import Effect4.Laws.Library.Semaphore.Steps
-import Effect4.Laws.Library.Semaphore.Ops
-import Effect4.Library.Pool.Model
-import Effect4.Laws.Library.Pool.Profile
-import Effect4.Laws.Library.Pool.Typing
-import Effect4.Laws.Library.Pool.Relation
-import Effect4.Laws.Library.Pool.Reading
-import Effect4.Laws.Library.Pool.Steps
-import Effect4.Laws.Library.Pool.Ops
-import Effect4.Laws.Library.Stream.Model
-import Effect4.Laws.Library.Stream.Steps
-import Effect4.Laws.Library.Stream.Typing
-import Effect4.Laws.Library.Stream.Ops
-import Effect4.Laws.Program.Typing.TermIntro
-import Effect4.Laws.Slice.Lattice
--- The entry module of the laws an author reads (decisions row 332).
-import Effect4.Laws.Author
-import Effect4.Laws.Author.Explain
-import Effect4.Laws.Program.Typing.Splice
-import Effect4.Laws.Program.Edit
-import Effect4.Laws.Program.Address
-import Effect4.Laws.Program.Typing.Rebase
-import Effect4.Laws.Program.Typing.PartsTable
-import Effect4.Laws.Program.Typing.Restrict
-import Effect4.Laws.Program.SketchWire
-import Effect4.Laws.Store.ShapeRead
-import Effect4.Laws.Library.Ref.Operations
-import Effect4.Laws.Library.Ref.Callback
-import Effect4.Laws.Library.PartitionedSemaphore.Steps
-import Effect4.Laws.Library.Stream.Array
-import Effect4.Laws.Library.SynchronizedRef.Ops
-import Effect4.Laws.Library.PubSub.Steps
-import Effect4.Laws.Library.Pull.Protocol
-import Effect4.Laws.Library.Channel.Protocol
-import Effect4.Laws.Library.Stream.Definitions
 import Effect4.Laws.Program.Folds.TyCache
-
--- Scenario proof structures and their independent controls.
-import Effect4.Laws.Api.AuthorBuild
-import Effect4.Laws.Auto.KernelRfl
-import Effect4.Laws.Library.Queue.Execution
-import Effect4.Laws.Machine.RaceFirst
-import Effect4.Laws.Machine.ScopeIdentity
-import Effect4.Laws.Program.FinalizerRun
-import Effect4.Laws.Machine.Ledger
-import Effect4.Laws.Program.LedgerRun
-import Effect4.Laws.Program.LedgerFinalizer
-import Effect4.Laws.Machine.FiberSum
-import Effect4.Laws.Program.FiberSumConnect
-import Effect4.Laws.Program.PlaceLedgerConnect
-import Effect4.Laws.Program.SourceOpportunityExecution
-import Effect4.Laws.Program.SourceOpportunityHistory
-import Effect4.Laws.Program.ReleaseCustody.Control
-import Effect4.Laws.Program.ReleaseCustody.Execution
-import Effect4.Laws.Program.ReleaseCustody.ScopeTransfer
-import Effect4.Laws.Program.HeapSites
-import Effect4.Laws.Program.NativeReplies
-import Effect4.Laws.Run.CallTree
-import Effect4.Laws.Run.Journal
-import Effect4.Laws.Run.Outcome
-import Effect4.Laws.Run.CallMap
-import Effect4.Laws.Run.Tree
-import Effect4.Laws.Program.PlaceFunding.Run
-import Effect4.Laws.Machine.WriterActions
-import Effect4.Laws.Api.Live
--- A run validated against declared protocols and a reference model (the claims packet).
-import Effect4.Laws.Program.Validated
-import Effect4.Laws.Machine.AnswerFlowRun
-import Effect4.Laws.Program.PlaceFunding.Flow
-import Effect4.Laws.Program.AddressMove
--- The expansion's address map, and the table at the source's addresses (decisions row 373 (7)).
-import Effect4.Laws.Program.ExpansionAddresses
-import Effect4.Laws.Program.SourceTable
--- An application's service block: its methods' types and its refusals (decisions row 378 (20)).
-import Effect4.Laws.Program.ApplicationService
-import Effect4.Laws.Program.Handler
--- A body's parameter runs as rows, and the banked Ref cache's transfer law (decisions row 378).
-import Effect4.Laws.Program.ParamRows
-import Effect4.Laws.Library.Ref.Cache
-
--- PROC-6 placement: definition-block meaning and its open agreement obligations (row 379).
-import Effect4.Laws.Program.BlockMeaning
-import Effect4.Laws.Program.FragmentBlock
-import Effect4.Laws.Program.Agreement.BlockPlain
-import Effect4.Laws.Program.Agreement.Blocks
-import Effect4.Laws.Program.Agreement.HostedBlocks
-import Effect4.Laws.Api.SessionMeaningBlocks
-import Effect4.Laws.Program.ValidatedBlocks
-
-
-
--- M3: carried driver guards and immutable initialized bindings.
-import Effect4.Laws.Machine.LiftCoupledFact
-
-import Effect4.Laws.Program.NativeScopeFields
-
-import Effect4.Laws.Program.Guard.Lift
-
-import Effect4.Laws.Program.PlaceFunding.FrameControl
-
-
--- M3: actual initialized native exits and the shared crew log history.
-import Effect4.Laws.Program.NativeActionRows
-
--- M3: checked shared producers and their concrete application readers.
-
--- M3: full native source accounting and actual application transitions.
-import Effect4.Laws.Program.FinalizerTemplateCommands
-
--- M3: one configuration transport with source annotations as instances.
-import Effect4.Laws.Program.CodeClosure.ConfigurationNativeMetadata
-import Effect4.Laws.Program.FinalizerSourceHistory
-import Effect4.Laws.Schema.DocumentJson
 import Effect4.Laws.Program.SketchAdmission
 import Effect4.Laws.Program.SourceDocument
+import Effect4.Laws.Program.Typing.FoldAgreement
+import Effect4.Laws.Store.Folds.Val
+
+-- 8. `context-requirements`: Context Requirements
+import Effect4.Laws.Program.BuildTotal
+import Effect4.Laws.Program.LayerSharing
+import Effect4.Laws.Program.ScopedTyping
+import Effect4.Laws.Program.Typed.ProtocolObligations
+
+-- 9. `host-session-protocol`: Host Session Protocol
+import Effect4.Laws.Api.Guard
 import Effect4.Laws.Api.LiveRecord
+import Effect4.Laws.Api.RunnerBytes
+import Effect4.Laws.Api.Session
+import Effect4.Laws.Program.Handler
+import Effect4.Laws.Program.HostBoundary
+import Effect4.Laws.Program.Invocation
+import Effect4.Laws.Run.CallMap
+import Effect4.Laws.Run.Outcome
+import Effect4.Laws.Run.Runner
+import Effect4.Laws.Tool.Exchange
+
+-- 10. `translation-simulation`: Translation & Simulation
+import Effect4.Laws.Api.AuthorBuild
+import Effect4.Laws.Api.Fuel
 import Effect4.Laws.Api.Preview
-import Effect4.Laws.Program.Typing.SigData
-import Effect4.Laws.Program.CheckAgreement
-import Effect4.Laws.Program.FillSet
+import Effect4.Laws.Library.Channel.Protocol
+import Effect4.Laws.Library.Latch.Registration
+import Effect4.Laws.Library.PartitionedSemaphore.Steps
+import Effect4.Laws.Library.Pool.Ops
+import Effect4.Laws.Library.PubSub.Steps
+import Effect4.Laws.Library.Queue.Execution
+import Effect4.Laws.Library.Ref.Cache
+import Effect4.Laws.Library.Stream.Array
+import Effect4.Laws.Library.Stream.Steps
+import Effect4.Laws.Machine.IntegerProfile
+import Effect4.Laws.Machine.Refinement
+import Effect4.Laws.Program.DenoteCtl
+import Effect4.Laws.Program.DenoteRowsAppend
+import Effect4.Laws.Program.IterLimit
+import Effect4.Laws.Program.ProfileSupport
+import Effect4.Laws.Program.ScopeMarkers
+import Effect4.Laws.Program.StoreComodel
+import Effect4.Laws.Program.Typed.Results
+import Effect4.Laws.Program.TypedRun
+import Effect4.Laws.Program.ValidatedBlocks
+import Effect4.Laws.Run.CallTree
+import Effect4.Laws.Store.Recovery
+
+-- The author's entry module, `#explain`, and the instruments: commands and tactics, no claim
+import Effect4.Laws.Author
+import Effect4.Laws.Author.Explain
+import Effect4.Laws.Auto.AnswerGate
+import Effect4.Laws.Auto.BankCensus
+import Effect4.Laws.Auto.Exhaustive
+import Effect4.Laws.Auto.KernelRfl
+import Effect4.Laws.Machine.Clock
 
 /-!
 # Effect4 proof graph
 
-The machine and program judgments, simulation, composition and execution laws.
-These modules continue their definition modules' namespaces; the module paths
-separate build targets. `import Effect4` never reaches this root.
+The machine and program judgments, simulation, composition and execution laws. The root names the
+law graph's tops, the modules that no other law module imports, under the concept of
+`docs/core/semantics.md` that their theorems serve; each top imports the rest. `make build` adds a
+new top here (`scripts/wire-roots.py`), and the semantics report places each theorem
+(`generated/semantics.md`). These modules continue their definition modules' namespaces; the
+module paths separate build targets. `import Effect4` never reaches this root.
 -/
