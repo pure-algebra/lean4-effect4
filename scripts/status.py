@@ -5,7 +5,8 @@
     since; the size of Lake's artifact cache and the part no build directory uses; which check
     and generation markers are fresh against the inputs the Makefile names
     for them; the committed generated files that differ from HEAD; the semantics claims by
-    status (generated/semantics.md); the open planned goals (proof_goal); the decision
+    status (generated/semantics.md); the open planned goals (proof_goal); the law graph's
+    duplicate statements (.lake/gen/statement-census.txt, `make statement-census`); the decision
     registers and the counterexample register by status; the stale references in the
     authority documents (scripts/lib/doc_refs.py).
 
@@ -291,6 +292,26 @@ def planned_goals() -> int:
     return count
 
 
+CENSUS = ".lake/gen/statement-census.txt"
+
+
+def statement_census() -> str:
+    """The law graph's groups of theorems with one statement, from the last `make statement-census`,
+    with its freshness against the law modules."""
+    path = ROOT / CENSUS
+    if not path.is_file():
+        return "never measured (make statement-census)"
+    match = re.match(r"#statement_census: (\d+) theorems in (\d+) modules; (\d+) duplicate groups",
+                     path.read_text().split("\n")[0])
+    if not match:
+        raise StatusError(f"{CENSUS}: no `#statement_census:` line; scripts/status.py no longer reads it")
+    theorems, modules, groups = match.groups()
+    laws = [p for p in lean_sources() if p.startswith("src/Effect4/Laws")]
+    fresh = mtime(CENSUS) >= max((mtime(p) for p in laws), default=0.0)
+    return (f"{groups} group(s) of theorems with one statement, in {theorems} theorems of {modules} "
+            f"law modules; {'fresh' if fresh else 'stale (make statement-census)'}")
+
+
 def summarise(counts: Counter, order: tuple[str, ...] = ()) -> str:
     keys = [k for k in order if k in counts] + sorted(k for k in counts if k not in order)
     return " · ".join(f"{counts[k]} {k}" for k in keys) if keys else "none"
@@ -383,6 +404,7 @@ def main() -> int:
     print(f"claims    {summarise(claim_counts, ('proved', 'modulo', 'goal', 'absent', 'refuted', 'assumed'))}  ({SEMANTICS})")
     print(f"goals     {planned_goals()} open planned goal(s) (proof_goal)")
     print(f"plan      requirements {requirements}; {next_goals}  ({SEMANTICS})")
+    print(f"duplicate {statement_census()}  ({CENSUS})")
     print(f"decisions {summarise(decisions(), ('open', 'ruled', 'landed'))}  (docs/core/decisions.md)")
     print(f"issues    {summarise(design_issues(), ('open', 'ruled', 'basis'))}  (docs/DESIGN-ISSUES.md)")
     print(f"counterex {summarise(counterexamples(), ('seeded', 'repaired', 'pinned', 'retired'))}  (Test/Counterexamples/REGISTER.md)")

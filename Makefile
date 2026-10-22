@@ -90,6 +90,17 @@ wire-roots:
 build-profile: ## where the last `make build` spent its time: the critical path and the slowest modules (.lake/gen/build-profile.md)
 	@$(PY) scripts/build-profile.py $(GEN)/build.log
 
+# The duplicate statements of the law graph: `#statement_census` (tools/ProofGraph/StatementCensus.lean)
+# over every module under src/Effect4/Laws, written to $(GEN)/statement-census.txt, which
+# `make status` reads. A measuring instrument, never a gate.
+statement-census: ## the law graph's groups of theorems with one statement, into .lake/gen/statement-census.txt (make status reads it)
+	@mkdir -p $(GEN)
+	$(LAKE) build Effect4Laws ProofGraph.StatementCensus
+	@mods="$$(find src/Effect4/Laws -name '*.lean' | sed -e 's|^src/||' -e 's|\.lean$$||' -e 's|/|.|g' | sort | tr '\n' ' ')"; \
+	  printf 'import Effect4.Laws\nimport ProofGraph.StatementCensus\n\n#statement_census %s\n' "$$mods" > $(GEN)/StatementCensus.lean
+	$(LAKE) env lean $(GEN)/StatementCensus.lean > $(GEN)/statement-census.tmp && mv $(GEN)/statement-census.tmp $(GEN)/statement-census.txt
+	@head -1 $(GEN)/statement-census.txt
+
 bank-census: ## every Effect4 aesop rule bank: its rules, simp lemmas and the clauses that name it (an instrument)
 	$(LAKE) build Effect4Laws
 	$(LAKE) env lean tools/BankCensusRun.lean
