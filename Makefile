@@ -788,3 +788,14 @@ help: ## this list
 
 clean: ## lake clean (drops the build, the generation and check markers)
 	$(LAKE) clean
+
+# reference pages
+# The reference set (docs/GENERATED.md, group reference): one page for each table of the tree's
+# data, folded by tools/Drivers/Reference.lean into generated/reference/. The semantics page is
+# read from its committed document; gen-reference-semantics takes it from a fresh report first.
+.PHONY: gen-reference gen-reference-semantics
+gen-reference: ## the reference pages into generated/reference (forms, native, marks, refusals, dictionary, semantics)
+	$(PY) scripts/generate.py --only reference
+gen-reference-semantics: $(GEN)/semantics ## the reference set's semantics page from a fresh semantics report, then the set
+	$(LAKE) build Drivers.Reference
+	$(LAKE) env lean -M4096 --run tools/Drivers/Reference.lean generated/reference $(GEN)/semantics-report
