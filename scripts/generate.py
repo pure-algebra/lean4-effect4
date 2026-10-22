@@ -291,7 +291,7 @@ def graphs(out, checking):
     table derivation participates. Check mode refuses destinations that alias committed files.
     """
     names = ['todo.gen.md', 'todo.gen.json'] + [
-        f'relation-{relation}.gen.tsv' for relation in ['nodes', 'defs', 'rows', 'calls']]
+        f'relation-{relation}.gen.tsv' for relation in ['nodes', 'defs', 'rows', 'calls', 'handlers']]
     temp = out / 'generated/graphs'
     if checking:
         published = {(ROOT / 'generated/graphs' / name).resolve() for name in names}

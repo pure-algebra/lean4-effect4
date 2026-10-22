@@ -19,7 +19,7 @@ evaluated without `unsafe`. The commands are the folds of §2, and nothing else:
     emit [--target ts|ocaml] [--check] [--out DIR] [--emit=module,surface,canonical,certificate,manifest]
     describe [--target ts|ocaml] [--out DIR] [--emit=…] [--pretty]
     inspect --what types|rows|surface|graph|manifest [the options of describe]
-    inspect --what relations|boundary|calls|layers [--form md|json|svg|tsv] [--session SERVICE] [--out DIR]
+    inspect --what relations|boundary|calls|layers|handlers [--form md|json|svg|tsv] [--session SERVICE] [--out DIR]
     run [--text | --typed] [--script FILE] [--budget N]
 
 **Every command returns a report** (`Compiler.Report`, the report note

@@ -333,7 +333,8 @@ $(GEN)/fixtures: $(CHK)/gen-fixtures.key
 # The four program relations and their graph queries, through the public inspect command.
 GRAPH_OUT := generated/graphs/todo.gen.md generated/graphs/todo.gen.json \
   generated/graphs/relation-nodes.gen.tsv generated/graphs/relation-defs.gen.tsv \
-  generated/graphs/relation-rows.gen.tsv generated/graphs/relation-calls.gen.tsv
+  generated/graphs/relation-rows.gen.tsv generated/graphs/relation-calls.gen.tsv \
+  generated/graphs/relation-handlers.gen.tsv
 $(GRAPH_OUT):
 GRAPH_SOURCES := $(shell $(PY) scripts/lean-imports.py --closure tools/Compiler/Exe.lean)
 $(GEN)/graphs: $(GEN)/derived $(GRAPH_SOURCES) $(GRAPH_OUT) scripts/generate.py lean-toolchain lake-manifest.json

@@ -879,6 +879,22 @@
      "kind": "table",
      "headers":
      ["address", "from", "targetSort", "target", "targetAddress", "origin"]}]},
+  {"title": "Handlers",
+   "kind": "part",
+   "key": "relation-handlers",
+   "body":
+   [{"rows":
+     [[[{"text": "TodoApp"}],
+       [{"text": "Context.Context<\"k30_6\">"}],
+       [{"text": "0"}],
+       [{"text": "add@1/1, list@2/0, complete@3/1, remove@4/1"}],
+       [{"text": "k30_6"}],
+       [{"text": ""}],
+       [{"text":
+         "TodoRepo.insert, TodoRepo.all, TodoRepo.setDone, TodoRepo.delete"}]]],
+     "kind": "table",
+     "headers":
+     ["service", "state", "init", "clauses", "requires", "forwards", "rows"]}]},
   {"title": "The program and its boundary",
    "kind": "part",
    "key": "mapping",

@@ -123,6 +123,12 @@ Node addresses name stored syntax. Call addresses name the checked expansion; or
 | 1.1.0.1.1.1.1.1.0.0.0 | `main` [main](#calls:node:main) | def | `def:4` [TodoApp_remove](#calls:node:def:4) | 0.1.1.1.1.0 | 1.1.0.1.1.1.1.1.0.0.0 |
 | 1.1.0.1.1.1.1.1.0.1.0 | `main` [main](#calls:node:main) | row | `row:8` [Session.reply_remove](#calls:node:row:8) | 8 | 1.1.0.1.1.1.1.1.0.1.0 |
 
+## Handlers
+
+| service | state | init | clauses | requires | forwards | rows |
+| --- | --- | --- | --- | --- | --- | --- |
+| TodoApp | Context.Context\<"k30_6"\> | 0 | add@1/1, list@2/0, complete@3/1, remove@4/1 | k30_6 |  | TodoRepo.insert, TodoRepo.all, TodoRepo.setDone, TodoRepo.delete |
+
 ## The program and its boundary
 
 | ours | Effect TypeScript | algebra |

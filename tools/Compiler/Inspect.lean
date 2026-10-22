@@ -43,10 +43,11 @@ inductive What where
   | boundary
   | calls
   | layers
+  | handlers
   deriving DecidableEq, Repr
 
 /-- Every reading, in the order the usage names them. -/
-def What.all : List What := [.types, .rows, .surface, .graph, .manifest, .relations, .boundary, .calls, .layers]
+def What.all : List What := [.types, .rows, .surface, .graph, .manifest, .relations, .boundary, .calls, .layers, .handlers]
 
 /-- A reading's name, as `--what` spells it. -/
 def What.name : What → String
@@ -59,13 +60,14 @@ def What.name : What → String
   | .boundary => "boundary"
   | .calls => "calls"
   | .layers => "layers"
+  | .handlers => "handlers"
 
 /-- The reading `--what` names; `none` for a word that names none. -/
 def What.parse (word : String) : Option What := What.all.find? (·.name == word)
 
 /-- Whether a reading is a document derived from the program relations. -/
 def What.isDocument : What → Bool
-  | .relations | .boundary | .calls | .layers => true
+  | .relations | .boundary | .calls | .layers | .handlers => true
   | _ => false
 
 /-- **A reading**: its text for a reader, and the same reading as a JSON tree. -/
@@ -122,6 +124,6 @@ def reading (b : Api.Built) : What → Except String Reading
   | .graph => .ok (graphReading b.program)
   | .surface => .ok (surfaceReading b.program)
   | .manifest => .error "the manifest is describe's"
-  | .relations | .boundary | .calls | .layers => .error "this reading uses the document forms"
+  | .relations | .boundary | .calls | .layers | .handlers => .error "this reading uses the document forms"
 
 end Compiler
