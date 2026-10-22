@@ -236,6 +236,7 @@ def registry : Registry where
     { id := "initial-algebras-folds"
       title := "Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniqueness"
       defaultModules := [
+        `Effect4.Laws.Program.Handler,
         `Effect4.Laws.Program.Folds.Ty,
         `Effect4.Laws.Machine.Folds.Val,
         `Effect4.Laws.Machine.Folds.Stores,
@@ -244,11 +245,13 @@ def registry : Registry where
     { id := "context-requirements"
       title := "Context Requirements: Graded coeffects, requirement rows, and layer discharge"
       defaultModules := [
+        `Effect4.Laws.Program.Handler,
         `Effect4.Laws.Effects.Protocol
       ] },
     { id := "host-session-protocol"
       title := "Host Session Protocol: Session automaton, external reply ingestion, and boundary capabilities"
       defaultModules := [
+        `Effect4.Laws.Program.Handler,
         `Effect4.Laws.Api.HostSession,
         `Effect4.Laws.Api.Built,
         `Effect4.Laws.Tool.Serve,
@@ -790,6 +793,10 @@ def registry : Registry where
       pointer := .witness `Effect4.Program.check_closed },
 
     -- 7. initial-algebras-folds
+    { id := "handler-fold-root", concept := "initial-algebras-folds", role := .fundamentalProperty
+      title := "The handler fold reads a definition block and joins all its children"
+      pointer := .witness `Effect4.Program.handlersOf_defs },
+
     { id := "document-json-fold-retraction", concept := "initial-algebras-folds", role := .compatibility
       title := "G6: the unrestricted JSON retraction is proved in Lean; evidence within the semantic axiom ceiling remains open (owner ruling, view-graph slice)"
       pointer := .absent "Tools.Document.Json.Document.ofJson_json proves the unrestricted equation. Its existing Lean.Json carrier reaches Classical.choice, so neither the semantic ceiling [propext, Quot.sound] nor the proof-plan gate admits it. The theorem remains in tools/Tools/Document/Json.lean; the trust policy is unchanged." },
@@ -925,6 +932,13 @@ def registry : Registry where
       pointer := .witness `Effect4.Program.hasTy_extSlotEnv },
 
     -- 8. context-requirements
+    { id := "layer-provide-assoc-conditional", concept := "context-requirements", role := .compatibility
+      title := "Provide associates when keys read from the inner layer remain provided by the middle or required by the inner"
+      pointer := .witness `Effect4.Program.provide_assoc_conditional },
+    { id := "layer-provide-tensor-interchange", concept := "context-requirements", role := .compatibility
+      title := "Provide interchanges with merge when each upper layer requires only its own lower layer's keys"
+      pointer := .witness `Effect4.Program.provide_tensor_interchange },
+
     { id := "satisfies-empty", concept := "context-requirements", role := .compatibility
       title := "The empty requirement is satisfied by every context"
       pointer := .witness `Effect4.Machine.Env.Context.satisfies_empty
@@ -957,6 +971,16 @@ def registry : Registry where
       pointer := .witness `Effect4.Program.Provision.build_total },
 
     -- 9. host-session-protocol
+    { id := "handler-fit-protocol", concept := "host-session-protocol", role := .compatibility
+      title := "Equal successful handler interfaces give equal session protocol rows"
+      pointer := .witness `Effect4.Program.Handler.rows_of_interface },
+    { id := "handler-fit-imposed", concept := "host-session-protocol", role := .compatibility
+      title := "Imposed blocks keep the interface of every successfully constructed application service"
+      pointer := .witness `Effect4.Program.Handler.interface_imposed },
+    { id := "imposed-wrap-tensor", concept := "host-session-protocol", role := .compatibility
+      title := "Wrapping only left entries keeps the combined interface equal to the two separate interfaces appended"
+      pointer := .witness `Effect4.Program.wrap_tensor },
+
     { id := "run-admitted-history", concept := "host-session-protocol", role := .compatibility
       title := "Every reached recorded run has its built program's call table and a history of session-admitted native decisions, at its compile budget; no progress or outside-host claim"
       pointer := .witness `Effect4.Run.reached_history },
