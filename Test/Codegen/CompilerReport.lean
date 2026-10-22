@@ -31,7 +31,7 @@ the terminal's reader stand inside a `#guard`.
 - **The publication of an inspection** (`inspectPlan`, `publicationOf`, `Publication.apply`): a
   session that does not exist refuses the plan before any file, so a folder as data stays as it
   was; a good plan writes its files and removes the programs' stale files of the form, and twice
-  gives the same folder. The run step over a refused request is hollow (`eventLines`).
+  gives the same folder. A fold whose program is refused stands hollow (`eventLines`).
 
 Every check is a `#guard`, so the rendered bytes stay inside them.
 -/
@@ -257,10 +257,9 @@ example (r : Report) :
     (publicationOf .tsv ["todo"] (once.map (·.1)) outputs).apply once == once &&
     (publicationOf .md ["todo"] (folder.map (·.1)) [("todo.gen.md", "new")]).removals == []
 
--- reader: the run step over a refused request is hollow, and the later requests' readings
--- follow it.
-#guard eventLines none [.started "running on the Lean machine", .measure "requests" 2,
-    .refusal "run" "the entry add is refused", .reading "add(\"milk\")" "line" none] ==
-  [[.text "□ running on the Lean machine", .text " · 2 requests"], [.text "refused at run: the entry add is refused"]]
+-- reader: a fold whose program is refused is hollow, and the readings after it follow it.
+#guard eventLines none [.started "folding the group corpus", .measure "programs" 2,
+    .refusal "check" "the entry add is refused", .reading "certificate" "line" none] ==
+  [[.text "□ folding the group corpus", .text " · 2 programs"], [.text "refused at check: the entry add is refused"]]
 
 end Test.Codegen.CompilerReport

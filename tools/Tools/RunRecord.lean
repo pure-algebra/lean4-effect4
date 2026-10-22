@@ -4,9 +4,10 @@ import Effect4.Api.HostSession
 # Tools.RunRecord — one recorded host call, and a request's literal arguments
 
 The two pieces of a recorded request that the lowered to-do host run needs
-(`Test/Dogfood/Scenario/Todo/HostRun.lean`). They live apart from `Tools.RunChecks`, which reads
-the law graph for its checks, so the LCNF route and the to-do lane's fixture import no law module.
-`Tools.RunChecks` imports this module, and the names stay under `Tools.RunChecks`.
+(`Test/Dogfood/Scenario/Todo/HostRun.lean`). The module imports no law module, so the LCNF route
+and the to-do lane's fixture import none. The names stand under `Tools.RunChecks`, the namespace of
+the recorded-run checks that the run's removal deleted (2026-10-22), so the lowered names keep
+their spelling.
 -/
 
 set_option autoImplicit false
