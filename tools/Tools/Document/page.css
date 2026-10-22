@@ -5,9 +5,6 @@
    tokens of CSS Syntax 3 and refuses a declaration that writes a literal colour, a family outside
    @font-face, a shadow, a gradient or a filter. */
 
-/* The data face, served from the site (vendor/fonts/). Prose takes the system's sans, by the look. */
-@font-face { font-family: "JetBrains Mono"; src: url("fonts/jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2") format("woff2"); font-weight: 100 800; font-style: normal; font-display: swap; }
-
 /* One modular scale (row 366, point 5): each step is the one before times the ratio. No text is set
    above --s3, about 23px. The measure holds prose to about 66 characters; a quiet text (a key, a
    count) is the ink over the ground. Weights are 400 and 500; no text is italic. */
