@@ -107,7 +107,7 @@ indices to it, what the shape wants there and what stands there. Where it finds 
 nothing, and the refusal stands without a place. -/
 
 /-- A shape as a short name: a primitive, a named definition, or a list, an option or a pair of
-those. The catalogue names its forms so (`Tools.Catalogue`). -/
+those. -/
 def shapeText : Shape → String
   | .unit => "unit"
   | .bool => "bool"

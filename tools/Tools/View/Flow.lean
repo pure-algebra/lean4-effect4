@@ -707,9 +707,8 @@ def kahnGo (outs : Std.HashMap Nat (Array Nat)) :
 
 /-- **Kahn's order by in-degree counts**: `kahn`'s queue and fuel, with each item's out-edges and
 the in-degrees in tables. An item taken spends all its out-edges; then its targets that no edge
-reaches any more join the queue, in the order of their first edge from it. Checked equal to `kahn`
-on every sketch of the view's builds (`Tools.View.LiveChecks`). No law reads it: `orderFor` checks
-the order it takes. -/
+reaches any more join the queue, in the order of their first edge from it. No law reads it:
+`orderFor` checks the order it takes. -/
 def kahnTable (n : Nat) (es : List Edge) : List Nat :=
   let outs : Std.HashMap Nat (Array Nat) :=
     es.foldl (fun m e => m.insert e.fr ((m.getD e.fr #[]).push e.to)) {}

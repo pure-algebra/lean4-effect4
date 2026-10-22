@@ -20,7 +20,7 @@ calls to a typed SVG tree on `lean4-whatwg`'s kit (`Tools.View.SvgOut`). No scri
   proportional and unmeasured here (`PaintBounds.textUnmeasured`), so a name set in them is cut.
 * The picture is drawn in the base look; the page's looks file recolours it by class
   (`Tools.View.Tokens.rules`), so a figure follows the reader's light or dark scheme.
-* Below the picture, the figure in words: each node, its status and the nodes it points to.
+* Below the picture, its description: each node, its status and the nodes it points to.
 -/
 
 namespace Tools.Document.Figure

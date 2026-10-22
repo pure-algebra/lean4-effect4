@@ -70,7 +70,7 @@ def recursive : Object :=
 #guard todoSession.any fun b =>
   let r := Compiler.Graphs.read b
   [r.nodes.length, r.defs.length, r.rows.length, r.calls.length] == [70, 5, 9, 14] &&
-  (document b "relations").check.isOk
+  (document "todo" b "relations").check.isOk
 
 -- G3, finite evaluation: the to-do's three shared wires contract to its three dependencies.
 #guard todoSession.any fun b =>
@@ -89,7 +89,7 @@ def recursive : Object :=
     let r := Compiler.Graphs.read b
     match boundary r, boxes r, calls r with
     | .graph _ _ ns es, .graph _ _ _ contracted, .graph _ _ cn ce =>
-      (document b "relations").check.isOk &&
+      (document "todo" b "relations").check.isOk &&
       (ns.filter (·.key == "wire:host:Host")).length == 1 && es.length == 3 &&
       es.contains ("wire:host:Host", "def:0") && es.contains ("wire:host:Host", "def:1") &&
       contracted.length == 2 && contracted.contains ("host:Host", "def:0") &&
@@ -134,7 +134,7 @@ def recursive : Object :=
   | .error _ => false
   | .ok b => match calls (Compiler.Graphs.read b) with
     | .graph _ _ ns es =>
-      (document b "calls").check.isOk && ns.map (·.key) == ["main", "def:0"] &&
+      (document "todo" b "calls").check.isOk && ns.map (·.key) == ["main", "def:0"] &&
       es == [("def:0", "def:0")] && (ordered ns es).map (·.key) == ns.map (·.key)
     | _ => false
 
@@ -145,7 +145,7 @@ def recursive : Object :=
     let r := Compiler.Graphs.read b
     match calls r with
     | .graph _ _ ns _ =>
-      (document b "relations").check.isOk && r.defs.length == 6 &&
+      (document "todo" b "relations").check.isOk && r.defs.length == 6 &&
       (ns.filter (·.label == "TodoApp_list")).length == 2 &&
       (ns.filter (fun n => r.defs.any fun d => (Scope.def_ d.k).key == n.key)).length == 6
     | _ => false
@@ -166,7 +166,7 @@ def recursive : Object :=
     let r := Compiler.Graphs.read b
     match calls r, layers r with
     | .graph _ _ ns es, .graph _ _ ls _ =>
-      (document b "relations").check.isOk && r.calls.length == 2 &&
+      (document "todo" b "relations").check.isOk && r.calls.length == 2 &&
       r.calls.any (fun c => c.address == [1, 0, 0] && c.origin == [1, 0]) &&
       r.calls.any (fun c => c.address == [2, 0, 0] && c.origin == [2, 0, 0]) &&
       ns.any (·.key == "layers") && es.contains ("layers", "row:0") &&
@@ -219,7 +219,7 @@ def recursive : Object :=
   | .error _ => false
   | .ok b => match wiring (Compiler.Graphs.read b) with
     | .graph _ _ ns es =>
-      (document b "layers").check.isOk &&
+      (document "todo" b "layers").check.isOk &&
       (ns.filter (·.form == .wire)).map (·.key) == ["wire:k30_6", "wire:k31_6", "wire:k32_6"] &&
       (ns.filter (·.form == .box)).length == 4 &&
       (es.filter (·.2 == "wire:k30_6")).length == 2 && (es.filter (·.1 == "wire:k30_6")).length == 2 &&

@@ -24,7 +24,7 @@ of row 204 moves at least one program forward.
   minted name for the cell's value.
 - Every program here imports entry modules (`Effect4.Author`, `Effect4.Run`, `Effect4.Emit`,
   `Effect4.Library`, `Effect4.Laws.Author`), a composed module's own files, or the batteries'
-  support (decisions row 332); `#exposure_report` lists any other import.
+  support (decisions row 332).
 - The machine's tape and the laws that name no scenario stand in the library, in the namespace
   `Effect4.Run`. `src/Effect4/Run/Tape.lean` holds the executable definitions: the machine's
   view, the tape, a funded run and rest. `src/Effect4/Laws/Run/Rows.lean` and

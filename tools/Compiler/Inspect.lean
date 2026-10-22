@@ -17,8 +17,8 @@ The relation readings use the program node table and the checked call table (`Co
 | `graph` | The program's public JSON, as the emitted program file prints it |
 | `surface` | The surface's existing reading of the program's data services |
 | `manifest` | The emission manifest, handled by `Compiler.Main` |
-| `relations` | The four relations, mapping table and their graph queries |
-| `boundary`, `calls`, `layers` | The selected graph queries and mapping table |
+| `relations` | The five relations and their graph queries |
+| `boundary`, `calls`, `layers` | The selected graph queries |
 
 The text is for a reader; `--json` prints the same reading through each carrier's public JSON.
 The table's generated codec comes from `Effect4.Tool.CheckDerived`; no tool query runs here.

@@ -276,7 +276,7 @@ def sessionPage (l : EditSession) (lit : Option (List Nat)) (title judgment plac
     Page :=
   sessionPageOf l (lines l.sketch.program) lit title judgment place foot
 
-/-! ## The code plane and the tree's text -/
+/-! ## The code plane -/
 
 /-- The code plane of a program in the view: its TypeScript at the plane's width (`Tools.Code`), or
 why it has none. -/
@@ -284,9 +284,5 @@ def codePanel (program : NativeEff) (table : RowTable) (holes : List String := [
   match Tools.Code.codeLines CODE_WIDTH program table holes with
   | .ok lines => some { head := "typescript", lines := lines.toArray }
   | .error why => some { head := "typescript", lines := #["no module: " ++ why] }
-
-/-- A program's tree as the terminal page writes it: address, node and type, one node a line. -/
-def treeText (name : String) (program : NativeEff) : String :=
-  "\n".intercalate (pageText (sessionPage (EditSession.open {} { program }) none name "" "" "")) ++ "\n"
 
 end Tools.View.Program

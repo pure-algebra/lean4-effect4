@@ -25,8 +25,8 @@ The blocks:
 * a wide table scrolls inside a focusable region named by its columns (`regionRaw`, lean4-whatwg's
   scrollable region, ask W13);
 * a figure is a `figure` around its picture, an SVG drawn by the view's layout whose nodes link
-  (`Tools.Document.Figure`), in a region named by the figure's caption, and the caption; then the
-  figure in words, which the figure names as its description (`aria-describedby`): each node,
+  (`Tools.Document.Figure`), in a region named by the figure's caption, and the caption; then its
+  description, headed `description`, which the figure names (`aria-describedby`): each node,
   linked, with its status mark and the nodes it points to, for a reader who does not see the
   picture. The package writes the pair (`Region.withWordsRaw`, ask W13): the identifiers come
   from the figure's key, written once, and the words follow the figure, so the caption stays
@@ -112,7 +112,7 @@ def algebra (target : String → String := fragment) : Algebra (Nat → List Raw
         (if n.status.isEmpty then [] else [.text " ", el "span" [.text n.status] [("class", "status"), ("data-status", n.status)]]) ++
         (if n.detail.isEmpty then [] else [.text (", " ++ n.detail)]) ++
         (if next.isEmpty then [] else [.text (" → " ++ ", ".intercalate next)])
-    Region.withWordsRaw k [pic] [.text caption] "The figure in words"
+    Region.withWordsRaw k [pic] [.text caption] "description"
       [el "ul" (ns.map fun n => el "li" (word n))] (some "graph") (some "scroll")
   part k t body depth :=
     -- the part's key beside its title: its identity, linked to itself (row 366, point 4)

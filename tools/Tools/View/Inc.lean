@@ -32,8 +32,7 @@ the waits needs a record of what each wait read; that design is Codex's, and sta
 The laws hold for every text of a line that reads no child (`ChildBlind`), as `Program.lines_at`
 does. The view's text, `Program.ownText`, reads no child: `argText` answers nothing at a child. It
 reads strings, whose functions reach `Classical.choice` on this toolchain, so its instance stands
-as a reading of `argText` and as the check at every step of every build
-(`Tools.View.LiveChecks`). The laws are a tool's, not registry claims (decisions row 334, point 3).
+as a reading of `argText`. The laws are a tool's, not registry claims (decisions row 334, point 3).
 They serve concept `initial-algebras-folds` and R14's live authoring; their consumer is the live
 step (`Tools.View.Live.page`), which draws a page from the lines along each edit.
 

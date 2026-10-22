@@ -28,10 +28,9 @@ print fold of §2 over a built program. Everything it writes is computed here, w
   target, each file written with its kind and SHA-256, the pins, the checks, and the command.
 
 **One artifact mechanics** (decision E6). Every producer of a printed module calls it: the
-compiler, the code generator's folder (`tools/Drivers/Emit.lean`), the printed corpus
-(`tools/Drivers/Corpus.lean`) and the truth corpus (`tools/Drivers/Truth.lean`). Their
-observations stay their own: the index and the trees, the diagnostics modules and the JSON
-oracles, the run expectations and `corpus.json`.
+compiler, the printed corpus (`tools/Drivers/Corpus.lean`) and the truth corpus
+(`tools/Drivers/Truth.lean`). Their observations stay their own: the diagnostics modules and the
+JSON oracles, the run expectations and `corpus.json`.
 
 - **The module text** (`moduleFile`): the module laid out at Effect's width, then one newline.
 - **The header**: the compiler's names the program's address first (`header`), and a lane's
@@ -352,9 +351,8 @@ def adapterOrigins : List Codegen.Bindings.Origin :=
 
 /-- **A printed module's file**: the module laid out at Effect's width under its header
 (`Tools.Code.moduleText`), then exactly one newline (`GeneratedStamp.endWithOneNewline`). Every
-printed module that a producer writes is this text: the compiler's emission, the code generator's
-folder (`tools/Drivers/Emit.lean`), the printed corpus's modules (`tools/Drivers/Corpus.lean`) and
-the truth corpus (`tools/Drivers/Truth.lean`). -/
+printed module that a producer writes is this text: the compiler's emission, the printed corpus's
+modules (`tools/Drivers/Corpus.lean`) and the truth corpus (`tools/Drivers/Truth.lean`). -/
 def moduleFile (m : TypeScript.Module) : String :=
   Tools.GeneratedStamp.endWithOneNewline (Tools.Code.moduleText Tools.Code.Ts.width m)
 
