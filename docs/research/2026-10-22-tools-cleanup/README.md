@@ -210,3 +210,179 @@ command of `Compiler.Main` writes the object page.
    - `Drivers.SemanticsControls`: a lake executable of the coordinator's `lakefile.toml`;
    - `Drivers.Workspace`: the OCaml test's producer.
 5. The pare-back of §3: the frames, the live loop, the specimens, the sheets and the C programs.
+
+## 2. What landed
+
+Four commits after the census, each built narrow before it was committed.
+
+### 2.1 No words of the writer in a program's document
+
+Commit `cbe95604a`, with the battery's repair in `ab5143a98`.
+
+- `Compiler.Graphs.document` takes the program's name. Its title is `name · reading`, for example
+  `todo · relations`.
+- The introductory paragraph, the part "The program and its boundary" and `Compiler.Graphs.mapping`
+  are gone. The mapping's content is the writer's reading of the handler concept, so no table keeps
+  it. Row 445 owns that concept.
+- A figure's caption is its name: `boundary`, `boxes`, `calls`, `layers`, `wiring`. A figure with
+  no node is left out, where before a sentence stood in its place.
+- The HTML fold heads a figure's description `description` (`Tools.Document.Html.algebra`).
+- `Compiler.Report` is unchanged.
+
+`generated/graphs` changed in two files: `todo.gen.md` (4 lines added, 22 removed) and
+`todo.gen.json` (5 added, 42 removed). The five TSV tables did not change.
+
+### 2.2 One typography from the look
+
+Commit `753caeedc`.
+
+- The dark look's name, label and title faces are `system-ui`, Helvetica Neue, Arial, sans-serif,
+  upright. The title's weight is 500. The data face stays JetBrains Mono (`Tools.View.Look`).
+- `page.css` names no family but the data face's `@font-face`. Its scale starts at 16 px and steps
+  by 1.125. `h1` is `--s3`, 22.8 px, with no `clamp`. The weights are 400 and 500, and no rule
+  sets italic.
+- Deleted: `vendor/fonts/source-serif-4/`, three files, 256,862 bytes. `Drivers.Site` copies only
+  JetBrains Mono.
+- The paper look stays a token file. The `sans` look keeps its own faces.
+
+### 2.3 The modules nothing reaches
+
+Commit `b178a526c` deletes the ten modules of §1.7, item 3: 1,824 lines. With `Drivers.Emit` go
+the three helpers only it called: `Compiler.Prelude.closure`, `Compiler.Prelude.write` and
+`Tools.View.Program.treeText`. `tools/Tools/View` is now 46 modules and 12,417 lines.
+
+### 2.4 Organization
+
+No module moved:
+
+- `Tools.Site` and `Tools.Document.Html` stay apart (§1.6).
+- `Tools.View.Tokens` imports `Compiler.Code.Doc`, so the drawing depends on the command line's
+  folder. `Compiler.Code` holds the printer in the namespace `Tools.Code`. Commit `2233ebd5f`
+  placed it under the compiler, so a move waits for a ruling.
+- `Compiler.Page` is reached by one battery only, and it draws the flows with `Flow.layout`, a
+  second layout. Section 3 names it.
+
+### 2.5 The receipt
+
+The one thing to know first: a program's document holds its name and reading as its title, then
+its tables and figures, and nothing else.
+
+- Base `afe86b819`. Head: the last commit of `claude/tools-cleanup-05167a`.
+- Changed files, outside this note: 34 files, 84 lines added, 2,119 removed
+  (`git diff --shortstat afe86b819..HEAD -- . ':!docs/research'`).
+
+| command | result |
+| --- | --- |
+| `LEAN_NUM_THREADS=3 lake build Compiler Tools` | 1,610 jobs, success |
+| `make batteries-touched BASE=afe86b819` | `Test.Codegen.CompilerGraphs`, `Test.Codegen.CompilerReport`: 1,376 jobs, success |
+| `lake build Test.Audit.SiteControls Test.Tools.GraphJson Test.Audit.ClosureAudit` | 1,383 jobs, success |
+| `python3 scripts/generate.py --only graphs`, twice | PASS twice; `git status --short generated/` empty both times |
+| `tools/view/v -d` | the specimen written; body `system-ui`, `h1` 22.78 px at 500, `dt` upright, code in JetBrains Mono |
+| `tools/view/v -L` | 11 looks; 11 come back from their token files; 22 PNG files drawn |
+| `python3 scripts/check-language.py --strict` on this note, `docs/GENERATED.md`, `vendor/fonts/README.md` | PASS |
+
+`make check-ts` did not run. No printed TypeScript byte can change: the printer's modules changed
+in docstrings only, and the deleted `Compiler.Prelude` functions were not on `Compiler.emitTs`'s path.
+
+The axiom output. The command is `#axiom_audit Compiler.Graphs Compiler.Main Compiler.Prelude
+Tools.Document.Html Tools.View.Look Tools.View.Program`, run by `lake env lean` at the base and at
+the head:
+
+- at `afe86b819`: 73 of 1,258 declarations reach axioms outside `[propext, Quot.sound]`;
+- at the head: 70 of 1,251.
+
+The three fewer are the deleted helpers. Every offender is a rendering, an option reader or a path
+function, reaching `Classical.choice` through `String`. No offender is in `Compiler.Graphs`, and
+none is new.
+
+Open obligations:
+
+- No evidence is bounded or host-only beyond the finite to-do data of the graphs group.
+- The view-forms seat's question on the figure's text face stays open.
+
+## 3. The pare-back: proposed, not landed
+
+The steer of 2026-10-18 keeps one graph layout and shows a run as a table. This section proposes
+the deletion of what the kept path does not reach. Command: the split of §1.1 over the import graph
+at the head. The kept roots are `Compiler.Exe`, the proof graph's anchors and the document drivers.
+The printers' drivers and the batteries that read `Tools.WireText` and `Tools.JsonBridge` are kept
+roots too.
+
+| group | files | lines |
+| --- | --- | --- |
+| the frames | `Build`, `Run`, `Motion`, `Output`, `GraphMotion`, `GraphAttachment`, `GraphAttachmentMotion`, `GraphSeparation`, `GraphCheck`, `GraphLayout`, `Decision` | 1,567 |
+| the live loop | `Live`, `Inc`, `Retained` | 1,551 |
+| the specimens | `Specimen`, `FlowSpecimen` | 164 |
+| the cell and glyph sheets | `Cell`, `CellSheet`, `GlyphSheet`, `Measure` | 747 |
+| the frames' battery | `GraphRegions`, `Test/Audit/GraphControls.lean` | 438 |
+| the drivers | `Drivers.View`, `Drivers.Live`, `Drivers.GlyphSheet` | 776 |
+| the C programs | `draw.c`, `play.c`, `scene_test.c`, `paint.h`, `replay.h`, `scene.h`, `build.sh` | 1,680 |
+| the script | `tools/view/v`, every mode but `-d` | 179 |
+| vendored by pin | `SDL3-3.4.16` (8 files, 13,509 bytes), `termbox2-2.5.0` (4, 129,072), `freetype-2.15.0` (8, 35,473), `harfbuzz-14.6.0` (5, 4,103), `thorvg-1.1.2` (5, 3,062) | |
+
+The Lean of the first six groups is 5,243 lines; with the C and the script, 7,102. The lake
+executables `view-pages` and `view-live` go from `lakefile.toml`, which is the coordinator's.
+
+What the studio loses:
+
+- the window player, its motion and its live mode;
+- the frames as PNG files, in the terminal and inline in kitty;
+- the kept runs and their gallery, and the build and run pages;
+- the graph and flow specimens, and the C store's check;
+- the vocabulary of marks, the Queue's cell page and the looks gallery (`v -L` is `Drivers.View`'s).
+
+What stays:
+
+- the graph layout, `Tools.View.Graph.layout`, and `SvgOut`;
+- the looks: `Look`, `Tokens`, and the token files under `tools/view/looks/`;
+- the document algebra and its folds, `page.css`, the site and the document specimen;
+- the compiler's documents and figures, the relations' tables, and `Glyph`;
+- the proof graph's anchors: `Flow`, `FlowLaws`, `FlowReach`, `LayerGraph`, `AlgGraph`.
+
+The studio index is a page of `Drivers.View`. Under the cut it becomes a list of the generated
+pages, which the document specimen's driver writes. That list is new code, so it waits for the
+ruling.
+
+Two further questions sit under the one-layout steer:
+
+- `Flow.layout` is a second layout. The object page (`Compiler.Page`) draws with it, and only a
+  battery reads that page. The proof graph's claim `view-reachability-summary-exact` reads
+  `Flow.Reach`, not the layout.
+- The look's `motion` and `organic` tokens lose their last drawing with the frames.
+
+The memories of the landed design that this cuts:
+
+- `visual-pipeline-2026-10-09.md`, with its note
+  `git:98a29895b800556365a2edc9924f3ed12787b820:docs/research/2026-10-09-visual-pipeline.md`;
+- `live-view-kit-2026-10-10.md`, the live loop and the retained store;
+- `view-model-2026-10-11.md`, `designer-studio-2026-10-12.md`, `tube-language-2026-10-13.md`;
+- `program-graph-laws-organic-2026-10-09.md`, `native-view-design-steer.md`, `faces-view-plan.md`.
+
+The layout note of the view, `docs/research/2026-10-21-view-graph/README.md`, keeps its subject:
+`Graph.layout` and the figure forms stay.
+
+### 3.1 Proposed decisions row 447
+
+The tools cleanup of 2026-10-22, on the owner's words of that day ("no editorializing", "cut",
+"streamline"):
+
+1. Landed: a program's document holds its name, its reading, its tables and its figures, and no
+   other words. The mapping table is gone, and a caption is a figure's name.
+2. Landed: one typography from the look. Prose in the system's sans, data in JetBrains Mono, no
+   text over 24 px, weights 400 and 500, no italic. The serif face is deleted.
+3. Landed: ten modules that nothing reaches are deleted, 1,824 lines.
+4. For the owner: the pare-back of §3, 7,102 lines of Lean, C and script, and five vendored pins.
+5. For the owner: `Flow.layout` and the object page, under the one-layout steer.
+6. For the owner: `Drivers.CodecValues`, `Drivers.SemanticsControls` and `Drivers.Workspace`, kept
+   now, each run by no gate.
+7. For the coordinator: `Compiler.Code` holds the namespace `Tools.Code` under the command line's
+   folder, and `Tools.View.Tokens` imports it.
+
+## 4. To the coordinator
+
+- First: a program's document is now its name, reading, tables and figures (`todo · relations`).
+- Cut: 2,119 lines removed and 84 added outside this note, with 256,862 font bytes.
+- Gates: touched batteries pass; `generated/` regenerates clean twice; audit 70 offenders, none new.
+- Owner rulings: the pare-back (7,102 lines, row 447 (4)); `Flow.layout`; the three unrun drivers.
+- Look: `http://localhost:8783/tools/view/out/docs/specimen-dark.html` after `tools/view/v -d`.
+- The program's document, as Markdown text: `http://localhost:8783/generated/graphs/todo.gen.md`.
