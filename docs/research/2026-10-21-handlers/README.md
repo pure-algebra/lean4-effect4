@@ -208,3 +208,234 @@ No theorem is proved here. Every "tested" is a finite evaluation on the plain an
 **Open obligations.** The three theorems of §8 and the two planned goals of §5.5, none started. The two owner questions of §8.
 
 **Bounded evidence.** Everything tested is bounded to the to-do, plain and cached, and to three hand-written layers.
+
+## 11. Handler landing receipt
+
+**The one thing to know before merging.** Steps 1–3 land on `handler-slice`. Step 4 reaches its specified stop rule.
+The current data type language cannot declare the method functions that form a block service's interface.
+The owner also replaces the brief's false associativity premise with the checked condition below.
+
+### 11.1 Base and head
+
+Base: `7cbd23aded83c97861e27a2cc960019a7f0c6c32` on `claude/handler-design-aa9683`.
+Implementation head: `78ae53a8ce45272bb03a29c223e2c0876c008e9f` on `handler-slice`.
+The receipt's head is the commit that adds this section and updates the generated-file inventory.
+The worktree is `/Users/pooks/.codex/worktrees/handler-slice/lean4-effect4`.
+
+| Commit | Change |
+| --- | --- |
+| `edef6f74e` | The handler view, its interface, the method-type consumer and the session consumer |
+| `2b9704503` | Five proved claims, one planned goal, placements and registry entries |
+| `78ae53a8c` | The handlers relation, the inspection command and generated documents |
+
+### 11.2 Changed files
+
+| Path | Change |
+| --- | --- |
+| `src/Effect4/Program/Handler.lean` | The six-field view, its generic fold, interface and fit check |
+| `src/Effect4.lean` | The Services import and the Handler import beside it |
+| `src/Effect4/Api/Session.lean` | `ServiceSession.methodPort` reads a singleton handler interface |
+| `src/Effect4/Codegen/Print.lean` | `methodType` reads a singleton handler interface |
+| `src/Effect4/Laws/Program/Handler.lean` | The fold, protocol, imposed-interface and layer composition laws |
+| `src/Effect4/Laws.lean` | The Handler import after ApplicationService |
+| `tools/ProofGraph/Registry.lean` | Six claims and the module in the three concepts' defaults |
+| `tools/Compiler/Graphs.lean` | `handlersTable`, with host calls from the calls relation |
+| `tools/Compiler/Inspect.lean` | The `handlers` reading and its document routing |
+| `tools/Compiler/Main.lean` | The command's documented usage |
+| `scripts/generate.py` | Publication and comparison of the handler TSV |
+| `Makefile` | The handler TSV in `GRAPH_OUT` |
+| `generated/graphs/todo.gen.md` | The generated handler table |
+| `generated/graphs/todo.gen.json` | The generated handler table |
+| `generated/graphs/relation-handlers.gen.tsv` | The generated handler table |
+| `docs/GENERATED.md` | The generated-file inventory includes handlers |
+| `docs/research/2026-10-21-handlers/README.md` | This receipt |
+
+No file under `Test/` changes. The decisions register and `lakefile.toml` stay unchanged.
+
+### 11.3 The typed service view
+
+`Handler.interface` owns the list of method names, arguments after the state, answers and errors.
+`Handler.fits` requires one service name and two successful, equal interfaces. Two failed interface reads do not establish fit.
+`Handler.rows_of_interface` keeps that successful-read premise explicit.
+
+Two local rewrites remain: `ServiceSession.methodPort` and `methodType`.
+Both keep their function types and their refusal values.
+The existing laws build without proof edits.
+
+Three sites remain at `methodArgs`:
+
+| Site | Reason |
+| --- | --- |
+| `entriesOf`, `src/Effect4/Codegen/Surface.lean` | The attempted rewrite breaks `entriesOf`'s formation proof in `src/Effect4/Laws/Codegen/Services.lean`. The rewrite is reverted. |
+| `methodClosure`, `src/Effect4/Codegen/Print.lean` | The attempted rewrite breaks the method-closure reading proof in `src/Effect4/Laws/Codegen/Services.lean`. The rewrite is reverted. |
+| `serviceFaultOfIn`, `src/Effect4/Program/Services.lean` | Importing Handler here creates an import cycle: Handler imports Services for `Service` and `methodArgs`. |
+
+The base has no explicit `Effect4.Program.Services` import in `src/Effect4.lean`.
+This landing adds it beside Handler, after the ApplicationService import.
+
+### 11.4 The corrected condition
+
+The brief's premise is `Row.Subset (Row.diff a.requires b.out) b.requires`.
+A checked finite evaluation refutes associativity under that premise, using one key `k`.
+
+| Layer | Output keys | Required keys | Error |
+| --- | --- | --- | --- |
+| `a` | empty | `k` | `never` |
+| `b` | empty | `k` | `never` |
+| `c` | `k` | empty | `never` |
+
+The premise holds. `(a.provide b).provide c` requires nothing. `a.provide (b.provide c)` still requires `k`.
+The diagnostic command is `LEAN_NUM_THREADS=3 lake env lean /private/tmp/handler-assoc-counterexample.lean`.
+It exits zero and prints `(0, 1)` after all four guards pass.
+Its retained source is below.
+
+```lean
+import Effect4.Program.Typing.Rules
+open Effect4 Effect4.Program
+namespace HandlerAssocCounterexample
+def key : ServiceKey := ⟨⟨30⟩, ⟨6⟩⟩
+def empty : Effect4.Row ServiceKey := Effect4.Row.empty
+def one : Effect4.Row ServiceKey := Effect4.Row.singleton key
+def a : LayerTy := ⟨empty, .never, one⟩
+def b : LayerTy := ⟨empty, .never, one⟩
+def c : LayerTy := ⟨one, .never, empty⟩
+#guard decide (Effect4.Row.Subset (Effect4.Row.diff a.requires b.out) b.requires)
+#guard ((a.provide b).provide c).requires = empty
+#guard (a.provide (b.provide c)).requires = one
+#guard (a.provide b).provide c != a.provide (b.provide c)
+#eval (((a.provide b).provide c).requires.elems.length,
+  (a.provide (b.provide c)).requires.elems.length)
+end HandlerAssocCounterexample
+```
+
+The owner approves this replacement premise:
+
+```lean
+∀ k, k ∈ a.requires → k ∈ c.out → k ∈ b.out ∨ k ∈ c.requires
+```
+
+`provide_assoc_conditional` proves equality of the three columns under that premise.
+It uses the existing row membership laws and `Ty.join_assoc`. No row lemma is added.
+
+### 11.5 Claims and placement
+
+All declarations below live in `src/Effect4/Laws/Program/Handler.lean`.
+The registry pointers live in `tools/ProofGraph/Registry.lean`.
+Each pointer uses `.witness`; the proof graph derives whether its declaration is a planned goal.
+
+| Claim and declaration | Concept | Role | Requirement | Reach and consumer | Evidence |
+| --- | --- | --- | --- | --- | --- |
+| `handler-fold-root`, `handlersOf_defs` | 7, `initial-algebras-folds` | fundamental property | R14 | Every operation alphabet and root block, including all children. Consumer: the handlers relation. | Proved |
+| `handler-fit-protocol`, `Handler.rows_of_interface` | 9, `host-session-protocol` | compatibility | R6 | Two handlers of one service with successful, equal interfaces. Consumer: session protocol clients. | Proved |
+| `handler-fit-imposed`, `Handler.interface_imposed` | 9, `host-session-protocol` | compatibility | R6 | Every application and imposed list whose two `serviceDefs` constructions succeed. Consumer: interface comparison before the protocol law. | Proved |
+| `layer-provide-assoc-conditional`, `provide_assoc_conditional` | 8, `context-requirements` | compatibility | R4 | The corrected key visibility premise. Consumer: composition of handler layer types. | Proved |
+| `layer-provide-tensor-interchange`, `provide_tensor_interchange` | 8, `context-requirements` | compatibility | R4 | Each upper layer requires only keys from its own lower layer. Consumer: composition of handler layer types. | Proved |
+| `imposed-wrap-tensor`, `wrap_tensor` | 9, `host-session-protocol` | compatibility | R6 | Shared declarations, disjoint entry names, wrappers naming only left entries, and successful constructions. Consumer: composition of handler interfaces. | Planned goal |
+
+The interchange proof closes within the brief's allowance. The wrapper law remains a `proof_goal`.
+The owner chooses equality of method interfaces after removing state for that goal.
+Its combined application concatenates the entry lists under shared declarations.
+It compares that interface with the two separate interfaces appended.
+It states no equality of clause behaviour after state translation.
+
+These are proposed additions to the required properties in `docs/core/semantics.md` under their listed concepts.
+The proof placements and semantics registry entries land here. This receipt does not amend that authority.
+The proposed decisions row is 445. The one-key diagnostic bounds the replaced premise.
+No claim here proves clause meaning, host progress, physical I/O or a layer build law.
+
+### 11.6 Why step 4 stops
+
+`ServiceDef.carrier` in `src/Effect4/Program/Authoring.lean` has type `Ty`.
+`Ty` in `src/Effect4/Program/TyCore.lean` has records and data types, but no constructor for a method function.
+The TypeScript service profile constructs function types directly in `methodType`, in `src/Effect4/Codegen/Print.lean`.
+The legacy reader `parseLegacy`, in `src/Effect4/Codegen/Types.lean`, explicitly excludes object and function types.
+A target string in `Ty.handle` therefore cannot supply the required interface declaration.
+
+There is a second boundary. `Application.contextDef` returns the state, not a service value containing its methods.
+`Checker.checkLayer` in `src/Effect4/Program/Checker.lean` requires an effect layer's answer to be a subtype of its key's carrier.
+Changing the key's carrier alone therefore cannot type `LayerTerm.effect key init` at the existing state-returning init.
+
+A next slice needs a declared representation of the callable interface and a typed construction of its service value.
+That construction must close methods over the state without storing host closures as program syntax.
+It also needs key allocation, its signature entry, the layer checker connection, and unchanged TypeScript service declarations.
+Those changes reach beyond ApplicationService, Authoring and the printer's service site.
+The brief therefore requires this landing to stop after step 3.
+No block-service key is added, and this receipt makes no claim that handlers enter the layer calculus yet.
+
+### 11.7 Commands and results
+
+Every Lean build runs with `LEAN_NUM_THREADS=3`. No two Lake processes run concurrently in this worktree.
+The TypeScript oracle is `@typescript/native-preview` version `7.0.0-dev.20260629.1`.
+
+| Command | Result |
+| --- | --- |
+| `cp -c -R /Users/pooks/Dev/lean4-effect4/.lake/packages .lake/packages` | Exit zero. Dependency packages use copy-on-write. |
+| `LEAN_NUM_THREADS=3 lake build Effect4.Program.Services Effect4.Program.LayerView Effect4.Laws.Program.ApplicationService` | `Build completed successfully (252 jobs).` |
+| `LEAN_NUM_THREADS=3 lake build Effect4.Program.Handler Effect4.Codegen.Surface Effect4.Api.Session Effect4.Laws.Api.Session Effect4.Laws.Codegen.Services Effect4.Laws.Codegen.PrintTyped Effect4.Laws.Codegen.ReadLeaf` | `Build completed successfully (434 jobs).` |
+| `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Program.Handler ProofGraph.Registry` | `Build completed successfully (393 jobs).` |
+| `LEAN_NUM_THREADS=3 lake build Effect4 Effect4Laws ProofGraph.Registry` | `Build completed successfully (1444 jobs).` |
+| `LEAN_NUM_THREADS=3 lake build Compiler.Graphs Compiler.Inspect Compiler.Main ProofGraph.AxiomAudit` | `Build completed successfully (488 jobs).` |
+| `LEAN_NUM_THREADS=3 python3 scripts/generate.py --only graphs` | Initial generation passes and its outputs enter `78ae53a8c`. |
+| `LEAN_NUM_THREADS=3 python3 scripts/generate.py --only graphs` | First repeat passes. `git diff --exit-code -- generated/` exits zero; `git status --porcelain -- generated/` is empty. |
+| `LEAN_NUM_THREADS=3 python3 scripts/generate.py --only graphs` | Second repeat passes. Both generated-file checks remain clean. |
+| `make batteries-touched BASE=7cbd23ade` | `batteries-touched: 2 batteries`; `Build completed successfully (1374 jobs).` |
+| `make check-ts` | Exit zero. Every gate component passes with tsgo `7.0.0-dev.20260629.1`. The reader reports `802 pass`, `0 fail`. Printed comparisons report `408 exact JSON/wire comparisons`. Service identity agrees with Lean. |
+| `python3 scripts/check-language.py --strict docs/research/2026-10-21-handlers/README.md docs/GENERATED.md generated/graphs/todo.gen.md` | All three touched Markdown files pass. |
+| `git diff --check` | Exit zero. |
+| `LEAN_NUM_THREADS=3 lake exe effect4 inspect --group todo --session TodoApp --what handlers --form json --out /private/tmp/handler-inspect-json` | Exit zero. The document holds only the handler table after its introductory paragraph. |
+| `LEAN_NUM_THREADS=3 lake exe effect4 inspect --group todo --session TodoApp --what handlers --form tsv --out /private/tmp/handler-inspect-tsv` | Exit zero. The table records `TodoApp`, its four methods, its required key and its four repository calls. |
+
+The first consumer build fails at the attempted Surface and methodClosure rewrites.
+Both rewrites are reverted before the passing build above. No existing proof is patched around either change.
+Local proof-development builds also report Lean elaboration errors, repaired before the recorded law build.
+
+### 11.8 Axiom output
+
+The command is `LEAN_NUM_THREADS=3 lake env lean /private/tmp/handler-axiom-audit.lean`.
+Its file imports the four changed core and law modules and `ProofGraph.AxiomAudit`, then runs:
+
+```lean
+#axiom_audit Effect4.Program.Handler Effect4.Api.Session Effect4.Codegen.Print Effect4.Laws.Program.Handler
+```
+
+The output is:
+
+```text
+#axiom_audit: 309 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 1 planned goals
+```
+
+The tool modules compile and their command outputs are checked. The axiom gate covers the changed library modules.
+
+### 11.9 Open obligations and evidence limits
+
+`wrap_tensor` remains a planned goal. No proved claim rests on it.
+Step 4 remains unimplemented at its specified scope boundary.
+The three unrevised typed-view sites remain as recorded in §11.3.
+The required-property additions and dictionary entries remain proposals for their authority owners.
+
+The protocol and interface results are Lean proofs over their stated inputs.
+They do not assert equal answers or equal clause behaviour.
+The table checks are finite observations of the to-do session.
+The counterexample is a finite evaluation that refutes the original premise.
+The TypeScript gate gives finite host evidence for its named corpus and runtime cases.
+The gate changes no tracked generated bytes.
+
+### 11.10 Proposed decisions row 445
+
+1. A handler is a view of a service block, read by `handlersOf` with one fold, never stored as program syntax.
+2. Fit requires one service name and successful, equal interfaces after removing the state from every method request.
+3. The fit consumers are session protocol rows and the TypeScript method-type view.
+4. The imposed transformer's fit is `Handler.interface_imposed`, for successful constructions of the application service.
+5. Provision is associative on layer types under the corrected visibility condition in §11.4.
+6. A block service key has the interface as its carrier. Its implementation needs the separate slice in §11.6.
+7. A continuation-capturing clause and a clause that returns a new dispatch state stay outside the representation.
+8. Mutable state uses the existing `Ref` operations. No rebinding dispatch or continuation value is added.
+
+The proposed dictionary entries are:
+
+| Word | Meaning | Anchor |
+| --- | --- | --- |
+| `handler` | A service-block view containing its service, state, init, clauses, required keys and forwarded keys | Second anchor: `Handler`, `src/Effect4/Program/Handler.lean` |
+| `interface` | The successful list of clause names, arguments after the state, answers and errors | `Handler.interface`, `src/Effect4/Program/Handler.lean` |
+| `fit` | Two handlers name one service and have successful, equal interfaces | `Handler.fits`, `src/Effect4/Program/Handler.lean` |
+| `transformer` | A wrapper of a clause program, selected by entry name and given the imposed block's bound state | `Application.Imposed.wrap`, `src/Effect4/Program/Authoring/Application.lean` |
